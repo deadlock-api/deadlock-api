@@ -1,0 +1,15 @@
+[package]
+name = "service-utils"
+version = "0.1.0"
+edition = "2024"
+description = "Env config, graceful shutdown, retries and shared HTTP clients for long-running services"
+
+[dependencies]
+reqwest = { workspace = true }
+tokio = { workspace = true, features = ["signal", "sync", "time"] }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+tryhard = { workspace = true }
+
+[lints]
+workspace = true

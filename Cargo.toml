@@ -1,24 +1,21 @@
 [workspace]
 members = [
-    "api",
-    "common",
-    "haste",
-    "haste/crates/*",
+    "api-crates/*",
     "live-events",
-    "rate-limit",
-    "tools/active-matches-scraper",
-    "tools/builds-fetcher",
-    "tools/demo-analyzer",
-    "tools/history-fetcher",
-    "tools/hltv-scraper",
-    "tools/ingest-worker",
-    "tools/matchdata-downloader",
-    "tools/player-match-history",
-    "tools/salt-scraper",
-    "tools/steam-profile-fetcher",
-    "tools/update-assets-tables",
-    "valveprotos",
+    "util-crates/*",
+    "util-crates/haste/crates/*",
     "website/wasm/*",
+    "worker-crates/active-matches-scraper",
+    "worker-crates/builds-fetcher",
+    "worker-crates/demo-analyzer",
+    "worker-crates/history-fetcher",
+    "worker-crates/hltv-scraper",
+    "worker-crates/ingest-worker",
+    "worker-crates/matchdata-downloader",
+    "worker-crates/player-match-history",
+    "worker-crates/salt-scraper",
+    "worker-crates/steam-profile-fetcher",
+    "worker-crates/update-assets-tables",
 ]
 resolver = "3"
 
@@ -27,19 +24,26 @@ edition = "2024"
 
 [workspace.dependencies]
 # Shared in-repo crates
-common = { version = "0.1.0", path = "common" }
-player-match-history = { path = "tools/player-match-history" }
-rate-limit = { path = "rate-limit" }
-valveprotos = { path = "valveprotos" }
+assets-client = { path = "util-crates/assets-client" }
+clickhouse-utils = { path = "util-crates/clickhouse-utils" }
+db-clients = { path = "util-crates/db-clients" }
+keyvalues = { path = "util-crates/keyvalues" }
+player-match-history = { path = "worker-crates/player-match-history" }
+rate-limit = { path = "api-crates/rate-limit" }
+service-utils = { path = "util-crates/service-utils" }
+steam-id = { path = "util-crates/steam-id" }
+steam-proxy = { path = "util-crates/steam-proxy" }
+telemetry = { path = "util-crates/telemetry" }
+valveprotos = { path = "util-crates/valveprotos" }
 wasm-abi = { path = "website/wasm/abi" }
-haste = { path = "haste" }
-haste_broadcast = { path = "haste/crates/haste_broadcast" }
-haste_core = { path = "haste/crates/haste_core" }
-haste_vartype = { path = "haste/crates/haste_vartype" }
-dungers = { path = "haste/crates/dungers" }
-dungers_bitbuf = { path = "haste/crates/dungers_bitbuf" }
-dungers_charsor = { path = "haste/crates/dungers_charsor" }
-dungers_varint = { path = "haste/crates/dungers_varint" }
+haste = { path = "util-crates/haste" }
+haste_broadcast = { path = "util-crates/haste/crates/haste_broadcast" }
+haste_core = { path = "util-crates/haste/crates/haste_core" }
+haste_vartype = { path = "util-crates/haste/crates/haste_vartype" }
+dungers = { path = "util-crates/haste/crates/dungers" }
+dungers_bitbuf = { path = "util-crates/haste/crates/dungers_bitbuf" }
+dungers_charsor = { path = "util-crates/haste/crates/dungers_charsor" }
+dungers_varint = { path = "util-crates/haste/crates/dungers_varint" }
 
 async-compression = "0.4.51"
 base64 = "0.23.1"

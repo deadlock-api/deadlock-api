@@ -35,7 +35,7 @@ const SHUTDOWN_GRACE: Duration = Duration::from_secs(5);
 
 #[tokio::main]
 async fn main() -> Result<(), StartupError> {
-    let _otel_guard = common::init_tracing_with(common::TracingConfig::new(
+    let _otel_guard = telemetry::init_tracing_with(telemetry::TracingConfig::new(
         "deadlock-live-events",
         "debug,hyper_util=warn,tower_http=info,reqwest=warn,rustls=warn,sqlx=warn,h2=warn",
     ));

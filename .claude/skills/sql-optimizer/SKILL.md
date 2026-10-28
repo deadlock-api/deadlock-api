@@ -40,14 +40,14 @@ The bench / equiv scripts only ever issue `SELECT` (and `EXPLAIN` / `SYSTEM FLUS
 The skill accepts any of:
 
 1. **A raw SQL string.** Run it directly.
-2. **A file path** (e.g. `api/src/routes/v1/analytics/hero_stats.rs`). Read the file, find the query builder (typically a `build_query` fn or a big `format!("…")` block), and reconstruct a representative SQL string by feeding it default/typical parameters. Show the rendered SQL to the user before benchmarking.
+2. **A file path** (e.g. `api-crates/api/src/routes/v1/analytics/hero_stats.rs`). Read the file, find the query builder (typically a `build_query` fn or a big `format!("…")` block), and reconstruct a representative SQL string by feeding it default/typical parameters. Show the rendered SQL to the user before benchmarking.
 3. **An API route** (e.g. `/v1/analytics/hero-stats`). Grep the codebase for the route handler, then proceed as in (2).
 
 For (2)/(3), realistic parameters matter — pick recent timestamps (e.g. last 30 days), `Normal` game mode if the schema has one, and any required filters. Don't run with parameters that return zero rows; the planner behaves differently.
 
 ## Workflow
 
-1. **Locate creds.** Read `CLICKHOUSE_HOST`, `CLICKHOUSE_HTTP_PORT`, `CLICKHOUSE_USERNAME`, `CLICKHOUSE_PASSWORD`, `CLICKHOUSE_DBNAME` from `.env` (commonly `<repo>/api/.env` in this codebase). Prefer the read-only user if both `CLICKHOUSE_USERNAME` and `CLICKHOUSE_RESTRICTED_USERNAME` exist. Never echo the password back to the user.
+1. **Locate creds.** Read `CLICKHOUSE_HOST`, `CLICKHOUSE_HTTP_PORT`, `CLICKHOUSE_USERNAME`, `CLICKHOUSE_PASSWORD`, `CLICKHOUSE_DBNAME` from `.env` (commonly `<repo>/api-crates/api/.env` in this codebase). Prefer the read-only user if both `CLICKHOUSE_USERNAME` and `CLICKHOUSE_RESTRICTED_USERNAME` exist. Never echo the password back to the user.
 
 2. **Render and inspect.** Show the rendered SQL. Run `EXPLAIN ESTIMATE` and `EXPLAIN PIPELINE` first — they're free and reveal partition counts, granule counts, and the operator pipeline. Often this alone tells you where the win is.
 

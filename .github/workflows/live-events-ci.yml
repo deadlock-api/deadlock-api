@@ -4,33 +4,23 @@ on:
   push:
     branches:
       - master
-    paths:
+    paths: &paths
       - 'live-events/**'
-      - 'common/**'
-      - '.github/workflows/live-events-ci.yml'
+      - 'util-crates/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
+      - '.cargo/**'
       - 'rust-toolchain.toml'
       - 'rustfmt.toml'
       - 'clippy.toml'
-      - 'valveprotos/**'
-      - 'haste/**'
-      - '.github/workflows/rust-ci-checks.yml'
+      - '_typos.toml'
+      - '.github/workflows/live-events-ci.yml'
+      - '.github/workflows/rust-checks.yml'
+      - '.github/actions/setup-rust/**'
   pull_request:
     branches:
       - master
-    paths:
-      - 'live-events/**'
-      - 'common/**'
-      - '.github/workflows/live-events-ci.yml'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'rust-toolchain.toml'
-      - 'rustfmt.toml'
-      - 'clippy.toml'
-      - 'valveprotos/**'
-      - 'haste/**'
-      - '.github/workflows/rust-ci-checks.yml'
+    paths: *paths
   workflow_dispatch:
     inputs:
       tag:
@@ -53,13 +43,12 @@ concurrency:
 
 jobs:
   checks:
-    uses: ./.github/workflows/rust-ci-checks.yml
+    uses: ./.github/workflows/rust-checks.yml
     with:
-      working-directory: live-events
       packages: deadlock-live-events
-      # .cargo/config.toml links with clang + mold
-      lint-extra-apt-packages: clang mold
-      rust-cache-shared-key: live-events-build-cache
+      paths: live-events
+      typos-paths: live-events
+      cache-key: live-events-build-cache
 
   deploy:
     name: Deploy
@@ -111,10 +100,12 @@ jobs:
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}-${{ matrix.platform }}
           platforms: ${{ matrix.docker_platform }}
 
+  # The per-platform images build in parallel with the checks; only the merged tag is deployed,
+  # so it waits for both.
   deploy-merge-manifests:
     name: "Deploy: Merge Manifests"
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
-    needs: deploy
+    needs: [checks, deploy]
     runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - name: Login to GitHub Container Registry

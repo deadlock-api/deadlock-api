@@ -1,0 +1,17 @@
+[package]
+name = "keyvalues"
+version = "0.1.0"
+edition = "2024"
+description = "Parsers for Valve's KeyValues3 (vdata) and KeyValues localization text formats"
+
+[dependencies]
+memchr = "2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+insta = { version = "1", features = ["json"] }
+
+[lints]
+workspace = true

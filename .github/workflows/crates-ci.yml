@@ -1,41 +1,31 @@
 name: Crates CI
 
-# Checks for the shared library crates (common, valveprotos, and haste with its
-# dungers crates) and the website's wasm modules (website/wasm/*).
-# Their consumers (api, tools, live-events, website) are checked by their own
-# workflows, which also trigger on changes to these crates.
+# Checks for the shared library crates (util-crates/*, including valveprotos and haste with its
+# dungers crates) and the website's wasm modules (website/wasm/*). Their consumers (api, workers,
+# live-events, website) are checked by their own workflows, which also trigger on changes to
+# these crates.
 
 on:
   push:
     branches:
       - master
-    paths:
-      - 'common/**'
-      - 'valveprotos/**'
-      - 'haste/**'
+    paths: &paths
+      - 'util-crates/**'
       - 'website/wasm/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
+      - '.cargo/**'
       - 'rust-toolchain.toml'
       - 'rustfmt.toml'
       - 'clippy.toml'
+      - '_typos.toml'
       - '.github/workflows/crates-ci.yml'
-      - '.github/workflows/rust-ci-checks.yml'
+      - '.github/workflows/rust-checks.yml'
+      - '.github/actions/setup-rust/**'
   pull_request:
     branches:
       - master
-    paths:
-      - 'common/**'
-      - 'valveprotos/**'
-      - 'haste/**'
-      - 'website/wasm/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'rust-toolchain.toml'
-      - 'rustfmt.toml'
-      - 'clippy.toml'
-      - '.github/workflows/crates-ci.yml'
-      - '.github/workflows/rust-ci-checks.yml'
+    paths: *paths
   workflow_dispatch:
 
 permissions:
@@ -46,55 +36,16 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  common:
-    uses: ./.github/workflows/rust-ci-checks.yml
+  checks:
+    uses: ./.github/workflows/rust-checks.yml
     with:
-      working-directory: common
-      packages: common
-      clippy-args: --all-features
-      lint-extra-apt-packages: clang mold
-      rust-cache-shared-key: common-build-cache
-
-  valveprotos:
-    uses: ./.github/workflows/rust-ci-checks.yml
-    with:
-      working-directory: valveprotos
-      packages: valveprotos
-      clippy-args: --all-features
-      typos: false
-      lint-extra-apt-packages: clang mold
-      rust-cache-shared-key: valveprotos-build-cache
-
-  haste:
-    uses: ./.github/workflows/rust-ci-checks.yml
-    with:
-      working-directory: haste
-      packages: haste haste_core haste_broadcast haste_vartype dungers dungers_bitbuf dungers_charsor dungers_varint
-      clippy-args: --all-features
-      typos: false
-      lint-extra-apt-packages: clang mold
-      rust-cache-shared-key: haste-build-cache
-
-  test:
-    name: Test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
-      - name: Cache Rust dependencies
-        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-        with:
-          shared-key: "crates-test-cache-${{ runner.os }}-${{ runner.arch }}"
-          save-if: ${{ github.ref == 'refs/heads/master' }}
-      - name: Tests
-        run: cargo test --locked -p common -p valveprotos -p haste -p haste_core -p haste_broadcast -p haste_vartype -p dungers -p dungers_bitbuf -p dungers_charsor -p dungers_varint --all-features
-
-  website-wasm:
-    uses: ./.github/workflows/rust-ci-checks.yml
-    with:
-      working-directory: website/wasm
-      packages: hero-build wasm-abi
-      typos: false
-      lint-extra-apt-packages: clang mold
-      rust-cache-shared-key: website-wasm-build-cache
+      packages: >-
+        assets-client clickhouse-utils db-clients keyvalues service-utils steam-id steam-proxy
+        telemetry valveprotos
+        haste haste_core haste_broadcast haste_vartype
+        dungers dungers_bitbuf dungers_charsor dungers_varint
+        hero-build wasm-abi
+      paths: util-crates website/wasm
+      typos-paths: util-crates website/wasm
+      test: true
+      cache-key: crates-build-cache

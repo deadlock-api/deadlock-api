@@ -1,0 +1,26 @@
+[package]
+name = "builds-fetcher"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clickhouse = { workspace = true }
+assets-client = { workspace = true }
+db-clients = { workspace = true }
+service-utils = { workspace = true }
+steam-proxy = { workspace = true }
+telemetry = { workspace = true, features = ["prometheus"] }
+itertools = { workspace = true }
+metrics = { workspace = true }
+rand = { workspace = true }
+reqwest = { workspace = true, features = ["json"] }
+serde_json = { workspace = true }
+sqlx = { workspace = true, features = ["macros", "postgres", "runtime-tokio", "time"] }
+thiserror = { workspace = true }
+time = "0.3.55"
+tokio = { workspace = true }
+tracing = { workspace = true }
+valveprotos = { workspace = true, features = ["gc-client", "serde"] }
+
+[lints]
+workspace = true

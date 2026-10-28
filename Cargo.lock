@@ -29,11 +29,14 @@ name = "active-matches-scraper"
 version = "0.1.0"
 dependencies = [
  "clickhouse",
- "common",
+ "clickhouse-utils",
+ "db-clients",
  "metrics",
  "reqwest",
  "serde",
  "serde_repr",
+ "service-utils",
+ "telemetry",
  "thiserror",
  "tokio",
  "tracing",
@@ -677,6 +680,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "71938f30533e4d95a6d17aa530939da3842c2ab6f4f84b9dae68447e4129f74a"
 
 [[package]]
+name = "assets-client"
+version = "0.1.0"
+dependencies = [
+ "reqwest",
+ "serde",
+ "service-utils",
+ "tokio",
+ "tracing",
+]
+
+[[package]]
 name = "async-compression"
 version = "0.4.51"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1300,14 +1314,18 @@ dependencies = [
 name = "builds-fetcher"
 version = "0.1.0"
 dependencies = [
+ "assets-client",
  "clickhouse",
- "common",
+ "db-clients",
  "itertools 0.15.0",
  "metrics",
  "rand 0.10.3",
  "reqwest",
  "serde_json",
+ "service-utils",
  "sqlx",
+ "steam-proxy",
+ "telemetry",
  "thiserror",
  "time",
  "tokio",
@@ -1605,6 +1623,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "clickhouse-utils"
+version = "0.1.0"
+dependencies = [
+ "clickhouse",
+ "metrics",
+ "serde",
+ "service-utils",
+ "tokio",
+ "tokio-util",
+ "tracing",
+]
+
+[[package]]
 name = "cmake"
 version = "0.1.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1657,35 +1688,6 @@ checksum = "b96a46ad395a5e00676eddaca4a45ed78b29c08be5a878d35e4b071c625637dd"
 dependencies = [
  "unicode-segmentation",
  "unicode-width",
-]
-
-[[package]]
-name = "common"
-version = "0.1.0"
-dependencies = [
- "base64 0.23.1",
- "clickhouse",
- "metrics",
- "metrics-exporter-prometheus",
- "object_store 0.14.2",
- "opentelemetry",
- "opentelemetry-appender-tracing",
- "opentelemetry-otlp",
- "opentelemetry_sdk",
- "prost",
- "redis",
- "reqwest",
- "serde",
- "serde_json",
- "sqlx",
- "thiserror",
- "tokio",
- "tokio-util",
- "tracing",
- "tracing-opentelemetry",
- "tracing-subscriber",
- "tryhard",
- "valveprotos",
 ]
 
 [[package]]
@@ -2804,6 +2806,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "11c0bd7d22989969a619bae09147b992a6aa7f31dd4f9d9af6345f533744781f"
 
 [[package]]
+name = "db-clients"
+version = "0.1.0"
+dependencies = [
+ "clickhouse",
+ "object_store 0.14.2",
+ "redis",
+ "sqlx",
+ "thiserror",
+ "tracing",
+]
+
+[[package]]
 name = "deadlock-api-rust"
 version = "0.1.0"
 dependencies = [
@@ -2825,7 +2839,6 @@ dependencies = [
  "chrono",
  "clickhouse",
  "clickhouse-sql-parser",
- "common",
  "crc32fast",
  "cssparser",
  "datafusion",
@@ -2841,8 +2854,8 @@ dependencies = [
  "insta",
  "itertools 0.15.0",
  "jsonwebtoken",
+ "keyvalues",
  "md-5",
- "memchr",
  "metrics",
  "mimalloc",
  "moka",
@@ -2869,8 +2882,11 @@ dependencies = [
  "serde_json",
  "snap",
  "sqlx",
+ "steam-id",
+ "steam-proxy",
  "strum 0.28.0",
  "tantivy",
+ "telemetry",
  "tempfile",
  "thiserror",
  "tokio",
@@ -2903,7 +2919,6 @@ dependencies = [
  "async-stream",
  "axum",
  "bytes",
- "common",
  "futures",
  "haste",
  "prost",
@@ -2912,6 +2927,7 @@ dependencies = [
  "serde-env",
  "serde_json",
  "strum 0.28.0",
+ "telemetry",
  "thiserror",
  "tokio",
  "tower-http 0.7.1",
@@ -2959,13 +2975,17 @@ dependencies = [
  "async-compression",
  "clap",
  "clickhouse",
- "common",
+ "clickhouse-utils",
+ "db-clients",
  "futures",
  "haste",
  "metrics",
  "prost",
  "reqwest",
  "serde",
+ "service-utils",
+ "steam-id",
+ "telemetry",
  "thiserror",
  "tokio",
  "tokio-util",
@@ -3820,12 +3840,17 @@ checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 name = "history-fetcher"
 version = "0.1.0"
 dependencies = [
- "common",
+ "assets-client",
+ "clickhouse-utils",
+ "db-clients",
  "futures",
  "metrics",
  "player-match-history",
  "reqwest",
+ "service-utils",
  "sqlx",
+ "steam-proxy",
+ "telemetry",
  "thiserror",
  "tokio",
  "tracing",
@@ -3851,8 +3876,8 @@ dependencies = [
  "bytes",
  "cached",
  "clap",
- "common",
  "dashmap",
+ "db-clients",
  "dungers",
  "haste",
  "itertools 0.15.0",
@@ -3865,6 +3890,8 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_json",
+ "service-utils",
+ "telemetry",
  "thiserror",
  "tokio",
  "tracing",
@@ -4217,17 +4244,22 @@ dependencies = [
 name = "ingest-worker"
 version = "0.1.0"
 dependencies = [
+ "assets-client",
  "bytes",
  "bzip2",
  "clap",
  "clickhouse",
- "common",
+ "clickhouse-utils",
+ "db-clients",
  "futures",
  "metrics",
  "object_store 0.14.2",
  "prost",
+ "reqwest",
  "serde",
  "serde_repr",
+ "service-utils",
+ "telemetry",
  "thiserror",
  "tokio",
  "tokio-util",
@@ -4452,6 +4484,17 @@ dependencies = [
  "signature",
  "simple_asn1",
  "zeroize",
+]
+
+[[package]]
+name = "keyvalues"
+version = "0.1.0"
+dependencies = [
+ "insta",
+ "memchr",
+ "serde",
+ "serde_json",
+ "thiserror",
 ]
 
 [[package]]
@@ -4691,12 +4734,15 @@ version = "0.1.0"
 dependencies = [
  "clap",
  "clickhouse",
- "common",
+ "clickhouse-utils",
+ "db-clients",
  "futures",
  "metrics",
  "object_store 0.14.2",
  "reqwest",
  "serde",
+ "service-utils",
+ "telemetry",
  "thiserror",
  "tokio",
  "tokio-util",
@@ -6413,11 +6459,15 @@ name = "salt-scraper"
 version = "0.1.0"
 dependencies = [
  "clickhouse",
- "common",
+ "clickhouse-utils",
+ "db-clients",
  "futures",
  "metrics",
  "reqwest",
  "serde",
+ "service-utils",
+ "steam-proxy",
+ "telemetry",
  "thiserror",
  "tokio",
  "tracing",
@@ -6654,6 +6704,17 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "service-utils"
+version = "0.1.0"
+dependencies = [
+ "reqwest",
+ "tokio",
+ "tokio-util",
+ "tracing",
+ "tryhard",
 ]
 
 [[package]]
@@ -7098,12 +7159,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7beae5182595e9a8b683fa98c4317f956c9a2dec3b9716990d20023cc60c766"
 
 [[package]]
+name = "steam-id"
+version = "0.1.0"
+
+[[package]]
 name = "steam-profile-fetcher"
 version = "0.1.0"
 dependencies = [
  "cached",
  "clickhouse",
- "common",
+ "clickhouse-utils",
+ "db-clients",
  "futures",
  "itertools 0.15.0",
  "metrics",
@@ -7111,10 +7177,28 @@ dependencies = [
  "reqwest",
  "serde",
  "serde_repr",
+ "service-utils",
  "sqlx",
+ "steam-id",
+ "telemetry",
  "thiserror",
  "tokio",
  "tracing",
+]
+
+[[package]]
+name = "steam-proxy"
+version = "0.1.0"
+dependencies = [
+ "base64 0.23.1",
+ "metrics",
+ "prost",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tracing",
+ "valveprotos",
 ]
 
 [[package]]
@@ -7412,6 +7496,21 @@ dependencies = [
  "filetime",
  "libc",
  "xattr",
+]
+
+[[package]]
+name = "telemetry"
+version = "0.1.0"
+dependencies = [
+ "metrics-exporter-prometheus",
+ "opentelemetry",
+ "opentelemetry-appender-tracing",
+ "opentelemetry-otlp",
+ "opentelemetry_sdk",
+ "thiserror",
+ "tracing",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
 ]
 
 [[package]]
@@ -8088,11 +8187,13 @@ name = "update-assets-tables"
 version = "0.1.0"
 dependencies = [
  "clickhouse",
- "common",
+ "db-clients",
  "metrics",
  "reqwest",
  "serde",
  "serde_repr",
+ "service-utils",
+ "telemetry",
  "thiserror",
  "tokio",
  "tracing",

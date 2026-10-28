@@ -4,39 +4,25 @@ on:
   push:
     branches:
       - master
-    paths:
-      - 'api/**'
-      - 'common/**'
-      - 'tools/player-match-history/**'
+    paths: &paths
+      - 'api-crates/**'
+      - 'worker-crates/player-match-history/**'
+      - 'util-crates/**'
       - '.sqlx/**'
-      - '.github/workflows/api-ci.yml'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - '.cargo/**'
       - 'rust-toolchain.toml'
       - 'rustfmt.toml'
       - 'clippy.toml'
-      - 'valveprotos/**'
-      - 'haste/**'
-      - '.github/workflows/rust-ci-checks.yml'
+      - '_typos.toml'
+      - '.github/workflows/api-ci.yml'
+      - '.github/workflows/rust-checks.yml'
+      - '.github/actions/setup-rust/**'
   pull_request:
     branches:
       - master
-    paths:
-      - 'api/**'
-      - 'common/**'
-      - 'tools/player-match-history/**'
-      - '.sqlx/**'
-      - '.github/workflows/api-ci.yml'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - '.cargo/**'
-      - 'rust-toolchain.toml'
-      - 'rustfmt.toml'
-      - 'clippy.toml'
-      - 'valveprotos/**'
-      - 'haste/**'
-      - '.github/workflows/rust-ci-checks.yml'
+    paths: *paths
   workflow_dispatch:
     inputs:
       tag:
@@ -59,82 +45,26 @@ concurrency:
 
 jobs:
   ###############################
-  ##    Stage 1: Lint & Check  ##
+  ##  Stage 1: Lint & Test     ##
   ###############################
 
   checks:
-    uses: ./.github/workflows/rust-ci-checks.yml
+    uses: ./.github/workflows/rust-checks.yml
+    secrets: inherit
     with:
-      working-directory: api
-      packages: deadlock-api-rust
-      lint-runs-on: blacksmith-4vcpu-ubuntu-2404
-      lint-extra-apt-packages: clang mold
-      lint-install-rust-toolchain: true
-      rust-cache-shared-key: api-build-cache
+      packages: deadlock-api-rust rate-limit
+      paths: api-crates
+      typos-paths: api-crates
+      test: true
+      runs-on: blacksmith-4vcpu-ubuntu-2404
+      cache-key: api-build-cache
+      test-cache-key: api-test
 
   ###############################
-  ##     Stage 2: Test         ##
+  ##  Stage 1b: Build Image    ##
   ###############################
 
-  test:
-    name: Test
-    timeout-minutes: 40
-    runs-on: blacksmith-4vcpu-ubuntu-2404
-    steps:
-      - uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a # v1.8.1
-        with:
-          lfs: true
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
-      - name: Install Rust toolchain
-        run: |
-          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
-          echo "$HOME/.cargo/bin" >> $GITHUB_PATH
-      # Sticky disks instead of rust-cache, see the lint job in rust-ci-checks.yml.
-      - name: Mount cargo registry
-        uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
-        with:
-          key: ${{ github.repository }}-cargo-registry
-          path: ~/.cargo/registry
-          commit: ${{ github.ref == 'refs/heads/master' && 'on-change' || 'false' }}
-      - name: Mount cargo git
-        uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
-        with:
-          key: ${{ github.repository }}-cargo-git
-          path: ~/.cargo/git
-          commit: ${{ github.ref == 'refs/heads/master' && 'on-change' || 'false' }}
-      - name: Mount target
-        uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
-        with:
-          # Dedicated disk: the test profile's artifacts differ from the clippy job's.
-          key: ${{ github.repository }}-api-test-target
-          path: target
-          commit: ${{ github.ref == 'refs/heads/master' && 'on-change' || 'false' }}
-      - name: Tests
-        run: cargo test --locked -p deadlock-api-rust
-        env:
-          # Read credentials for the R2 bucket holding versioned game assets.
-          # Used by the integration tests to validate hero/rank IDs against
-          # real data. R2_ENDPOINT is intentionally left unset so it defaults
-          # to the Cloudflare S3 API endpoint, which supports object listing.
-          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          CARGO_INCREMENTAL: "0"
-      - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
-        if: github.ref == 'refs/heads/master'
-        with:
-          tool: cargo-sweep
-      - name: Prune target
-        if: github.ref == 'refs/heads/master'
-        run: cargo sweep --time 7
-
-  ###############################
-  ##  Stage 2b: Build Image    ##
-  ###############################
-
-  # Runs in parallel with checks/test. The image is pushed under a per-commit
+  # Runs in parallel with the checks. The image is pushed under a per-commit
   # staging tag only; nothing consumes it until deploy promotes it.
   build:
     name: Build Image
@@ -142,8 +72,6 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
     steps:
       - uses: useblacksmith/checkout@25227e61ff9dafe400e22fa487b673eac4e4409a # v1.8.1
-        with:
-          lfs: true
       - name: Login to Docker Hub
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
@@ -164,18 +92,18 @@ jobs:
         with:
           # Build context is the repo root: api is a member of the root cargo workspace.
           context: .
-          file: api/Dockerfile
+          file: api-crates/api/Dockerfile
           tags: ${{ env.IMAGE_NAME }}:build-${{ github.sha }}
           push: true
 
   ###############################
-  ##     Stage 3: Deploy       ##
+  ##     Stage 2: Deploy       ##
   ###############################
 
   deploy:
     name: Deploy
     runs-on: blacksmith-2vcpu-ubuntu-2404
-    needs: [checks, test, build]
+    needs: [checks, build]
     if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
     steps:
       - name: Determine Docker Tag

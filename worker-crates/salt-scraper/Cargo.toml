@@ -1,0 +1,23 @@
+[package]
+name = "salt-scraper"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clickhouse = { workspace = true }
+clickhouse-utils = { workspace = true }
+db-clients = { workspace = true }
+service-utils = { workspace = true }
+steam-proxy = { workspace = true }
+telemetry = { workspace = true, features = ["prometheus"] }
+futures = { workspace = true }
+metrics = { workspace = true }
+reqwest = { workspace = true }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+valveprotos = { workspace = true, features = ["gc-client"] }
+
+[lints]
+workspace = true

@@ -1,0 +1,644 @@
+use core::num::NonZeroUsize;
+use core::time::Duration;
+use std::collections::HashMap;
+use std::env;
+use std::sync::{Arc, LazyLock, Mutex};
+use std::time::Instant;
+
+use axum::extract::State;
+use axum::routing::{get, post};
+use axum::{Json, Router};
+use base64::prelude::*;
+use itertools::Itertools as _;
+use jiff::{Timestamp, ToSpan as _};
+use lru::LruCache;
+use prost::Message as _;
+use redis::aio::ConnectionManager;
+use redis::{AsyncCommands as _, ExpireOption};
+use reqwest::{Client, StatusCode};
+use serde::{Deserialize, Serialize};
+use tokio::time::sleep;
+use tracing::{Span, debug, error, field, info, warn};
+use valveprotos::deadlock::c_msg_client_to_gc_spectate_user_response::EResponse;
+use valveprotos::deadlock::{
+    CMsgClientToGcSpectateLobby, CMsgClientToGcSpectateLobbyResponse, EgcCitadelClientMessages,
+};
+use valveprotos::gcsdk::EgcPlatform;
+
+use crate::easy_poll::{PollError, start_polling_text};
+
+const BOT_RUNTIME_HOURS: u64 = 6;
+const SPECTATE_COOLDOWN: Duration = Duration::from_millis(10);
+const ERROR_COOLDOWN: Duration = Duration::from_secs(5);
+const MAX_GAP_SIZE: usize = 100;
+const REDIS_SPEC_KEY: &str = "spectated_matches";
+const REDIS_FAILED_KEY: &str = "failed_spectated_matches";
+const REDIS_EXTRA_KEY: &str = "extra_spectated_matches";
+const REDIS_EXPIRY: i64 = 900; // 15 minutes in seconds
+
+// Percentile (0.0 - 1.0) used to choose where to start
+// filling gaps between the min and max match id range. Defaults to 0.5 (50%).
+static GAP_PERCENTILE: LazyLock<f64> =
+    LazyLock::new(|| service_utils::env_or("GAP_PERCENTILE", 0.5_f64).clamp(0.0, 1.0));
+
+// When set to a truthy value, the bot skips finding and spectating gap matches,
+// only spectating active matches.
+static DISABLE_GAP_SPECTATING: LazyLock<bool> = LazyLock::new(|| {
+    env::var("DISABLE_GAP_SPECTATING")
+        .is_ok_and(|s| matches!(s.trim().to_lowercase().as_str(), "1" | "true" | "yes"))
+});
+
+#[derive(Debug, thiserror::Error)]
+pub(crate) enum SpectateBotError {
+    #[error(transparent)]
+    Redis(#[from] redis::RedisError),
+    #[error(transparent)]
+    Http(#[from] reqwest::Error),
+    #[error(transparent)]
+    Encode(#[from] prost::EncodeError),
+    #[error(transparent)]
+    Base64(#[from] base64::DecodeError),
+    #[error(transparent)]
+    Decode(#[from] prost::DecodeError),
+    #[error(transparent)]
+    Poll(#[from] PollError),
+    #[error(transparent)]
+    Timestamp(#[from] jiff::Error),
+    #[error("Failed to parse client version")]
+    ParseClientVersion,
+    #[error("current_patch mutex poisoned: {0}")]
+    PatchMutexPoisoned(String),
+    #[error("No current patch version available")]
+    NoPatchVersion,
+    #[error("Spectate bot server stopped")]
+    ServerStopped,
+    #[error("Spectate bot server failed")]
+    ServerFailed(#[source] std::io::Error),
+    #[error("Spectate bot server task failed")]
+    ServerTask(#[source] tokio::task::JoinError),
+}
+
+type Result<T, E = SpectateBotError> = core::result::Result<T, E>;
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct PoolLimitInfo {
+    ready_bots: u32,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+struct InvokeResponse {
+    data: String,
+    username: String,
+    pool_limit_info: PoolLimitInfo,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub(crate) enum SpectatedMatchType {
+    ActiveMatch,
+    GapMatch,
+}
+
+impl SpectatedMatchType {
+    pub(crate) const fn label(&self) -> &'static str {
+        match self {
+            Self::ActiveMatch => "ACT",
+            Self::GapMatch => "GAP",
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub(crate) struct SpectatedMatchInfo {
+    pub match_type: SpectatedMatchType,
+    pub match_id: u64,
+    pub broadcast_url: String,
+    #[serde(with = "jiff::fmt::serde::timestamp::second::required")]
+    pub updated_at: Timestamp,
+    #[serde(with = "jiff::fmt::serde::timestamp::second::optional")]
+    pub started_at: Option<Timestamp>,
+}
+
+impl SpectatedMatchInfo {
+    pub(crate) const fn new(
+        match_type: SpectatedMatchType,
+        match_id: u64,
+        broadcast_url: String,
+        updated_at: Timestamp,
+        started_at: Option<Timestamp>,
+    ) -> Self {
+        Self {
+            match_type,
+            match_id,
+            broadcast_url,
+            updated_at,
+            started_at,
+        }
+    }
+}
+
+struct SpectatorBot {
+    client: Client,
+    redis: ConnectionManager,
+    api_token: String,
+    proxy_url: String,
+    failed_spectates: Mutex<LruCache<u64, bool>>,
+    current_patch: Mutex<Option<u32>>,
+}
+
+impl SpectatorBot {
+    async fn try_new(proxy_api_url: String, api_token: String) -> Result<Self> {
+        let redis = db_clients::get_redis_client().await?;
+
+        Ok(Self {
+            client: service_utils::http_client()?,
+            redis,
+            api_token,
+            proxy_url: proxy_api_url,
+            failed_spectates: Mutex::new(LruCache::new(
+                NonZeroUsize::new(1000).unwrap_or(NonZeroUsize::MIN),
+            )),
+            current_patch: Mutex::new(None),
+        })
+    }
+
+    async fn is_recently_spectated(&self, key: &str, match_id: u64) -> Result<bool> {
+        let exists: Option<String> = self.redis.clone().hget(key, match_id).await?;
+        Ok(exists.is_some())
+    }
+    async fn update_spectated(&self, key: &str, match_id: u64, expiry_seconds: i64) -> Result<()> {
+        let _: () = self
+            .redis
+            .clone()
+            .hexpire(key, expiry_seconds, ExpireOption::NONE, match_id)
+            .await?;
+
+        Ok(())
+    }
+
+    async fn mark_spectated(&self, key: &str, smi: &SpectatedMatchInfo) -> Result<()> {
+        self.mark_spectated_many(key, core::slice::from_ref(smi), REDIS_EXPIRY)
+            .await
+    }
+
+    /// Remembers that spectating `match_id` failed, so it is not picked again soon.
+    fn mark_failed_locally(&self, match_id: u64) {
+        if let Ok(mut guard) = self.failed_spectates.lock() {
+            guard.put(match_id, true);
+        }
+    }
+    async fn mark_spectated_many(
+        &self,
+        key: &str,
+        matches: &[SpectatedMatchInfo],
+        expiry_seconds: i64,
+    ) -> Result<()> {
+        let payload: Vec<(u64, String)> = matches
+            .iter()
+            .filter_map(|x| serde_json::to_string(&x).ok().map(|s| (x.match_id, s)))
+            .collect();
+        let mut redis = self.redis.clone();
+        let _: () = redis.hset_multiple(key, &payload).await?;
+        let _: () = redis
+            .hexpire(
+                key,
+                expiry_seconds,
+                ExpireOption::NONE,
+                matches.iter().map(|x| x.match_id).collect_vec(),
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    async fn mark_ended(&self, match_ids: &[u64]) -> Result<()> {
+        let _: () = self.redis.clone().hdel(REDIS_SPEC_KEY, match_ids).await?;
+        Ok(())
+    }
+
+    async fn get_all_recently_spectated(
+        &self,
+        key: &str,
+    ) -> Result<HashMap<u64, SpectatedMatchInfo>> {
+        let members: Vec<String> = self.redis.clone().hvals(key).await?;
+        Ok(members
+            .into_iter()
+            .filter_map(|s| serde_json::from_str::<SpectatedMatchInfo>(&s).ok())
+            .map(|x| (x.match_id, x))
+            .collect())
+    }
+
+    fn find_gaps(
+        active_match_ids: &[u64],
+        recently_spectated: &HashMap<u64, SpectatedMatchInfo>,
+        failed_spectating: &HashMap<u64, SpectatedMatchInfo>,
+    ) -> Vec<u64> {
+        let Some((&min_id, &max_id)) = active_match_ids
+            .iter()
+            .min()
+            .zip(active_match_ids.iter().max())
+        else {
+            return vec![];
+        };
+
+        let span = max_id.saturating_sub(min_id);
+        #[expect(
+            clippy::cast_precision_loss,
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            reason = "a fraction in [0, 1] of the id span, which stays far below 2^53"
+        )]
+        let offset = (span as f64 * *GAP_PERCENTILE) as u64;
+        let start = min_id.saturating_add(offset).min(max_id);
+
+        let active_set: std::collections::HashSet<u64> = active_match_ids.iter().copied().collect();
+
+        // we prioritise from start to max first, then start to min
+        // cause the very old matches might be already over and result in KENotInGame Errors
+        (start..max_id)
+            .chain(min_id..start)
+            .filter(|x| !recently_spectated.contains_key(x))
+            .filter(|x| !failed_spectating.contains_key(x))
+            .filter(|x| !active_set.contains(x))
+            .take(MAX_GAP_SIZE)
+            .collect()
+    }
+
+    fn update_patch_version(&self, steam_inf: &str) -> Result<()> {
+        let version = steam_inf
+            .split_once("ClientVersion=")
+            .and_then(|(_, rest)| rest.split_once('\n'))
+            .and_then(|(v, _)| v.trim().parse::<u32>().ok())
+            .ok_or(SpectateBotError::ParseClientVersion)?;
+
+        if let Ok(mut current) = self.current_patch.lock() {
+            let overridden = env::var("CLIENT_VERSION").ok().and_then(|s| s.parse().ok());
+            *current = Some(overridden.unwrap_or(version));
+        }
+        Ok(())
+    }
+
+    #[tracing::instrument(skip(self), fields(account = field::Empty, ready_bots = field::Empty))]
+    #[expect(clippy::too_many_lines, reason = "one request flow from start to end")]
+    async fn spectate_match(
+        &self,
+        match_type: SpectatedMatchType,
+        match_id: u64,
+        lobby_id: Option<u64>,
+    ) -> Result<bool> {
+        let label = match_type.label();
+        if self.is_recently_spectated(REDIS_SPEC_KEY, match_id).await? {
+            debug!("[{label} {match_id}] Recently spectated, skipping");
+            return Ok(false);
+        }
+
+        let current_patch = self
+            .current_patch
+            .lock()
+            .map_err(|e| SpectateBotError::PatchMutexPoisoned(e.to_string()))?
+            .ok_or(SpectateBotError::NoPatchVersion)?;
+
+        let spectate_message = CMsgClientToGcSpectateLobby {
+            match_id: Some(match_id),
+            client_version: Some(current_patch),
+            client_platform: Some(EgcPlatform::KEGcPlatformPc as i32),
+            lobby_id,
+        };
+
+        let mut data = Vec::new();
+        spectate_message.encode(&mut data)?;
+
+        let response = self
+            .client
+            .post(&self.proxy_url)
+            .header("Authorization", format!("Bearer {}", self.api_token))
+            .json(&serde_json::json!({
+                "message_kind": EgcCitadelClientMessages::KEMsgClientToGcSpectateLobby as u32,
+                "bot_in_all_groups": ["SpectateLobby"],
+                "rate_limit_cooldown_millis": 2 * 24 * 60 * 60 * 1000 / 50,
+                "job_cooldown_millis": 24 * 60 * 60 * 1000 / 50,
+                "soft_cooldown_millis": 24 * 60 * 60 * 1000 / 50,
+                "data": BASE64_STANDARD.encode(data),
+            }))
+            .send()
+            .await?;
+
+        match response.status() {
+            StatusCode::OK => {
+                let body: InvokeResponse = response.json().await?;
+                let buf = BASE64_STANDARD.decode(body.data)?;
+                let spectate_response =
+                    CMsgClientToGcSpectateLobbyResponse::decode(buf.as_slice())?;
+
+                let Some(ref res) = spectate_response.result else {
+                    warn!("[{label} {match_id}] No result in response");
+                    self.mark_failed_locally(match_id);
+                    sleep(SPECTATE_COOLDOWN).await;
+                    return Ok(false);
+                };
+                let Some(broadcast_url) = res.client_broadcast_url.as_ref() else {
+                    warn!("[{label} {match_id}] No broadcast URL");
+                    self.mark_failed_locally(match_id);
+                    sleep(SPECTATE_COOLDOWN).await;
+                    return Ok(false);
+                };
+
+                let result = res.result();
+                let smi = SpectatedMatchInfo::new(
+                    match_type,
+                    match_id,
+                    broadcast_url.clone(),
+                    jiff::Timestamp::now(),
+                    None,
+                );
+                Span::current().record("account", &body.username);
+                Span::current().record("ready_bots", body.pool_limit_info.ready_bots);
+
+                let did_succeed = match result {
+                    EResponse::KESuccess => {
+                        info!(
+                            "[{label} {match_id}] Successfully spectated match, lobby id: {} {:?}",
+                            &res.lobby_id(),
+                            &result
+                        );
+                        debug!("[{match_id}] Response: {:?}", &spectate_response);
+                        self.mark_spectated(REDIS_SPEC_KEY, &smi).await?;
+                        self.mark_spectated_many(REDIS_EXTRA_KEY, &[smi], 60 * 60)
+                            .await?;
+                        true
+                    }
+                    EResponse::KENotInGame | EResponse::KEInvalidClientVersion => {
+                        warn!("[{label} {match_id}] Match not in game: {:?}", &result);
+                        self.mark_spectated(REDIS_FAILED_KEY, &smi).await?;
+                        false
+                    }
+                    EResponse::KERateLimited => {
+                        warn!(
+                            "[{label} {match_id}] Rate limited: {:?}, waiting 10s",
+                            &result
+                        );
+                        sleep(Duration::from_secs(10)).await;
+                        false
+                    }
+                    _ => {
+                        warn!(
+                            "[{label} {match_id}] Other failure in spectate: {:?}",
+                            &result
+                        );
+                        false
+                    }
+                };
+
+                sleep(SPECTATE_COOLDOWN).await;
+                Ok(did_succeed)
+            }
+
+            StatusCode::TOO_MANY_REQUESTS => {
+                warn!("Got proxy rate limit, waiting 10s before continuing");
+                sleep(Duration::from_secs(10)).await;
+
+                Ok(false)
+            }
+            _ => {
+                warn!(
+                    "[{label}] {match_id} Failed to spectate match: {:?}",
+                    response.status()
+                );
+                self.mark_failed_locally(match_id);
+                sleep(ERROR_COOLDOWN).await;
+                Ok(false)
+            }
+        }
+    }
+
+    #[expect(
+        clippy::too_many_lines,
+        reason = "the bot's main loop reads best in one piece"
+    )]
+    async fn run(&self, max_spectating_matches: Option<usize>) -> Result<()> {
+        let start_time = Instant::now();
+
+        let (abort_handle, steam_inf) = start_polling_text(
+            "https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf".to_owned(),
+            Duration::from_mins(5),
+        ).await?;
+        // Stops the poller however this run ends, including the early `?` returns.
+        let _poller = AbortOnDrop(abort_handle);
+
+        while start_time.elapsed() < Duration::from_secs(BOT_RUNTIME_HOURS * 3600) {
+            self.update_patch_version(&steam_inf.read().await)?;
+
+            let recently_spectated = self.get_all_recently_spectated(REDIS_SPEC_KEY).await?;
+            let n_spectated = recently_spectated.len();
+
+            if let Some(max_spectating_matches) = max_spectating_matches
+                && n_spectated > max_spectating_matches
+            {
+                info!("Maximum spectated matches reached ({n_spectated}), waiting...");
+                sleep(Duration::from_secs(5)).await;
+                continue;
+            }
+
+            let redis_failed_spectates = self.get_all_recently_spectated(REDIS_FAILED_KEY).await?;
+            let local_failed_spectates: std::collections::HashSet<u64> = self
+                .failed_spectates
+                .lock()
+                .map_or_default(|guard| guard.iter().map(|(k, _)| *k).collect());
+
+            let live_matches = crate::active_matches::fetch_active_matches_cached().await?;
+            let next_match = live_matches
+                .iter()
+                .filter(|x| {
+                    x.spectators.unwrap_or_default() == 0
+                        && !recently_spectated.contains_key(&x.match_id)
+                        && !redis_failed_spectates.contains_key(&x.match_id)
+                        && !local_failed_spectates.contains(&x.match_id)
+                })
+                .filter(|x| x.is_titan_exposed())
+                .min_by_key(|x| {
+                    (
+                        core::cmp::Reverse(x.match_score.unwrap_or_default() / 100),
+                        if x.is_titan_exposed() {
+                            0
+                        } else if x.is_shrine_exposed() {
+                            1
+                        } else {
+                            2
+                        },
+                        x.start_time,
+                    )
+                });
+
+            if let Some(m) = next_match {
+                info!(
+                    "Spectating active match {:?} (score: {:?})",
+                    m.lobby_id, m.match_score
+                );
+                if let Err(e) = self
+                    .spectate_match(SpectatedMatchType::ActiveMatch, m.match_id, m.lobby_id)
+                    .await
+                {
+                    error!("Failed to spectate match {}: {e:?}", m.match_id);
+                }
+            } else if *DISABLE_GAP_SPECTATING {
+                info!(
+                    "No eligible active matches; gap spectating disabled (spectated: {n_spectated})"
+                );
+                sleep(Duration::from_secs(10)).await;
+            } else {
+                let fifteen_min_ago = jiff::Timestamp::now()
+                    .checked_sub(15.minutes())?
+                    .as_second();
+                let fifty_min_ago = jiff::Timestamp::now()
+                    .checked_sub(50.minutes())?
+                    .as_second();
+
+                let match_ids: Vec<u64> = live_matches
+                    .iter()
+                    .filter(|x| {
+                        x.start_time
+                            .and_then(|x| i64::try_from(x).ok())
+                            .is_some_and(|x| x <= fifteen_min_ago && x > fifty_min_ago)
+                    })
+                    .map(|m| m.match_id)
+                    .sorted()
+                    .collect();
+
+                let gaps =
+                    Self::find_gaps(&match_ids, &recently_spectated, &redis_failed_spectates)
+                        .into_iter()
+                        .filter(|x| !local_failed_spectates.contains(x))
+                        .collect::<Vec<_>>();
+
+                if gaps.is_empty() {
+                    info!("No eligible matches or gaps found (spectated: {n_spectated})");
+                    sleep(Duration::from_secs(10)).await;
+                } else {
+                    info!(
+                        "No eligible matches found. Attempting to spectate {} gaps",
+                        gaps.len()
+                    );
+                    for gap_id in gaps.into_iter().take(10) {
+                        if let Err(e) = self
+                            .spectate_match(SpectatedMatchType::GapMatch, gap_id, None)
+                            .await
+                        {
+                            error!("Error spectating gap match {gap_id}: {:?}", e);
+                        }
+                    }
+                }
+            }
+        }
+
+        info!("Bot runtime exceeded, restarting in 30s...");
+        sleep(Duration::from_secs(30)).await;
+        Ok(())
+    }
+}
+/// Aborts the task when dropped.
+struct AbortOnDrop(tokio::task::AbortHandle);
+
+impl Drop for AbortOnDrop {
+    fn drop(&mut self) {
+        self.0.abort();
+    }
+}
+
+async fn run_server(bot: Arc<SpectatorBot>) -> std::io::Result<()> {
+    let app = Router::new()
+        .route("/matches", get(fetch_matches))
+        .route("/matches-past-hour", get(count_extra_matches))
+        .route("/match-ended", post(record_match_end))
+        .route("/match-still-alive", post(record_match_still_alive))
+        .with_state(bot);
+
+    // run our app with hyper, listening globally on port 3000
+    let listener = tokio::net::TcpListener::bind("0.0.0.0:3929").await?;
+    axum::serve(listener, app).await?;
+
+    Ok(())
+}
+
+async fn fetch_matches(
+    State(bot): State<Arc<SpectatorBot>>,
+) -> Result<Json<Vec<SpectatedMatchInfo>>, String> {
+    let matches = bot
+        .get_all_recently_spectated(REDIS_SPEC_KEY)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(Json(matches.into_values().collect()))
+}
+async fn count_extra_matches(State(bot): State<Arc<SpectatorBot>>) -> Result<String, String> {
+    let matches = bot
+        .get_all_recently_spectated(REDIS_EXTRA_KEY)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(matches.len().to_string())
+}
+
+#[derive(Serialize, Deserialize)]
+struct MatchEndReq {
+    match_id: u64,
+}
+
+async fn record_match_end(
+    State(bot): State<Arc<SpectatorBot>>,
+    Json(req): Json<MatchEndReq>,
+) -> Result<(), String> {
+    let match_id = req.match_id;
+
+    bot.mark_ended(&[match_id])
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+async fn record_match_still_alive(
+    State(bot): State<Arc<SpectatorBot>>,
+    Json(req): Json<MatchEndReq>,
+) -> Result<(), String> {
+    let match_id = req.match_id;
+
+    bot.update_spectated(REDIS_SPEC_KEY, match_id, REDIS_EXPIRY)
+        .await
+        .map_err(|e| e.to_string())?;
+
+    Ok(())
+}
+
+pub(crate) async fn run_bot(
+    proxy_url: String,
+    proxy_api_token: String,
+    max_spectating_matches: Option<usize>,
+) -> Result<()> {
+    let bot = Arc::new(SpectatorBot::try_new(proxy_url, proxy_api_token).await?);
+    let mut server = tokio::spawn(run_server(Arc::clone(&bot)));
+    let shutdown = service_utils::shutdown_token();
+
+    let bot_loop = async {
+        loop {
+            if let Err(e) = bot.run(max_spectating_matches).await {
+                error!("Bot error, restarting in 2 minutes: {:?}", e);
+                sleep(Duration::from_mins(2)).await;
+            }
+        }
+    };
+
+    // The scrapers depend on the HTTP server, so if it stops the process exits with an
+    // error (and gets restarted) instead of spectating matches nobody downloads.
+    tokio::select! {
+        () = bot_loop => Ok(()),
+        result = &mut server => match result {
+            Ok(Ok(())) => Err(SpectateBotError::ServerStopped),
+            Ok(Err(e)) => Err(SpectateBotError::ServerFailed(e)),
+            Err(e) => Err(SpectateBotError::ServerTask(e)),
+        },
+        () = shutdown.cancelled() => {
+            info!("Shutting down spectate bot");
+            server.abort();
+            Ok(())
+        }
+    }
+}

@@ -1,0 +1,1084 @@
+#![forbid(unsafe_code)]
+#![cfg_attr(
+    test,
+    allow(
+        clippy::arithmetic_side_effects,
+        clippy::disallowed_macros,
+        clippy::disallowed_methods,
+        clippy::expect_used,
+        clippy::indexing_slicing,
+        clippy::panic,
+        clippy::panic_in_result_fn,
+        clippy::print_stderr,
+        clippy::print_stdout,
+        clippy::string_slice,
+        clippy::unreachable,
+        clippy::unwrap_in_result,
+        clippy::unwrap_used,
+        reason = "tests may panic"
+    )
+)]
+
+use core::time::Duration;
+use std::collections::{HashMap, HashSet};
+use std::sync::{Arc, LazyLock, Mutex, OnceLock, PoisonError};
+
+use clap::Parser;
+use clickhouse::Client;
+use futures::StreamExt as _;
+use metrics::{counter, gauge};
+use models::{MatchCandidates, MatchSalts};
+use object_store::path::Path;
+use object_store::{ObjectStore, ObjectStoreExt as _, PutPayload};
+use tokio::time::sleep;
+use tokio_util::bytes::Bytes;
+use tracing::{debug, error, info, instrument, warn};
+
+mod models;
+
+#[derive(Debug, thiserror::Error)]
+enum Error {
+    #[error(transparent)]
+    Metrics(#[from] telemetry::MetricsError),
+    #[error(transparent)]
+    Env(#[from] std::env::VarError),
+    #[error(transparent)]
+    Client(#[from] db_clients::ClientError),
+    #[error("reading {path}")]
+    ReadMatchIds {
+        path: String,
+        #[source]
+        source: std::io::Error,
+    },
+    #[error("invalid match id {line:?}")]
+    InvalidMatchId {
+        line: String,
+        #[source]
+        source: core::num::ParseIntError,
+    },
+    #[error("No match ids found in {0}")]
+    NoMatchIds(String),
+    #[error("fetching salts for the requested match ids")]
+    FetchRequestedSalts(#[source] clickhouse::error::Error),
+    #[error("fetching the incremental match id bound")]
+    FetchIncrementalBound(#[source] clickhouse::error::Error),
+    #[error("fetching pending match salts")]
+    FetchPendingSalts(#[source] clickhouse::error::Error),
+    #[error("stamping salt verdicts")]
+    StampVerdicts(#[source] clickhouse::error::Error),
+    #[error("deleting superseded salt candidates")]
+    CollectGarbage(#[source] clickhouse::error::Error),
+}
+
+#[derive(Debug, thiserror::Error)]
+enum DownloadError {
+    #[error("checking for existing metadata")]
+    CheckExisting(#[source] object_store::Error),
+    #[error("fetching metadata for match {match_id}")]
+    FetchMetadata {
+        match_id: u64,
+        #[source]
+        source: FetchError,
+    },
+    #[error("uploading main metadata")]
+    UploadMain(#[source] object_store::Error),
+    #[error("uploading cached metadata")]
+    UploadCache(#[source] object_store::Error),
+    #[error("deleting outdated HLTV metadata (main)")]
+    DeleteHltvMain(#[source] object_store::Error),
+    #[error("deleting outdated HLTV metadata (cache)")]
+    DeleteHltvCache(#[source] object_store::Error),
+}
+
+#[derive(Debug, thiserror::Error)]
+enum FetchError {
+    #[error("every candidate salt failed")]
+    AllCandidatesFailed(#[source] reqwest::Error),
+    #[error("no candidate salts")]
+    NoCandidates,
+}
+
+/// Upper bound on matches downloaded per iteration. Without it a large backlog
+/// keeps a single iteration running for hours, during which matches that got
+/// salts in the meantime are never picked up.
+const BATCH_LIMIT: usize = 5_000;
+/// How much of [`BATCH_LIMIT`] a single iteration may spend on re-attempts. Fresh
+/// salts are claimed first and retries only fill what is left, but the backlog is
+/// far larger than one batch, so it also needs a cap of its own: without it every
+/// iteration would run the full 5 000 and stretch well past [`POLL_INTERVAL`],
+/// delaying the fresh salts that arrive in the meantime.
+const RETRY_BATCH_LIMIT: usize = 500;
+/// Each iteration opens with [`pending_salts_query`], which costs a fixed amount however little
+/// it finds. New candidates arrive at ~27/min against a [`BATCH_LIMIT`] of 5 000, so polling
+/// faster than this only re-pays that fixed cost to discover a few dozen matches.
+const POLL_INTERVAL: Duration = Duration::from_secs(120);
+/// The verdict columns are not in the `match_salts` key, so finding the open candidates scans
+/// the whole table (~27M rows, ~1 CPU-second) even though fresh salts almost always belong to
+/// recent matches. Between full scans, polls only look at matches started within
+/// [`INCREMENTAL_MAX_MATCH_AGE`], a `match_id` bound the key prunes on (~1M rows, ~0.1
+/// CPU-seconds). Older matches, which are mostly the retry backlog, wait for the next full
+/// scan; of their retry cooldowns only the first is shorter than this interval.
+const FULL_SCAN_INTERVAL: Duration = Duration::from_mins(10);
+const INCREMENTAL_MAX_MATCH_AGE: &str = "7 DAY";
+const ITERATION_BACKOFF: Duration = Duration::from_secs(5);
+/// Cooldown before the first re-attempt of a failed match; doubles per attempt
+/// up to [`RETRY_MAX_INTERVAL`].
+const RETRY_INITIAL_INTERVAL: Duration = Duration::from_mins(5);
+const RETRY_MAX_INTERVAL: Duration = Duration::from_hours(24);
+/// A large share of matches can never be fetched — Valve answers 502 for them
+/// indefinitely — and a failure alone stamps no verdict, so they would stay in the
+/// pending set forever. Retrying them without limit would burn most of the
+/// download capacity on matches that will never arrive, so they are parked after
+/// this many attempts, which the backoff spreads over roughly four days. A
+/// restart re-examines them, a slow enough cadence to still catch late arrivals.
+const MAX_ATTEMPTS: u32 = 12;
+/// A DELETE is a mutation that rewrites every part of `match_salts` (~80) whether or not it
+/// holds a superseded candidate: hourly, that was ~1 800 part rewrites and 11 GiB a day. Readers
+/// never depend on the losers being gone, so once a day is plenty.
+const GC_INTERVAL: Duration = Duration::from_hours(24);
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+const REQUEST_TIMEOUT: Duration = Duration::from_mins(1);
+
+static CONCURRENCY: LazyLock<usize> = LazyLock::new(|| {
+    Some(service_utils::env_or(
+        "MATCHDATA_DOWNLOADER_CONCURRENCY",
+        10,
+    ))
+    .filter(|c| *c > 0)
+    .unwrap_or(10)
+});
+
+/// One pooled client for the whole process. A fresh `reqwest::Client` per request
+/// rebuilds the connection pool and TLS config each time, and — more importantly —
+/// carries no timeout, so a stalled replay server can hold a concurrency slot
+/// forever.
+static HTTP_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+
+/// [`HTTP_CLIENT`], built on first use. Racing first calls may each build one; all but the
+/// first are dropped.
+fn http_client() -> reqwest::Result<&'static reqwest::Client> {
+    if let Some(client) = HTTP_CLIENT.get() {
+        return Ok(client);
+    }
+    let client = reqwest::Client::builder()
+        .connect_timeout(CONNECT_TIMEOUT)
+        .timeout(REQUEST_TIMEOUT)
+        .pool_max_idle_per_host(*CONCURRENCY)
+        .build()?;
+    Ok(HTTP_CLIENT.get_or_init(|| client))
+}
+
+/// Salts of 0 are placeholders that can never resolve to a replay URL.
+const VALID_SALTS: &str = "cluster_id > 0 AND metadata_salt > 0";
+
+/// Aggregated rather than read with `FINAL` so a verdict still hides its candidate while its
+/// part is unmerged.
+const UNRESOLVED: &str = "max(verified_at) IS NULL AND max(failed_at) IS NULL";
+
+/// Coalescing keeps the earliest `created_at`, so `min` is the value a verdict must repeat.
+const SALT_COLUMNS: &str = "
+    match_id,
+    cluster_id,
+    metadata_salt,
+    toUnixTimestamp(min(created_at)) AS created_at";
+
+const SALT_GROUPING: &str = "
+GROUP BY match_id, cluster_id, metadata_salt";
+
+/// Every candidate of every match whose salts have no verdict yet, newest first. There is
+/// deliberately no recency cut-off: a match that could not be downloaded within a couple of
+/// days must stay a candidate rather than silently disappear.
+///
+/// The verdict columns are the only "already fetched" signal. `match_player` must not be used
+/// for that: the HLTV scraper fills it too, and its metadata is exactly what a salt download
+/// is supposed to replace, so excluding matches with player rows would hide every HLTV match
+/// from the downloader forever.
+///
+/// A candidate can only come from a match that still has a row without a verdict, and those
+/// are a fraction of a percent of `match_salts`. `open_matches` collects them with a plain
+/// filter so the grouping (and its hash table of one group per match) only runs over that
+/// slice instead of the whole table; the `HAVING` still hides a candidate whose verdict sits
+/// in an unmerged row.
+///
+/// `min_match_id` is 0 for a full scan.
+fn pending_salts_query(min_match_id: u64) -> String {
+    format!(
+        "
+WITH open_matches AS (
+    SELECT match_id
+    FROM match_salts
+    WHERE match_id >= {min_match_id} AND {VALID_SALTS}
+        AND verified_at IS NULL AND failed_at IS NULL
+)
+SELECT {SALT_COLUMNS}
+FROM match_salts
+WHERE {VALID_SALTS} AND match_id IN open_matches
+{SALT_GROUPING}
+HAVING {UNRESOLVED}
+ORDER BY created_at DESC
+SETTINGS log_comment = 'matchdata_downloader_fetch_pending_salts'
+"
+    )
+}
+
+fn salts_by_id_query(match_ids: &[u64]) -> String {
+    let ids = match_ids
+        .iter()
+        .map(u64::to_string)
+        .collect::<Vec<_>>()
+        .join(",");
+    format!(
+        "
+SELECT {SALT_COLUMNS}
+FROM match_salts
+WHERE match_id IN ({ids}) AND {VALID_SALTS}
+{SALT_GROUPING}
+HAVING {UNRESOLVED}
+ORDER BY created_at DESC
+SETTINGS log_comment = 'matchdata_downloader_fetch_salts_by_id'
+"
+    )
+}
+
+/// Keeps the newest-first order of both the matches and the candidates within them.
+fn group_by_match(rows: Vec<MatchSalts>) -> Vec<MatchCandidates> {
+    let mut grouped: Vec<MatchCandidates> = Vec::new();
+    let mut position: HashMap<u64, usize> = HashMap::new();
+    for row in rows {
+        if let Some(group) = position
+            .get(&row.match_id)
+            .and_then(|&i| grouped.get_mut(i))
+        {
+            group.candidates.push(row);
+        } else {
+            position.insert(row.match_id, grouped.len());
+            grouped.push(MatchCandidates {
+                match_id: row.match_id,
+                candidates: vec![row],
+            });
+        }
+    }
+    grouped
+}
+
+#[derive(Parser)]
+#[command(about = "Deadlock match metadata downloader")]
+struct Cli {
+    /// Path to a file containing match IDs (one per line) to download once,
+    /// instead of running the pending-match poll loop.
+    #[arg(long)]
+    match_ids_file: Option<String>,
+}
+
+#[tokio::main]
+#[expect(
+    clippy::infinite_loop,
+    reason = "the service runs until run_until_shutdown drops the loop on a shutdown signal"
+)]
+async fn main() -> Result<(), Error> {
+    let _otel_guard = telemetry::init_tracing(env!("CARGO_PKG_NAME"));
+    telemetry::init_metrics()?;
+
+    let cli = Cli::parse();
+
+    let ch_client = db_clients::get_ch_client()?;
+    let store: Arc<dyn ObjectStore> = Arc::new(db_clients::get_store()?);
+    let cache_store: Arc<dyn ObjectStore> = Arc::new(db_clients::get_cache_store()?);
+
+    if let Some(ref file_path) = cli.match_ids_file {
+        return download_from_file(&ch_client, &store, &cache_store, file_path).await;
+    }
+
+    let state = State::new();
+    let mut scan = Scan::default();
+    let mut last_gc = tokio::time::Instant::now();
+    service_utils::run_until_shutdown(async move {
+        loop {
+            let started = tokio::time::Instant::now();
+            if let Err(e) = run_iteration(&ch_client, &store, &cache_store, &state, &mut scan).await
+            {
+                counter!("matchdata_downloader.iteration.failure").increment(1);
+                error!("Iteration failed: {}", service_utils::ErrorChain(&e));
+                sleep(ITERATION_BACKOFF).await;
+                continue;
+            }
+            if last_gc.elapsed() >= GC_INTERVAL {
+                last_gc = tokio::time::Instant::now();
+                if let Err(e) = collect_garbage(&ch_client).await {
+                    warn!(
+                        "Collecting superseded salt candidates failed: {}",
+                        service_utils::ErrorChain(&e)
+                    );
+                }
+            }
+            if let Some(remaining) = POLL_INTERVAL.checked_sub(started.elapsed()) {
+                sleep(remaining).await;
+            }
+        }
+    })
+    .await
+}
+
+async fn download_from_file(
+    ch_client: &Client,
+    store: &Arc<dyn ObjectStore>,
+    cache_store: &Arc<dyn ObjectStore>,
+    file_path: &str,
+) -> Result<(), Error> {
+    let content = tokio::fs::read_to_string(file_path)
+        .await
+        .map_err(|source| Error::ReadMatchIds {
+            path: file_path.to_owned(),
+            source,
+        })?;
+    let mut match_ids = content
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .map(|l| {
+            l.parse::<u64>().map_err(|source| Error::InvalidMatchId {
+                line: l.to_owned(),
+                source,
+            })
+        })
+        .collect::<Result<Vec<_>, _>>()?;
+    match_ids.sort_unstable();
+    match_ids.dedup();
+    if match_ids.is_empty() {
+        return Err(Error::NoMatchIds(file_path.to_owned()));
+    }
+
+    let salts = group_by_match(
+        ch_client
+            .query(&salts_by_id_query(&match_ids))
+            .fetch_all::<MatchSalts>()
+            .await
+            .map_err(Error::FetchRequestedSalts)?,
+    );
+    info!(
+        "Downloading {} of {} requested matches; {} have no usable salts",
+        salts.len(),
+        match_ids.len(),
+        match_ids.len().saturating_sub(salts.len()),
+    );
+
+    let results = process_batch(store.as_ref(), cache_store.as_ref(), &salts).await;
+    let failed = results.iter().filter(|(_, r)| r.is_err()).count();
+    let verdicts = Verdicts {
+        verified: results
+            .into_iter()
+            .filter_map(|(_, r)| r.ok().flatten())
+            .collect(),
+        failed: vec![],
+    };
+    stamp(ch_client, &verdicts).await?;
+    info!(
+        "Downloaded {} matches, {failed} failed",
+        salts.len().saturating_sub(failed)
+    );
+    Ok(())
+}
+
+/// Tracks when the last full scan of the pending set ran and the `match_id` bound polls use
+/// in between, see [`FULL_SCAN_INTERVAL`].
+#[derive(Default)]
+struct Scan {
+    last_full: Option<tokio::time::Instant>,
+    incremental_min_match_id: u64,
+}
+
+#[expect(
+    clippy::cast_precision_loss,
+    reason = "match counts stay far below 2^53"
+)]
+async fn run_iteration(
+    ch_client: &Client,
+    store: &Arc<dyn ObjectStore>,
+    cache_store: &Arc<dyn ObjectStore>,
+    state: &State,
+    scan: &mut Scan,
+) -> Result<(), Error> {
+    let full_scan = scan
+        .last_full
+        .is_none_or(|t| t.elapsed() >= FULL_SCAN_INTERVAL);
+    let min_match_id = if full_scan {
+        // Only a scan bound: if nothing qualifies, polls scan the whole table.
+        scan.incremental_min_match_id = clickhouse_utils::fetch_min_match_id_started_within(
+            ch_client,
+            INCREMENTAL_MAX_MATCH_AGE,
+            "matchdata_downloader_fetch_incremental_min_match_id",
+        )
+        .await
+        .map_err(Error::FetchIncrementalBound)?;
+        0
+    } else {
+        scan.incremental_min_match_id
+    };
+    info!(full_scan, min_match_id, "Fetching match ids to download");
+    let pending = group_by_match(
+        ch_client
+            .query(&pending_salts_query(min_match_id))
+            .fetch_all::<MatchSalts>()
+            .await
+            .map_err(Error::FetchPendingSalts)?,
+    );
+
+    // Only a full scan sees the whole pending set: an incremental one would report too few
+    // matches and drop the retry state of every match below its bound.
+    if full_scan {
+        scan.last_full = Some(tokio::time::Instant::now());
+        gauge!("matchdata_downloader.matches_to_download").set(pending.len() as f64);
+        state.prune(&pending.iter().map(|s| s.match_id).collect());
+    }
+    let (mut to_fetch, retries) = state.select_eligible(pending);
+    let eligible = to_fetch.len().saturating_add(retries.len());
+    gauge!("matchdata_downloader.matches_eligible_now").set(eligible as f64);
+    gauge!("matchdata_downloader.matches_retryable_now").set(retries.len() as f64);
+
+    if eligible == 0 {
+        info!("No matches eligible for download");
+        return Ok(());
+    }
+
+    // Fresh salts claim capacity first; retries only get what is left over.
+    to_fetch.truncate(BATCH_LIMIT);
+    let n_fresh = to_fetch.len();
+    let retry_budget = BATCH_LIMIT.saturating_sub(n_fresh).min(RETRY_BATCH_LIMIT);
+    to_fetch.extend(retries.into_iter().take(retry_budget));
+    info!(
+        "Downloading {} of {eligible} eligible matches ({n_fresh} fresh, {} retries, newest first)",
+        to_fetch.len(),
+        to_fetch.len().saturating_sub(n_fresh),
+    );
+
+    let results = process_batch(store.as_ref(), cache_store.as_ref(), &to_fetch).await;
+    stamp(ch_client, &handle_results(state, &to_fetch, results)).await?;
+    Ok(())
+}
+
+/// Each row repeats its candidate's sorting key, so coalescing folds the verdict onto that row
+/// rather than adding one. The column a row does not speak to stays NULL, which coalescing
+/// skips, so both verdicts fit in one statement.
+async fn stamp(ch_client: &Client, verdicts: &Verdicts) -> Result<(), Error> {
+    let row = |s: &MatchSalts, verified: &str, failed: &str| {
+        format!(
+            "({},{},{},toDateTime({}),{verified},{failed})",
+            s.match_id,
+            s.cluster_id.unwrap_or_default(),
+            s.metadata_salt.unwrap_or_default(),
+            s.created_at,
+        )
+    };
+    let values = verdicts
+        .verified
+        .iter()
+        .map(|s| row(s, "now()", "NULL"))
+        .chain(verdicts.failed.iter().map(|s| row(s, "NULL", "now()")))
+        .collect::<Vec<_>>();
+    if values.is_empty() {
+        return Ok(());
+    }
+    ch_client
+        .query(&format!(
+            "INSERT INTO match_salts \
+             (match_id, cluster_id, metadata_salt, created_at, verified_at, failed_at) \
+             VALUES {}",
+            values.join(",")
+        ))
+        .execute()
+        .await
+        .map_err(Error::StampVerdicts)?;
+    counter!("matchdata_downloader.salts_stamped", "verdict" => "verified")
+        .increment(verdicts.verified.len() as u64);
+    counter!("matchdata_downloader.salts_stamped", "verdict" => "failed")
+        .increment(verdicts.failed.len() as u64);
+    Ok(())
+}
+
+/// Drops candidates that lost to a verified sibling. Pure cleanup: readers already prefer the
+/// verified candidate, so a failure only warns.
+async fn collect_garbage(ch_client: &Client) -> Result<(), Error> {
+    ch_client
+        .query(
+            "DELETE FROM match_salts \
+             WHERE match_id IN (SELECT match_id FROM match_salts WHERE verified_at IS NOT NULL) \
+               AND (match_id, cluster_id, metadata_salt) NOT IN ( \
+                   SELECT match_id, cluster_id, metadata_salt \
+                   FROM match_salts WHERE verified_at IS NOT NULL)",
+        )
+        .execute()
+        .await
+        .map_err(Error::CollectGarbage)
+}
+
+/// Each result carries its own match id: [`futures::StreamExt::buffer_unordered`]
+/// yields in completion order, so the results cannot be zipped back onto `salts`
+/// by position.
+async fn process_batch<B, C>(
+    bucket: &B,
+    cache_bucket: &C,
+    salts: &[MatchCandidates],
+) -> Vec<(u64, Result<Option<MatchSalts>, DownloadError>)>
+where
+    B: ObjectStore + ?Sized,
+    C: ObjectStore + ?Sized,
+{
+    futures::stream::iter(salts.iter())
+        .map(|s| async move {
+            let r = download_match(bucket, cache_bucket, s).await;
+            match &r {
+                Ok(_) => gauge!("matchdata_downloader.matches_to_download").decrement(1),
+                Err(e) => error!(
+                    "Failed to download match {}: {}",
+                    s.match_id,
+                    service_utils::ErrorChain(e)
+                ),
+            }
+            (s.match_id, r)
+        })
+        .buffer_unordered(*CONCURRENCY)
+        .collect()
+        .await
+}
+
+#[derive(Default)]
+struct Verdicts {
+    verified: Vec<MatchSalts>,
+    failed: Vec<MatchSalts>,
+}
+
+/// A failure proves nothing until the attempt budget is spent, at which point every candidate
+/// is written off: each was tried on every attempt.
+fn handle_results(
+    state: &State,
+    batch: &[MatchCandidates],
+    results: Vec<(u64, Result<Option<MatchSalts>, DownloadError>)>,
+) -> Verdicts {
+    let by_id: HashMap<u64, &MatchCandidates> = batch.iter().map(|m| (m.match_id, m)).collect();
+    let mut verdicts = Verdicts::default();
+    for (match_id, result) in results {
+        match result {
+            Ok(winner) => {
+                state.mark_uploaded(match_id);
+                verdicts.verified.extend(winner);
+            }
+            Err(_) => {
+                if state.back_off(match_id) == GaveUp::Yes
+                    && let Some(m) = by_id.get(&match_id)
+                {
+                    verdicts.failed.extend(m.candidates.iter().cloned());
+                }
+            }
+        }
+    }
+    verdicts
+}
+
+/// Exponential cooldown, saturating at [`RETRY_MAX_INTERVAL`]. A replay server
+/// returning 502 is indistinguishable from one that never had the replay, so a
+/// match is only written off after [`MAX_ATTEMPTS`] spread over about four days.
+fn retry_delay(attempts: u32) -> Duration {
+    RETRY_INITIAL_INTERVAL
+        .saturating_mul(2u32.saturating_pow(attempts.saturating_sub(1).min(16)))
+        .min(RETRY_MAX_INTERVAL)
+}
+
+struct Attempt {
+    next: tokio::time::Instant,
+    count: u32,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+enum GaveUp {
+    Yes,
+    No,
+}
+
+/// Counts a failed attempt at `id` and schedules its retry; returns the attempts so far.
+fn record_attempt(failed: &mut HashMap<u64, Attempt>, id: u64) -> u32 {
+    let now = tokio::time::Instant::now();
+    let attempt = failed.entry(id).or_insert_with(|| Attempt {
+        next: now,
+        count: 0,
+    });
+    attempt.count = attempt.count.saturating_add(1);
+    // Cannot overflow: the delay is capped at `RETRY_MAX_INTERVAL`.
+    attempt.next = now.checked_add(retry_delay(attempt.count)).unwrap_or(now);
+    attempt.count
+}
+
+struct State {
+    /// Uploaded (or found already uploaded) without a verdict being stamped, e.g. the
+    /// file was already in the ingest prefix; the SQL query keeps returning these.
+    uploaded: Mutex<HashSet<u64>>,
+    failed: Mutex<HashMap<u64, Attempt>>,
+}
+
+impl State {
+    fn new() -> Self {
+        Self {
+            uploaded: Mutex::new(HashSet::new()),
+            failed: Mutex::new(HashMap::new()),
+        }
+    }
+
+    fn mark_uploaded(&self, id: u64) {
+        self.uploaded
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .insert(id);
+        self.failed
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .remove(&id);
+    }
+
+    fn back_off(&self, id: u64) -> GaveUp {
+        let count = record_attempt(
+            &mut self.failed.lock().unwrap_or_else(PoisonError::into_inner),
+            id,
+        );
+        if count == MAX_ATTEMPTS {
+            debug!("Giving up on match {id} after {MAX_ATTEMPTS} attempts");
+            counter!("matchdata_downloader.match.given_up").increment(1);
+            return GaveUp::Yes;
+        }
+        GaveUp::No
+    }
+
+    /// Drop entries for matches that have left the pending set — they are ingested
+    /// or their salts are gone — so the in-memory state cannot grow unboundedly.
+    fn prune(&self, valid: &HashSet<u64>) {
+        self.uploaded
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .retain(|id| valid.contains(id));
+        self.failed
+            .lock()
+            .unwrap_or_else(PoisonError::into_inner)
+            .retain(|id, _| valid.contains(id));
+    }
+
+    /// Splits the pending set into matches that were never attempted and those
+    /// whose retry cooldown has elapsed, so the caller can serve the fresh ones
+    /// first. Both keep the newest-first order of the query.
+    fn select_eligible(
+        &self,
+        pending: Vec<MatchCandidates>,
+    ) -> (Vec<MatchCandidates>, Vec<MatchCandidates>) {
+        let now = tokio::time::Instant::now();
+        let uploaded = self.uploaded.lock().unwrap_or_else(PoisonError::into_inner);
+        let failed = self.failed.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut fresh = Vec::new();
+        let mut retries = Vec::new();
+        for s in pending {
+            if uploaded.contains(&s.match_id) {
+                continue;
+            }
+            match failed.get(&s.match_id) {
+                None => fresh.push(s),
+                Some(a) if a.count < MAX_ATTEMPTS && now >= a.next => retries.push(s),
+                Some(_) => {}
+            }
+        }
+        drop(uploaded);
+        drop(failed);
+        (fresh, retries)
+    }
+}
+
+/// Returns the candidate that produced the file, or `None` when the metadata was already in
+/// the bucket and no candidate was exercised.
+#[instrument(skip(bucket, cache_bucket))]
+async fn download_match<B, C>(
+    bucket: &B,
+    cache_bucket: &C,
+    salts: &MatchCandidates,
+) -> Result<Option<MatchSalts>, DownloadError>
+where
+    B: ObjectStore + ?Sized,
+    C: ObjectStore + ?Sized,
+{
+    let main_key = main_metadata_key(salts.match_id);
+    let cache_key = cache_metadata_key(salts.match_id);
+    let processed_key = processed_metadata_key(salts.match_id);
+    let outdated_hltv_key = outdated_hltv_metadata_key(salts.match_id);
+    let outdated_cache_hltv_key = outdated_cache_hltv_metadata_key(salts.match_id);
+
+    // The ingest worker moves the file to `processed/`, so `ingest/` alone misses every match
+    // that was ingested before a restart emptied [`State::uploaded`].
+    let (in_ingest, in_processed) = tokio::try_join!(
+        key_exists(bucket, &main_key),
+        key_exists(bucket, &processed_key),
+    )
+    .map_err(DownloadError::CheckExisting)?;
+    if in_ingest || in_processed {
+        return Ok(None);
+    }
+
+    let (winner, bytes) = fetch_first_working(&salts.candidates)
+        .await
+        .map_err(|source| DownloadError::FetchMetadata {
+            match_id: salts.match_id,
+            source,
+        })?;
+
+    let (up_main, up_cache, del_main, del_cache) = tokio::join!(
+        upload_object(bucket, &main_key, bytes.clone()),
+        upload_object(cache_bucket, &cache_key, bytes),
+        delete_object(bucket, &outdated_hltv_key),
+        delete_object(cache_bucket, &outdated_cache_hltv_key),
+    );
+    up_main.map_err(DownloadError::UploadMain)?;
+    up_cache.map_err(DownloadError::UploadCache)?;
+    del_main.map_err(DownloadError::DeleteHltvMain)?;
+    del_cache.map_err(DownloadError::DeleteHltvCache)?;
+
+    info!("Match downloaded");
+    Ok(Some(winner))
+}
+
+/// Sequential rather than concurrent: all but one candidate are expected to be wrong, and a
+/// wrong salt still costs the replay server a request.
+async fn fetch_first_working(candidates: &[MatchSalts]) -> Result<(MatchSalts, Bytes), FetchError> {
+    let mut last_err = None;
+    for candidate in candidates {
+        match fetch_metadata(candidate).await {
+            Ok(bytes) => return Ok((candidate.clone(), bytes)),
+            Err(e) => last_err = Some(e),
+        }
+    }
+    Err(last_err.map_or(FetchError::NoCandidates, FetchError::AllCandidatesFailed))
+}
+
+fn main_metadata_key(match_id: u64) -> Path {
+    Path::from(format!("/ingest/metadata/{match_id}.meta.bz2"))
+}
+
+fn processed_metadata_key(match_id: u64) -> Path {
+    Path::from(format!("/processed/metadata/{match_id}.meta.bz2"))
+}
+
+fn cache_metadata_key(match_id: u64) -> Path {
+    Path::from(format!("{match_id}.meta.bz2"))
+}
+
+fn outdated_hltv_metadata_key(match_id: u64) -> Path {
+    Path::from(format!("/processed/metadata/{match_id}.meta_hltv.bz2"))
+}
+
+/// The cache is flat, so hltv-scraper's copy sits beside [`cache_metadata_key`].
+fn outdated_cache_hltv_metadata_key(match_id: u64) -> Path {
+    Path::from(format!("{match_id}.meta_hltv.bz2"))
+}
+
+fn metadata_url(salts: &MatchSalts) -> String {
+    format!(
+        "http://replay{}.valve.net/1422450/{}_{}.meta.bz2",
+        salts.cluster_id.unwrap_or_default(),
+        salts.match_id,
+        salts.metadata_salt.unwrap_or_default(),
+    )
+}
+
+async fn fetch_metadata(salts: &MatchSalts) -> reqwest::Result<Bytes> {
+    let url = metadata_url(salts);
+    let bytes = async {
+        http_client()?
+            .get(&url)
+            .send()
+            .await?
+            .error_for_status()?
+            .bytes()
+            .await
+    }
+    .await;
+    match bytes {
+        Ok(b) => {
+            counter!("matchdata_downloader.fetch_metadata.successful").increment(1);
+            debug!("Metadata fetched from {url}");
+            Ok(b)
+        }
+        Err(e) => {
+            counter!("matchdata_downloader.fetch_metadata.failure").increment(1);
+            debug!("Failed to fetch metadata from {url}: {e}");
+            Err(e)
+        }
+    }
+}
+
+#[instrument(skip(store, bytes))]
+async fn upload_object<S: ObjectStore + ?Sized>(
+    store: &S,
+    key: &Path,
+    bytes: Bytes,
+) -> object_store::Result<()> {
+    match store.put(key, PutPayload::from_bytes(bytes)).await {
+        Ok(_) => {
+            counter!("matchdata_downloader.upload_object.successful").increment(1);
+            debug!("Uploaded object");
+            Ok(())
+        }
+        Err(e) => {
+            counter!("matchdata_downloader.upload_object.failure").increment(1);
+            Err(e)
+        }
+    }
+}
+
+#[instrument(skip(store))]
+async fn delete_object<S: ObjectStore + ?Sized>(store: &S, key: &Path) -> object_store::Result<()> {
+    match store.delete(key).await {
+        Ok(()) => {
+            counter!("matchdata_downloader.delete_object.successful").increment(1);
+            debug!("Deleted object");
+            Ok(())
+        }
+        Err(object_store::Error::NotFound { .. }) => Ok(()),
+        Err(e) => {
+            counter!("matchdata_downloader.delete_object.failure").increment(1);
+            Err(e)
+        }
+    }
+}
+
+/// Only `NotFound` means missing: treating any failed `head` as missing would download and
+/// ingest the match again whenever the store hiccups.
+#[instrument(skip(store))]
+async fn key_exists<S: ObjectStore + ?Sized>(
+    store: &S,
+    file_path: &Path,
+) -> object_store::Result<bool> {
+    debug!("Checking if key exists");
+    match store.head(file_path).await {
+        Ok(_) => Ok(true),
+        Err(object_store::Error::NotFound { .. }) => Ok(false),
+        Err(e) => Err(e),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn candidate(match_id: u64, cluster_id: u32) -> MatchSalts {
+        MatchSalts {
+            match_id,
+            cluster_id: Some(cluster_id),
+            metadata_salt: Some(2),
+            created_at: 0,
+        }
+    }
+
+    fn salts(match_id: u64) -> MatchCandidates {
+        MatchCandidates {
+            match_id,
+            candidates: vec![candidate(match_id, 1)],
+        }
+    }
+
+    fn failure(match_id: u64) -> DownloadError {
+        DownloadError::FetchMetadata {
+            match_id,
+            source: FetchError::NoCandidates,
+        }
+    }
+
+    #[test]
+    fn candidates_of_one_match_are_grouped_without_disturbing_the_order() {
+        let grouped = group_by_match(vec![
+            candidate(40, 1),
+            candidate(20, 7),
+            candidate(40, 2),
+            candidate(10, 1),
+        ]);
+
+        assert_eq!(
+            grouped,
+            vec![
+                MatchCandidates {
+                    match_id: 40,
+                    candidates: vec![candidate(40, 1), candidate(40, 2)],
+                },
+                MatchCandidates {
+                    match_id: 20,
+                    candidates: vec![candidate(20, 7)],
+                },
+                MatchCandidates {
+                    match_id: 10,
+                    candidates: vec![candidate(10, 1)],
+                },
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn candidates_are_only_written_off_once_the_attempt_budget_is_spent() {
+        let state = State::new();
+        let batch = [MatchCandidates {
+            match_id: 1,
+            candidates: vec![candidate(1, 187), candidate(1, 390)],
+        }];
+        let fail = || vec![(1, Err(failure(1)))];
+
+        for _ in 1..MAX_ATTEMPTS {
+            assert_eq!(
+                handle_results(&state, &batch, fail()).failed,
+                Vec::<MatchSalts>::new()
+            );
+        }
+        let verdicts = handle_results(&state, &batch, fail());
+
+        assert_eq!(
+            verdicts.failed,
+            vec![candidate(1, 187), candidate(1, 390)],
+            "every candidate was tried on every attempt, so all of them are written off"
+        );
+    }
+
+    #[tokio::test]
+    async fn only_the_candidate_that_produced_the_file_is_verified() {
+        let state = State::new();
+        let batch = [MatchCandidates {
+            match_id: 1,
+            candidates: vec![candidate(1, 187), candidate(1, 390)],
+        }];
+
+        let verdicts = handle_results(&state, &batch, vec![(1, Ok(Some(candidate(1, 390))))]);
+
+        assert_eq!(verdicts.verified, vec![candidate(1, 390)]);
+        assert_eq!(verdicts.failed, Vec::<MatchSalts>::new());
+    }
+
+    /// After a restart [`State::uploaded`] is empty and the ingest worker has already moved
+    /// the file out of `ingest/`, so only `processed/` still shows it was downloaded.
+    #[tokio::test]
+    async fn a_match_already_moved_to_processed_is_not_downloaded_again() {
+        let bucket = object_store::memory::InMemory::new();
+        let cache_bucket = object_store::memory::InMemory::new();
+        bucket
+            .put(&processed_metadata_key(1), PutPayload::from_static(b"meta"))
+            .await
+            .unwrap();
+
+        let result = download_match(&bucket, &cache_bucket, &salts(1)).await;
+
+        assert!(matches!(result, Ok(None)), "{result:?}");
+    }
+
+    #[test]
+    fn retry_delay_backs_off_and_saturates() {
+        assert_eq!(retry_delay(1), RETRY_INITIAL_INTERVAL);
+        assert_eq!(retry_delay(2), RETRY_INITIAL_INTERVAL * 2);
+        assert_eq!(retry_delay(3), RETRY_INITIAL_INTERVAL * 4);
+        assert_eq!(retry_delay(u32::MAX), RETRY_MAX_INTERVAL);
+    }
+
+    #[tokio::test]
+    async fn a_failed_match_is_held_back_until_its_cooldown_elapses() {
+        let state = State::new();
+        state.back_off(1);
+
+        assert_eq!(state.select_eligible(vec![salts(1)]), (vec![], vec![]));
+        // The entry survives pruning, so the cooldown is not lost while the match
+        // is still pending, and it becomes eligible again once the delay elapses.
+        state.prune(&HashSet::from([1]));
+        assert_eq!(state.failed.lock().unwrap().len(), 1);
+        state.failed.lock().unwrap().get_mut(&1).unwrap().next = tokio::time::Instant::now();
+        assert_eq!(
+            state.select_eligible(vec![salts(1)]),
+            (vec![], vec![salts(1)])
+        );
+    }
+
+    #[tokio::test]
+    async fn a_match_that_never_arrives_is_parked_rather_than_retried_forever() {
+        let state = State::new();
+        for _ in 0..MAX_ATTEMPTS {
+            state.back_off(1);
+            state.failed.lock().unwrap().get_mut(&1).unwrap().next = tokio::time::Instant::now();
+        }
+
+        // Cooldown elapsed, but the attempt budget is spent, so it no longer
+        // competes for download slots with matches that can still arrive.
+        assert_eq!(state.select_eligible(vec![salts(1)]), (vec![], vec![]));
+    }
+
+    #[tokio::test]
+    async fn uploading_clears_the_cooldown_and_skips_the_match() {
+        let state = State::new();
+        state.back_off(1);
+        state.mark_uploaded(1);
+
+        assert!(state.failed.lock().unwrap().is_empty());
+        assert_eq!(state.select_eligible(vec![salts(1)]), (vec![], vec![]));
+    }
+
+    /// A backlog of retryable matches must never displace matches whose salts just
+    /// arrived: fresh ones are reported separately so they can claim capacity first.
+    #[tokio::test]
+    async fn fresh_matches_are_kept_separate_from_the_retry_backlog() {
+        let state = State::new();
+        for id in [20, 30] {
+            state.back_off(id);
+            state.failed.lock().unwrap().get_mut(&id).unwrap().next = tokio::time::Instant::now();
+        }
+
+        // Newest first, as the pending query returns them.
+        let (fresh, retries) =
+            state.select_eligible(vec![salts(40), salts(30), salts(20), salts(10)]);
+
+        assert_eq!(fresh, vec![salts(40), salts(10)]);
+        assert_eq!(retries, vec![salts(30), salts(20)]);
+    }
+
+    /// `buffer_unordered` completes fast failures before slow successes, so results
+    /// arrive in an order unrelated to the requested batch. Attributing them by
+    /// position marks failed matches as uploaded, which excludes them from every
+    /// later iteration because they never get a verdict.
+    #[tokio::test]
+    async fn results_are_attributed_by_match_id_not_by_position() {
+        let state = State::new();
+        let batch = [salts(10), salts(20), salts(30)];
+
+        handle_results(
+            &state,
+            &batch,
+            vec![
+                (30, Err(failure(30))),
+                (10, Ok(Some(candidate(10, 1)))),
+                (20, Err(failure(20))),
+            ],
+        );
+
+        assert_eq!(
+            *state.uploaded.lock().unwrap(),
+            HashSet::from([10]),
+            "only the match that actually succeeded may be marked uploaded"
+        );
+        let failed = state.failed.lock().unwrap();
+        assert!(failed.contains_key(&20) && failed.contains_key(&30));
+        drop(failed);
+
+        // The two failures stay candidates once their cooldown elapses.
+        for id in [20, 30] {
+            state.failed.lock().unwrap().get_mut(&id).unwrap().next = tokio::time::Instant::now();
+        }
+        assert_eq!(
+            state.select_eligible(batch.to_vec()),
+            (vec![], vec![salts(20), salts(30)])
+        );
+    }
+
+    #[tokio::test]
+    async fn state_is_dropped_once_a_match_leaves_the_pending_set() {
+        let state = State::new();
+        state.mark_uploaded(1);
+        state.back_off(2);
+
+        state.prune(&HashSet::new());
+
+        assert!(state.uploaded.lock().unwrap().is_empty());
+        assert!(state.failed.lock().unwrap().is_empty());
+    }
+}

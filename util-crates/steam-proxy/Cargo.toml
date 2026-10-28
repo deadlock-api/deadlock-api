@@ -1,0 +1,21 @@
+[package]
+name = "steam-proxy"
+version = "0.1.0"
+edition = "2024"
+description = "Request and response types of sv-proxy, and a client for it"
+
+[dependencies]
+base64 = { workspace = true }
+metrics = { workspace = true }
+prost = { workspace = true }
+reqwest = { workspace = true, features = ["json"] }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+valveprotos = { workspace = true, features = ["gc-client", "serde"] }
+
+[dev-dependencies]
+serde_json = { workspace = true }
+
+[lints]
+workspace = true

@@ -1,0 +1,100 @@
+services:
+  active-matches-scraper:
+    build:
+      context: ..
+      dockerfile: worker-crates/Dockerfile
+    command: ["active-matches-scraper"]
+    restart: always
+    env_file: .env
+
+  ingest-worker:
+    build:
+      context: ..
+      dockerfile: worker-crates/Dockerfile
+    command: ["ingest-worker"]
+    restart: always
+    env_file: .env
+    stop_grace_period: 30s
+
+  matchdata-downloader:
+    build:
+      context: ..
+      dockerfile: worker-crates/Dockerfile
+    command: ["matchdata-downloader"]
+    restart: always
+    env_file: .env
+    stop_grace_period: 30s
+
+  salt-scraper:
+    build:
+      context: ..
+      dockerfile: worker-crates/Dockerfile
+    command: ["salt-scraper"]
+    restart: always
+    environment:
+      RUST_LOG: debug
+    env_file: salt-scraper/.env
+
+  history-fetcher:
+    build:
+      context: ..
+      dockerfile: worker-crates/Dockerfile
+    command: ["history-fetcher"]
+    restart: always
+    env_file: .env
+    environment:
+      RUST_LOG: info
+
+  steam-profile-fetcher:
+    build:
+      context: ..
+      dockerfile: worker-crates/Dockerfile
+    command: ["steam-profile-fetcher"]
+    restart: always
+    env_file: .env
+
+  builds-fetcher:
+    build:
+      context: ..
+      dockerfile: worker-crates/Dockerfile
+    command: ["builds-fetcher"]
+    restart: always
+    env_file: .env
+    environment:
+      RUST_LOG: info
+
+  update-assets-tables:
+    build:
+      context: ..
+      dockerfile: worker-crates/Dockerfile
+    command: ["update-assets-tables"]
+    restart: always
+    env_file: .env
+    environment:
+      RUST_LOG: info
+
+  demo-analyzer:
+    build:
+      context: ..
+      dockerfile: worker-crates/Dockerfile
+    command: ["demo-analyzer"]
+    restart: always
+    env_file: .env
+
+  hltv-spectator:
+    build:
+      context: ..
+      dockerfile: worker-crates/Dockerfile
+    command: ["hltv-scraper", "run-spectate-bot"]
+    restart: always
+    env_file: .env
+
+  hltv-scraper:
+    build:
+      context: ..
+      dockerfile: worker-crates/Dockerfile
+    command: ["hltv-scraper", "scrape-hltv-matches"]
+    restart: always
+    env_file: .env
+    volumes:
+    - ./local-store:/matches

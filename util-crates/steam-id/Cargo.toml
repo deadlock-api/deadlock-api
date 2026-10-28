@@ -1,0 +1,8 @@
+[package]
+name = "steam-id"
+version = "0.1.0"
+edition = "2024"
+description = "Conversions between Steam account ids and SteamID64s"
+
+[lints]
+workspace = true

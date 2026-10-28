@@ -4,35 +4,23 @@ on:
   push:
     branches:
       - master
-    paths:
+    paths: &paths
       - 'website/**'
       - '.github/workflows/website-ci.yml'
       # The tracker demo ports its metric formulas (website/src/lib/tracker/player-metric-formulas.ts).
-      - 'api/src/routes/v1/analytics/player_stats_metrics.rs'
+      - 'api-crates/api/src/routes/v1/analytics/player_stats_metrics.rs'
       # The crosshair editor ports the renderer (website/src/lib/crosshair-render.ts), tested against its PNGs.
-      - 'api/src/services/crosshair/render.rs'
-      - 'api/src/services/crosshair/fixtures/**'
+      - 'api-crates/api/src/services/crosshair/render.rs'
+      - 'api-crates/api/src/services/crosshair/fixtures/**'
       # The wasm modules (website/wasm/*) build on valveprotos in the root cargo workspace.
-      - 'valveprotos/**'
+      - 'util-crates/valveprotos/**'
       - 'Cargo.toml'
       - 'Cargo.lock'
       - 'rust-toolchain.toml'
   pull_request:
     branches:
       - master
-    paths:
-      - 'website/**'
-      - '.github/workflows/website-ci.yml'
-      # The tracker demo ports its metric formulas (website/src/lib/tracker/player-metric-formulas.ts).
-      - 'api/src/routes/v1/analytics/player_stats_metrics.rs'
-      # The crosshair editor ports the renderer (website/src/lib/crosshair-render.ts), tested against its PNGs.
-      - 'api/src/services/crosshair/render.rs'
-      - 'api/src/services/crosshair/fixtures/**'
-      # The wasm modules (website/wasm/*) build on valveprotos in the root cargo workspace.
-      - 'valveprotos/**'
-      - 'Cargo.toml'
-      - 'Cargo.lock'
-      - 'rust-toolchain.toml'
+    paths: *paths
   workflow_dispatch:
 
 jobs:

@@ -4,7 +4,7 @@ import { test } from "node:test";
 
 import { PLAYER_METRIC_FORMULAS, type PlayerMetricRow, playerMetricsOf } from "./player-metric-formulas";
 
-const RUST = new URL("../../../../api/src/routes/v1/analytics/player_stats_metrics.rs", import.meta.url);
+const RUST = new URL("../../../../api-crates/api/src/routes/v1/analytics/player_stats_metrics.rs", import.meta.url);
 
 /** `Metric::get_select_clause`'s SQL per metric key, from the Rust source. */
 function rustFormulas(): Map<string, string> {

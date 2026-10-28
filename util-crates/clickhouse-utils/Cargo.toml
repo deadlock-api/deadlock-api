@@ -1,0 +1,21 @@
+[package]
+name = "clickhouse-utils"
+version = "0.1.0"
+edition = "2024"
+description = "ClickHouse inserts, a retrying batch inserter and match id bounds for the workers"
+
+[dependencies]
+clickhouse = { workspace = true }
+metrics = { workspace = true }
+service-utils = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time"] }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+
+[dev-dependencies]
+clickhouse = { workspace = true, features = ["test-util"] }
+serde = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time", "macros", "rt-multi-thread"] }
+
+[lints]
+workspace = true

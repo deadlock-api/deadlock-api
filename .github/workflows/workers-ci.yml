@@ -1,0 +1,138 @@
+name: Workers CI/CD
+
+env:
+  CARGO_TERM_COLOR: always
+  BASE_IMAGE: ghcr.io/${{ github.repository }}/tools-base
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+    paths: &paths
+      - 'worker-crates/**'
+      - 'util-crates/**'
+      - '.sqlx/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - '.cargo/**'
+      - 'rust-toolchain.toml'
+      - 'rustfmt.toml'
+      - 'clippy.toml'
+      - '_typos.toml'
+      - '.github/workflows/workers-ci.yml'
+      - '.github/workflows/rust-checks.yml'
+      - '.github/actions/setup-rust/**'
+  pull_request:
+    branches:
+      - master
+    paths: *paths
+
+permissions:
+  contents: read
+  packages: write
+  id-token: write
+
+concurrency:
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.ref }}
+
+jobs:
+  checks:
+    uses: ./.github/workflows/rust-checks.yml
+    with:
+      packages: >-
+        active-matches-scraper builds-fetcher demo-analyzer
+        history-fetcher hltv-scraper ingest-worker matchdata-downloader player-match-history salt-scraper
+        steam-profile-fetcher update-assets-tables
+      paths: worker-crates
+      typos-paths: worker-crates
+      cache-key: tools-build-cache
+
+  # One image holds every worker binary. It builds in parallel with the checks; the components'
+  # tags only move to it once those pass.
+  build-base:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Setup Docker Builder
+        uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2.2.0
+        with:
+          cache-key: deadlock-api/tools-base
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build Base Image
+        uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2.3.0
+        with:
+          # Build context is the repo root: the workers are members of the root cargo workspace.
+          context: .
+          file: worker-crates/Dockerfile
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.BASE_IMAGE }}:build-${{ github.sha }}
+
+  deploy:
+    name: Deploy
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    needs: [checks, build-base]
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/master'
+    env:
+      # Deployed components: each one pulls the base image under its own name.
+      COMPONENTS: >-
+        active-matches-scraper builds-fetcher demo-analyzer history-fetcher hltv-scraper
+        ingest-worker matchdata-downloader salt-scraper steam-profile-fetcher update-assets-tables
+      # Everything every worker builds on.
+      SHARED_PATHS: >-
+        util-crates/** .sqlx/** worker-crates/player-match-history/**
+        worker-crates/Dockerfile Cargo.toml Cargo.lock rust-toolchain.toml
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Generate path filters
+        id: filters
+        run: |
+          set -f # the paths are globs for the filter, not for the shell
+          {
+            echo 'yaml<<EOF'
+            for component in $COMPONENTS; do
+              echo "$component:"
+              for path in "worker-crates/$component/**" $SHARED_PATHS; do echo "  - '$path'"; done
+            done
+            echo 'EOF'
+          } >> "$GITHUB_OUTPUT"
+      - name: Filter changed components
+        id: changes
+        uses: dorny/paths-filter@ceb8a2b8f2d89434be7ff52d3de7ec3738c5cc9d # v4.0.3
+        with:
+          filters: ${{ steps.filters.outputs.yaml }}
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      # Re-tags on the registry, no image data moves. A manual run redeploys every component.
+      # `tools-base:latest` keeps pointing at the newest build for anyone pulling the base directly.
+      - name: Promote base image to changed components
+        env:
+          BUILD: ${{ env.BASE_IMAGE }}:build-${{ github.sha }}
+          CHANGES: ${{ steps.changes.outputs.changes }}
+          DISPATCH: ${{ github.event_name == 'workflow_dispatch' }}
+          IMAGE_PREFIX: ghcr.io/${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if [[ "$DISPATCH" == "true" ]]; then
+            components=$COMPONENTS
+          else
+            # The filter names of the changed components, as a JSON array of plain names.
+            components=$(tr -d '[]"' <<<"$CHANGES" | tr ',' ' ')
+          fi
+          docker buildx imagetools create -t "$BASE_IMAGE:latest" "$BUILD"
+          for component in $components; do
+            echo "Deploying $component"
+            docker buildx imagetools create -t "$IMAGE_PREFIX/$component:latest" "$BUILD"
+          done

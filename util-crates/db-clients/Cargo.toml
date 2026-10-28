@@ -1,0 +1,16 @@
+[package]
+name = "db-clients"
+version = "0.1.0"
+edition = "2024"
+description = "ClickHouse, Postgres, Redis and object store connections configured from the environment"
+
+[dependencies]
+clickhouse = { workspace = true }
+object_store = { workspace = true }
+redis = { workspace = true }
+sqlx = { workspace = true, features = ["macros", "postgres", "runtime-tokio", "time"] }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+[lints]
+workspace = true

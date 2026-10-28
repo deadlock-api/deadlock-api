@@ -29,7 +29,7 @@ const durationM = (row: PlayerMetricRow) => Math.max(1, row.duration_s) / 60;
 
 /**
  * The per-match values of the API's player-stats metrics, ported from `Metric::get_select_clause` in
- * `api/src/routes/v1/analytics/player_stats_metrics.rs` for the tracker demo, whose account the API does not know.
+ * `api-crates/api/src/routes/v1/analytics/player_stats_metrics.rs` for the tracker demo, whose account the API does not know.
  * Each keeps the SQL it ports, and `player-metric-formulas.test.ts` fails when the Rust one changes. The metrics over
  * columns the demo does not generate (neutral damage, max health, self and teammate healing, barriers, heal prevented,
  * buffs) and the deprecated aliases are left out.

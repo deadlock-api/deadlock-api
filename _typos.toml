@@ -1,0 +1,29 @@
+# Config for `typos`, run from the repo root over the crates' sources (see lefthook.yml and
+# .github/workflows/rust-checks.yml).
+
+[default.extend-identifiers]
+# Upstream game field names (sic).
+m_sModifer = "m_sModifer"
+m_strVAlue = "m_strVAlue"
+m_StrPropertyNAme = "m_StrPropertyNAme"
+m_VerticallRecoil = "m_VerticallRecoil"
+
+[default.extend-words]
+# Upstream game field names (sic).
+Modifer = "Modifer"
+VAlue = "VAlue"
+NAme = "NAme"
+Verticall = "Verticall"
+# Deliberate syntax error in an MCP query test.
+SELEC = "SELEC"
+
+[files]
+# Game files, test fixtures and snapshots keep upstream spellings, and so do the protos and the
+# demo parser ported from upstream.
+extend-exclude = [
+    "*_fixtures/",
+    "*_snapshots/",
+    "fixtures/",
+    "haste/",
+    "valveprotos/",
+]

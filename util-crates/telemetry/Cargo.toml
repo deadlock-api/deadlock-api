@@ -1,0 +1,23 @@
+[package]
+name = "telemetry"
+version = "0.1.0"
+edition = "2024"
+description = "Console logging, OTLP trace and log export, and the Prometheus endpoint of the services"
+
+[features]
+# Prometheus scrape endpoint for the `metrics` facade.
+prometheus = ["dep:metrics-exporter-prometheus", "dep:thiserror"]
+
+[dependencies]
+metrics-exporter-prometheus = { version = "0.18", optional = true }
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+opentelemetry-otlp = { workspace = true }
+opentelemetry-appender-tracing = { workspace = true, features = ["experimental_span_attributes"] }
+thiserror = { workspace = true, optional = true }
+tracing = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
+
+[lints]
+workspace = true

@@ -1,0 +1,65 @@
+name: Set up Rust
+description: >-
+  System packages, the Rust toolchain and build caches for a job that compiles the cargo workspace.
+
+inputs:
+  cache-key:
+    description: >-
+      Cache name. Jobs whose builds differ (clippy vs test profile, other packages) need their own,
+      or they evict each other's artifacts.
+    required: true
+  sticky-disks:
+    description: "Cache on Blacksmith sticky disks instead of rust-cache (Blacksmith runners only)."
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    # protoc for the valveprotos build script; clang and mold because .cargo/config.toml links with them.
+    - name: Install system dependencies
+      shell: bash
+      run: sudo apt-get update && sudo apt-get install -y protobuf-compiler libprotobuf-dev clang mold
+
+    # Blacksmith runners ship without Rust; GitHub's have rustup.
+    - name: Install Rust toolchain
+      shell: bash
+      run: |
+        if ! command -v rustup >/dev/null; then
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+        fi
+
+    # Blacksmith serves rust-cache from GitHub's backend at ~3.5 MB/s (4 min for 1 GB); sticky
+    # disks mount in seconds. Only master commits them, like rust-cache's save-if, so PR runs
+    # read master's disks without writing.
+    - name: Mount cargo registry
+      if: inputs.sticky-disks == 'true'
+      uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
+      with:
+        key: ${{ github.repository }}-cargo-registry
+        path: ~/.cargo/registry
+        commit: ${{ github.ref == 'refs/heads/master' && 'on-change' || 'false' }}
+    - name: Mount cargo git
+      if: inputs.sticky-disks == 'true'
+      uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
+      with:
+        key: ${{ github.repository }}-cargo-git
+        path: ~/.cargo/git
+        commit: ${{ github.ref == 'refs/heads/master' && 'on-change' || 'false' }}
+    - name: Mount target
+      if: inputs.sticky-disks == 'true'
+      uses: useblacksmith/stickydisk@3f6be1451e3cad893b778bc93495c80452a5da26 # v1.7.2
+      with:
+        key: ${{ github.repository }}-${{ inputs.cache-key }}-target
+        path: target
+        commit: ${{ github.ref == 'refs/heads/master' && 'on-change' || 'false' }}
+
+    - name: Cache Rust dependencies
+      if: inputs.sticky-disks != 'true'
+      uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      with:
+        shared-key: "${{ inputs.cache-key }}-${{ runner.os }}-${{ runner.arch }}"
+        # PR runs restore master's cache but don't save their own copy, so ref-scoped duplicates
+        # don't evict master's entries from the quota.
+        save-if: ${{ github.ref == 'refs/heads/master' }}

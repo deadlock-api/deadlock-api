@@ -1,0 +1,125 @@
+name: Rust Checks
+
+# Reusable checks for one component of the root cargo workspace. Cargo runs from the repo root,
+# scoped to the component with `packages`, so each component's workflow gates its own deploy.
+
+on:
+  workflow_call:
+    inputs:
+      packages:
+        description: "Space-separated cargo packages of the component (passed as -p)."
+        required: true
+        type: string
+      paths:
+        description: "Space-separated directories of the component, checked by cargo machete."
+        required: true
+        type: string
+      typos-paths:
+        description: "Space-separated directories to run typos on (empty: skip). Config: _typos.toml."
+        required: false
+        type: string
+        default: ""
+      test:
+        description: "Whether to run the packages' tests."
+        required: false
+        type: boolean
+        default: false
+      runs-on:
+        description: "Runner label for the jobs that compile. Blacksmith labels cache on sticky disks."
+        required: false
+        type: string
+        default: ubuntu-latest
+      cache-key:
+        description: "Build cache name of the component (sticky disk or rust-cache key)."
+        required: true
+        type: string
+      test-cache-key:
+        description: "Build cache name of the test job. Empty: <cache-key>-test."
+        required: false
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+  SQLX_OFFLINE: "true"
+
+jobs:
+  # Nothing here compiles, so one small job covers formatting, dependencies and spelling.
+  hygiene:
+    name: Format, Dependencies & Typos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup component add rustfmt
+      - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        with:
+          tool: cargo-machete
+      - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        if: inputs.typos-paths != ''
+        with:
+          tool: typos-cli
+      - name: Rustfmt
+        run: cargo fmt $(printf -- '-p %s ' ${{ inputs.packages }}) -- --check
+      - name: Machete
+        run: cargo machete ${{ inputs.paths }}
+      - name: Typos
+        if: inputs.typos-paths != ''
+        run: typos ${{ inputs.typos-paths }}
+
+  lint:
+    name: Clippy
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-rust
+        with:
+          cache-key: ${{ inputs.cache-key }}
+          sticky-disks: ${{ startsWith(inputs.runs-on, 'blacksmith') }}
+      - run: rustup component add clippy
+      - name: Clippy
+        run: cargo clippy $(printf -- '-p %s ' ${{ inputs.packages }}) --all-targets --all-features --locked -- -D warnings
+      # A sticky target dir is never pruned by rust-cache, so artifacts of old dependency versions
+      # pile up. Atime-based: relatime updates atime about daily, so anything a build used within
+      # the week survives.
+      - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        if: startsWith(inputs.runs-on, 'blacksmith') && github.ref == 'refs/heads/master'
+        with:
+          tool: cargo-sweep
+      - name: Prune target
+        if: startsWith(inputs.runs-on, 'blacksmith') && github.ref == 'refs/heads/master'
+        run: cargo sweep --time 7
+
+  test:
+    name: Test
+    if: inputs.test
+    timeout-minutes: 40
+    runs-on: ${{ inputs.runs-on }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup-rust
+        with:
+          # Own cache: the test profile's artifacts differ from clippy's.
+          cache-key: ${{ inputs.test-cache-key || format('{0}-test', inputs.cache-key) }}
+          sticky-disks: ${{ startsWith(inputs.runs-on, 'blacksmith') }}
+      - name: Tests
+        run: cargo test $(printf -- '-p %s ' ${{ inputs.packages }}) --all-features --locked
+        env:
+          # Read credentials for the R2 bucket holding versioned game assets (callers pass
+          # `secrets: inherit`). The API's integration tests validate hero/rank IDs against real
+          # data. R2_ENDPOINT is intentionally left unset so it defaults to the Cloudflare S3 API
+          # endpoint, which supports object listing.
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      - uses: taiki-e/cache-cargo-install-action@9ee83daaa7b96a6fab930949ecf1122bba04a389 # v3.0.8
+        if: startsWith(inputs.runs-on, 'blacksmith') && github.ref == 'refs/heads/master'
+        with:
+          tool: cargo-sweep
+      - name: Prune target
+        if: startsWith(inputs.runs-on, 'blacksmith') && github.ref == 'refs/heads/master'
+        run: cargo sweep --time 7

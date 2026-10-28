@@ -1,0 +1,15 @@
+[package]
+name = "assets-client"
+version = "0.1.0"
+edition = "2024"
+description = "Client for the hero and ranked season assets of api.deadlock-api.com"
+
+[dependencies]
+reqwest = { workspace = true, features = ["json"] }
+serde = { workspace = true }
+service-utils = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
+tracing = { workspace = true }
+
+[lints]
+workspace = true

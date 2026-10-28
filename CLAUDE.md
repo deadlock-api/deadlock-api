@@ -3,13 +3,21 @@
 Monorepo for the main game data Rust API and website of https://deadlock-api.com
 
 ```
-api/ # rust api, served in production at https://api.deadlock-api.com
-common/ # plumbing shared by api, tools and live-events (tracing, http, steam ids); feature-gated db clients and sv-proxy client
-tools/ # rust microservices for data ingestion and scraping
+api-crates/api/ # rust api, served in production at https://api.deadlock-api.com
+api-crates/rate-limit/ # generic sliding-window rate limiter (caller-defined scopes, per-request costs, Redis or in-memory store)
+worker-crates/ # rust microservices for data ingestion and scraping; migrations/ holds the clickhouse + postgres migrations
 live-events/ # rust service for live match event streaming
-rate-limit/ # generic sliding-window rate limiter (caller-defined scopes, per-request costs, Redis or in-memory store)
-valveprotos/ # rust protobuf bindings for steam/deadlock (formerly valveprotos-rs)
-haste/ # source 2 demo/broadcast parser (formerly deadlock-api/haste); crates/dungers* are its bitbuf/varint/charsor primitives (formerly deadlock-api/dungers)
+util-crates/ # libraries shared by the services:
+  telemetry/ # console logs + otlp export (all services); feature `prometheus` for the workers' scrape endpoint
+  service-utils/ # env config, graceful shutdown, retries with backoff, shared http clients
+  steam-id/ # account id <-> SteamID64
+  steam-proxy/ # sv-proxy request/response types and client
+  db-clients/ # clickhouse/postgres/redis/s3/file-cache connections from env, shared postgres queries
+  clickhouse-utils/ # inserts, retrying batch inserter, match id bounds for the workers
+  assets-client/ # heroes and ranked seasons from the public asset endpoints
+  keyvalues/ # parsers for valve's kv3 (.vdata) and localization text files, used by the api's asset endpoints
+  valveprotos/ # rust protobuf bindings for steam/deadlock (formerly valveprotos-rs)
+  haste/ # source 2 demo/broadcast parser (formerly deadlock-api/haste); crates/dungers* are its bitbuf/varint/charsor primitives (formerly deadlock-api/dungers)
 website/ # tanstack start website, using generated openapi SDKs hitting the api
 website/wasm/ # rust crates compiled to wasm for the website (hero build codes on valveprotos); abi/ is their shared ABI
 ```
@@ -30,7 +38,7 @@ a `reason`.
 
 ## Twin implementations
 
-The crosshair renderer exists twice, in Rust (`api/src/services/crosshair/render.rs`, used by the API) and as a
+The crosshair renderer exists twice, in Rust (`api-crates/api/src/services/crosshair/render.rs`, used by the API) and as a
 line-by-line TypeScript port (`website/src/lib/crosshair-render.ts`, used by the crosshair editor). A change to one must
 be made to the other in the same commit. The TypeScript test checks pixel parity against the Rust fixture PNGs.
 

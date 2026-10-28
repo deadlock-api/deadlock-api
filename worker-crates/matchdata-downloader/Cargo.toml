@@ -1,0 +1,25 @@
+[package]
+name = "matchdata-downloader"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+clap = { workspace = true }
+clickhouse = { workspace = true, features = ["time", "test-util"] }
+clickhouse-utils = { workspace = true }
+db-clients = { workspace = true }
+service-utils = { workspace = true }
+telemetry = { workspace = true, features = ["prometheus"] }
+futures = { workspace = true }
+metrics = { workspace = true }
+object_store = { workspace = true }
+reqwest = { workspace = true, features = ["stream"] }
+serde = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true, features = ["io"] }
+tracing = { workspace = true }
+
+
+[lints]
+workspace = true

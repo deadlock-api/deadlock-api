@@ -1,0 +1,27 @@
+[package]
+name = "steam-profile-fetcher"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+cached = { workspace = true, features = ["async"] }
+clickhouse = { workspace = true }
+clickhouse-utils = { workspace = true }
+db-clients = { workspace = true }
+service-utils = { workspace = true }
+steam-id = { workspace = true }
+telemetry = { workspace = true, features = ["prometheus"] }
+futures = { workspace = true }
+itertools = { workspace = true }
+metrics = { workspace = true }
+rand = { workspace = true }
+reqwest = { workspace = true, features = ["json"] }
+serde = { workspace = true }
+serde_repr = { workspace = true }
+sqlx = { workspace = true, features = ["macros", "postgres", "runtime-tokio"] }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+
+[lints]
+workspace = true
