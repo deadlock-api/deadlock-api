@@ -2,13 +2,17 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
 import { isWin } from "./compute";
 
-export interface CompanionRow {
-  accountId: number;
+/** Games and wins of the tracked player in a set of their matches. */
+export interface MatchTally {
   matches: number;
   wins: number;
-  lastPlayedUnix: number;
   /** Shared match IDs after intersecting the active history filters, without duplicates. */
   matchIds: number[];
+}
+
+export interface CompanionRow extends MatchTally {
+  accountId: number;
+  lastPlayedUnix: number;
 }
 
 export type CompanionSort = "matches" | "wins" | "winrate" | "lastPlayedUnix";

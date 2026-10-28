@@ -97,7 +97,7 @@ function PairsTable({
             </TableRowHeader>
             <TableCell className="text-end tabular-nums">
               <CompanionMatchesDialog
-                row={{ ...pair, accountId: pair.memberIds[0] }}
+                row={pair}
                 name={pair.memberIds.map(nameOf).join(" + ")}
                 relation="with"
                 entries={entries}

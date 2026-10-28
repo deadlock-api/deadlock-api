@@ -43,6 +43,7 @@ import { compareRecentMatches, RECENT_MATCH_WINDOWS } from "~/lib/tracker/overvi
 import { cn } from "~/lib/utils";
 
 import { CompanionsPanel } from "./CompanionsPanel";
+import { HeroMatchupsPanel } from "./HeroMatchupsPanel";
 import { HeroStatsTable } from "./HeroStatsTable";
 import { MatchStatsPanels } from "./MatchStatsPanels";
 import { PerformanceInsights } from "./PerformanceInsights";
@@ -291,6 +292,8 @@ export function OverviewTab({
         />
         <CompanionsPanel accountId={accountId} filters={filters} entries={sorted} onOpenMatch={onOpenMatch} />
       </div>
+
+      <HeroMatchupsPanel entries={sorted} onOpenMatch={onOpenMatch} />
 
       <div className="grid gap-2 @2xl/overview:grid-cols-2 @5xl/overview:grid-cols-3">
         <Panel className="@container/splits">

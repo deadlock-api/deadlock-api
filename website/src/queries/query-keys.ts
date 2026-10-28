@@ -142,6 +142,7 @@ export const queryKeys = {
     matchMetadata: (matchId: number, source: MatchMetadataSource = "any") =>
       ["api-tracker-match-metadata", matchId, source] as const,
     matchSummary: (matchId: number) => ["api-match-summary", matchId] as const,
+    matchTeams: (matchIds: readonly number[]) => ["api-tracker-match-teams", matchIds] as const,
     matchStats: (params: TrackerMatchStatsParams) => ["api-tracker-match-stats", params] as const,
     abilities: () => ["api-tracker-abilities"] as const,
     ingestStatus: (accountId: number) => ["api-player-ingest-status", accountId] as const,

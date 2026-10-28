@@ -16,7 +16,7 @@ import {
 } from "~/components/ui/dialog";
 import { InlineStat } from "~/components/ui/inline-stat";
 import { formatPercent } from "~/lib/format";
-import type { CompanionRow } from "~/lib/tracker/companions";
+import type { MatchTally } from "~/lib/tracker/companions";
 import { sortMatches } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
@@ -28,7 +28,7 @@ function SharedMatches({
   entries,
   onOpenMatch,
 }: {
-  row: CompanionRow;
+  row: MatchTally;
   entries: PlayerMatchHistoryEntry[];
   onOpenMatch: (matchId: number) => void;
 }) {
@@ -126,7 +126,10 @@ function SharedMatches({
   );
 }
 
-/** Makes a shared game count actionable without opening another player's patron-gated tracker. */
+/**
+ * Makes a shared game count actionable without opening another player's patron-gated tracker. `name` is who or which
+ * hero the matches were played with or against.
+ */
 export function CompanionMatchesDialog({
   row,
   name,
@@ -135,7 +138,7 @@ export function CompanionMatchesDialog({
   onOpenMatch,
   className,
 }: {
-  row: CompanionRow;
+  row: MatchTally;
   name: string;
   relation: "with" | "against";
   entries: PlayerMatchHistoryEntry[];

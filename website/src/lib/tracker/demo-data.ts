@@ -25,6 +25,7 @@ import type {
 import { combatStats } from "./combat-stats";
 import { badgeToLinear, isWin, linearToBadge } from "./compute";
 import { DEMO_ACCOUNT_ID, demoMatchId, demoMatchIndex } from "./demo";
+import type { MatchTeams } from "./hero-matchups";
 import { LANE_PHASE_END_S } from "./lane-matchup";
 import type { TrackerMatchStats } from "./match-stats";
 import { type PlayerMetricRow, playerMetricsOf } from "./player-metric-formulas";
@@ -527,6 +528,37 @@ function demoObjectives(rng: Rng, winningTeam: string, durationS: number): Track
 }
 
 /** Full details of one generated match, consistent with its row in `history`; null for an unknown match id. */
+/** The seeded generator of a match's details; its first draws pick the other heroes (`demoOtherHeroes`). */
+function demoMatchRng(matchId: number): Rng {
+  return mulberry32(demoMatchIndex(matchId) + 0x5eed);
+}
+
+/** The eleven other heroes of a match: five teammates, then six enemies. */
+function demoOtherHeroes(rng: Rng, entry: PlayerMatchHistoryEntry, heroes: readonly SlimHero[]): number[] {
+  return shuffled(
+    rng,
+    heroes.filter((hero) => isPlayableHero(hero) && hero.id !== entry.hero_id),
+  ).map((hero) => hero.id);
+}
+
+/** Each requested match's heroes by team, the same ones its generated details show. */
+export function demoMatchTeams(
+  matchIds: readonly number[],
+  history: readonly PlayerMatchHistoryEntry[],
+  heroes: readonly SlimHero[],
+): Record<number, MatchTeams> {
+  const requested = new Set(matchIds);
+  const teams: Record<number, MatchTeams> = {};
+  for (const entry of history) {
+    if (!requested.has(entry.match_id)) continue;
+    const others = demoOtherHeroes(demoMatchRng(entry.match_id), entry, heroes);
+    const own = [entry.hero_id, ...others.slice(0, 5)];
+    const enemy = others.slice(5, 11);
+    teams[entry.match_id] = entry.player_team === 0 ? [own, enemy] : [enemy, own];
+  }
+  return teams;
+}
+
 export function demoMatchMetadata(
   matchId: number,
   history: readonly PlayerMatchHistoryEntry[],
@@ -534,7 +566,7 @@ export function demoMatchMetadata(
 ): TrackerMatchMetadata | null {
   const entry = history.find((candidate) => candidate.match_id === matchId);
   if (!entry) return null;
-  const rng = mulberry32(demoMatchIndex(matchId) + 0x5eed);
+  const rng = demoMatchRng(matchId);
   const durationS = entry.match_duration_s;
   const minutes = durationS / 60;
   const laned = entry.game_mode === GAME_MODE_NORMAL;
@@ -545,14 +577,11 @@ export function demoMatchMetadata(
   const badge = entry.ranked_display_badge ?? demoRank(history).badge;
 
   const roster = matchRoster(matchId);
-  const otherHeroes = shuffled(
-    rng,
-    assets.heroes.filter((hero) => isPlayableHero(hero) && hero.id !== entry.hero_id),
-  );
+  const otherHeroes = demoOtherHeroes(rng, entry, assets.heroes);
   const seats = [
     { accountId: DEMO_ACCOUNT_ID, team: ownTeam, heroId: entry.hero_id },
-    ...roster.mates.map((accountId, i) => ({ accountId, team: ownTeam, heroId: otherHeroes[i]?.id ?? 0 })),
-    ...roster.enemies.map((accountId, i) => ({ accountId, team: enemyTeam, heroId: otherHeroes[5 + i]?.id ?? 0 })),
+    ...roster.mates.map((accountId, i) => ({ accountId, team: ownTeam, heroId: otherHeroes[i] ?? 0 })),
+    ...roster.enemies.map((accountId, i) => ({ accountId, team: enemyTeam, heroId: otherHeroes[5 + i] ?? 0 })),
   ];
 
   const kills = seats.map((seat, i) =>

@@ -12,6 +12,7 @@ import { graphql, isGraphqlRateLimited } from "~/lib/graphql";
 import { ensureCached } from "~/lib/prefetch-safe";
 import { combatStats, type CombatStats } from "~/lib/tracker/combat-stats";
 import { DEMO_ACCOUNT_ID, isDemoAccount, isDemoMatch } from "~/lib/tracker/demo";
+import { type MatchTeams, teamsByMatch } from "~/lib/tracker/hero-matchups";
 import {
   claimedMidBosses,
   destroyedObjectives,
@@ -476,6 +477,40 @@ export function matchSummaryQueryOptions(matchId: number) {
     },
     // A stored match never changes; a missing one may be sent in any time.
     staleTime: (query) => (query.state.data === null ? CACHE_DURATIONS.FIVE_MINUTES : CACHE_DURATIONS.FOREVER),
+  });
+}
+
+/**
+ * The heroes of each team in up to `MATCH_HEROES_CHUNK` matches. A match whose players are not stored yet is left out
+ * until the next fetch.
+ */
+export function trackerMatchTeamsQueryOptions(matchIds: readonly number[]) {
+  return queryOptions({
+    queryKey: queryKeys.players.matchTeams(matchIds),
+    queryFn: async ({ client }): Promise<Record<number, MatchTeams>> => {
+      if (matchIds.every(isDemoMatch)) {
+        const [{ demoMatchTeams }, history, heroes] = await Promise.all([
+          loadDemoData(),
+          demoHistory(client),
+          ensureCached(client, heroesQueryOptions),
+        ]);
+        return demoMatchTeams(matchIds, history, heroes);
+      }
+      const { match_players: rows } = await graphql.query({
+        match_players: {
+          __args: {
+            where: { match_id: { in: [...matchIds] } },
+            // Twelve players a match, and room for a re-ingested duplicate row.
+            limit: matchIds.length * 13,
+          },
+          match_id: true,
+          team: true,
+          hero_id: true,
+        },
+      });
+      return teamsByMatch(rows);
+    },
+    staleTime: CACHE_DURATIONS.ONE_HOUR,
   });
 }
 
