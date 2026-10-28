@@ -6,7 +6,7 @@
 //   node scripts/build-wasm.mjs [crate...]
 
 import { execFileSync } from "node:child_process";
-import { copyFileSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -19,7 +19,10 @@ const PROFILE = "wasm";
 /** The crate names of the wasm modules. */
 export function wasmModules() {
   return readdirSync(WASM_CRATES).flatMap((dir) => {
-    const manifest = readFileSync(join(WASM_CRATES, dir, "Cargo.toml"), "utf8");
+    // Skips what is not a crate, like the .DS_Store Finder leaves.
+    const manifestPath = join(WASM_CRATES, dir, "Cargo.toml");
+    if (!existsSync(manifestPath)) return [];
+    const manifest = readFileSync(manifestPath, "utf8");
     if (!/crate-type\s*=\s*\[[^\]]*"cdylib"/.test(manifest)) return [];
     const name = manifest.match(/^name\s*=\s*"([^"]+)"/m)?.[1];
     return name ? [name] : [];
