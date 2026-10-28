@@ -100,7 +100,7 @@ fn build_query(query: &RankDistributionQuery) -> String {
 }
 
 cached_ch_query! {
-    fn run_query(1_000, 3600) -> Vec<RankDistributionEntry>;
+    fn run_query(3600) -> Vec<RankDistributionEntry>;
 }
 
 #[utoipa::path(

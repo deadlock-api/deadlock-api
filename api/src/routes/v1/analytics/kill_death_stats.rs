@@ -216,7 +216,7 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
 }
 
 cached_ch_query! {
-    fn run_query(1_000, 3600) -> Vec<KillDeathStats>;
+    fn run_query(3600) -> Vec<KillDeathStats>;
 }
 
 async fn get_kill_death_stats(

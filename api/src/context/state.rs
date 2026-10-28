@@ -241,6 +241,8 @@ impl AppState {
         if let Some(path) = std::env::var_os("CH_CACHE_PATH") {
             ch_cache::disk::init(path.into());
         }
+        ch_cache::spawn_memory_metrics();
+        crate::services::process_memory::spawn();
 
         if !cfg!(debug_assertions) && std::env::var_os("COHORT_AGG_REFRESH_DISABLED").is_none() {
             debug!("Starting cohort agg refresh");

@@ -76,7 +76,7 @@ fn build_query(account_id: u32, query: &EnemyStatsQuery) -> String {
 cached_ch_query! {
     /// Short-lived and small: an account's roster changes with every new match, and entries carry
     /// per-match arrays that the LRU only evicts when it needs room.
-    fn run_query(100, 60) -> Vec<EnemyStats>;
+    fn run_query(60) -> Vec<EnemyStats>;
 }
 
 async fn get_enemy_stats(

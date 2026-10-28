@@ -390,7 +390,7 @@ SETTINGS log_comment = 'lane_matchup_stats', apply_patch_parts = 0, max_threads 
 }
 
 cached_ch_query! {
-    fn run_query(5_000, 3600) -> Vec<LaneMatchupStatsRow>;
+    fn run_query(3600) -> Vec<LaneMatchupStatsRow>;
 }
 
 fn to_response(row: &LaneMatchupStatsRow, requested: &[LaneStat]) -> LaneMatchupStats {

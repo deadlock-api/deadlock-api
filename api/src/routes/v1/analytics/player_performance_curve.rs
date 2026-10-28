@@ -543,7 +543,7 @@ async fn agg_days_built(
 }
 
 cached_ch_query! {
-    fn run_query(5_000, 3600) -> Vec<PlayerPerformanceCurvePoint>;
+    fn run_query(3600) -> Vec<PlayerPerformanceCurvePoint>;
 }
 
 async fn get_player_performance_curve(

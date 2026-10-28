@@ -157,7 +157,7 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
 }
 
 cached_ch_query! {
-    fn run_query(1_000, 3600) -> Vec<BadgeDistribution>;
+    fn run_query(3600) -> Vec<BadgeDistribution>;
 }
 
 async fn get_badge_distribution(

@@ -15,7 +15,6 @@ use std::path::{Path, PathBuf};
 use std::sync::{Arc, OnceLock};
 use std::time::SystemTime;
 
-use serde::Serialize;
 use serde::de::DeserializeOwned;
 use tokio::sync::Semaphore;
 use tokio_util::task::TaskTracker;
@@ -70,8 +69,9 @@ impl DiskTier {
         self.dir.join(cache).join(format!("{key:032x}"))
     }
 
-    /// The stored result of `key` and its deadline, if one is stored, unexpired and decodable.
-    pub(crate) async fn load<T>(&self, cache: &str, key: u128) -> Option<(T, SystemTime)>
+    /// The stored result of `key`, its deadline and its encoded size, if one is stored, unexpired
+    /// and decodable.
+    pub(crate) async fn load<T>(&self, cache: &str, key: u128) -> Option<(T, SystemTime, usize)>
     where
         T: DeserializeOwned + Send + 'static,
     {
@@ -94,12 +94,9 @@ impl DiskTier {
         entry
     }
 
-    /// Stores `value` as the result of `key` in the background. Dropped if too many writes are
-    /// in flight: the disk tier is an optimization.
-    pub(crate) fn store<T>(&self, cache: &str, key: u128, expires_at: SystemTime, value: Arc<T>)
-    where
-        T: Serialize + Send + Sync + 'static,
-    {
+    /// Stores `encoded` (a result as named `MessagePack`) as the result of `key` in the
+    /// background. Dropped if too many writes are in flight: the disk tier is an optimization.
+    pub(crate) fn store(&self, cache: &str, key: u128, expires_at: SystemTime, encoded: Vec<u8>) {
         let Ok(permit) = Arc::clone(&self.writes).try_acquire_owned() else {
             metrics::counter!("ch_cache_disk_writes", "result" => "dropped").increment(1);
             return;
@@ -107,7 +104,7 @@ impl DiskTier {
         let path = self.path(cache, key);
         self.tasks.spawn_blocking(move || {
             let _permit = permit;
-            let result = match write_entry(&path, expires_at, &*value) {
+            let result = match write_entry(&path, expires_at, &encoded) {
                 Ok(()) => "ok",
                 Err(e) => {
                     warn!("Failed to write query cache entry {path:?}: {e}");
@@ -168,8 +165,9 @@ fn invalid_data(e: impl core::error::Error + Send + Sync + 'static) -> std::io::
     std::io::Error::new(ErrorKind::InvalidData, e)
 }
 
-/// `Ok(None)` for an expired entry or one of another format version.
-fn read_entry<T: DeserializeOwned>(path: &Path) -> std::io::Result<Option<(T, SystemTime)>> {
+/// The entry, its deadline and its encoded size; `Ok(None)` for an expired entry or one of
+/// another format version.
+fn read_entry<T: DeserializeOwned>(path: &Path) -> std::io::Result<Option<(T, SystemTime, usize)>> {
     let mut file = std::fs::File::open(path)?;
     let mut header = [0; HEADER_LEN];
     file.read_exact(&mut header)?;
@@ -178,19 +176,14 @@ fn read_entry<T: DeserializeOwned>(path: &Path) -> std::io::Result<Option<(T, Sy
     };
     let bytes = zstd::decode_all(file)?;
     let value = rmp_serde::from_slice(&bytes).map_err(invalid_data)?;
-    Ok(Some((value, expires_at)))
+    Ok(Some((value, expires_at, bytes.len())))
 }
 
-fn write_entry<T: Serialize>(
-    path: &Path,
-    expires_at: SystemTime,
-    value: &T,
-) -> std::io::Result<()> {
+fn write_entry(path: &Path, expires_at: SystemTime, encoded: &[u8]) -> std::io::Result<()> {
     static TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
-    let encoded = rmp_serde::to_vec_named(value).map_err(invalid_data)?;
     let mut contents = header(expires_at).to_vec();
-    contents.extend(zstd::bulk::compress(&encoded, ZSTD_LEVEL)?);
+    contents.extend(zstd::bulk::compress(encoded, ZSTD_LEVEL)?);
 
     let dir = path
         .parent()
@@ -253,7 +246,13 @@ fn prune(dir: &Path, now: SystemTime) -> usize {
 
 #[cfg(test)]
 mod tests {
+    use serde::Serialize;
+
     use super::*;
+
+    fn write_value<T: Serialize>(path: &Path, expires_at: SystemTime, value: &T) {
+        write_entry(path, expires_at, &rmp_serde::to_vec_named(value).unwrap()).unwrap();
+    }
 
     fn in_secs(secs: u64) -> SystemTime {
         // Whole seconds, as the header stores them.
@@ -265,22 +264,24 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("cache").join("key");
         let expires_at = in_secs(60);
-        write_entry(&path, expires_at, &vec![(1u32, "a".to_owned())]).unwrap();
-        let (value, read_expires_at) = read_entry::<Vec<(u32, String)>>(&path).unwrap().unwrap();
-        assert_eq!(value, vec![(1, "a".to_owned())]);
+        let value = vec![(1u32, "a".to_owned())];
+        write_value(&path, expires_at, &value);
+        let (read, read_expires_at, encoded_len) =
+            read_entry::<Vec<(u32, String)>>(&path).unwrap().unwrap();
+        assert_eq!(read, value);
         assert_eq!(read_expires_at, expires_at);
+        assert_eq!(encoded_len, rmp_serde::to_vec_named(&value).unwrap().len());
     }
 
     #[test]
     fn expired_entries_read_as_none() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("cache").join("key");
-        write_entry(
+        write_value(
             &path,
             SystemTime::UNIX_EPOCH + Duration::from_secs(1),
             &1u32,
-        )
-        .unwrap();
+        );
         assert!(read_entry::<u32>(&path).unwrap().is_none());
     }
 
@@ -298,7 +299,7 @@ mod tests {
         }
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("cache").join("key");
-        write_entry(&path, in_secs(60), &vec![Old { wins: 1 }]).unwrap();
+        write_value(&path, in_secs(60), &vec![Old { wins: 1 }]);
         let err = read_entry::<Vec<New>>(&path).unwrap_err();
         assert_eq!(err.kind(), ErrorKind::InvalidData);
     }
@@ -307,8 +308,8 @@ mod tests {
     fn prune_removes_expired_foreign_and_stale_files_only() {
         let dir = tempfile::tempdir().unwrap();
         let cache = dir.path().join("cache");
-        write_entry(&cache.join("live"), in_secs(60), &1u32).unwrap();
-        write_entry(&cache.join("expired"), in_secs(0), &1u32).unwrap();
+        write_value(&cache.join("live"), in_secs(60), &1u32);
+        write_value(&cache.join("expired"), in_secs(0), &1u32);
         std::fs::write(cache.join("foreign"), [FORMAT_VERSION + 1; HEADER_LEN]).unwrap();
         std::fs::write(cache.join(".fresh.tmp"), b"partial").unwrap();
 
@@ -328,9 +329,10 @@ mod tests {
     async fn store_then_load() {
         let dir = tempfile::tempdir().unwrap();
         let tier = DiskTier::new(dir.path().to_owned());
-        tier.store("cache", 42, in_secs(60), Arc::new(vec![1u64, 2]));
+        let encoded = rmp_serde::to_vec_named(&vec![1u64, 2]).unwrap();
+        tier.store("cache", 42, in_secs(60), encoded);
         tier.flush().await;
-        let (value, _) = tier.load::<Vec<u64>>("cache", 42).await.unwrap();
+        let (value, _, _) = tier.load::<Vec<u64>>("cache", 42).await.unwrap();
         assert_eq!(value, vec![1, 2]);
         assert!(tier.load::<Vec<u64>>("cache", 43).await.is_none());
     }

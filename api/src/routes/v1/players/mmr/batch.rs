@@ -85,7 +85,7 @@ fn build_mmr_query_inner(
 }
 
 cached_ch_query! {
-    fn run_mmr_query(1_000, 60) -> Vec<MMRHistory>;
+    fn run_mmr_query(60) -> Vec<MMRHistory>;
 }
 
 /// Applies the MMR rate limits, then drops protected accounts and rejects an oversized batch.

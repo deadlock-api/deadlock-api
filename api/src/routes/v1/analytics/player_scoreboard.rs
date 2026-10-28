@@ -266,11 +266,11 @@ SETTINGS log_comment = 'player_scoreboard', apply_patch_parts = 0, do_not_merge_
 const PAGE_BLOCK_SIZE: u32 = 50_000;
 
 cached_ch_query! {
-    fn run_query(1_000, 3600) -> Vec<PlayerEntry>;
+    fn run_query(3600) -> Vec<PlayerEntry>;
 }
 
 cached_ch_query! {
-    fn run_block_query(100, 3600) -> Vec<PlayerEntry>;
+    fn run_block_query(3600) -> Vec<PlayerEntry>;
 }
 
 /// The block-aligned queries covering ranks `offset + 1..=offset + limit`: at most two, as

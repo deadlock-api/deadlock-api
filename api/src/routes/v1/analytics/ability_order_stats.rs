@@ -376,15 +376,15 @@ fn build_max_first_query(query: &AbilityOrderStatsQuery) -> String {
 const MAXED_UPGRADES: u32 = 4;
 
 cached_ch_query! {
-    fn run_query(5_000, 3600) -> Vec<AnalyticsAbilityOrderStats>;
+    fn run_query(3600) -> Vec<AnalyticsAbilityOrderStats>;
 }
 
 cached_ch_query! {
-    fn run_max_first_query(1_000, 3600) -> Vec<AnalyticsAbilityMaxFirstStats>;
+    fn run_max_first_query(3600) -> Vec<AnalyticsAbilityMaxFirstStats>;
 }
 
 cached_ch_query! {
-    fn run_tree_query(1_000, 3600) -> Vec<AnalyticsAbilityOrderTreeNode>;
+    fn run_tree_query(3600) -> Vec<AnalyticsAbilityOrderTreeNode>;
 }
 
 async fn get_ability_order_stats(

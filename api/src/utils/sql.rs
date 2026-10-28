@@ -115,7 +115,8 @@ pub(crate) fn query_cache_key(query_str: &str) -> u128 {
 }
 
 /// Declares an async fn `name(ch_client, query_str)` that runs a `ClickHouse` query and caches
-/// the result per query string for `ttl_secs`, keeping at most `max_size` results in memory.
+/// the result per query string for `ttl_secs`, in memory as far as the shared memory budget
+/// allows and on disk.
 ///
 /// The cache is a [`ChCache`](crate::services::ch_cache::ChCache): concurrent misses of one query
 /// share a single run, a miss reads the shared disk tier before querying `ClickHouse`, and a query
@@ -125,11 +126,11 @@ pub(crate) fn query_cache_key(query_str: &str) -> u128 {
 /// cache is named after the function's path, which keeps its disk entries across
 /// releases; renaming or moving the function starts it empty.
 ///
-/// `fn name(max_size, ttl_secs) -> Vec<Row>;` fetches all rows and returns them in an `Arc`, so a
-/// hit costs no deep clone. `fn name(max_size, ttl_secs) -> T = fetch;` caches whatever
+/// `fn name(ttl_secs) -> Vec<Row>;` fetches all rows and returns them in an `Arc`, so a
+/// hit costs no deep clone. `fn name(ttl_secs) -> T = fetch;` caches whatever
 /// `fetch(ch_client, query_str)` returns and returns a clone of it.
 macro_rules! cached_ch_query {
-    ($(#[$meta:meta])* $vis:vis fn $name:ident($size:literal, $ttl:literal) -> Vec<$row:ty>;) => {
+    ($(#[$meta:meta])* $vis:vis fn $name:ident($ttl:literal) -> Vec<$row:ty>;) => {
         $(#[$meta])*
         $vis async fn $name(
             ch_client: &::clickhouse::Client,
@@ -142,7 +143,6 @@ macro_rules! cached_ch_query {
                 ::std::sync::LazyLock::new(|| {
                     crate::services::ch_cache::ChCache::new(
                         concat!(module_path!(), "::", stringify!($name)),
-                        $size,
                         ::core::time::Duration::from_secs($ttl),
                     )
                 });
@@ -158,7 +158,7 @@ macro_rules! cached_ch_query {
                 .await
         }
     };
-    ($(#[$meta:meta])* $vis:vis fn $name:ident($size:literal, $ttl:literal) -> $ret:ty = $fetch:path;) => {
+    ($(#[$meta:meta])* $vis:vis fn $name:ident($ttl:literal) -> $ret:ty = $fetch:path;) => {
         $(#[$meta])*
         $vis async fn $name(
             ch_client: &::clickhouse::Client,
@@ -168,7 +168,6 @@ macro_rules! cached_ch_query {
                 ::std::sync::LazyLock::new(|| {
                     crate::services::ch_cache::ChCache::new(
                         concat!(module_path!(), "::", stringify!($name)),
-                        $size,
                         ::core::time::Duration::from_secs($ttl),
                     )
                 });
