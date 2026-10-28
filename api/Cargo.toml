@@ -1,5 +1,5 @@
 [package]
-name = "deadlock-api-rust"
+name = "deadlock-api"
 version = "0.1.0"
 edition = "2024"
 description = "API for Deadlock game data"

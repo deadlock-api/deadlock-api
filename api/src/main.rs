@@ -23,7 +23,7 @@ use core::net::{Ipv4Addr, SocketAddr};
 
 use axum::ServiceExt;
 use axum::extract::Request;
-use deadlock_api_rust::{ConsoleFields, StartupError, router};
+use deadlock_api::{ConsoleFields, StartupError, router};
 use mimalloc::MiMalloc;
 use tokio::signal::unix::{SignalKind, signal};
 use tracing::{error, info};
@@ -73,10 +73,10 @@ async fn shutdown_signal() {
     }
 
     info!("Shutdown signal received, draining for {DRAIN_DELAY:?} before stopping");
-    deadlock_api_rust::SHUTTING_DOWN.store(true, core::sync::atomic::Ordering::Relaxed);
+    deadlock_api::SHUTTING_DOWN.store(true, core::sync::atomic::Ordering::Relaxed);
     // Close long-lived streams (live SSE) right away so they don't hold connections open through
     // the drain and block graceful shutdown until the container is force-killed.
-    deadlock_api_rust::SHUTDOWN_TOKEN.cancel();
+    deadlock_api::SHUTDOWN_TOKEN.cancel();
     #[cfg(not(debug_assertions))]
     tokio::time::sleep(DRAIN_DELAY).await;
 }
@@ -102,6 +102,6 @@ async fn main() -> Result<(), StartupError> {
         .await?;
 
     info!("Server stopped, flushing background batchers");
-    deadlock_api_rust::shutdown_background_tasks(FINAL_FLUSH_TIMEOUT).await;
+    deadlock_api::shutdown_background_tasks(FINAL_FLUSH_TIMEOUT).await;
     Ok(())
 }

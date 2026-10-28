@@ -52,7 +52,7 @@ jobs:
     uses: ./.github/workflows/rust-checks.yml
     secrets: inherit
     with:
-      packages: deadlock-api-rust
+      packages: deadlock-api
       paths: api
       typos-paths: api
       test: true

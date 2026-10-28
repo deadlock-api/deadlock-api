@@ -13,7 +13,7 @@ with Source2Viewer-CLI (tested with 20.0) and run this script on the result:
     uv run scripts/extract_map_geometry.py \
         out/maps/dl_midtown/entities/default_ents.vents \
         > crates/game-assets/src/versions/map/city_never_sleeps.rs
-    cargo fmt -p deadlock-api-rust
+    cargo fmt -p deadlock-api
 
 Output (Rust statics, world coordinates):
 - `LANE_ORIGINS` / `LANES`: one `citadel_zipline_path` per lane, in `LANE_ORDER`

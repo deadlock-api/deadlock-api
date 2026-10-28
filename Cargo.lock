@@ -2846,7 +2846,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "deadlock-api-rust"
+name = "deadlock-api"
 version = "0.1.0"
 dependencies = [
  "ab_glyph",
