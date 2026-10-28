@@ -18,7 +18,7 @@ use valveprotos::deadlock::{
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::to_fetch::{queue_requested_matches, resolve_invalid_match};
+use crate::routes::v1::matches::to_fetch::{queue_requested_match, resolve_invalid_match};
 use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher, in_clause};
 use crate::services::rate_limiter::Quota;
@@ -277,19 +277,23 @@ pub(super) async fn fetch_match_salts(
         return Ok(salts.into());
     }
 
-    if disable_steam {
-        return Err(APIError::status_msg(
-            StatusCode::NOT_FOUND,
-            "Match salts not found in Clickhouse and Steam fallback is disabled",
-        ));
-    }
-
     let has_metadata = state
         .batchers
         .match_info_exists
         .load(match_id)
         .await
         .is_ok();
+
+    if disable_steam {
+        // Nobody fetches the match now: queue it so the to-fetch workers pick it up instead.
+        if !has_metadata {
+            queue_requested_match(state, match_id);
+        }
+        return Err(APIError::status_msg(
+            StatusCode::NOT_FOUND,
+            "Match salts not found in Clickhouse and Steam fallback is disabled",
+        ));
+    }
 
     if has_metadata {
         warn!("Blocking request for match salts for match {match_id} with metadata");
@@ -301,6 +305,7 @@ pub(super) async fn fetch_match_salts(
         ));
     }
 
+    // Rate limited: queue the match so the to-fetch workers pick it up instead.
     state
         .rate_limit_client
         .apply_limits(
@@ -312,7 +317,8 @@ pub(super) async fn fetch_match_salts(
                 Quota::global_limit(1500, Duration::from_hours(1)),
             ],
         )
-        .await?;
+        .await
+        .inspect_err(|_| queue_requested_match(state, match_id))?;
 
     // If not in Clickhouse, fetch from Steam
     let msg = CMsgClientToGcGetMatchMetaData {
@@ -346,8 +352,8 @@ pub(super) async fn fetch_match_salts(
         Ok(result) => result,
         Err(e) => {
             // No bot to spare: queue the match so the to-fetch workers pick it up instead.
-            if !is_custom && is_proxy_exhausted(&e) {
-                queue_requested_matches(state, &[match_id]).await;
+            if is_proxy_exhausted(&e) {
+                queue_requested_match(state, match_id);
             }
             return Err(e.into());
         }

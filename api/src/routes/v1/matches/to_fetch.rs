@@ -9,7 +9,6 @@ use axum::response::{IntoResponse, Response};
 use axum_extra::extract::Query;
 use cached::macros::cached;
 use clickhouse::Row;
-use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use tracing::{debug, warn};
@@ -17,6 +16,7 @@ use uuid::Uuid;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::clickhouse_batcher::{BatchQuery, ClickhouseBatcher};
 use crate::services::clickhouse_insert_batcher::{BatchInsert, ClickhouseInsertBatcher};
 use crate::services::lease::RELEASE_IF_OWNED;
 use crate::utils::parse::parse_steam_id_option;
@@ -103,8 +103,8 @@ async fn newest_match_id(ch_client: &clickhouse::Client) -> clickhouse::error::R
         .await
 }
 
-/// Whether `match_id` is one `pending_matches` tracks: not too old, not a custom match, and
-/// not newer than any match seen being played.
+/// Whether `match_id` is one `pending_matches` tracks: not too old and not newer than
+/// any match seen being played.
 async fn is_trackable(state: &AppState, match_id: u64) -> bool {
     if match_id < MIN_MATCH_ID {
         return false;
@@ -122,51 +122,60 @@ async fn is_trackable(state: &AppState, match_id: u64) -> bool {
 /// Every 1000 ids since `MIN_MATCH_ID` hold one, except the newest, not fetched yet.
 const START_TIME_ID_WINDOW: u64 = 1000;
 
-fn start_times_query(match_ids: &[u64]) -> String {
-    let ids = id_list(match_ids);
-    let ranges = match_ids
-        .iter()
-        .map(|id| {
-            format!(
-                "match_id BETWEEN {} AND {id}",
-                id.saturating_sub(START_TIME_ID_WINDOW)
-            )
-        })
-        .join(" OR ");
-    format!(
-        "SELECT toUInt64(requested), toUnixTimestamp(argMax(start_time, match_id)) \
-         FROM match_player \
-         ARRAY JOIN arrayFilter(r -> match_id BETWEEN r - {START_TIME_ID_WINDOW} AND r, [{ids}]) \
-             AS requested \
-         WHERE {ranges} \
-         GROUP BY requested \
-         SETTINGS log_comment = 'requested_matches_start_times'"
-    )
+#[derive(Debug, Clone, Row, Deserialize)]
+pub(crate) struct EstimatedStartTimeRow {
+    requested_id: u64,
+    estimated_start: u32,
 }
 
-/// Rough start times of `match_ids`: that of the closest lower match with metadata, as match
-/// ids grow with start time. Ids without one in reach are the newest matches, so they get now.
-async fn estimate_start_times(
-    ch_client: &clickhouse::Client,
-    match_ids: &[u64],
-) -> HashMap<u64, u32> {
-    let now = u32::try_from(chrono::Utc::now().timestamp()).unwrap_or(u32::MAX);
-    let mut start_times: HashMap<u64, u32> = match ch_client
-        .query(&start_times_query(match_ids))
-        .fetch_all::<(u64, u32)>()
-        .await
-    {
-        Ok(rows) => rows.into_iter().collect(),
-        Err(e) => {
-            warn!("Failed to estimate start times of requested matches: {e}");
-            HashMap::new()
-        }
-    };
-    for &match_id in match_ids {
-        start_times.entry(match_id).or_insert(now);
+/// Rough start times of requested matches: that of the closest lower match with metadata, as
+/// match ids grow with start time. Ids without one in reach are the newest matches, missing
+/// from the result.
+pub(crate) struct EstimatedStartTimeQuery;
+
+impl BatchQuery for EstimatedStartTimeQuery {
+    type Key = u64;
+    type Value = EstimatedStartTimeRow;
+
+    /// The id windows are read through an `IN` set rather than an `OR` of one range per id:
+    /// key analysis of such an `OR` walks every mark of every part, ~10 ms per id, while the
+    /// set is looked up by binary search. A batch of 200 ids costs ~1 CPU-second, a fifth of
+    /// what single-id queries cost per id.
+    fn build_query(keys: &[u64]) -> String {
+        let ids = id_list(keys);
+        format!(
+            "SELECT toUInt64(requested) AS requested_id, \
+                    toUnixTimestamp(argMax(st, match_id)) AS estimated_start \
+             FROM ( \
+                 SELECT match_id, any(start_time) AS st FROM match_player \
+                 WHERE match_id IN ( \
+                     SELECT arrayJoin(range(toUInt64(r - {START_TIME_ID_WINDOW}), \
+                                            toUInt64(r + 1))) \
+                     FROM (SELECT arrayJoin(CAST([{ids}], 'Array(UInt64)')) AS r)) \
+                 GROUP BY match_id) \
+             ARRAY JOIN arrayFilter(r -> match_id BETWEEN r - {START_TIME_ID_WINDOW} AND r, \
+                                    [{ids}]) AS requested \
+             GROUP BY requested \
+             SETTINGS log_comment = 'requested_matches_start_times'"
+        )
     }
-    start_times
+
+    fn key_of(value: &EstimatedStartTimeRow) -> u64 {
+        value.requested_id
+    }
+
+    /// Requests are queued off the request path, so waiting costs nothing and every id a
+    /// batch adds is ~5x cheaper than a query of its own.
+    fn linger_ms() -> u64 {
+        5_000
+    }
+
+    fn max_batch_size() -> usize {
+        200
+    }
 }
+
+pub(crate) type EstimatedStartTimeBatcher = ClickhouseBatcher<EstimatedStartTimeQuery>;
 
 /// Queues matches the API was asked for but could not fetch. Ids `pending_matches` doesn't
 /// track are dropped, so a made-up id never enters the to-fetch pool.
@@ -180,18 +189,35 @@ pub(crate) async fn queue_requested_matches(state: &AppState, match_ids: &[u64])
     if trackable.is_empty() {
         return;
     }
-    let start_times = estimate_start_times(&state.ch_client_ro, &trackable).await;
+    let start_times: HashMap<u64, u32> = match state
+        .batchers
+        .estimated_start_time
+        .load_many(&trackable)
+        .await
+    {
+        Ok(rows) => rows
+            .into_iter()
+            .map(|r| (r.requested_id, r.estimated_start))
+            .collect(),
+        Err(e) => {
+            warn!("Failed to estimate start times of requested matches: {e}");
+            HashMap::new()
+        }
+    };
+    let now = u32::try_from(chrono::Utc::now().timestamp()).unwrap_or(u32::MAX);
     let rows = trackable
         .into_iter()
-        // `estimate_start_times` has an entry for every id.
-        .filter_map(|match_id| {
-            Some(PendingMatchRow::requested(
-                match_id,
-                *start_times.get(&match_id)?,
-            ))
+        .map(|match_id| {
+            PendingMatchRow::requested(match_id, start_times.get(&match_id).copied().unwrap_or(now))
         })
         .collect();
     state.batchers.pending_match_insert.insert(rows).await;
+}
+
+/// [`queue_requested_matches`] for one match, off the request path.
+pub(crate) fn queue_requested_match(state: &AppState, match_id: u64) {
+    let state = state.clone();
+    tokio::spawn(async move { queue_requested_matches(&state, &[match_id]).await });
 }
 
 /// Queues a match whose live URL was just requested, so it is fetched once it ended. Its start
@@ -626,13 +652,10 @@ mod tests {
     }
 
     #[test]
-    fn start_times_query_is_valid_sql() {
-        let sql = start_times_query(&[31_307_609, 70_156_416]);
+    fn estimated_start_time_query_is_valid_sql() {
+        let sql = EstimatedStartTimeQuery::build_query(&[31_307_609, 70_156_416]);
         assert_valid_sql(&sql);
         // An id literal that fits UInt32 is typed UInt32, which the u64 row type rejects.
-        assert!(sql.starts_with("SELECT toUInt64(requested),"));
-        assert!(sql.contains(
-            "WHERE match_id BETWEEN 31306609 AND 31307609 OR match_id BETWEEN 70155416 AND 70156416"
-        ));
+        assert!(sql.starts_with("SELECT toUInt64(requested) AS requested_id,"));
     }
 }
