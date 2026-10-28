@@ -7,10 +7,15 @@ use redis::{ErrorKind, RedisError, RedisResult, Script};
 
 use super::{Charge, Store, Usage};
 
+/// Namespaces the keys by the format of their members, so logs written in another format (an older
+/// version, or another replica mid-deploy) are never read; bump it when `charge.lua` changes it.
+const KEY_PREFIX: &str = "rate-limit:v2:";
+
 /// Hashed once; invoking it sends the hash and only falls back to the source after a restart.
 static SCRIPT: LazyLock<Script> = LazyLock::new(|| Script::new(include_str!("charge.lua")));
 
-/// Keeps each key's requests in a Redis sorted set, so all replicas share the counts.
+/// Keeps each key's requests in a Redis sorted set under [`KEY_PREFIX`], so all replicas share the
+/// counts.
 ///
 /// A charge is one atomic script call, so concurrent requests cannot interleave; the counts assume
 /// the replicas' clocks agree.
@@ -51,12 +56,12 @@ impl Store for RedisStore {
             .arg(charge.if_admitted.len());
         for log in charge.always.iter().chain(charge.if_admitted) {
             invocation
-                .key(log.key)
+                .key(format!("{KEY_PREFIX}{}", log.key))
                 .arg(saturating_micros(log.retention));
         }
         for window in charge.windows {
             invocation
-                .key(window.key)
+                .key(format!("{KEY_PREFIX}{}", window.key))
                 .arg(charge.now.checked_sub(window.period).map_or(0, micros))
                 .arg(window.limit);
         }
@@ -102,6 +107,16 @@ mod tests {
                 .unwrap()
                 .as_nanos()
         );
+        // A log in the previous format (members are timestamps) under the unprefixed name, inside
+        // the first window the checks read, must not be read.
+        let legacy = format!("{prefix}:own");
+        let _: () = redis::cmd("ZADD")
+            .arg(&legacy)
+            .arg(1_699_999_999_000_000_i64)
+            .arg("1699999999000000")
+            .query_async(&mut connection.clone())
+            .await
+            .unwrap();
         super::super::conformance::check(&RedisStore::new(connection), &prefix).await;
     }
 }
