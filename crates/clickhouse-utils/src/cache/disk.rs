@@ -1,24 +1,24 @@
-//! The disk tier of the query caches: one file per cached result, in a directory shared by all
-//! API instances (`CH_CACHE_PATH`, a Docker volume mounted into each).
+//! The disk tier of the query caches: one file per cached result, in a directory that may be
+//! shared by several processes (for the API, a Docker volume mounted into each instance).
 //!
 //! A file is `<dir>/<cache name>/<key as 32 hex digits>`: a header of the format version and the
 //! entry's deadline (Unix seconds, little endian), then the result as named `MessagePack`,
 //! zstd-compressed. Named fields make a result whose row type changed between releases fail to
 //! decode (a miss) instead of being misread. Files are written to a temporary name and renamed,
-//! so readers on any instance only see complete files. Expired files are deleted by a pruner on
-//! every instance; races between them are harmless.
+//! so readers in any process only see complete files. Expired files are deleted by a pruner in
+//! every process; races between them are harmless.
 
 use core::sync::atomic::{AtomicU64, Ordering};
 use core::time::Duration;
 use std::io::{ErrorKind, Read as _};
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 use std::time::SystemTime;
 
 use serde::de::DeserializeOwned;
 use tokio::sync::Semaphore;
 use tokio_util::task::TaskTracker;
-use tracing::{debug, info, warn};
+use tracing::{debug, warn};
 
 const FORMAT_VERSION: u8 = 1;
 const HEADER_LEN: usize = 1 + 8;
@@ -29,40 +29,29 @@ const PRUNE_INTERVAL: Duration = Duration::from_mins(10);
 /// A temporary file older than this was left behind by a crashed write.
 const STALE_TMP_AGE: Duration = Duration::from_hours(1);
 
-static GLOBAL: OnceLock<DiskTier> = OnceLock::new();
-
-/// Enables the process-wide disk tier in `dir` and starts its pruner.
-pub(crate) fn init(dir: PathBuf) {
-    if let Err(e) = std::fs::create_dir_all(&dir) {
-        warn!("Query cache disk tier disabled, cannot create {dir:?}: {e}");
-        return;
-    }
-    info!("Query cache disk tier in {dir:?}");
-    if GLOBAL.set(DiskTier::new(dir)).is_ok()
-        && let Some(tier) = GLOBAL.get()
-    {
-        tokio::spawn(tier.prune_loop());
-    }
-}
-
-/// The process-wide disk tier, if [`init`] enabled one.
-pub(crate) fn global() -> Option<&'static DiskTier> {
-    GLOBAL.get()
-}
-
-pub(crate) struct DiskTier {
+/// Query results on disk, see the module docs.
+#[derive(Debug)]
+pub struct DiskTier {
     dir: PathBuf,
     writes: Arc<Semaphore>,
     tasks: TaskTracker,
 }
 
 impl DiskTier {
-    pub(crate) fn new(dir: PathBuf) -> Self {
-        Self {
+    /// A tier in `dir`, created if missing.
+    pub fn open(dir: impl Into<PathBuf>) -> std::io::Result<Self> {
+        let dir = dir.into();
+        std::fs::create_dir_all(&dir)?;
+        Ok(Self {
             dir,
             writes: Arc::new(Semaphore::new(MAX_CONCURRENT_WRITES)),
             tasks: TaskTracker::new(),
-        }
+        })
+    }
+
+    #[must_use]
+    pub fn dir(&self) -> &Path {
+        &self.dir
     }
 
     fn path(&self, cache: &str, key: u128) -> PathBuf {
@@ -71,7 +60,7 @@ impl DiskTier {
 
     /// The stored result of `key`, its deadline and its encoded size, if one is stored, unexpired
     /// and decodable.
-    pub(crate) async fn load<T>(&self, cache: &str, key: u128) -> Option<(T, SystemTime, usize)>
+    pub(super) async fn load<T>(&self, cache: &str, key: u128) -> Option<(T, SystemTime, usize)>
     where
         T: DeserializeOwned + Send + 'static,
     {
@@ -96,7 +85,7 @@ impl DiskTier {
 
     /// Stores `encoded` (a result as named `MessagePack`) as the result of `key` in the
     /// background. Dropped if too many writes are in flight: the disk tier is an optimization.
-    pub(crate) fn store(&self, cache: &str, key: u128, expires_at: SystemTime, encoded: Vec<u8>) {
+    pub(super) fn store(&self, cache: &str, key: u128, expires_at: SystemTime, encoded: Vec<u8>) {
         let Ok(permit) = Arc::clone(&self.writes).try_acquire_owned() else {
             metrics::counter!("ch_cache_disk_writes", "result" => "dropped").increment(1);
             return;
@@ -116,27 +105,26 @@ impl DiskTier {
     }
 
     /// Waits for the background writes started so far.
-    #[cfg(test)]
-    pub(crate) async fn flush(&self) {
+    pub async fn flush(&self) {
         self.tasks.close();
         self.tasks.wait().await;
         self.tasks.reopen();
     }
 
-    #[expect(
-        clippy::infinite_loop,
-        reason = "prunes for the lifetime of the process"
-    )]
-    async fn prune_loop(&'static self) {
-        let mut interval = tokio::time::interval(PRUNE_INTERVAL);
-        loop {
-            interval.tick().await;
-            let dir = self.dir.clone();
-            match tokio::task::spawn_blocking(move || prune(&dir, SystemTime::now())).await {
-                Ok(removed) => debug!(removed, "Pruned query cache disk tier"),
-                Err(e) => warn!("Query cache prune task failed: {e}"),
+    /// Deletes expired entries and temporary files left behind by crashed writes every 10
+    /// minutes, for the lifetime of the process.
+    pub fn spawn_pruner(self: Arc<Self>) {
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(PRUNE_INTERVAL);
+            loop {
+                interval.tick().await;
+                let dir = self.dir.clone();
+                match tokio::task::spawn_blocking(move || prune(&dir, SystemTime::now())).await {
+                    Ok(removed) => debug!(removed, "Pruned query cache disk tier"),
+                    Err(e) => warn!("Query cache prune task failed: {e}"),
+                }
             }
-        }
+        });
     }
 }
 
@@ -146,19 +134,24 @@ fn unix_secs(time: SystemTime) -> u64 {
 }
 
 fn header(expires_at: SystemTime) -> [u8; HEADER_LEN] {
-    let mut header = [0; HEADER_LEN];
-    header[0] = FORMAT_VERSION;
-    header[1..].copy_from_slice(&unix_secs(expires_at).to_le_bytes());
+    let mut header = [FORMAT_VERSION; HEADER_LEN];
+    for (byte, secs_byte) in header
+        .iter_mut()
+        .skip(1)
+        .zip(unix_secs(expires_at).to_le_bytes())
+    {
+        *byte = secs_byte;
+    }
     header
 }
 
 /// The deadline in `header`, or `None` for another format version.
 fn parse_header(header: &[u8; HEADER_LEN]) -> Option<SystemTime> {
-    if header[0] != FORMAT_VERSION {
+    let [version, secs @ ..] = *header;
+    if version != FORMAT_VERSION {
         return None;
     }
-    let secs = u64::from_le_bytes(header[1..].try_into().ok()?);
-    SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(secs))
+    SystemTime::UNIX_EPOCH.checked_add(Duration::from_secs(u64::from_le_bytes(secs)))
 }
 
 fn invalid_data(e: impl core::error::Error + Send + Sync + 'static) -> std::io::Error {
@@ -328,7 +321,7 @@ mod tests {
     #[tokio::test]
     async fn store_then_load() {
         let dir = tempfile::tempdir().unwrap();
-        let tier = DiskTier::new(dir.path().to_owned());
+        let tier = DiskTier::open(dir.path()).unwrap();
         let encoded = rmp_serde::to_vec_named(&vec![1u64, 2]).unwrap();
         tier.store("cache", 42, in_secs(60), encoded);
         tier.flush().await;

@@ -107,18 +107,11 @@ impl MatchInfoFilters {
     }
 }
 
-/// Cache key of a query string: its 128-bit xxh3 hash. Keeping the hash instead of the string
-/// bounds a cache entry's key at 16 bytes whatever the query length; a collision between two
-/// distinct queries at 128 bits is not a practical concern.
-pub(crate) fn query_cache_key(query_str: &str) -> u128 {
-    xxhash_rust::xxh3::xxh3_128(query_str.as_bytes())
-}
-
 /// Declares an async fn `name(ch_client, query_str)` that runs a `ClickHouse` query and caches
 /// the result per query string for `ttl_secs`, in memory as far as the shared memory budget
 /// allows and on disk.
 ///
-/// The cache is a [`ChCache`](crate::services::ch_cache::ChCache): concurrent misses of one query
+/// The cache is a [`QueryCache`](clickhouse_utils::cache::QueryCache): concurrent misses of one query
 /// share a single run, a miss reads the shared disk tier before querying `ClickHouse`, and a query
 /// first takes a slot from the `ClickHouse` admission limiter ([`crate::services::ch_admission`]).
 /// Errors, including [`ChQueryError::Busy`](crate::services::ch_admission::ChQueryError), are not
@@ -139,9 +132,9 @@ macro_rules! cached_ch_query {
             ::std::sync::Arc<Vec<$row>>,
             crate::services::ch_admission::ChQueryError,
         > {
-            static CACHE: ::std::sync::LazyLock<crate::services::ch_cache::ChCache<Vec<$row>>> =
+            static CACHE: ::std::sync::LazyLock<::clickhouse_utils::cache::QueryCache<Vec<$row>>> =
                 ::std::sync::LazyLock::new(|| {
-                    crate::services::ch_cache::ChCache::new(
+                    ::clickhouse_utils::cache::QueryCache::new(
                         concat!(module_path!(), "::", stringify!($name)),
                         ::core::time::Duration::from_secs($ttl),
                     )
@@ -164,9 +157,9 @@ macro_rules! cached_ch_query {
             ch_client: &::clickhouse::Client,
             query_str: &str,
         ) -> ::core::result::Result<$ret, crate::services::ch_admission::ChQueryError> {
-            static CACHE: ::std::sync::LazyLock<crate::services::ch_cache::ChCache<$ret>> =
+            static CACHE: ::std::sync::LazyLock<::clickhouse_utils::cache::QueryCache<$ret>> =
                 ::std::sync::LazyLock::new(|| {
-                    crate::services::ch_cache::ChCache::new(
+                    ::clickhouse_utils::cache::QueryCache::new(
                         concat!(module_path!(), "::", stringify!($name)),
                         ::core::time::Duration::from_secs($ttl),
                     )
@@ -339,12 +332,6 @@ mod tests {
     fn test_id_list() {
         assert_eq!(id_list::<u32>(&[]), "");
         assert_eq!(id_list(&[1_u32, 2, 3]), "1, 2, 3");
-    }
-
-    #[test]
-    fn test_query_cache_key() {
-        assert_eq!(query_cache_key("SELECT 1"), query_cache_key("SELECT 1"));
-        assert_ne!(query_cache_key("SELECT 1"), query_cache_key("SELECT 2"));
     }
 
     #[test]

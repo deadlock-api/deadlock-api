@@ -1628,11 +1628,18 @@ version = "0.1.0"
 dependencies = [
  "clickhouse",
  "metrics",
+ "moka",
+ "rmp-serde",
+ "rstest",
  "serde",
  "service-utils",
+ "tempfile",
+ "thiserror",
  "tokio",
  "tokio-util",
  "tracing",
+ "xxhash-rust",
+ "zstd 0.14.3",
 ]
 
 [[package]]
@@ -2897,7 +2904,6 @@ dependencies = [
  "regex",
  "reqwest",
  "rmcp",
- "rmp-serde",
  "rstest",
  "schemars",
  "serde",
@@ -2931,7 +2937,6 @@ dependencies = [
  "valveprotos",
  "wreq",
  "wreq-util",
- "xxhash-rust",
  "zstd 0.14.3",
 ]
 

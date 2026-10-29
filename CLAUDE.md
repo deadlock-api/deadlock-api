@@ -13,7 +13,7 @@ crates/ # libraries shared by the services:
   steam-proxy/ # sv-proxy request/response types and client
   crosshair/ # crosshair share codes (DL.…) to settings and back, and settings to png; used by the api's /crosshair routes and, as wasm (website/wasm/crosshair), the website's crosshair editor
   db-clients/ # clickhouse/postgres/redis/s3/file-cache connections from env, shared postgres queries, redis single-replica lease
-  clickhouse-utils/ # inserts, retrying batch inserter, batched key lookups (BatchQuery), match id bounds
+  clickhouse-utils/ # inserts, retrying batch inserter, batched key lookups (BatchQuery), match id bounds, error classification; feature `admission` for the pressure-adaptive query limiter, `cache` for the memory + shared disk query result caches (both used by the api)
   assets-client/ # heroes and ranked seasons from the public asset endpoints
   rate-limit/ # generic sliding-window rate limiter (caller-defined scopes, per-request costs, Redis or in-memory store), used by the api
   game-assets/ # the versioned game files on R2 (.vdata, css, localization) to the api's /v1/assets JSON; features `utoipa`/`graphql`/`schemars` add the api's derives

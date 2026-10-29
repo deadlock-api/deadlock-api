@@ -4,7 +4,7 @@ use std::sync::Arc;
 use axum::body::Body;
 use axum::http::{Response, header};
 use axum::response::IntoResponse;
-use clickhouse_utils::BatchError;
+use clickhouse_utils::{BatchError, is_query_timeout};
 use game_assets::client::AssetsClientError;
 use reqwest::StatusCode;
 use serde_json::json;
@@ -170,18 +170,6 @@ fn build_error_response(status: StatusCode, error: impl serde::Serialize) -> Res
             .into(),
         )
         .unwrap_or_else(|_| "Internal server error".to_owned().into_response())
-}
-
-/// Whether a `ClickHouse` error means the query ran into a timeout (client side, or the server's
-/// `max_execution_time`), which is reported as `504` rather than a generic internal error.
-pub(crate) fn is_query_timeout(e: &clickhouse::error::Error) -> bool {
-    match e {
-        clickhouse::error::Error::TimedOut => true,
-        clickhouse::error::Error::BadResponse(msg) => {
-            msg.contains("TIMEOUT_EXCEEDED") || msg.contains("timed out")
-        }
-        _ => false,
-    }
 }
 
 /// `wait` in whole seconds for a `Retry-After` header: rounded up and at least 1, as a client

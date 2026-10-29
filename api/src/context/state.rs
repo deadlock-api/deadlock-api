@@ -15,7 +15,7 @@ use tracing::{debug, error, warn};
 use crate::context::batchers::{Batchers, insert_batcher};
 use crate::context::config::Config;
 use crate::routes::v1::mcp::{CatalogError, SnapshotCatalog};
-use crate::services::ch_admission::spawn_controller as spawn_ch_admission_controller;
+use crate::services::ch_admission;
 use crate::services::ch_cache;
 use crate::services::data_dump::DataDump;
 use crate::services::feature_flags::FeatureFlags;
@@ -219,13 +219,8 @@ impl AppState {
         }
         let steam_search_index = SteamSearchIndex::new(steam_search_index_path);
         steam_search_index.spawn_refresh_loop(ch_client_ro.clone(), feature_flags.clone());
-        spawn_ch_admission_controller(ch_client_ro.clone());
-        // The query caches' disk tier, shared by all instances so a restarted one does not
-        // re-run every cached query. Unset (local runs, tests): memory only.
-        if let Some(path) = std::env::var_os("CH_CACHE_PATH") {
-            ch_cache::disk::init(path.into());
-        }
-        ch_cache::spawn_memory_metrics();
+        ch_admission::spawn_controller(ch_client_ro.clone());
+        ch_cache::init();
         telemetry::process_memory::spawn();
 
         if !cfg!(debug_assertions) {

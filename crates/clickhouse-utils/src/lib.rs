@@ -1,5 +1,10 @@
 //! `ClickHouse` helpers for the API and the workers: one-shot inserts, a retrying batch inserter,
-//! batched key lookups and match id bounds.
+//! batched key lookups, match id bounds and error classification.
+//!
+//! Features:
+//! - `admission`: [`admission`], a concurrency limiter for queries that adapts to the server's CPU
+//!   pressure.
+//! - `cache`: [`cache`], memory and shared disk caches of query results.
 
 #![forbid(unsafe_code)]
 #![cfg_attr(
@@ -22,10 +27,16 @@
     )
 )]
 
+#[cfg(feature = "admission")]
+pub mod admission;
 mod batch_inserter;
 mod batch_query;
+#[cfg(feature = "cache")]
+pub mod cache;
 mod ch;
+mod error;
 
 pub use batch_inserter::*;
 pub use batch_query::*;
 pub use ch::*;
+pub use error::*;

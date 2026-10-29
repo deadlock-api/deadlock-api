@@ -2,20 +2,41 @@
 name = "clickhouse-utils"
 version = "0.1.0"
 edition = "2024"
-description = "ClickHouse inserts, a retrying batch inserter, batched key lookups and match id bounds"
+description = "ClickHouse inserts, a retrying batch inserter, batched key lookups, match id bounds, admission control and query result caches"
+
+[features]
+# `admission`: a concurrency limiter for queries that adapts to the server's CPU pressure.
+admission = ["dep:thiserror", "tokio/rt"]
+# `cache`: memory + shared disk caches of query results, in front of `admission`.
+cache = [
+    "admission",
+    "dep:moka",
+    "dep:rmp-serde",
+    "dep:xxhash-rust",
+    "dep:zstd",
+    "tokio/rt",
+    "tokio-util/rt",
+]
 
 [dependencies]
 clickhouse = { workspace = true }
 metrics = { workspace = true }
+moka = { workspace = true, optional = true }
+rmp-serde = { workspace = true, optional = true }
 serde = { workspace = true }
 service-utils = { workspace = true }
+thiserror = { workspace = true, optional = true }
 tokio = { workspace = true, features = ["sync", "time"] }
 tokio-util = { workspace = true }
 tracing = { workspace = true }
+xxhash-rust = { workspace = true, optional = true }
+zstd = { workspace = true, optional = true }
 
 [dev-dependencies]
 clickhouse = { workspace = true, features = ["test-util"] }
-tokio = { workspace = true, features = ["sync", "time", "macros", "rt-multi-thread"] }
+rstest = { workspace = true }
+tempfile = { workspace = true }
+tokio = { workspace = true, features = ["sync", "time", "macros", "rt-multi-thread", "test-util"] }
 
 [lints]
 workspace = true

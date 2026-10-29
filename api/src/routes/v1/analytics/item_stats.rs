@@ -4,6 +4,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
+use clickhouse_utils::is_query_timeout;
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -20,7 +21,7 @@ use super::common_filters::{
 };
 use super::rollup_window::{Coverage, DaySplit, EdgeRows, Reach, Rollup, RollupFilters};
 use crate::context::AppState;
-use crate::error::{APIError, APIResult, is_query_timeout};
+use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::services::ch_admission::ChQueryError;
 use crate::services::cohort_agg_refresh::{

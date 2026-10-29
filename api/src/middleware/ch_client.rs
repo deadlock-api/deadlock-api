@@ -1,5 +1,4 @@
 use core::time::Duration;
-use std::sync::Arc;
 
 use axum::extract::{Request, State};
 use axum::http::StatusCode;
@@ -10,7 +9,7 @@ use uuid::Uuid;
 
 use crate::context::AppState;
 use crate::error::APIError;
-use crate::services::ch_admission::{CH_CLIENT, ChClient};
+use crate::services::ch_admission::{CH_CLIENT, Caller};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 /// Runs the request with its client in [`CH_CLIENT`], so the `ClickHouse` admission limiter can
@@ -37,11 +36,8 @@ pub(crate) async fn scope_ch_client(
             None => key.api_key = None,
         }
     }
-    let client = ChClient {
-        id: Arc::from(key.client_id()),
-        capped: key.api_key.is_none(),
-    };
-    CH_CLIENT.scope(client, next.run(req)).await
+    let caller = Caller::new(key.client_id(), key.api_key.is_none());
+    CH_CLIENT.scope(caller, next.run(req)).await
 }
 
 /// Bounds the Postgres lookup behind an uncached key, so a slow or down Postgres doesn't hold up
