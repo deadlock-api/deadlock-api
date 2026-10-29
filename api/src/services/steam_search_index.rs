@@ -447,9 +447,12 @@ impl SteamSearchIndex {
         let q_lc = query.to_lowercase();
         let q_nospace = strip_whitespace(&q_lc);
 
-        // If the user typed an account_id (u32) or steam_id64, pin that
-        // profile at the front of the results.
-        let pinned_id = parse_id_query(&q_lc);
+        // A pasted Steam id pins its profile first; the route parses it the same way.
+        let pinned_id = query
+            .trim()
+            .parse::<SteamId>()
+            .ok()
+            .map(SteamId::account_id);
 
         // Fuzzy match on every token (no prefix variant — too expensive on
         // short queries; the JW reranker handles partial matches via the
@@ -693,13 +696,6 @@ impl SteamSearchIndex {
             warn!("steam search index: stale instance dir GC task failed: {e}");
         }
     }
-}
-
-fn parse_id_query(q: &str) -> Option<u32> {
-    let id = q.trim().parse::<u64>().ok()?;
-    SteamId::from_account_or_steam64(id)
-        .ok()
-        .map(SteamId::account_id)
 }
 
 fn profile_from_doc(doc: &TantivyDocument, f: SearchFields, matches_played: u64) -> IndexedProfile {
@@ -1114,7 +1110,7 @@ pub(crate) enum SearchError {
 
 #[cfg(test)]
 mod tests {
-    use super::{jaro, jaro_winkler, parse_id_query};
+    use super::{jaro, jaro_winkler};
 
     fn approx(a: f64, b: f64) {
         assert!((a - b).abs() < 1e-3, "expected {b} ± 1e-3, got {a}");
@@ -1135,23 +1131,6 @@ mod tests {
         approx(jaro_winkler("DWAYNE", "DUANE"), 0.84);
         approx(jaro_winkler("DIXON", "DICKSONX"), 0.8133);
         approx(jaro_winkler("abc", "xbc"), jaro("abc", "xbc"));
-    }
-
-    #[test]
-    fn parses_account_id() {
-        assert_eq!(parse_id_query("12345"), Some(12345));
-        assert_eq!(parse_id_query("  12345 "), Some(12345));
-    }
-
-    #[test]
-    fn parses_steam_id64() {
-        assert_eq!(parse_id_query("76561198044298185"), Some(84_032_457));
-    }
-
-    #[test]
-    fn rejects_non_numeric() {
-        assert_eq!(parse_id_query("raimann"), None);
-        assert_eq!(parse_id_query("123abc"), None);
     }
 
     #[test]
