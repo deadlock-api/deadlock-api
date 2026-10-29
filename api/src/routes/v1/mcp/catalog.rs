@@ -82,7 +82,7 @@ pub(crate) enum QueryError {
     #[error("The snapshot catalog is still loading, retry in a few seconds")]
     NotReady,
     #[error(
-        "Query timed out after {} seconds; filter `match_player` on `match_id` or `start_time` and select fewer columns",
+        "Query timed out after {} seconds; filter `match_player` on `match_id` or `start_time`, select fewer columns, and use `match_player` instead of the slower `match_player_latest` where duplicates don't matter",
         QUERY_TIMEOUT.as_secs()
     )]
     Timeout,
