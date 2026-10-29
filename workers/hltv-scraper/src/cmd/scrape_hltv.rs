@@ -183,6 +183,7 @@ fn download_task(
                     .json(&json!({"match_id": match_id}))
                     .send()
                     .await
+                    .and_then(reqwest::Response::error_for_status)
                 {
                     error!("[{label} {match_id}] Error marking match ended: {:?}", e);
                 }

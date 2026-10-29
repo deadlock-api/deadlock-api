@@ -6,6 +6,7 @@ use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Instant;
 
 use axum::extract::State;
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use base64::prelude::*;
@@ -79,6 +80,14 @@ pub(crate) enum SpectateBotError {
 }
 
 type Result<T, E = SpectateBotError> = core::result::Result<T, E>;
+
+/// A handler error is a 500, so the scrapers see the failure instead of a `200 OK` body.
+impl IntoResponse for SpectateBotError {
+    fn into_response(self) -> Response {
+        error!("Request failed: {}", service_utils::ErrorChain(&self));
+        (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response()
+    }
+}
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 struct PoolLimitInfo {
@@ -560,19 +569,13 @@ async fn run_server(bot: Arc<SpectatorBot>) -> std::io::Result<()> {
 
 async fn fetch_matches(
     State(bot): State<Arc<SpectatorBot>>,
-) -> Result<Json<Vec<SpectatedMatchInfo>>, String> {
-    let matches = bot
-        .get_all_recently_spectated(REDIS_SPEC_KEY)
-        .await
-        .map_err(|e| e.to_string())?;
+) -> Result<Json<Vec<SpectatedMatchInfo>>> {
+    let matches = bot.get_all_recently_spectated(REDIS_SPEC_KEY).await?;
 
     Ok(Json(matches.into_values().collect()))
 }
-async fn count_extra_matches(State(bot): State<Arc<SpectatorBot>>) -> Result<String, String> {
-    let matches = bot
-        .get_all_recently_spectated(REDIS_EXTRA_KEY)
-        .await
-        .map_err(|e| e.to_string())?;
+async fn count_extra_matches(State(bot): State<Arc<SpectatorBot>>) -> Result<String> {
+    let matches = bot.get_all_recently_spectated(REDIS_EXTRA_KEY).await?;
 
     Ok(matches.len().to_string())
 }
@@ -585,12 +588,10 @@ struct MatchEndReq {
 async fn record_match_end(
     State(bot): State<Arc<SpectatorBot>>,
     Json(req): Json<MatchEndReq>,
-) -> Result<(), String> {
+) -> Result<()> {
     let match_id = req.match_id;
 
-    bot.mark_ended(&[match_id])
-        .await
-        .map_err(|e| e.to_string())?;
+    bot.mark_ended(&[match_id]).await?;
 
     Ok(())
 }
@@ -598,12 +599,11 @@ async fn record_match_end(
 async fn record_match_still_alive(
     State(bot): State<Arc<SpectatorBot>>,
     Json(req): Json<MatchEndReq>,
-) -> Result<(), String> {
+) -> Result<()> {
     let match_id = req.match_id;
 
     bot.update_spectated(REDIS_SPEC_KEY, match_id, REDIS_EXPIRY)
-        .await
-        .map_err(|e| e.to_string())?;
+        .await?;
 
     Ok(())
 }
