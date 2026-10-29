@@ -3,6 +3,8 @@
 
 use std::borrow::Cow;
 
+use strum::{IntoStaticStr, VariantArray};
+
 mod client;
 mod docs;
 pub(crate) mod extractor;
@@ -24,22 +26,17 @@ pub(crate) type Exceeded = rate_limit::Exceeded<Scope>;
 /// address. What sets them apart is which clients they hold: once a policy has key quotas, they
 /// replace its IP quotas for clients with a key, and a policy with key quotas but no IP quotas
 /// only admits clients with a key.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, IntoStaticStr, VariantArray)]
 pub(crate) enum Scope {
+    #[strum(serialize = "IP")]
     Ip,
     Key,
     Global,
 }
 
 impl Scope {
-    pub(crate) const ALL: [Self; 3] = [Self::Ip, Self::Key, Self::Global];
-
-    pub(crate) const fn as_str(self) -> &'static str {
-        match self {
-            Self::Ip => "IP",
-            Self::Key => "Key",
-            Self::Global => "Global",
-        }
+    pub(crate) fn as_str(self) -> &'static str {
+        self.into()
     }
 }
 

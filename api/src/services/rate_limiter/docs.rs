@@ -4,6 +4,8 @@
 use core::fmt::{self, Display};
 use core::time::Duration;
 
+use strum::VariantArray as _;
+
 use crate::services::rate_limiter::{Quota, RateLimit, Scope};
 
 /// What the docs state for endpoints without a rate limit of their own. Nothing in the API
@@ -64,7 +66,7 @@ impl Display for Limits<'_> {
         }
         writeln!(f, "| Type | Limit |")?;
         writeln!(f, "| ---- | ----- |")?;
-        for scope in Scope::ALL {
+        for &scope in Scope::VARIANTS {
             write!(f, "| {} | ", scope.as_str())?;
             for (i, &(label, quotas)) in self.cases.iter().enumerate() {
                 if i > 0 {

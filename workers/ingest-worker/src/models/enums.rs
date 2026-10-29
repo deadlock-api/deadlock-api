@@ -32,20 +32,6 @@ impl From<ECitadelGameMode> for GameMode {
     }
 }
 
-impl From<u8> for GameMode {
-    fn from(value: u8) -> Self {
-        match value {
-            1 => Self::Normal,
-            2 => Self::OnevOneTest,
-            3 => Self::Sandbox,
-            4 => Self::StreetBrawl,
-            5 => Self::ExploreNYC,
-            6 => Self::Internal,
-            _ => Self::Invalid,
-        }
-    }
-}
-
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
 #[repr(i8)]
 pub(crate) enum BotDifficulty {
@@ -66,19 +52,6 @@ impl From<ECitadelBotDifficulty> for BotDifficulty {
             ECitadelBotDifficulty::KECitadelBotDifficultyHard => Self::Hard,
             ECitadelBotDifficulty::KECitadelBotDifficultyNightmare => Self::Nightmare,
             ECitadelBotDifficulty::KECitadelBotDifficultyGuided => Self::Guided,
-        }
-    }
-}
-
-impl From<u8> for BotDifficulty {
-    fn from(value: u8) -> Self {
-        match value {
-            1 => Self::Easy,
-            2 => Self::Medium,
-            3 => Self::Hard,
-            4 => Self::Nightmare,
-            5 => Self::Guided,
-            _ => Self::None,
         }
     }
 }
@@ -109,21 +82,6 @@ impl From<ECitadelMatchMode> for MatchMode {
             ECitadelMatchMode::KECitadelMatchModeTutorial => Self::Tutorial,
             ECitadelMatchMode::KECitadelMatchModeHeroLabs => Self::HeroLabs,
             ECitadelMatchMode::KECitadelMatchModeNewPlayerPlacement => Self::NewPlayerPlacement,
-        }
-    }
-}
-
-impl From<u8> for MatchMode {
-    fn from(value: u8) -> Self {
-        match value {
-            1 => Self::Unranked,
-            2 => Self::PrivateLobby,
-            3 => Self::CoopBot,
-            4 => Self::Ranked,
-            5 => Self::ServerTest,
-            6 => Self::Tutorial,
-            7 => Self::HeroLabs,
-            _ => Self::Invalid,
         }
     }
 }
@@ -236,16 +194,6 @@ impl From<ECitadelLobbyTeam> for Team {
             ECitadelLobbyTeam::KECitadelLobbyTeamTeam0 => Self::Team0,
             ECitadelLobbyTeam::KECitadelLobbyTeamTeam1 => Self::Team1,
             ECitadelLobbyTeam::KECitadelLobbyTeamSpectator => Self::Spectator,
-        }
-    }
-}
-
-impl From<u8> for Team {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => Self::Team0,
-            1 => Self::Team1,
-            _ => Self::Spectator,
         }
     }
 }

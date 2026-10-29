@@ -13,13 +13,15 @@ use std::sync::{Arc, Mutex, PoisonError};
 
 use arc_swap::ArcSwap;
 use sqlx::{Pool, Postgres};
+use strum::IntoStaticStr;
 use tokio::time::MissedTickBehavior;
 use tracing::{debug, info, warn};
 use utoipa::openapi::OpenApi;
 
 const REFRESH_INTERVAL: Duration = Duration::from_secs(10);
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, IntoStaticStr)]
+#[strum(serialize_all = "snake_case")]
 pub(crate) enum Kind {
     /// An API route, keyed by its axum path. Disabled routes answer 503.
     Route,
@@ -30,12 +32,8 @@ pub(crate) enum Kind {
 }
 
 impl Kind {
-    const fn as_str(self) -> &'static str {
-        match self {
-            Self::Route => "route",
-            Self::Feature => "feature",
-            Self::Job => "job",
-        }
+    fn as_str(self) -> &'static str {
+        self.into()
     }
 }
 

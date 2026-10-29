@@ -1,5 +1,3 @@
-use core::fmt::{Display, Formatter};
-
 use axum::response::sse::Event;
 use haste::entities::DeltaHeader;
 use serde::Serialize;
@@ -30,10 +28,12 @@ impl TryFrom<DemoEvent> for Event {
     }
 }
 
-#[derive(Serialize, Debug, Clone)]
+#[derive(Serialize, Debug, Clone, Display)]
 #[serde(tag = "event_type")]
 #[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
 pub(super) enum DemoEventPayload {
+    #[strum(to_string = "{entity_type}_entity_{delta}")]
     EntityUpdate {
         delta: Delta,
         entity_index: i32,
@@ -99,29 +99,6 @@ pub(super) enum DemoEventPayload {
         upgrade_info: u32,
     },
     TickEnd,
-}
-
-impl Display for DemoEventPayload {
-    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::EntityUpdate {
-                delta, entity_type, ..
-            } => write!(f, "{entity_type}_entity_{delta}"),
-            Self::ChatMessage { .. } => write!(f, "chat_message"),
-            Self::HeroKilled { .. } => write!(f, "hero_killed"),
-            Self::BannedHeroes { .. } => write!(f, "banned_heroes"),
-            Self::SoulBagPickup { .. } => write!(f, "soul_bag_pickup"),
-            Self::HeroReleaseVote(..) => write!(f, "hero_release_vote"),
-            Self::CombatLogEntry(..) => write!(f, "combat_log_entry"),
-            Self::CombatLogBulkData(..) => write!(f, "combat_log_bulk_data"),
-            Self::PlayerTyping { .. } => write!(f, "player_typing"),
-            Self::MusicQueue { .. } => write!(f, "music_queue"),
-            Self::CorruptedItemShopSpawn { .. } => write!(f, "corrupted_item_shop_spawn"),
-            Self::CorruptedItemShopRestock { .. } => write!(f, "corrupted_item_shop_restock"),
-            Self::CorruptedItem { .. } => write!(f, "corrupted_item"),
-            Self::TickEnd => write!(f, "tick_end"),
-        }
-    }
 }
 
 #[derive(FromRepr, Serialize, Debug, Clone, Copy, PartialEq, Eq, Default, Display)]

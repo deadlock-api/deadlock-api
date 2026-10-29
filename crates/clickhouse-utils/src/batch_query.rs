@@ -25,27 +25,18 @@ pub fn in_clause<K: fmt::Display>(keys: &[K]) -> String {
 }
 
 /// Why a batched lookup failed.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, thiserror::Error)]
 pub enum BatchError {
     /// The batcher's task is gone.
+    #[error("Batcher unavailable")]
     Unavailable,
     /// The batch query failed; it is logged once for the whole batch.
+    #[error("Batch query failed")]
     QueryFailed,
     /// [`ClickhouseBatcher::load`] found no row for the key.
+    #[error("Not found")]
     NotFound,
 }
-
-impl fmt::Display for BatchError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(match self {
-            Self::Unavailable => "Batcher unavailable",
-            Self::QueryFailed => "Batch query failed",
-            Self::NotFound => "Not found",
-        })
-    }
-}
-
-impl core::error::Error for BatchError {}
 
 type BatchResult<T> = Result<T, BatchError>;
 

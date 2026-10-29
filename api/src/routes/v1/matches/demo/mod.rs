@@ -11,6 +11,7 @@ use core::time::Duration;
 
 use md5::{Digest as _, Md5};
 use serde::{Deserialize, Serialize};
+use strum::IntoStaticStr;
 use utoipa::{OpenApi, ToSchema};
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
@@ -20,8 +21,11 @@ pub(crate) use worker::DemoQueryQueue;
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlMiddleware;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, ToSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, ToSchema, IntoStaticStr,
+)]
 #[serde(rename_all = "lowercase")]
+#[strum(serialize_all = "lowercase")]
 pub(crate) enum OutputFormat {
     /// Apache Parquet. Handles the full Arrow type set; recommended.
     #[default]
@@ -31,11 +35,8 @@ pub(crate) enum OutputFormat {
 }
 
 impl OutputFormat {
-    pub(crate) const fn extension(self) -> &'static str {
-        match self {
-            Self::Parquet => "parquet",
-            Self::Ndjson => "ndjson",
-        }
+    pub(crate) fn extension(self) -> &'static str {
+        self.into()
     }
 
     /// Suffix of the uploaded object. NDJSON is zstd-compressed on upload; Parquet

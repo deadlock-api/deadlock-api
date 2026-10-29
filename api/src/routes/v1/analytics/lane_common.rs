@@ -1,7 +1,7 @@
 use axum::http::StatusCode;
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
-use strum::{Display, EnumString};
+use strum::{Display, EnumString, IntoStaticStr, VariantArray};
 use utoipa::ToSchema;
 
 use super::common_filters::{LaneDuoFilters, MatchInfoFilters, id_list, range_filters};
@@ -171,6 +171,8 @@ impl LaneStats {
     Serialize,
     Deserialize,
     EnumString,
+    IntoStaticStr,
+    VariantArray,
     ToSchema,
 )]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -183,15 +185,8 @@ pub(super) enum LaneGroupBy {
 }
 
 impl LaneGroupBy {
-    /// Fixed, so column order never depends on the order the caller asked for.
-    const ALL: [Self; 3] = [Self::AssignedLane, Self::HeroIds, Self::EnemyHeroIds];
-
-    const fn column_name(self) -> &'static str {
-        match self {
-            Self::AssignedLane => "assigned_lane",
-            Self::HeroIds => "hero_ids",
-            Self::EnemyHeroIds => "enemy_hero_ids",
-        }
+    fn column_name(self) -> &'static str {
+        self.into()
     }
 
     const fn definition(self) -> &'static str {
@@ -249,10 +244,12 @@ pub(super) struct LaneGrouping(Vec<LaneGroupBy>);
 
 impl LaneGrouping {
     pub(super) fn new(group_by: Option<&[LaneGroupBy]>) -> Self {
-        let requested = group_by.unwrap_or(&LaneGroupBy::ALL);
+        let requested = group_by.unwrap_or(LaneGroupBy::VARIANTS);
         Self(
-            LaneGroupBy::ALL
-                .into_iter()
+            // Declaration order, so column order never depends on the order the caller asked for.
+            LaneGroupBy::VARIANTS
+                .iter()
+                .copied()
                 .filter(|dim| requested.contains(dim))
                 .collect(),
         )
@@ -296,9 +293,9 @@ impl LaneGrouping {
     }
 
     fn select_all(&self, grouped: impl Fn(LaneGroupBy) -> &'static str) -> String {
-        LaneGroupBy::ALL
-            .into_iter()
-            .map(|dim| {
+        LaneGroupBy::VARIANTS
+            .iter()
+            .map(|&dim| {
                 if self.0.contains(&dim) {
                     grouped(dim)
                 } else {

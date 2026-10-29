@@ -24,7 +24,6 @@
     )
 )]
 
-use std::fmt;
 use std::io::Read as _;
 
 use base64::Engine as _;
@@ -50,29 +49,17 @@ const BASE64: GeneralPurpose = GeneralPurpose::new(
     GeneralPurposeConfig::new().with_decode_padding_mode(DecodePaddingMode::Indifferent),
 );
 
-#[derive(Debug)]
+#[derive(Debug, thiserror::Error)]
 pub enum DecodeError {
+    #[error("not a build code (base64: {0})")]
     Base64(base64::DecodeError),
+    #[error("not a build code (zstd: {0})")]
     Zstd(String),
+    #[error("not a build code (larger than {MAX_DECODED_BYTES} bytes)")]
     TooLarge,
+    #[error("not a build code (protobuf: {0})")]
     Protobuf(prost::DecodeError),
 }
-
-impl fmt::Display for DecodeError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Base64(e) => write!(f, "not a build code (base64: {e})"),
-            Self::Zstd(e) => write!(f, "not a build code (zstd: {e})"),
-            Self::TooLarge => write!(
-                f,
-                "not a build code (larger than {MAX_DECODED_BYTES} bytes)"
-            ),
-            Self::Protobuf(e) => write!(f, "not a build code (protobuf: {e})"),
-        }
-    }
-}
-
-impl core::error::Error for DecodeError {}
 
 /// Reads a build code as copied in game. Whitespace anywhere in it (a wrapped paste) is ignored.
 pub fn decode(code: &str) -> Result<CMsgHeroBuild, DecodeError> {

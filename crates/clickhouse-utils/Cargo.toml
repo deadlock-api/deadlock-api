@@ -6,7 +6,7 @@ description = "ClickHouse inserts, a retrying batch inserter, batched key lookup
 
 [features]
 # `admission`: a concurrency limiter for queries that adapts to the server's CPU pressure.
-admission = ["dep:thiserror", "tokio/rt"]
+admission = ["tokio/rt"]
 # `cache`: memory + shared disk caches of query results, in front of `admission`.
 cache = [
     "admission",
@@ -25,7 +25,7 @@ moka = { workspace = true, optional = true }
 rmp-serde = { workspace = true, optional = true }
 serde = { workspace = true }
 service-utils = { workspace = true }
-thiserror = { workspace = true, optional = true }
+thiserror = { workspace = true }
 tokio = { workspace = true, features = ["sync", "time"] }
 tokio-util = { workspace = true }
 tracing = { workspace = true }
