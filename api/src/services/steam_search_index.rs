@@ -18,6 +18,7 @@ use arc_swap::ArcSwapOption;
 use chrono::{DateTime, Utc};
 use clickhouse::Row;
 use serde::Deserialize;
+use steam_id::SteamId;
 use tantivy::collector::TopDocs;
 use tantivy::columnar::StrColumn;
 use tantivy::directory::MmapDirectory;
@@ -61,8 +62,6 @@ const INSTANCE_DIR_PREFIX: &str = "inst_";
 /// disk. A live replica commits an incremental every `INCREMENTAL_INTERVAL_SECS`,
 /// keeping its dir well within this window.
 const STALE_INSTANCE_GRACE_SECS: u64 = 60 * 60;
-/// Offset applied to `account_id` to produce a Steam ID64.
-const STEAM_ID64_OFFSET: u64 = 76_561_197_960_265_728;
 /// Subdirectory prefix for the on-disk index. Bump whenever the Tantivy
 /// schema changes — old `v*_` dirs that don't match are GC'd at next
 /// successful rebuild.
@@ -697,12 +696,10 @@ impl SteamSearchIndex {
 }
 
 fn parse_id_query(q: &str) -> Option<u32> {
-    let q = q.trim();
-    if let Ok(account_id) = q.parse::<u32>() {
-        return Some(account_id);
-    }
-    let account_id = q.parse::<u64>().ok()?.checked_sub(STEAM_ID64_OFFSET)?;
-    u32::try_from(account_id).ok()
+    let id = q.trim().parse::<u64>().ok()?;
+    SteamId::from_account_or_steam64(id)
+        .ok()
+        .map(SteamId::account_id)
 }
 
 fn profile_from_doc(doc: &TantivyDocument, f: SearchFields, matches_played: u64) -> IndexedProfile {
@@ -1117,7 +1114,7 @@ pub(crate) enum SearchError {
 
 #[cfg(test)]
 mod tests {
-    use super::{STEAM_ID64_OFFSET, jaro, jaro_winkler, parse_id_query};
+    use super::{jaro, jaro_winkler, parse_id_query};
 
     fn approx(a: f64, b: f64) {
         assert!((a - b).abs() < 1e-3, "expected {b} ± 1e-3, got {a}");
@@ -1148,9 +1145,7 @@ mod tests {
 
     #[test]
     fn parses_steam_id64() {
-        let acc: u32 = 84_032_457;
-        let sid64 = STEAM_ID64_OFFSET + u64::from(acc);
-        assert_eq!(parse_id_query(&sid64.to_string()), Some(acc));
+        assert_eq!(parse_id_query("76561198044298185"), Some(84_032_457));
     }
 
     #[test]
