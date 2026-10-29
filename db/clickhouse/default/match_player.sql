@@ -323,6 +323,7 @@ CREATE TABLE default.match_player
     INDEX idx_account_id_tight account_id TYPE bloom_filter GRANULARITY 1,
     INDEX idx_account_id account_id TYPE bloom_filter GRANULARITY 4,
     INDEX idx_start_time start_time TYPE minmax GRANULARITY 1,
+    INDEX idx_start_time_coarse start_time TYPE minmax GRANULARITY 1024,
     INDEX idx_duration_s duration_s TYPE minmax GRANULARITY 1,
     INDEX idx_avg_badge_team0 average_badge_team0 TYPE minmax GRANULARITY 1,
     INDEX idx_avg_badge_team1 average_badge_team1 TYPE minmax GRANULARITY 1,
