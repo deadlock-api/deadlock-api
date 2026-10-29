@@ -34,15 +34,16 @@ Read-only SQL access to hourly parquet snapshots of the Deadlock API database (h
 - Engine: DuckDB (DuckDB SQL dialect). The database is attached read-only: CREATE, INSERT, UPDATE, DELETE, DROP, SET and extension loading fail.
 - Results are capped at 1,024 rows and 50 KB per query; queries time out after 45 seconds.
 - Meant for coding agents and short scripts, not for polling or bulk export: `execute_query` is limited to 30 calls per minute, 300 per hour and 400 per day per client. For recurring or bulk access download the parquet dumps directly (https://deadlock-api.com/data-dumps) or use the REST API (https://api.deadlock-api.com/docs).
-- Column comments carry the original ClickHouse type. Table comments say how the table is exported.
+- Column comments carry the original ClickHouse type and, for many columns, what the values mean and their pitfalls; check them with `list_columns` before relying on a column. Table comments say how the table is exported.
 - Only read queries run: SELECT, WITH, FROM, DESCRIBE, SHOW, SUMMARIZE.
 - `match_player` holds hundreds of gigabytes in parquet files split by `match_id` range. Filters on `match_id` or `start_time` skip whole files and are fast; a filter on `account_id` alone has to scan everything and is slow, so combine it with a `start_time` range. Select only needed columns and use LIMIT.
 - Only `match_id` and `start_time` skip files. Filters on other columns (`match_mode`, `game_mode`, `hero_id`, ...) still read every file, so always add a `start_time` range (e.g. the last 7 days) to queries over `match_player` or `match_player_latest`, even for a plain `min`/`max`.
 - `match_player` is exported incrementally, so up to ~2% of rows can appear twice with different `created_at`. `match_player_latest` keeps only the newest row per (`match_id`, `account_id`), which costs extra work; prefer it when counts matter, and `match_player` for ranges and rough aggregates.
 - Nested ClickHouse columns are flattened into parallel arrays with a dot in their name (`items.item_id`, `items.game_time_s`, `stats.*`, ...). Quote the name, as in `\"items.item_id\"`, or DuckDB reads `items` as a table. Arrays of one group unnested in the same SELECT stay aligned: `SELECT unnest(\"items.item_id\"), unnest(\"items.game_time_s\") FROM match_player ...`.
 - Schema exploration: `SHOW TABLES`, `DESCRIBE match_player`, `SUMMARIZE match_salts`, `duckdb_columns()`.
-- DuckDB extras: `SELECT * EXCLUDE (col)`, `GROUP BY ALL`, `QUALIFY`, `arg_max(x, y)`, list/struct literals, `strftime`/`date_trunc`.
+- DuckDB extras: `SELECT * EXCLUDE (col)`, `GROUP BY ALL`, `QUALIFY`, `arg_max(x, y)`, list/struct literals, `strftime`/`date_trunc`. Lambdas use `lambda x: x + 1`; the arrow form `x -> x + 1` fails.
 - Heroes and items (abilities, weapons, shop upgrades) are stored as numeric ids. `list_heroes` and `list_items` map them to names; pass an `id` to get the full details of one hero or item.
+- Players are stored by numeric `account_id`. To find one by name, search `steam_profiles` (Steam name and profile URL) or `steam_profile_observed_names` (in-game names).
 - `list_patches` lists the patch notes of the official forum changelog and the Steam news feed (the REST `/v2/patches` feed). Pass a patch `link` to get its full notes.";
 
 pub(super) struct McpServer {
@@ -359,7 +360,7 @@ impl McpServer {
 
     #[tool(
         title = "List Heroes",
-        description = "List the heroes of the current game version with their `id` (the hero id in the tables), `name` and `className`. Pass `id` to get the full details of one hero instead: description, stats, abilities, images."
+        description = "List the heroes of the current game version with their `id` (the hero id in the tables), `name` and `className`. Pass `id` to get the full details of one hero instead: description, stats, abilities, images. Its `popular_items` come from the game files (Valve's item popularity) and state no time window, rank or sample size; they are not deadlock-api statistics."
     )]
     async fn list_heroes(&self, Parameters(args): Parameters<ListHeroesArgs>) -> CallToolResult {
         let heroes = match self.assets.heroes().await {
@@ -390,7 +391,7 @@ impl McpServer {
 
     #[tool(
         title = "List Items",
-        description = "List the items of one type in the current game version with their `id` (the item id in the tables), `name` (null for internal items) and `className`; upgrades also list their `slot`, `tier`, `cost` and whether they are still `shopable`. Pass `id` to get the full details of one item instead: description, properties, heroes, upgrades, images. A hero's own abilities and weapon are listed by class name in `list_heroes` for that hero's `id`."
+        description = "List the items of one type in the current game version with their `id` (the item id in the tables), `name` (null for internal items) and `className`; upgrades also list their `slot`, `tier`, `cost` and whether they are still `shopable`. Pass `id` to get the full details of one item instead: description, properties, heroes, upgrades, images. Some abilities have no `description.desc`; their text is in `tooltip_details.info_sections[].loc_string`. A hero's own abilities and weapon are listed by class name in `list_heroes` for that hero's `id`."
     )]
     async fn list_items(&self, Parameters(args): Parameters<ListItemsArgs>) -> CallToolResult {
         let items = match self.assets.items().await {

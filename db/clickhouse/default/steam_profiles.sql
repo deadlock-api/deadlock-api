@@ -1,8 +1,8 @@
 CREATE TABLE default.steam_profiles
 (
     `account_id` UInt32 COMMENT 'steam id3' STATISTICS(tdigest),
-    `personaname` String CODEC(ZSTD(1)),
-    `profileurl` String CODEC(ZSTD(1)),
+    `personaname` String COMMENT 'Current Steam display name; search it (e.g. ILIKE) to find a player\'s account_id. In-game names seen in matches are in steam_profile_observed_names' CODEC(ZSTD(1)),
+    `profileurl` String COMMENT 'Steam profile URL: ends in /id/<vanity>/ for a custom URL, else /profiles/<SteamID64>/' CODEC(ZSTD(1)),
     `avatar` String CODEC(ZSTD(1)),
     `personastate` Enum8('Offline' = 0, 'Online' = 1, 'Busy' = 2, 'Away' = 3, 'Snooze' = 4, 'LookingToTrade' = 5, 'LookingToPlay' = 6),
     `realname` Nullable(String),

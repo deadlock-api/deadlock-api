@@ -82,7 +82,7 @@ pub(crate) enum QueryError {
     #[error("The snapshot catalog is still loading, retry in a few seconds")]
     NotReady,
     #[error(
-        "Query timed out after {} seconds; filter `match_player` on `match_id` or `start_time` and select fewer columns",
+        "Query timed out after {} seconds; filter `match_player` on `match_id` or `start_time`, select fewer columns, and query `match_player` instead of the slower `match_player_latest` where duplicate rows don't matter",
         QUERY_TIMEOUT.as_secs()
     )]
     Timeout,
@@ -575,7 +575,9 @@ fn table_meta(manifest_tables: &BTreeMap<String, TableMeta>, name: &str) -> Opti
         comment: format!(
             "`{base}` with duplicates resolved: only the newest `created_at` row per \
              (`match_id`, `account_id`) is kept. Filters on `match_id`, `account_id` and \
-             `start_time` are pushed below the deduplication."
+             `start_time` are pushed below the deduplication, but it is much slower than `{base}` \
+             over long windows (a 90-day `min(start_time)` per hero times out); use it only when \
+             exact counts matter."
         ),
         column_types: meta.column_types.clone(),
     })

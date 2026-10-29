@@ -1,7 +1,7 @@
 CREATE TABLE default.steam_profile_observed_names
 (
     `account_id` UInt32,
-    `observed_name` String CODEC(ZSTD(1)),
+    `observed_name` String COMMENT 'In-game name the player had in match_id' CODEC(ZSTD(1)),
     `match_id` UInt64,
     `observed_at` DateTime CODEC(Delta(4), ZSTD(1))
 )
