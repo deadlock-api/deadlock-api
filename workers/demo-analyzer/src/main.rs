@@ -156,8 +156,11 @@ async fn main() -> Result<(), Error> {
     let mut last_full_scan: Option<Instant> = None;
     let mut incremental_min_match_id = 0;
 
-    service_utils::run_until_shutdown(async move {
-        loop {
+    // Not `run_until_shutdown`: a shutdown must not drop the parsed updates `process_matches`
+    // has not applied yet. It stops that batch, applies them, and the loop exits here.
+    let shutdown = service_utils::shutdown_token();
+    async {
+        while !shutdown.is_cancelled() {
             let full_scan = last_full_scan.is_none_or(|t| t.elapsed() >= FULL_SCAN_INTERVAL);
             // A failed query must not end the process: log it and poll again later.
             let pending = async {
@@ -182,7 +185,9 @@ async fn main() -> Result<(), Error> {
                     if cli.once {
                         return Err(e);
                     }
-                    tokio::time::sleep(Duration::from_mins(1)).await;
+                    shutdown
+                        .run_until_cancelled(tokio::time::sleep(Duration::from_mins(1)))
+                        .await;
                     continue;
                 }
             };
@@ -201,7 +206,9 @@ async fn main() -> Result<(), Error> {
                 if cli.once {
                     return Ok(());
                 }
-                tokio::time::sleep(Duration::from_mins(1)).await;
+                shutdown
+                    .run_until_cancelled(tokio::time::sleep(Duration::from_mins(1)))
+                    .await;
                 continue;
             }
 
@@ -236,14 +243,21 @@ async fn main() -> Result<(), Error> {
                 return Ok(());
             }
 
-            tokio::time::sleep(Duration::from_mins(1)).await;
+            shutdown
+                .run_until_cancelled(tokio::time::sleep(Duration::from_mins(1)))
+                .await;
         }
-    })
+        info!("Shutting down");
+        Ok::<_, clickhouse::error::Error>(())
+    }
     .await?;
     Ok(())
 }
 
 /// Processes `matches` and applies their updates in batches; returns the failed match ids.
+///
+/// A shutdown drops the demos still downloading or parsing (they stay pending and are picked
+/// up again) and applies the updates already parsed.
 async fn process_matches(
     http_client: &reqwest::Client,
     ch_client: &clickhouse::Client,
@@ -253,7 +267,7 @@ async fn process_matches(
 ) -> Vec<u64> {
     let mut failed = Vec::new();
     let mut pending_updates: Vec<MatchUpdate> = Vec::new();
-    let mut stream = futures::stream::iter(matches)
+    let stream = futures::stream::iter(matches)
         .map(|m| async move {
             let match_id = m.match_id;
             match process_demo(http_client, &m).await {
@@ -268,7 +282,9 @@ async fn process_matches(
                 }
             }
         })
-        .buffer_unordered(parallelism);
+        .buffer_unordered(parallelism)
+        .take_until(service_utils::shutdown_token().cancelled_owned());
+    let mut stream = core::pin::pin!(stream);
 
     while let Some(result) = stream.next().await {
         match result {
