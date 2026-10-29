@@ -9,7 +9,7 @@ use std::io::Read as _;
 use std::sync::Arc;
 use std::time::Instant;
 
-use arc_swap::ArcSwap;
+use arc_swap::{ArcSwap, ArcSwapOption};
 use bytes::Bytes;
 use cached::macros::cached;
 use object_store::aws::AmazonS3;
@@ -52,9 +52,12 @@ const ON_DEMAND_COOLDOWN: Duration = Duration::from_mins(1);
 #[derive(Clone, Default)]
 pub struct VersionStore {
     versions: Arc<ArcSwap<Vec<u32>>>,
+    /// Time of the last successful listing. Written under `refresh_lock`, read
+    /// without it.
+    last_listed: Arc<ArcSwapOption<Instant>>,
     /// Singleflight guard: any task that wants to hit R2 for a fresh listing
-    /// must hold this lock. Holds the time of the last successful listing.
-    refresh_lock: Arc<Mutex<Option<Instant>>>,
+    /// must hold this lock.
+    refresh_lock: Arc<Mutex<()>>,
 }
 
 impl VersionStore {
@@ -82,19 +85,19 @@ impl VersionStore {
         if !self.versions.load().is_empty() {
             return Ok(());
         }
-        let mut last_listed = self.refresh_lock.lock().await;
+        let _guard = self.refresh_lock.lock().await;
         // Re-check now that we hold the lock: another task may have filled
         // the list while we waited.
         if !self.versions.load().is_empty() {
             return Ok(());
         }
-        self.load_locked(r2, &mut last_listed).await
+        self.load_locked(r2).await
     }
 
     /// Force a fresh listing from R2. Used by the background refresh loop.
     pub(crate) async fn refresh_now(&self, r2: &AmazonS3) -> Result<(), VersionStoreError> {
-        let mut last_listed = self.refresh_lock.lock().await;
-        self.load_locked(r2, &mut last_listed).await
+        let _guard = self.refresh_lock.lock().await;
+        self.load_locked(r2).await
     }
 
     /// Refresh for a request naming `version`, which isn't in the cached list,
@@ -102,28 +105,34 @@ impl VersionStore {
     /// refresh. Lists R2 only if [`needs_listing`] says so; callers that waited
     /// behind a listing reuse its result.
     pub async fn refresh_for(&self, r2: &AmazonS3, version: u32) -> Result<(), VersionStoreError> {
-        let mut last_listed = self.refresh_lock.lock().await;
-        if needs_listing(self.latest(), *last_listed, version, Instant::now()) {
-            self.load_locked(r2, &mut last_listed).await
+        // Checked before the lock too, so requests inside the cooldown don't
+        // queue behind a listing that is in flight.
+        if !self.needs_listing(version) {
+            return Ok(());
+        }
+        let _guard = self.refresh_lock.lock().await;
+        if self.needs_listing(version) {
+            self.load_locked(r2).await
         } else {
             Ok(())
         }
     }
 
+    fn needs_listing(&self, version: u32) -> bool {
+        let last_listed = self.last_listed.load().as_deref().copied();
+        needs_listing(self.latest(), last_listed, version, Instant::now())
+    }
+
     /// Caller must hold `refresh_lock`. Lists R2, swaps the cached list and
     /// records the time of the listing in `last_listed`.
-    async fn load_locked(
-        &self,
-        r2: &AmazonS3,
-        last_listed: &mut Option<Instant>,
-    ) -> Result<(), VersionStoreError> {
+    async fn load_locked(&self, r2: &AmazonS3) -> Result<(), VersionStoreError> {
         let v = list_versions_raw(r2).await?;
         if v.is_empty() {
             return Err(VersionStoreError::NoVersions);
         }
         debug!("Refreshed version list: {} versions", v.len());
         self.versions.store(Arc::new(v));
-        *last_listed = Some(Instant::now());
+        self.last_listed.store(Some(Arc::new(Instant::now())));
         Ok(())
     }
 
@@ -314,7 +323,9 @@ mod tests {
         store.ensure_loaded(&r2).await.unwrap();
         assert_eq!(lists.load(Ordering::SeqCst), 1);
         // Let the on-demand cooldown run out.
-        *store.refresh_lock.lock().await = Instant::now().checked_sub(ON_DEMAND_COOLDOWN);
+        store
+            .last_listed
+            .store(Instant::now().checked_sub(ON_DEMAND_COOLDOWN).map(Arc::new));
 
         versions.lock().unwrap().push(101);
         let tasks: Vec<_> = (0..20)

@@ -9,12 +9,12 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use bytes::Bytes;
-use cached::{Cached as _, TtlCache};
 use clickhouse::Row;
 use clickhouse_utils::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
 use futures::future::join;
 use futures::stream::BoxStream;
 use metrics::counter;
+use moka::future::Cache;
 use object_store::aws::AmazonS3;
 use object_store::local::LocalFileSystem;
 use object_store::path::Path as S3Path;
@@ -22,7 +22,7 @@ use object_store::{GetResult, ObjectStore, ObjectStoreExt as _};
 use prost::Message as _;
 use serde::Deserialize;
 use tokio::io::AsyncReadExt as _;
-use tokio::sync::{Mutex, OnceCell};
+use tokio::sync::OnceCell;
 use tracing::{debug, error};
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
@@ -101,37 +101,31 @@ static MIN_MATCH_ID_IN_CACHE: OnceCell<u64> = OnceCell::const_new();
 /// Negative cache of match IDs whose metadata fetch from Valve's replay CDN recently failed.
 /// Lets retry storms short-circuit instead of repeatedly re-hitting S3 and the (often
 /// unavailable) CDN for the same match.
-static METADATA_FETCH_FAILURES: LazyLock<Option<NegativeCache>> =
+static METADATA_FETCH_FAILURES: LazyLock<NegativeCache> =
     LazyLock::new(|| negative_cache(Duration::from_mins(1)));
 
 /// Negative cache of match IDs whose metadata Valve's replay CDN answered with 404. Unlike
 /// transient failures, these rarely resolve quickly, so they are remembered for longer.
-static METADATA_NOT_FOUND: LazyLock<Option<NegativeCache>> =
+static METADATA_NOT_FOUND: LazyLock<NegativeCache> =
     LazyLock::new(|| negative_cache(Duration::from_hours(1)));
 
-type NegativeCache = Mutex<TtlCache<u64, ()>>;
+type NegativeCache = Cache<u64, ()>;
 
-/// A negative cache of match IDs; `None` (nothing is cached) only for a zero `ttl`.
-fn negative_cache(ttl: Duration) -> Option<NegativeCache> {
-    TtlCache::<u64, ()>::builder()
-        .ttl(ttl)
-        .initial_capacity(100_000)
+/// A negative cache of match IDs. Concurrent lookups don't contend on a lock, and expired
+/// entries are evicted instead of piling up until their key is looked up again.
+fn negative_cache(ttl: Duration) -> NegativeCache {
+    Cache::builder()
+        .time_to_live(ttl)
+        .max_capacity(1_000_000)
         .build()
-        .ok()
-        .map(Mutex::new)
 }
 
-async fn is_cached(cache: &LazyLock<Option<NegativeCache>>, match_id: u64) -> bool {
-    let Some(cache) = cache.as_ref() else {
-        return false;
-    };
-    cache.lock().await.cache_get(&match_id).is_some()
+fn is_cached(cache: &NegativeCache, match_id: u64) -> bool {
+    cache.contains_key(&match_id)
 }
 
-async fn remember(cache: &LazyLock<Option<NegativeCache>>, match_id: u64) {
-    if let Some(cache) = cache.as_ref() {
-        cache.lock().await.cache_set(match_id, ());
-    }
+async fn remember(cache: &NegativeCache, match_id: u64) {
+    cache.insert(match_id, ()).await;
 }
 
 fn metadata_not_found() -> APIError {
@@ -204,10 +198,10 @@ async fn fetch_match_metadata_raw(
     is_custom: bool,
     disable_steam: bool,
 ) -> APIResult<Bytes> {
-    if is_cached(&METADATA_NOT_FOUND, match_id).await {
+    if is_cached(&METADATA_NOT_FOUND, match_id) {
         return Err(metadata_not_found());
     }
-    if is_cached(&METADATA_FETCH_FAILURES, match_id).await {
+    if is_cached(&METADATA_FETCH_FAILURES, match_id) {
         return Err(APIError::status_msg(
             StatusCode::SERVICE_UNAVAILABLE,
             "Match metadata recently failed to fetch from upstream. Retry later.",
