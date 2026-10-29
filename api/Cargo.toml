@@ -26,8 +26,6 @@ chrono = { version = "0.4.45", features = ["serde"] }
 serde_json = "1.0.154"
 object_store = { version = "0.14.2", features = ["aws", "fs"], default-features = false }
 tower = { version = "0.5.3", features = ["limit", "tokio"] }
-tower-layer = "0.3.3"
-tower-service = "0.3.3"
 tower-http = { version = "0.7.1", features = ["compression-full", "cors", "decompression-full", "normalize-path", "trace", "limit"] }
 tracing = "0.1.44"
 utoipa-scalar = { version = "0.4.0", features = ["axum"] }
@@ -101,7 +99,6 @@ clickhouse-sql-parser = { git = "https://github.com/raimannma/clickhouse-antlr4"
 proptest = "1"
 proptest-derive = "0.9"
 rstest = { workspace = true }
-tempfile = { workspace = true }
 
 [lints]
 workspace = true

@@ -42,6 +42,7 @@ use axum::routing::get;
 use axum::{Json, Router};
 use axum_prometheus::PrometheusMetricLayer;
 pub use error::*;
+use tower::Layer as _;
 use tower::limit::ConcurrencyLimitLayer;
 use tower_http::compression::predicate::NotForContentType;
 use tower_http::compression::{
@@ -50,7 +51,6 @@ use tower_http::compression::{
 use tower_http::limit::RequestBodyLimitLayer;
 use tower_http::normalize_path::{NormalizePath, NormalizePathLayer};
 use tower_http::trace::TraceLayer;
-use tower_layer::Layer as _;
 use tracing::debug;
 pub use utils::observability::ConsoleFields;
 use utoipa::OpenApi as _;

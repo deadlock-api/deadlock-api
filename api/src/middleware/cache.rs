@@ -8,7 +8,7 @@ use axum::http::HeaderValue;
 use axum::http::header::CACHE_CONTROL;
 use axum::response::Response;
 use reqwest::header::InvalidHeaderValue;
-use tower_service::Service;
+use tower::Service;
 
 /// A layer that adds a `Cache-Control` header to successful responses that don't set one.
 ///
@@ -77,7 +77,7 @@ pub(crate) struct CacheControlLayer<S> {
     header: Option<HeaderValue>,
 }
 
-impl<S> tower_layer::Layer<S> for CacheControlMiddleware {
+impl<S> tower::Layer<S> for CacheControlMiddleware {
     type Service = CacheControlLayer<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
