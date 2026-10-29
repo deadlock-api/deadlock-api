@@ -1,18 +1,10 @@
-use core::fmt::Display;
+use strum::Display;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Display)]
+#[strum(serialize_all = "lowercase")]
 pub(crate) enum FragmentType {
     Full = 0,
     Delta = 1,
-}
-
-impl Display for FragmentType {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Self::Full => write!(f, "full"),
-            Self::Delta => write!(f, "delta"),
-        }
-    }
 }
 
 pub(crate) mod hltv_download;

@@ -3970,6 +3970,7 @@ dependencies = [
  "serde",
  "serde_json",
  "service-utils",
+ "strum 0.28.0",
  "telemetry",
  "thiserror",
  "tokio",

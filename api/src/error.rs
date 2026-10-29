@@ -74,7 +74,7 @@ pub(super) enum APIError {
     Snappy(#[from] snap::Error),
     #[error("Object Store Error: {0}")]
     ObjectStore(#[from] object_store::Error),
-    #[error("{0}")]
+    #[error(transparent)]
     Crosshair(#[from] CrosshairError),
 }
 

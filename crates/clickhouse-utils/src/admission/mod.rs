@@ -19,7 +19,7 @@ use thiserror::Error;
 /// share its result ([`crate::cache`]).
 #[derive(Debug, Clone, Error)]
 pub enum QueryError {
-    #[error("{0}")]
+    #[error(transparent)]
     Busy(#[from] Busy),
     #[error("{0}")]
     Clickhouse(Arc<clickhouse::error::Error>),
