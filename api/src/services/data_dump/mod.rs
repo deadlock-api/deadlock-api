@@ -29,6 +29,7 @@ use self::policy::{Policy, TABLES, TablePolicy};
 use crate::SHUTDOWN_TOKEN;
 use crate::context::DataDumpConfig;
 use crate::routes::v1::data_privacy::update_row_policy;
+use crate::services::feature_flags::{DATA_DUMP, FeatureFlags};
 use crate::services::lease::Lease;
 
 pub(crate) mod catalog;
@@ -78,6 +79,7 @@ pub(crate) struct DataDump {
     pub(crate) ch_admin: clickhouse::Client,
     pub(crate) pg: Pool<Postgres>,
     pub(crate) redis: ConnectionManager,
+    pub(crate) feature_flags: FeatureFlags,
     pub(crate) store: Arc<dyn ObjectStore>,
     pub(crate) work_dir: PathBuf,
 }
@@ -106,6 +108,10 @@ impl DataDump {
                 tick.tick().await;
                 if SHUTDOWN_TOKEN.is_cancelled() {
                     return;
+                }
+                if !this.feature_flags.is_enabled(&DATA_DUMP) {
+                    info!("data dump: disabled by its feature flag; skipping tick");
+                    continue;
                 }
                 this.tick().await;
             }

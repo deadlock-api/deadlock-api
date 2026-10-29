@@ -11,6 +11,7 @@ use super::membership::{handle_downgrade_or_cancellation, handle_reactivation};
 use super::repository::PatronRepository;
 use super::steam_accounts_repository::SteamAccountsRepository;
 use super::types::Patron;
+use crate::services::feature_flags::{FeatureFlags, PATREON_VERIFICATION};
 
 /// Interval between verification runs (1 hour)
 const VERIFICATION_INTERVAL_SECS: u64 = 60 * 60;
@@ -43,12 +44,14 @@ pub(crate) struct PatreonVerificationJob {
     patreon_client: PatreonClient,
     /// Patrons that need retry due to API errors
     retry_queue: Mutex<Vec<RetryPatron>>,
+    feature_flags: FeatureFlags,
 }
 
 impl PatreonVerificationJob {
     pub(crate) fn new(
         http_client: reqwest::Client,
         pg_client: Pool<Postgres>,
+        feature_flags: FeatureFlags,
         encryption_key: String,
         patreon_client_id: String,
         patreon_client_secret: String,
@@ -68,6 +71,7 @@ impl PatreonVerificationJob {
             steam_accounts_repository,
             patreon_client,
             retry_queue: Mutex::new(Vec::new()),
+            feature_flags,
         }
     }
 
@@ -81,7 +85,11 @@ impl PatreonVerificationJob {
 
             loop {
                 tokio::select! {
-                    _ = interval.tick() => job.run_verification().await,
+                    _ = interval.tick() => {
+                        if job.enabled() {
+                            job.run_verification().await;
+                        }
+                    }
                     () = crate::SHUTDOWN_TOKEN.cancelled() => {
                         info!("Patreon verification job shutting down");
                         break;
@@ -100,11 +108,23 @@ impl PatreonVerificationJob {
 
             loop {
                 tokio::select! {
-                    _ = interval.tick() => job.process_retry_queue().await,
+                    _ = interval.tick() => {
+                        if job.enabled() {
+                            job.process_retry_queue().await;
+                        }
+                    }
                     () = crate::SHUTDOWN_TOKEN.cancelled() => break,
                 }
             }
         });
+    }
+
+    fn enabled(&self) -> bool {
+        let enabled = self.feature_flags.is_enabled(&PATREON_VERIFICATION);
+        if !enabled {
+            info!("Patreon verification is disabled by its feature flag; skipping tick");
+        }
+        enabled
     }
 
     /// Run the verification process for all patrons

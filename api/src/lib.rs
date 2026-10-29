@@ -143,6 +143,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         let patreon_verification_job = std::sync::Arc::new(PatreonVerificationJob::new(
             state.http_client.clone(),
             state.pg_client.clone(),
+            state.feature_flags.clone(),
             state.config.patron_encryption_key.clone(),
             state.config.patreon.client_id.clone(),
             state.config.patreon.client_secret.clone(),
@@ -217,6 +218,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
     };
     api.servers = Some(vec![utoipa::openapi::Server::new(server_url)]);
     api_doc::fill_missing_response_descriptions(&mut api);
+    state.feature_flags.register_routes(&api).await;
 
     let docs = Router::new()
         .merge(Scalar::with_url("/docs", api.clone()).custom_html(api_doc::SCALAR_HTML))

@@ -22,6 +22,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::to_fetch::{queue_requested_match, resolve_invalid_match};
 use crate::routes::v1::matches::types::ClickhouseSalts;
+use crate::services::feature_flags::STEAM_SALTS_FALLBACK;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::utils::types::MatchIdQuery;
@@ -294,7 +295,7 @@ pub(super) async fn fetch_match_salts(
         .await
         .is_ok();
 
-    if disable_steam {
+    if disable_steam || !state.feature_flags.is_enabled(&STEAM_SALTS_FALLBACK) {
         // Nobody fetches the match now: queue it so the to-fetch workers pick it up instead.
         if !has_metadata {
             queue_requested_match(state, match_id);

@@ -11,6 +11,7 @@ use crate::routes::v1::analytics::rollup_window::BUILT_THROUGH;
 use crate::routes::v1::analytics::{
     game_stats, hero_pair_agg, item_stats, player_performance_curve_agg,
 };
+use crate::services::feature_flags::{COHORT_AGG_REFRESH, FeatureFlags};
 use crate::services::lease::Lease;
 
 const REFRESH_INTERVAL_SECS: u64 = 30 * 60;
@@ -612,6 +613,7 @@ async fn refresh(
 pub(crate) fn spawn_cohort_agg_refresh(
     ch_client: clickhouse::Client,
     redis: redis::aio::ConnectionManager,
+    feature_flags: FeatureFlags,
 ) {
     // Each per-day insert sets its own log_comment, overriding this one.
     let ch_client = ch_client
@@ -630,6 +632,10 @@ pub(crate) fn spawn_cohort_agg_refresh(
         let mut tick = interval(Duration::from_secs(REFRESH_INTERVAL_SECS));
         loop {
             tick.tick().await;
+            if !feature_flags.is_enabled(&COHORT_AGG_REFRESH) {
+                info!("cohort agg refresh is disabled by its feature flag; skipping tick");
+                continue;
+            }
             let started = std::time::Instant::now();
             let lease = match Lease::acquire(redis.clone(), LEASE_KEY, &token, LEASE_TTL).await {
                 Ok(Some(lease)) => lease,

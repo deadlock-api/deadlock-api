@@ -12,6 +12,7 @@ use tracing::warn;
 use uuid::Uuid;
 
 use crate::error::{APIError, APIResult};
+use crate::services::feature_flags::{EMERGENCY_MODE, FeatureFlags};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, Status};
 
@@ -20,19 +21,19 @@ use crate::services::rate_limiter::{Quota, RateLimit, Scope, Status};
 pub(crate) struct RateLimitClient {
     limiter: RateLimiter<RedisStore>,
     pg_client: Pool<Postgres>,
-    emergency_mode: bool,
+    feature_flags: FeatureFlags,
 }
 
 impl RateLimitClient {
     pub(crate) const fn new(
         redis_client: ConnectionManager,
         pg_client: Pool<Postgres>,
-        emergency_mode: bool,
+        feature_flags: FeatureFlags,
     ) -> Self {
         Self {
             limiter: RateLimiter::new(RedisStore::new(redis_client)),
             pg_client,
-            emergency_mode,
+            feature_flags,
         }
     }
 
@@ -81,7 +82,7 @@ impl RateLimitClient {
                     "API key is required for this endpoint",
                 ));
             }
-            None if self.emergency_mode => {
+            None if self.feature_flags.is_enabled(&EMERGENCY_MODE) => {
                 count_denial("emergency_mode");
                 return Err(APIError::status_msg(
                     StatusCode::SERVICE_UNAVAILABLE,

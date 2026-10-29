@@ -11,6 +11,7 @@ use axum::response::IntoResponse;
 
 use crate::context::AppState;
 use crate::routes::v1::graphql::GraphQLRequestLog;
+use crate::services::feature_flags::REQUEST_LOGGING;
 use crate::services::request_logger::RequestLog;
 use crate::utils::request::{client_ip, header_str, parse_api_key};
 
@@ -87,7 +88,8 @@ pub(crate) async fn track_requests(
     if !matches!(
         path_str,
         "/" | "/docs" | "/favicon.ico" | "/robots.txt" | "/metrics" | "/openapi.json"
-    ) {
+    ) && state.feature_flags.is_enabled(&REQUEST_LOGGING)
+    {
         let log = RequestLog {
             timestamp: chrono::Utc::now().timestamp_millis(),
             method,

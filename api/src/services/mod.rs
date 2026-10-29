@@ -2,6 +2,7 @@ pub(crate) mod ch_admission;
 pub(crate) mod ch_cache;
 pub(crate) mod cohort_agg_refresh;
 pub(crate) mod data_dump;
+pub(crate) mod feature_flags;
 pub(crate) mod lease;
 pub(crate) mod patreon;
 pub(crate) mod process_memory;

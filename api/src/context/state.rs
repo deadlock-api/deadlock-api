@@ -1,6 +1,4 @@
 use core::time::Duration;
-use std::collections::HashMap;
-use std::fs::File;
 use std::io;
 use std::sync::Arc;
 
@@ -9,7 +7,6 @@ use game_assets::versions::store::VersionStore;
 use object_store::aws::{AmazonS3, AmazonS3Builder};
 use object_store::local::LocalFileSystem;
 use object_store::{BackoffConfig, RetryConfig};
-use serde::Deserialize;
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use sqlx::{Pool, Postgres};
 use thiserror::Error;
@@ -21,6 +18,7 @@ use crate::routes::v1::mcp::{CatalogError, SnapshotCatalog};
 use crate::services::ch_admission::spawn_controller as spawn_ch_admission_controller;
 use crate::services::ch_cache;
 use crate::services::data_dump::DataDump;
+use crate::services::feature_flags::FeatureFlags;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::request_logger::RequestLogger;
 use crate::services::steam::client::SteamClient;
@@ -46,11 +44,6 @@ pub enum AppStateError {
     Http(#[from] reqwest::Error),
     #[error("MCP catalog error: {0}")]
     McpCatalog(#[from] CatalogError),
-}
-
-#[derive(Debug, Clone, Deserialize, Default)]
-pub(crate) struct FeatureFlags {
-    pub(crate) routes: HashMap<String, bool>,
 }
 
 /// Shared application state. Cheap to clone: every `State<AppState>` extraction clones it, so
@@ -175,17 +168,8 @@ impl AppState {
             .connect_with(pg_options)
             .await?;
 
-        // Load feature flags
         debug!("Loading feature flags");
-        let feature_flags = File::open("feature_flags.json")
-            .inspect_err(|e| warn!("Failed to open feature flags file: {e}"))
-            .ok()
-            .and_then(|f| {
-                serde_json::from_reader(f)
-                    .inspect_err(|e| warn!("Failed to parse feature flags: {e}"))
-                    .ok()
-            })
-            .unwrap_or_default();
+        let feature_flags = FeatureFlags::load(pg_client.clone()).await;
 
         // Create a Steam client
         debug!("Creating Steam client");
@@ -207,7 +191,7 @@ impl AppState {
         let rate_limit_client = RateLimitClient::new(
             redis_client.clone(),
             pg_client.clone(),
-            config.emergency_mode,
+            feature_flags.clone(),
         );
 
         // Create a Request Logger
@@ -234,7 +218,7 @@ impl AppState {
             );
         }
         let steam_search_index = SteamSearchIndex::new(steam_search_index_path);
-        steam_search_index.spawn_refresh_loop(ch_client_ro.clone());
+        steam_search_index.spawn_refresh_loop(ch_client_ro.clone(), feature_flags.clone());
         spawn_ch_admission_controller(ch_client_ro.clone());
         // The query caches' disk tier, shared by all instances so a restarted one does not
         // re-run every cached query. Unset (local runs, tests): memory only.
@@ -244,11 +228,12 @@ impl AppState {
         ch_cache::spawn_memory_metrics();
         crate::services::process_memory::spawn();
 
-        if !cfg!(debug_assertions) && std::env::var_os("COHORT_AGG_REFRESH_DISABLED").is_none() {
+        if !cfg!(debug_assertions) {
             debug!("Starting cohort agg refresh");
             crate::services::cohort_agg_refresh::spawn_cohort_agg_refresh(
                 ch_client.clone(),
                 redis_client.clone(),
+                feature_flags.clone(),
             );
         }
 
@@ -281,7 +266,13 @@ impl AppState {
 
         if config.data_dump.enabled {
             debug!("Starting data dump");
-            spawn_data_dump(&config, &ch_client, &pg_client, &redis_client)?;
+            spawn_data_dump(
+                &config,
+                &ch_client,
+                &pg_client,
+                &redis_client,
+                &feature_flags,
+            )?;
         }
 
         Ok(Self(Arc::new(AppStateInner {
@@ -381,6 +372,7 @@ fn spawn_data_dump(
     ch_client: &clickhouse::Client,
     pg_client: &Pool<Postgres>,
     redis_client: &redis::aio::ConnectionManager,
+    feature_flags: &FeatureFlags,
 ) -> Result<(), object_store::Error> {
     let lake_store = s3_store(
         "auto",
@@ -406,6 +398,7 @@ fn spawn_data_dump(
         ch_admin: ch_client.clone(),
         pg: pg_client.clone(),
         redis: redis_client.clone(),
+        feature_flags: feature_flags.clone(),
         store: Arc::new(lake_store),
         work_dir: std::env::temp_dir().join("deadlock-data-dump"),
     }

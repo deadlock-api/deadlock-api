@@ -31,7 +31,9 @@ use tantivy::{
     DocAddress, Index, IndexReader, IndexSettings, Order, ReloadPolicy, TantivyDocument, Term,
 };
 use tokio::time::interval;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
+
+use crate::services::feature_flags::{FeatureFlags, STEAM_SEARCH_INDEX_REFRESH};
 
 const INCREMENTAL_INTERVAL_SECS: u64 = 2 * 60;
 /// Incrementals already pick up profile changes; a full rebuild only refreshes the
@@ -624,7 +626,13 @@ impl SteamSearchIndex {
     /// `INCREMENTAL_INTERVAL_SECS` and falls back to a full rebuild every
     /// `FULL_REBUILD_INTERVAL_SECS`. A single task means incremental and full
     /// rebuilds never overlap, so no Mutex is needed.
-    pub(crate) fn spawn_refresh_loop(&self, ch_client: clickhouse::Client) {
+    /// Rebuilds the index while the [`STEAM_SEARCH_INDEX_REFRESH`] flag is enabled; disabled,
+    /// searches keep serving the last built index.
+    pub(crate) fn spawn_refresh_loop(
+        &self,
+        ch_client: clickhouse::Client,
+        feature_flags: FeatureFlags,
+    ) {
         let loaded = self.try_load_persisted();
         info!(
             "steam search index: dir={:?}, incremental every {INCREMENTAL_INTERVAL_SECS}s, full every {FULL_REBUILD_INTERVAL_SECS}s, loaded_persisted={loaded}",
@@ -632,7 +640,17 @@ impl SteamSearchIndex {
         );
         let this = self.clone();
         tokio::spawn(async move {
-            if !loaded && let Err(e) = this.rebuild_full(&ch_client).await {
+            let enabled = || {
+                let enabled = feature_flags.is_enabled(&STEAM_SEARCH_INDEX_REFRESH);
+                if !enabled {
+                    debug!("steam search index refresh is disabled by its feature flag; skipping");
+                }
+                enabled
+            };
+            if !loaded
+                && enabled()
+                && let Err(e) = this.rebuild_full(&ch_client).await
+            {
                 warn!("steam search index initial full build failed: {e}");
             }
             this.gc_stale_instance_dirs().await;
@@ -643,11 +661,17 @@ impl SteamSearchIndex {
             loop {
                 tokio::select! {
                     _ = inc.tick() => {
+                        if !enabled() {
+                            continue;
+                        }
                         if let Err(e) = this.rebuild_incremental(&ch_client).await {
                             error!("steam search index incremental failed: {e}");
                         }
                     }
                     _ = full.tick() => {
+                        if !enabled() {
+                            continue;
+                        }
                         if let Err(e) = this.rebuild_full(&ch_client).await {
                             error!("steam search index periodic full rebuild failed: {e}");
                         }

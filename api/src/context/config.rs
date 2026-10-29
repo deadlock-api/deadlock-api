@@ -253,8 +253,6 @@ impl Default for DataDumpConfig {
 
 #[derive(Deserialize, Debug, Clone)]
 pub(crate) struct Config {
-    #[serde(default)]
-    pub(crate) emergency_mode: bool,
     pub(crate) internal_api_key: String,
     pub(super) steam: SteamConfig,
     pub(super) redis: RedisConfig,
