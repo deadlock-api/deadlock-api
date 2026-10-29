@@ -1,4 +1,4 @@
-//! Redis lease so only one API replica runs a background job at a time.
+//! Redis lease so only one replica of a service runs a background job at a time.
 
 use core::time::Duration;
 
@@ -18,7 +18,8 @@ if redis.call('set', KEYS[1], ARGV[1], 'PX', ARGV[2], 'NX') then
 end
 return 0";
 
-pub(crate) const RELEASE_IF_OWNED: &str = "
+/// Deletes `KEYS[1]` if it still holds the token `ARGV[1]`, leaving another owner's key alone.
+pub const RELEASE_IF_OWNED: &str = "
 if redis.call('get', KEYS[1]) == ARGV[1] then
     return redis.call('del', KEYS[1])
 end
@@ -44,7 +45,8 @@ async fn eval_if_owned(
     cmd.query_async(redis).await
 }
 
-pub(crate) struct Lease {
+/// A held lease on a Redis key, renewed in the background until released or dropped.
+pub struct Lease {
     redis: ConnectionManager,
     key: String,
     token: String,
@@ -53,7 +55,7 @@ pub(crate) struct Lease {
 
 impl Lease {
     /// Returns `None` when another replica holds the lease.
-    pub(crate) async fn acquire(
+    pub async fn acquire(
         mut redis: ConnectionManager,
         key: &str,
         token: &str,
@@ -106,7 +108,8 @@ impl Lease {
         }))
     }
 
-    pub(crate) async fn release(mut self) {
+    /// Deletes the key if this lease still owns it.
+    pub async fn release(mut self) {
         self.heartbeat.abort();
         if let Err(e) = eval_if_owned(
             &mut self.redis,
@@ -123,7 +126,7 @@ impl Lease {
 
     /// Keeps the lease for `hold` more, without renewal, so other replicas skip their ticks
     /// until then. Releases it at once when `hold` is zero.
-    pub(crate) async fn hold_for(mut self, hold: Duration) {
+    pub async fn hold_for(mut self, hold: Duration) {
         if hold.is_zero() {
             return self.release().await;
         }

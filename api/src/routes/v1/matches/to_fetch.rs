@@ -10,6 +10,7 @@ use axum_extra::extract::Query;
 use cached::macros::cached;
 use clickhouse::Row;
 use clickhouse_utils::{BatchInserter, BatchQuery, ClickhouseBatcher};
+use db_clients::RELEASE_IF_OWNED;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use tracing::{debug, warn};
@@ -17,7 +18,6 @@ use uuid::Uuid;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::services::lease::RELEASE_IF_OWNED;
 use crate::utils::request::header_str;
 use crate::utils::sql::id_list;
 

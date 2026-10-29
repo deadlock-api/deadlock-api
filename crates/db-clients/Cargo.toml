@@ -10,6 +10,7 @@ object_store = { workspace = true }
 redis = { workspace = true }
 sqlx = { workspace = true, features = ["macros", "postgres", "runtime-tokio", "time"] }
 thiserror = { workspace = true }
+tokio = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
 
 [lints]

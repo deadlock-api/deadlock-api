@@ -1,5 +1,6 @@
 //! Connections to the services' databases and stores (`ClickHouse`, Postgres, Redis, S3 and the
-//! local file cache), configured from the environment, and the shared Postgres queries.
+//! local file cache), configured from the environment, the shared Postgres queries, and a Redis
+//! lease for single-replica background jobs.
 
 #![forbid(unsafe_code)]
 #![cfg_attr(
@@ -23,7 +24,9 @@
 )]
 
 mod clients;
+mod lease;
 mod prioritization;
 
 pub use clients::*;
+pub use lease::*;
 pub use prioritization::*;

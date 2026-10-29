@@ -16,6 +16,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use chrono::{DateTime, Utc};
+use db_clients::Lease;
 use object_store::path::Path;
 use object_store::{Attribute, Attributes, ObjectStore, PutOptions, PutPayload};
 use redis::aio::ConnectionManager;
@@ -30,7 +31,6 @@ use crate::SHUTDOWN_TOKEN;
 use crate::context::DataDumpConfig;
 use crate::routes::v1::data_privacy::update_row_policy;
 use crate::services::feature_flags::{DATA_DUMP, FeatureFlags};
-use crate::services::lease::Lease;
 
 pub(crate) mod catalog;
 mod compaction;

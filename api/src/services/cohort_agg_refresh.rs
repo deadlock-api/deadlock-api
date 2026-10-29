@@ -2,6 +2,7 @@ use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 
 use clickhouse::Row;
+use db_clients::Lease;
 use serde::Deserialize;
 use tokio::time::interval;
 use tracing::{debug, error, info};
@@ -12,7 +13,6 @@ use crate::routes::v1::analytics::{
     game_stats, hero_pair_agg, item_stats, player_performance_curve_agg,
 };
 use crate::services::feature_flags::{COHORT_AGG_REFRESH, FeatureFlags};
-use crate::services::lease::Lease;
 
 const REFRESH_INTERVAL_SECS: u64 = 30 * 60;
 

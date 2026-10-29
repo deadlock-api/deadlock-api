@@ -2842,6 +2842,7 @@ dependencies = [
  "redis",
  "sqlx",
  "thiserror",
+ "tokio",
  "tracing",
 ]
 
@@ -2870,6 +2871,7 @@ dependencies = [
  "clickhouse-utils",
  "crosshair",
  "datafusion",
+ "db-clients",
  "demofusion",
  "duckdb",
  "futures",
