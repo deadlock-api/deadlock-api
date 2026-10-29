@@ -1,20 +1,32 @@
 use core::time::Duration;
-use std::sync::{Arc, Mutex};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex, PoisonError};
 
 use chrono::{TimeDelta, Utc};
-use sqlx::{Pool, Postgres};
-use tokio::time::interval;
-use tracing::{error, info, warn};
+use db_clients::Lease;
+use redis::aio::ConnectionManager;
+use tokio::time::{MissedTickBehavior, interval};
+use tracing::{debug, error, info, warn};
 
 use super::client::PatreonClient;
 use super::membership::{handle_downgrade_or_cancellation, handle_reactivation};
 use super::repository::PatronRepository;
 use super::steam_accounts_repository::SteamAccountsRepository;
 use super::types::Patron;
+use crate::context::AppState;
 use crate::services::feature_flags::{FeatureFlags, PATREON_VERIFICATION};
 
 /// Interval between verification runs (1 hour)
 const VERIFICATION_INTERVAL_SECS: u64 = 60 * 60;
+
+/// Every API replica runs the job; the lease lets one of them verify per interval. Two at once
+/// would refresh the same tokens and race to store the token pairs Patreon returned.
+const LEASE_KEY: &str = "patreon_verification:leader";
+/// Renewed while a run is in progress, so it only bounds how long a crashed leader blocks.
+const LEASE_TTL: Duration = Duration::from_mins(5);
+/// The lease outlives the run until shortly before the leader's next tick, so the other
+/// replicas skip the rest of this interval.
+const LEASE_HOLD_MARGIN: Duration = Duration::from_mins(1);
 
 /// Patron queued for retry after API error
 struct RetryPatron {
@@ -42,81 +54,112 @@ pub(crate) struct PatreonVerificationJob {
     patron_repository: PatronRepository,
     steam_accounts_repository: SteamAccountsRepository,
     patreon_client: PatreonClient,
-    /// Patrons that need retry due to API errors
-    retry_queue: Mutex<Vec<RetryPatron>>,
+    /// Patrons that need retry due to API errors, by patron id
+    retry_queue: Mutex<HashMap<uuid::Uuid, RetryPatron>>,
     feature_flags: FeatureFlags,
+    redis: ConnectionManager,
+    /// This replica's lease token.
+    lease_token: String,
 }
 
 impl PatreonVerificationJob {
-    pub(crate) fn new(
-        http_client: reqwest::Client,
-        pg_client: Pool<Postgres>,
-        feature_flags: FeatureFlags,
-        encryption_key: String,
-        patreon_client_id: String,
-        patreon_client_secret: String,
-        patreon_redirect_uri: String,
-    ) -> Self {
-        let patron_repository = PatronRepository::new(pg_client.clone(), encryption_key);
-        let steam_accounts_repository = SteamAccountsRepository::new(pg_client);
+    pub(crate) fn new(state: &AppState) -> Self {
+        let patron_repository = PatronRepository::new(
+            state.pg_client.clone(),
+            state.config.patron_encryption_key.clone(),
+        );
+        let steam_accounts_repository = SteamAccountsRepository::new(state.pg_client.clone());
         let patreon_client = PatreonClient::new(
-            http_client,
-            patreon_client_id,
-            patreon_client_secret,
-            patreon_redirect_uri,
+            state.http_client.clone(),
+            state.config.patreon.client_id.clone(),
+            state.config.patreon.client_secret.clone(),
+            state.config.patreon.redirect_uri.clone(),
         );
 
         Self {
             patron_repository,
             steam_accounts_repository,
             patreon_client,
-            retry_queue: Mutex::new(Vec::new()),
-            feature_flags,
+            retry_queue: Mutex::new(HashMap::new()),
+            feature_flags: state.feature_flags.clone(),
+            redis: state.redis_client.clone(),
+            lease_token: uuid::Uuid::new_v4().simple().to_string(),
         }
     }
 
     /// Start the background verification task
+    ///
+    /// Both tasks are tracked and stop between patrons on shutdown, not between Patreon's token
+    /// refresh and storing the tokens it returned.
     pub(crate) fn start_background_verification(self: Arc<Self>) {
-        // Start the main verification task (runs every 24 hours)
+        let shutdown = &*crate::SHUTDOWN_TOKEN;
+
+        // Start the main verification task (runs every hour)
         let job = Arc::clone(&self);
-        tokio::spawn(async move {
+        crate::BACKGROUND_TASKS.spawn(async move {
             let mut interval = interval(Duration::from_secs(VERIFICATION_INTERVAL_SECS));
+            interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
             info!("Patreon verification job started (runs every hour)");
 
-            loop {
-                tokio::select! {
-                    _ = interval.tick() => {
-                        if job.enabled() {
-                            job.run_verification().await;
-                        }
-                    }
-                    () = crate::SHUTDOWN_TOKEN.cancelled() => {
-                        info!("Patreon verification job shutting down");
-                        break;
-                    }
+            while shutdown
+                .run_until_cancelled(interval.tick())
+                .await
+                .is_some()
+            {
+                if job.enabled() {
+                    job.run_verification_with_lease().await;
                 }
             }
-
+            // A lease held until the next tick would keep the replacing replicas idle.
+            Lease::release_token(job.redis.clone(), LEASE_KEY, &job.lease_token).await;
             info!("Patreon verification job stopped");
         });
 
         // Start the retry task (runs every 30 minutes)
         let job = Arc::clone(&self);
-        tokio::spawn(async move {
+        crate::BACKGROUND_TASKS.spawn(async move {
             let mut interval = interval(Duration::from_secs(RETRY_INTERVAL_SECS));
+            interval.set_missed_tick_behavior(MissedTickBehavior::Delay);
             info!("Patreon retry job started (checks every 30 minutes)");
 
-            loop {
-                tokio::select! {
-                    _ = interval.tick() => {
-                        if job.enabled() {
-                            job.process_retry_queue().await;
-                        }
-                    }
-                    () = crate::SHUTDOWN_TOKEN.cancelled() => break,
+            while shutdown
+                .run_until_cancelled(interval.tick())
+                .await
+                .is_some()
+            {
+                if job.enabled() {
+                    job.process_retry_queue().await;
                 }
             }
         });
+    }
+
+    /// Runs [`Self::run_verification`] if this replica wins the lease, then holds the lease
+    /// until shortly before the next tick.
+    async fn run_verification_with_lease(&self) {
+        let started = std::time::Instant::now();
+        let lease =
+            match Lease::acquire(self.redis.clone(), LEASE_KEY, &self.lease_token, LEASE_TTL).await
+            {
+                Ok(Some(lease)) => lease,
+                Ok(None) => {
+                    debug!("Patreon verification: another replica holds the lease; skipping tick");
+                    return;
+                }
+                Err(e) => {
+                    error!("Patreon verification: lease acquisition failed: {e}");
+                    return;
+                }
+            };
+        self.run_verification().await;
+        if crate::SHUTDOWN_TOKEN.is_cancelled() {
+            lease.release().await;
+            return;
+        }
+        let hold = Duration::from_secs(VERIFICATION_INTERVAL_SECS)
+            .saturating_sub(started.elapsed())
+            .saturating_sub(LEASE_HOLD_MARGIN);
+        lease.hold_for(hold).await;
     }
 
     fn enabled(&self) -> bool {
@@ -141,6 +184,9 @@ impl PatreonVerificationJob {
         };
 
         info!("Found {} patrons to verify", patrons.len());
+        // This run syncs every patron again and queues the ones that fail, so earlier entries
+        // (and their possibly rotated access tokens) are superseded.
+        self.lock_retry_queue().clear();
 
         let mut refreshed_count = 0_usize;
         let mut membership_synced_count = 0_usize;
@@ -149,6 +195,10 @@ impl PatreonVerificationJob {
         let mut api_error_count = 0_usize;
 
         for patron in patrons {
+            if crate::SHUTDOWN_TOKEN.is_cancelled() {
+                info!("Patreon verification stopped by shutdown");
+                return;
+            }
             match self.verify_patron(&patron).await {
                 VerificationResult::RefreshedAndSynced => {
                     refreshed_count = refreshed_count.saturating_add(1);
@@ -375,22 +425,20 @@ impl PatreonVerificationJob {
         }
     }
 
-    /// Queue a patron for retry after Patreon API error
-    fn queue_for_retry(&self, patron: RetryPatron) {
+    fn lock_retry_queue(&self) -> std::sync::MutexGuard<'_, HashMap<uuid::Uuid, RetryPatron>> {
         self.retry_queue
             .lock()
-            .unwrap_or_else(std::sync::PoisonError::into_inner)
-            .push(patron);
+            .unwrap_or_else(PoisonError::into_inner)
+    }
+
+    /// Queue a patron for retry after Patreon API error, replacing an older entry for them
+    fn queue_for_retry(&self, patron: RetryPatron) {
+        self.lock_retry_queue().insert(patron.id, patron);
     }
 
     /// Process the retry queue for patrons that had API errors
     async fn process_retry_queue(&self) {
-        let patrons_to_retry = core::mem::take(
-            &mut *self
-                .retry_queue
-                .lock()
-                .unwrap_or_else(std::sync::PoisonError::into_inner),
-        );
+        let patrons_to_retry = core::mem::take(&mut *self.lock_retry_queue());
 
         if patrons_to_retry.is_empty() {
             return;
@@ -404,7 +452,10 @@ impl PatreonVerificationJob {
         let mut success_count = 0_usize;
         let mut requeued_count = 0_usize;
 
-        for retry_patron in patrons_to_retry {
+        for retry_patron in patrons_to_retry.into_values() {
+            if crate::SHUTDOWN_TOKEN.is_cancelled() {
+                return;
+            }
             match self
                 .sync_membership(
                     retry_patron.id,
