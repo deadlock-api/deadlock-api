@@ -9,6 +9,7 @@ import {
   List,
   Plus,
   RefreshCw,
+  Star,
   Trash2,
   X,
   ZoomIn,
@@ -342,6 +343,16 @@ export function Primitives() {
           </Badge>
           <Badge variant="muted" shape="square">
             0.0%
+          </Badge>
+        </Variants>
+        <Variants label="glyph">
+          <Badge variant="warning">
+            <Star aria-hidden="true" />
+            outline
+          </Badge>
+          <Badge variant="positive" glyph="solid">
+            <Star aria-hidden="true" />
+            solid
           </Badge>
         </Variants>
         <Variants label="categories (chart-1 to chart-8)">

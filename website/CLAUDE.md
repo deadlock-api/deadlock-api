@@ -159,5 +159,5 @@ hint text or descriptions, or write a PRODUCT.md / DESIGN.md (`docs/design-syste
 - React Compiler runs in every build, dev included, via `@vitejs/plugin-react`'s `compiler` option — backed by `oxc-transform-react` (the Rust port), which shares the oxc pass with the TypeScript and JSX transforms and so needs no production-only gate.
 - Constructs it cannot lower (`try`/`finally`, `throw` inside `try`, `++`/`--` on a captured variable) leave that component unoptimized and print a `react-compiler(Todo)` warning. Same components the Babel plugin skipped silently — a to-do list, not a build failure.
 - shadcn primitives live in `src/components/ui/` next to our own primitives; the folder is linted and formatted like the rest. Add new ones with `pnpm dlx shadcn@latest add <component>` against the existing `components.json`, then run `pnpm fmt`.
-- Tailwind v4: tokens live in `src/styles/tokens.css` (`@theme inline`); `@plugin` directives in `tailwind.css` for typography/iconify/animations (no JS plugin array).
+- Tailwind v4: tokens live in `src/styles/tokens.css` (`@theme inline`); `@plugin` directives in `tailwind.css` (typography; no JS plugin array).
 - TypeScript 7 is the native compiler: `tsc` only, no JS compiler API (`require("typescript")` exposes just the version). A tool that needs the old API has to alias `@typescript/typescript6`.

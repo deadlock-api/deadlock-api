@@ -74,9 +74,6 @@
   "devDependencies": {
     "@babel/core": "^8.0.9",
     "@babel/preset-typescript": "^8.0.7",
-    "@iconify-json/material-symbols": "^1.2.96",
-    "@iconify-json/mdi": "^1.2.3",
-    "@iconify/tailwind4": "^1.2.3",
     "@jridgewell/trace-mapping": "^0.3.31",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/typography": "^0.5.20",

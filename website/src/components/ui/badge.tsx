@@ -46,6 +46,11 @@ const badgeVariants = cva(
         /** A fixed disc for one or two characters: a step number, a rank. */
         circle: "rounded-full px-0 py-0 tabular-nums",
       },
+      /** How its icons are drawn: lucide's outlines, or filled in the text color (a star rating). */
+      glyph: {
+        outline: "",
+        solid: "[&>svg]:fill-current",
+      },
     },
     compoundVariants: [
       { shape: "circle", size: "default", class: "size-5" },
@@ -55,6 +60,7 @@ const badgeVariants = cva(
       variant: "default",
       size: "default",
       shape: "pill",
+      glyph: "outline",
     },
   },
 );
@@ -64,6 +70,7 @@ function Badge({
   variant = "default",
   size = "default",
   shape = "pill",
+  glyph = "outline",
   ...props
 }: React.ComponentProps<"span"> & VariantProps<typeof badgeVariants>) {
   return (
@@ -71,7 +78,8 @@ function Badge({
       data-slot="badge"
       data-variant={variant}
       data-shape={shape}
-      className={cn(badgeVariants({ variant, size, shape }), className)}
+      data-glyph={glyph}
+      className={cn(badgeVariants({ variant, size, shape, glyph }), className)}
       {...props}
     />
   );

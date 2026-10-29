@@ -1,4 +1,5 @@
 import type { ItemSlotType } from "deadlock_api_client";
+import { ShapesIcon } from "lucide-react";
 
 import { Field } from "~/components/ui/field";
 import { anyPressed, anyValue } from "~/components/ui/hooks/any-selection";
@@ -29,7 +30,7 @@ export function ItemSlotSelector({
     onValueChange,
   });
   return (
-    <Field label="Slots" icon={<span aria-hidden="true" className="icon-[mdi--shape] size-3" />} {...props}>
+    <Field label="Slots" icon={<ShapesIcon aria-hidden="true" className="size-3.5 shrink-0" />} {...props}>
       <ToggleGroup
         type="multiple"
         variant="outline"

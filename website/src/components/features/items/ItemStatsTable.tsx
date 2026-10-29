@@ -1,5 +1,16 @@
 import type { AnalyticsApiItemStatsRequest, ItemStats } from "deadlock_api_client";
-import { Table2 } from "lucide-react";
+import {
+  CheckIcon,
+  CircleAlertIcon,
+  CircleQuestionMarkIcon,
+  ListFilterIcon,
+  MinusIcon,
+  PlusIcon,
+  StarIcon,
+  Table2,
+  TriangleAlertIcon,
+  XIcon,
+} from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
 import {
   createContext,
@@ -49,7 +60,6 @@ import { useHydrated } from "~/hooks/useHydrated";
 import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import { parseAsSetOf } from "~/lib/nuqs-parsers";
-import { cn } from "~/lib/utils";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import type { SlimUpgrade } from "~/queries/asset-queries";
 
@@ -242,26 +252,26 @@ function ConfidenceTierBadge({ row }: { row: DisplayItemStats }) {
     switch (t) {
       case 1:
         // Big warning, something more extreme than alert
-        return <span className="icon-[mdi--alert-circle] h-4 w-4" />;
+        return <CircleAlertIcon aria-hidden="true" />;
       case 2:
         // Warning: a glyph of its own, so Low does not pass for Moderate
-        return <span className="icon-[mdi--alert] h-4 w-4" />;
+        return <TriangleAlertIcon aria-hidden="true" />;
       case 3:
         // Question
-        return <span className="icon-[mdi--help-circle] h-4 w-4" />;
+        return <CircleQuestionMarkIcon aria-hidden="true" />;
       case 4:
-        // Check
-        return <span className="icon-[material-symbols--star-rounded] h-4 w-4" />;
+        // Star
+        return <StarIcon aria-hidden="true" />;
       case 5:
-        // Big check
+        // Two stars
         return (
-          <span className="flex items-center gap-0.5">
-            <span className="icon-[material-symbols--star-rounded] h-4 w-4" />
-            <span className="icon-[material-symbols--star-rounded] h-4 w-4" />
-          </span>
+          <>
+            <StarIcon aria-hidden="true" />
+            <StarIcon aria-hidden="true" />
+          </>
         );
       default:
-        return <span className="icon-[mdi--help-circle] h-4 w-4" />;
+        return <CircleQuestionMarkIcon aria-hidden="true" />;
     }
   };
 
@@ -288,7 +298,9 @@ function ConfidenceTierBadge({ row }: { row: DisplayItemStats }) {
       }
     >
       <TooltipTarget aria-label={`${name} confidence`}>
-        <Badge variant={variant}>{getConfidenceLabel(tier)}</Badge>
+        <Badge variant={variant} glyph={tier >= 4 ? "solid" : "outline"}>
+          {getConfidenceLabel(tier)}
+        </Badge>
       </TooltipTarget>
     </Tooltip>
   );
@@ -448,7 +460,11 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
               onItemInclude(row.item_id);
             }}
           >
-            <span className={cn(isIncluded ? "icon-[mdi--check]" : "icon-[mdi--plus]", "size-4")} />
+            {isIncluded ? (
+              <CheckIcon aria-hidden="true" className="size-4" />
+            ) : (
+              <PlusIcon aria-hidden="true" className="size-4" />
+            )}
           </Button>
           <Button
             variant="negative-soft"
@@ -461,7 +477,11 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
               onItemExclude(row.item_id);
             }}
           >
-            <span className={cn(isExcluded ? "icon-[mdi--close]" : "icon-[mdi--minus]", "size-4")} />
+            {isExcluded ? (
+              <XIcon aria-hidden="true" className="size-4" />
+            ) : (
+              <MinusIcon aria-hidden="true" className="size-4" />
+            )}
           </Button>
         </div>
       </TableCell>
@@ -757,7 +777,10 @@ export function ItemStatsTable({
                   />
                   <TableHead className="hidden text-center @md:table-cell">Confidence</TableHead>
                   <TableHead className="text-center">
-                    <span className="icon-[mdi--filter-variant] inline-block size-4 align-middle text-muted-foreground" />
+                    <ListFilterIcon
+                      aria-hidden="true"
+                      className="inline-block size-4 align-middle text-muted-foreground"
+                    />
                     <span className="sr-only">Filter</span>
                   </TableHead>
                 </TableRow>

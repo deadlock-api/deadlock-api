@@ -1,3 +1,5 @@
+import { Layers3Icon } from "lucide-react";
+
 import { Field } from "~/components/ui/field";
 import { anyPressed, anyValue } from "~/components/ui/hooks/any-selection";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
@@ -29,7 +31,7 @@ export function ItemTierSelector({
     onValueChange,
   });
   return (
-    <Field label="Tiers" icon={<span aria-hidden="true" className="icon-[mdi--layers-triple] size-3" />} {...props}>
+    <Field label="Tiers" icon={<Layers3Icon aria-hidden="true" className="size-3.5 shrink-0" />} {...props}>
       <ToggleGroup
         type="multiple"
         variant="outline"
