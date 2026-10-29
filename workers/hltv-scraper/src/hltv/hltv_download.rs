@@ -9,9 +9,14 @@ use thiserror::Error;
 use tokio::sync::mpsc::{Receiver, Sender, channel};
 use tokio::time::sleep;
 use tracing::{error, trace};
+use tryhard::RetryPolicy;
 
 use crate::hltv::FragmentType;
 use crate::hltv::hltv_extract_meta::analyze_fragment;
+
+/// Retries of a fragment download that failed in transport (connect, DNS, read timeout),
+/// with linearly growing delays (1 s, 2 s, ...), before `/sync` decides whether to go on.
+const NETWORK_RETRIES: u32 = 5;
 
 #[derive(Debug)]
 pub(crate) struct HltvFragment {
@@ -183,8 +188,13 @@ async fn fragment_fetching_loop(
         for &fragment_type in fragment_types {
             let mut retry_count: u64 = 0;
             loop {
-                match download_match_fragment(client, &broadcast_url, fragment_n, fragment_type)
-                    .await
+                match download_fragment_retrying_network(
+                    client,
+                    &broadcast_url,
+                    fragment_n,
+                    fragment_type,
+                )
+                .await
                 {
                     Ok(contents) => {
                         counter!("hltv.fragment.success").increment(1);
@@ -248,9 +258,12 @@ async fn fragment_fetching_loop(
                             }
                         }
                         DownloadError::NetworkError(e) => {
-                            counter!("hltv.fragment.error.network_error").increment(1);
-                            error!("[{match_id} {fragment_n}] Network error: {e:?}");
-                            sleep(Duration::from_secs(1)).await;
+                            // The relay may be gone for good: stop if `/sync` is, otherwise
+                            // resync to the newest fragment.
+                            error!("[{match_id} {fragment_n}] network retries exhausted: {e}");
+                            sync_available = check_sync_availability(client, &broadcast_url).await;
+                            hard_retry = sync_available;
+                            break;
                         }
                         _ => {
                             return Err(e);
@@ -268,6 +281,27 @@ async fn fragment_fetching_loop(
     }
 
     Ok(())
+}
+
+/// [`download_match_fragment`], retrying transport errors with backoff. HTTP statuses are
+/// returned right away: the caller weighs them against `/sync`.
+async fn download_fragment_retrying_network(
+    client: &Client,
+    broadcast_url: &str,
+    fragment_n: u64,
+    fragment_type: FragmentType,
+) -> Result<Bytes, DownloadError> {
+    tryhard::retry_fn(|| download_match_fragment(client, broadcast_url, fragment_n, fragment_type))
+        .retries(NETWORK_RETRIES)
+        .custom_backoff(|attempt, e: &DownloadError| {
+            if matches!(e, DownloadError::NetworkError(_)) {
+                counter!("hltv.fragment.error.network_error").increment(1);
+                RetryPolicy::Delay(Duration::from_secs(1).saturating_mul(attempt))
+            } else {
+                RetryPolicy::Break
+            }
+        })
+        .await
 }
 
 /// Checks if `/sync` is still available with a 5s retry period.

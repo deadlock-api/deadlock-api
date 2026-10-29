@@ -30,6 +30,7 @@ strum = { version = "0.28.0", features = ["derive"] }
 thiserror = { workspace = true }
 tokio = { workspace = true }
 tracing = { workspace = true }
+tryhard = { workspace = true }
 url = "2.5.8"
 valveprotos = { workspace = true, features = ["user-msgs"] }
 
