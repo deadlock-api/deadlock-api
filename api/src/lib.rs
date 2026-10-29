@@ -104,14 +104,7 @@ pub async fn shutdown_background_tasks(timeout: Duration) {
     }
 }
 
-const ROBOTS_TXT: &str = "
-User-agent: *
-Disallow: /
-Allow: /$
-Allow: /docs
-Allow: /openapi.json
-Allow: /cdn-cgi/
-";
+const ROBOTS_TXT: &str = include_str!("../public/robots.txt");
 
 /// Marks every non-2xx response `no-store`, overriding any `Cache-Control` set further in
 /// (including by [`CacheControlMiddleware`]). Applied outside of every other layer that can
