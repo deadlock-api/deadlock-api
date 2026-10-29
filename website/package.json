@@ -94,7 +94,7 @@
     "tsx": "^4.23.15",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
-    "wrangler": "^4.152.0"
+    "wrangler": "^4.153.0"
   },
   "engines": {
     "node": ">=26.0.0"
