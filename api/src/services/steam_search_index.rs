@@ -18,6 +18,7 @@ use arc_swap::ArcSwapOption;
 use chrono::{DateTime, Utc};
 use clickhouse::Row;
 use serde::Deserialize;
+use steam_id::SteamId;
 use tantivy::collector::TopDocs;
 use tantivy::columnar::StrColumn;
 use tantivy::directory::MmapDirectory;
@@ -61,8 +62,6 @@ const INSTANCE_DIR_PREFIX: &str = "inst_";
 /// disk. A live replica commits an incremental every `INCREMENTAL_INTERVAL_SECS`,
 /// keeping its dir well within this window.
 const STALE_INSTANCE_GRACE_SECS: u64 = 60 * 60;
-/// Offset applied to `account_id` to produce a Steam ID64.
-const STEAM_ID64_OFFSET: u64 = 76_561_197_960_265_728;
 /// Subdirectory prefix for the on-disk index. Bump whenever the Tantivy
 /// schema changes — old `v*_` dirs that don't match are GC'd at next
 /// successful rebuild.
@@ -448,9 +447,12 @@ impl SteamSearchIndex {
         let q_lc = query.to_lowercase();
         let q_nospace = strip_whitespace(&q_lc);
 
-        // If the user typed an account_id (u32) or steam_id64, pin that
-        // profile at the front of the results.
-        let pinned_id = parse_id_query(&q_lc);
+        // A pasted Steam id pins its profile first; the route parses it the same way.
+        let pinned_id = query
+            .trim()
+            .parse::<SteamId>()
+            .ok()
+            .map(SteamId::account_id);
 
         // Fuzzy match on every token (no prefix variant — too expensive on
         // short queries; the JW reranker handles partial matches via the
@@ -694,15 +696,6 @@ impl SteamSearchIndex {
             warn!("steam search index: stale instance dir GC task failed: {e}");
         }
     }
-}
-
-fn parse_id_query(q: &str) -> Option<u32> {
-    let q = q.trim();
-    if let Ok(account_id) = q.parse::<u32>() {
-        return Some(account_id);
-    }
-    let account_id = q.parse::<u64>().ok()?.checked_sub(STEAM_ID64_OFFSET)?;
-    u32::try_from(account_id).ok()
 }
 
 fn profile_from_doc(doc: &TantivyDocument, f: SearchFields, matches_played: u64) -> IndexedProfile {
@@ -1117,7 +1110,7 @@ pub(crate) enum SearchError {
 
 #[cfg(test)]
 mod tests {
-    use super::{STEAM_ID64_OFFSET, jaro, jaro_winkler, parse_id_query};
+    use super::{jaro, jaro_winkler};
 
     fn approx(a: f64, b: f64) {
         assert!((a - b).abs() < 1e-3, "expected {b} ± 1e-3, got {a}");
@@ -1138,25 +1131,6 @@ mod tests {
         approx(jaro_winkler("DWAYNE", "DUANE"), 0.84);
         approx(jaro_winkler("DIXON", "DICKSONX"), 0.8133);
         approx(jaro_winkler("abc", "xbc"), jaro("abc", "xbc"));
-    }
-
-    #[test]
-    fn parses_account_id() {
-        assert_eq!(parse_id_query("12345"), Some(12345));
-        assert_eq!(parse_id_query("  12345 "), Some(12345));
-    }
-
-    #[test]
-    fn parses_steam_id64() {
-        let acc: u32 = 84_032_457;
-        let sid64 = STEAM_ID64_OFFSET + u64::from(acc);
-        assert_eq!(parse_id_query(&sid64.to_string()), Some(acc));
-    }
-
-    #[test]
-    fn rejects_non_numeric() {
-        assert_eq!(parse_id_query("raimann"), None);
-        assert_eq!(parse_id_query("123abc"), None);
     }
 
     #[test]
