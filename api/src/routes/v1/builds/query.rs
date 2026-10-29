@@ -145,6 +145,22 @@ impl Default for BuildsSearchQuery {
     }
 }
 
+/// A case-insensitive "contains" `LIKE` pattern for `text`, matching `%` and `_` literally.
+/// The `Query` extractor has already percent-decoded `text`; `\` is Postgres' default `LIKE`
+/// escape character.
+fn like_contains(text: &str) -> String {
+    let mut pattern = String::with_capacity(text.len().saturating_add(2));
+    pattern.push('%');
+    for c in text.to_lowercase().chars() {
+        if matches!(c, '\\' | '%' | '_') {
+            pattern.push('\\');
+        }
+        pattern.push(c);
+    }
+    pattern.push('%');
+    pattern
+}
+
 /// The search query. The free-text searches are bound as parameters; everything
 /// else is a number or a fixed keyword.
 pub(crate) fn search_query(params: &BuildsSearchQuery) -> QueryBuilder<sqlx::Postgres> {
@@ -154,15 +170,12 @@ pub(crate) fn search_query(params: &BuildsSearchQuery) -> QueryBuilder<sqlx::Pos
         query_builder.push(format_args!(" AND data->'hero_build'->'tags' @> '{tag}'"));
     }
     if let Some(search_name) = &params.search_name {
-        let search_name = urlencoding::decode(search_name).unwrap_or_else(|_| search_name.into());
         query_builder.push(" AND lower(data->'hero_build'->>'name') LIKE ");
-        query_builder.push_bind(format!("%{}%", search_name.to_lowercase()));
+        query_builder.push_bind(like_contains(search_name));
     }
     if let Some(search_description) = &params.search_description {
-        let search_description =
-            urlencoding::decode(search_description).unwrap_or_else(|_| search_description.into());
         query_builder.push(" AND lower(data->'hero_build'->>'description') LIKE ");
-        query_builder.push_bind(format!("%{}%", search_description.to_lowercase()));
+        query_builder.push_bind(like_contains(search_description));
     }
     #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let language = params.language;
@@ -296,6 +309,14 @@ mod tests {
         let sql = sql_query(&query);
         assert!(!sql.contains("OR '1'"));
         assert!(!sql.contains("--"));
+    }
+
+    #[test]
+    fn test_like_contains_escapes_wildcards() {
+        assert_eq!(like_contains("Tank Build"), "%tank build%");
+        assert_eq!(like_contains("100%_\\x"), "%100\\%\\_\\\\x%");
+        // Already decoded by the extractor: a literal `%41` stays `%41`.
+        assert_eq!(like_contains("%41"), "%\\%41%");
     }
 
     #[test]
