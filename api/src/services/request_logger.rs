@@ -12,6 +12,8 @@ pub(crate) type RequestLogger = BatchInserter<RequestLog>;
 pub(crate) struct RequestLog {
     /// Timestamp of the request in milliseconds since epoch
     pub timestamp: i64,
+    /// Cloudflare Ray id, or a `UUIDv7` for requests that didn't come through Cloudflare
+    pub request_id: String,
     /// HTTP method (GET, POST, etc.)
     pub method: String,
     /// The matched route path pattern (e.g., `/v1/players/:account_id`)

@@ -65,6 +65,7 @@ use crate::middleware::cache_bust::reject_cache_busts;
 use crate::middleware::ch_client::scope_ch_client;
 use crate::middleware::cors;
 use crate::middleware::feature_flags::feature_flags;
+use crate::middleware::request_id::request_id;
 use crate::middleware::track_requests::track_requests;
 use crate::services::patreon::verification_job::PatreonVerificationJob;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -202,6 +203,8 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         // Outermost: normalize `?api_key=` / `Bearer` into `X-API-Key` before anything (the
         // request span, request tracking, rate limiting) reads the key.
         .layer(from_fn(write_api_key_to_header))
+        // Outside the request span and request tracking, which both read the request id.
+        .layer(from_fn(request_id))
         .split_for_parts();
 
     let server_url = if cfg!(debug_assertions) {

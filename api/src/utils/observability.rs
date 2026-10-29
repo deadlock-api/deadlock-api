@@ -10,6 +10,7 @@ use tracing_subscriber::field::RecordFields;
 use tracing_subscriber::fmt::FormatFields;
 use tracing_subscriber::fmt::format::{DefaultFields, Writer};
 
+use crate::middleware::request_id::RequestId;
 use crate::utils::parse;
 use crate::utils::request::{client_ip, header_str, parse_api_key};
 
@@ -68,10 +69,10 @@ pub(crate) fn make_request_span<B>(request: &Request<B>) -> Span {
 
     let api_key = parse_api_key(headers);
 
-    // Correlation id provided by the reverse proxy (Cloudflare Ray id / request id).
-    let request_id = header_str(headers, "x-request-id")
-        .or_else(|| header_str(headers, "cf-ray"))
-        .unwrap_or_default();
+    let request_id = request
+        .extensions()
+        .get::<RequestId>()
+        .map_or("", |id| id.0.as_str());
 
     // Human-friendly span name, e.g. `GET /v1/players/{account_id}/steam`.
     let otel_name = format!("{method} {route}");

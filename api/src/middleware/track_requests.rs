@@ -10,6 +10,7 @@ use axum::middleware::Next;
 use axum::response::IntoResponse;
 
 use crate::context::AppState;
+use crate::middleware::request_id::RequestId;
 use crate::routes::v1::graphql::GraphQLRequestLog;
 use crate::services::feature_flags::REQUEST_LOGGING;
 use crate::services::request_logger::RequestLog;
@@ -44,6 +45,11 @@ pub(crate) async fn track_requests(
             })
             .collect()
     });
+    let request_id = req
+        .extensions()
+        .get::<RequestId>()
+        .map(|id| id.0.clone())
+        .unwrap_or_default();
     let headers = req.headers();
     let user_agent = get_header(headers, header::USER_AGENT);
     let api_key = parse_api_key(headers);
@@ -92,6 +98,7 @@ pub(crate) async fn track_requests(
     {
         let log = RequestLog {
             timestamp: chrono::Utc::now().timestamp_millis(),
+            request_id,
             method,
             path: path_str.to_owned(),
             uri,
