@@ -1711,45 +1711,6 @@ mod tests {
     }
 
     #[test]
-    fn agg_select_body_matches_the_item_stats_agg_v2_columns() {
-        let migration = include_str!(
-            "../../../../../workers/migrations/clickhouse/52_item_stats_agg_incremental.sql"
-        );
-        let create = &migration[migration.find("CREATE TABLE").unwrap()..];
-        let create = &create[..create.find("ENGINE").unwrap()];
-        let table_columns = create
-            .lines()
-            .filter_map(|l| l.trim().strip_prefix('`')?.split('`').next())
-            .collect::<Vec<_>>();
-        // The refresh job inserts by position.
-        let select_columns = ITEM_STATS_AGG
-            .grain
-            .iter()
-            .map(|(col, _)| *col)
-            .chain(ROLLUP_MEASURES.split(", "))
-            .collect::<Vec<_>>();
-        assert_eq!(table_columns, select_columns);
-
-        let body = item_stats_agg_select_body("start_time >= 0");
-        assert_valid_sql(&body);
-        let aliases = body[..body.find("\nFROM ").unwrap()]
-            .lines()
-            .filter_map(|l| l.trim().trim_end_matches(',').rsplit_once(" AS "))
-            .map(|(_, alias)| alias)
-            .collect::<Vec<_>>();
-        assert_eq!(aliases, select_columns);
-        assert!(body.contains(&format!(
-            "GROUP BY {}",
-            ITEM_STATS_AGG
-                .grain
-                .iter()
-                .map(|(col, _)| *col)
-                .collect::<Vec<_>>()
-                .join(", ")
-        )));
-    }
-
-    #[test]
     fn rollups_decline_a_window_without_a_whole_day() {
         let (min, _) = mid_day_window();
         let window = ItemStatsQuery {

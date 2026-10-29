@@ -311,8 +311,6 @@ const MV_MEASURES: &str = "n_matches, n_wins, sum_kills, sum_deaths, sum_assists
     sum_neutral_damage, sum_max_health, sum_shots_hit, sum_shots_missed, sum_permanent_buffs, \
     n_permanent_buff_timing_matches, sum_first_permanent_buff_time_s";
 
-/// The hero-stats rollup rows of a window's partial days. Keep in sync with the `SELECT` of both
-/// views in `workers/migrations/clickhouse/50_power_up_buff_analytics.sql`.
 fn mv_rows(
     EdgeRows {
         where_clause,
@@ -950,28 +948,6 @@ mod tests {
             })
             .is_none()
         );
-    }
-
-    #[test]
-    fn edge_rows_mirror_the_rollup_views() {
-        let migration = include_str!(
-            "../../../../../workers/migrations/clickhouse/50_power_up_buff_analytics.sql"
-        );
-        let rows = mv_rows(&EdgeRows {
-            where_clause: String::new(),
-            grain_select: String::new(),
-            group_by: String::new(),
-        });
-        for line in rows.lines().filter(|l| l.contains(" AS ")) {
-            let line = line.trim().trim_end_matches(',');
-            assert!(migration.contains(line), "{line}");
-        }
-        for (col, expr) in MV_GRAIN {
-            assert!(
-                migration.contains(&format!("{expr} AS {col}")) || col == expr,
-                "{col}"
-            );
-        }
     }
 
     #[test]

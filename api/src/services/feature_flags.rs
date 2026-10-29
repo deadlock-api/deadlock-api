@@ -1,5 +1,4 @@
-//! Runtime feature flags, managed in the Postgres `feature_flags` table
-//! (`workers/migrations/postgres/13_create_feature_flags_table.sql`).
+//! Runtime feature flags, managed in the Postgres `feature_flags` table.
 //!
 //! Every flag registers itself: on startup the API upserts every flag declared in [`flags!`] and
 //! every route in the `OpenAPI` spec, and a route or flag missing from the table (an undocumented
@@ -19,13 +18,6 @@ use tracing::{debug, info, warn};
 use utoipa::openapi::OpenApi;
 
 const REFRESH_INTERVAL: Duration = Duration::from_secs(10);
-
-/// Serializes the table setup of replicas starting at the same time: concurrent
-/// `CREATE OR REPLACE FUNCTION`s fail with "tuple concurrently updated".
-const SETUP_LOCK_ID: i64 = 0x6665_6174_7572_6573; // "features"
-
-const SETUP_SQL: &str =
-    include_str!("../../../workers/migrations/postgres/13_create_feature_flags_table.sql");
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Kind {
@@ -150,9 +142,6 @@ impl FeatureFlags {
             writes: !cfg!(debug_assertions),
         }));
         if flags.0.writes {
-            if let Err(e) = flags.setup_table().await {
-                warn!("Failed to set up the feature_flags table: {e}");
-            }
             flags
                 .register(DECLARED.iter().map(Registration::from))
                 .await;
@@ -224,16 +213,6 @@ impl FeatureFlags {
                 flags.register([registration]).await;
             });
         }
-    }
-
-    async fn setup_table(&self) -> sqlx::Result<()> {
-        let mut tx = self.0.pg.begin().await?;
-        sqlx::query("SELECT pg_advisory_xact_lock($1)")
-            .bind(SETUP_LOCK_ID)
-            .execute(&mut *tx)
-            .await?;
-        sqlx::raw_sql(SETUP_SQL).execute(&mut *tx).await?;
-        tx.commit().await
     }
 
     /// Inserts missing flags with their default and marks existing ones as seen. Never touches

@@ -257,10 +257,6 @@ pub(crate) fn cohort_rollup_rows(table: &str) -> Option<impl Fn(&str) -> String>
     Some(move |since_clause: &str| select_body(&spec, since_clause))
 }
 
-/// Keep in sync with the backfill in
-/// `workers/migrations/clickhouse/41_create_item_enemy_stats_agg.sql`. The opposing-team
-/// expression mirrors the semi-join of the `item_stats` base query so both count the same rows.
-/// `enemy_hero_id` keeps only the buyers facing that hero.
 pub(crate) fn enemy_hero_select_body(since_clause: &str, enemy_hero_id: Option<u32>) -> String {
     let enemy_team_having = enemy_hero_id.map_or_else(String::new, |id| {
         format!("HAVING has(enemy_hero_ids, {id})")
