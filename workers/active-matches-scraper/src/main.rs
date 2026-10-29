@@ -75,8 +75,8 @@ async fn main() -> Result<(), Error> {
 
 type SnapshotKey = (u64, u32, u32, u16, u16, u16, u16);
 
-/// Returns the snapshot keys inserted on this tick (the previous tick's keys if fetching
-/// failed).
+/// Returns the snapshot keys inserted on this tick (the previous tick's keys if fetching or
+/// inserting failed).
 #[instrument(skip(http_client, ch_client, previous_tick))]
 #[expect(
     clippy::cast_precision_loss,
@@ -135,6 +135,9 @@ async fn fetch_insert_active_matches(
             gauge!("active_matches_scraper.inserted_active_matches").set(0);
             counter!("active_matches_scraper.insert_active_matches.failure").increment(1);
             error!("Failed to insert active matches: {e:?}");
+            // None of this tick's snapshots reached ClickHouse: keep the last keys, so the
+            // next tick inserts them instead of skipping the unchanged ones.
+            return previous_tick;
         }
     }
     this_tick
@@ -146,6 +149,7 @@ async fn fetch_active_matches(http_client: &reqwest::Client) -> reqwest::Result<
         .get(ACTIVE_MATCHES_URL.as_str())
         .send()
         .await?
+        .error_for_status()?
         .json()
         .await
 }
