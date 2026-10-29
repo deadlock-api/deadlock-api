@@ -109,18 +109,16 @@ impl Lease {
     }
 
     /// Deletes the key if this lease still owns it.
-    pub async fn release(mut self) {
+    pub async fn release(self) {
         self.heartbeat.abort();
-        if let Err(e) = eval_if_owned(
-            &mut self.redis,
-            RELEASE_IF_OWNED,
-            &self.key,
-            &self.token,
-            None,
-        )
-        .await
-        {
-            warn!("lease {} release failed: {e}", self.key);
+        Self::release_token(self.redis.clone(), &self.key, &self.token).await;
+    }
+
+    /// Deletes `key` if it still holds `token`: ends a [`Self::hold_for`] early, e.g. when the
+    /// holder shuts down and the replicas replacing it should not wait out the hold.
+    pub async fn release_token(mut redis: ConnectionManager, key: &str, token: &str) {
+        if let Err(e) = eval_if_owned(&mut redis, RELEASE_IF_OWNED, key, token, None).await {
+            warn!("lease {key} release failed: {e}");
         }
     }
 

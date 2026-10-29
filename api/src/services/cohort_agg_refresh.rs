@@ -4,7 +4,7 @@ use std::collections::{HashMap, HashSet};
 use clickhouse::Row;
 use db_clients::Lease;
 use serde::Deserialize;
-use tokio::time::interval;
+use tokio::time::{MissedTickBehavior, interval};
 use tracing::{debug, error, info};
 
 use crate::routes::v1::analytics::item_flow_stats::agg as item_flow_agg;
@@ -574,6 +574,11 @@ async fn refresh(
     // Each day is recorded as soon as it is built, so a pass cut short (an error, a deploy) keeps
     // its progress instead of rebuilding every day again.
     for (day, built_through, n_matches) in &stale {
+        // Each built day is recorded, so the next leader resumes from here.
+        if crate::SHUTDOWN_TOKEN.is_cancelled() {
+            info!("cohort agg refresh for {} stopped by shutdown", spec.table);
+            return Ok(());
+        }
         rebuild_day(ch_client, spec, day, *built_through, &log_comment).await?;
         record_watermark(ch_client, spec.table, day, *built_through, *n_matches).await?;
     }
@@ -615,7 +620,9 @@ pub(crate) fn spawn_cohort_agg_refresh(
     let ch_client = ch_client
         .with_setting("max_execution_time", "600")
         .with_setting("log_comment", "cohort_agg_refresh");
-    tokio::spawn(async move {
+    // Tracked, so a shutdown waits for the run to stop at a statement boundary and give up the
+    // lease (see the end of this task).
+    crate::BACKGROUND_TASKS.spawn(async move {
         let specs = cohort_specs();
         info!(
             "cohort agg refresh started: watermark-driven, every {REFRESH_INTERVAL_SECS}s rebuild \
@@ -624,10 +631,11 @@ pub(crate) fn spawn_cohort_agg_refresh(
         if let Err(e) = ensure_state_table(&ch_client).await {
             error!("cohort agg state table init failed: {e}");
         }
+        let shutdown = &*crate::SHUTDOWN_TOKEN;
         let token = uuid::Uuid::new_v4().simple().to_string();
         let mut tick = interval(Duration::from_secs(REFRESH_INTERVAL_SECS));
-        loop {
-            tick.tick().await;
+        tick.set_missed_tick_behavior(MissedTickBehavior::Delay);
+        while shutdown.run_until_cancelled(tick.tick()).await.is_some() {
             if !feature_flags.is_enabled(&COHORT_AGG_REFRESH) {
                 info!("cohort agg refresh is disabled by its feature flag; skipping tick");
                 continue;
@@ -645,15 +653,26 @@ pub(crate) fn spawn_cohort_agg_refresh(
                 }
             };
             for spec in &specs {
+                if shutdown.is_cancelled() {
+                    break;
+                }
                 if let Err(e) = refresh(&ch_client, spec).await {
                     error!("cohort agg refresh for {} failed: {e}", spec.table);
                 }
+            }
+            if shutdown.is_cancelled() {
+                break;
             }
             let hold = Duration::from_secs(REFRESH_INTERVAL_SECS)
                 .saturating_sub(started.elapsed())
                 .saturating_sub(LEASE_HOLD_MARGIN);
             lease.hold_for(hold).await;
         }
+        // Whether a run was cut short or the lease is only held until the next tick, the
+        // replicas replacing this one should not sit idle until it expires. Safe only because
+        // `refresh` stops between statements: a dropped INSERT keeps running server-side.
+        Lease::release_token(redis, LEASE_KEY, &token).await;
+        info!("cohort agg refresh stopped");
     });
 }
 
