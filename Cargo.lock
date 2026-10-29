@@ -7583,12 +7583,14 @@ dependencies = [
 name = "telemetry"
 version = "0.1.0"
 dependencies = [
+ "metrics",
  "metrics-exporter-prometheus",
  "opentelemetry",
  "opentelemetry-appender-tracing",
  "opentelemetry-otlp",
  "opentelemetry_sdk",
  "thiserror",
+ "tokio",
  "tracing",
  "tracing-opentelemetry",
  "tracing-subscriber",

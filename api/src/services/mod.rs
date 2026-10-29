@@ -5,7 +5,6 @@ pub(crate) mod data_dump;
 pub(crate) mod feature_flags;
 pub(crate) mod lease;
 pub(crate) mod patreon;
-pub(crate) mod process_memory;
 pub(crate) mod rank_image;
 pub(super) mod rate_limiter;
 pub(crate) mod request_logger;

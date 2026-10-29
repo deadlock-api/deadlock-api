@@ -226,7 +226,7 @@ impl AppState {
             ch_cache::disk::init(path.into());
         }
         ch_cache::spawn_memory_metrics();
-        crate::services::process_memory::spawn();
+        telemetry::process_memory::spawn();
 
         if !cfg!(debug_assertions) {
             debug!("Starting cohort agg refresh");

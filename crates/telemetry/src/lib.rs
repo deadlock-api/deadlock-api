@@ -1,5 +1,6 @@
-//! Logging and metrics setup shared by the services: console logs plus OTLP traces and logs, and
-//! (feature `prometheus`) a Prometheus scrape endpoint for the `metrics` facade.
+//! Logging and metrics setup shared by the services: console logs plus OTLP traces and logs,
+//! (feature `prometheus`) a Prometheus scrape endpoint for the `metrics` facade, and (feature
+//! `process-memory`) gauges of the process's memory by owner.
 
 #![forbid(unsafe_code)]
 #![cfg_attr(
@@ -21,6 +22,9 @@
         reason = "tests may panic"
     )
 )]
+
+#[cfg(feature = "process-memory")]
+pub mod process_memory;
 
 #[cfg(feature = "prometheus")]
 use core::net::SocketAddrV4;

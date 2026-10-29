@@ -38,7 +38,7 @@ futures = "0.3.34"
 snap = "1.1.2"
 steam-id = { workspace = true, features = ["serde"] }
 steam-proxy = { workspace = true }
-telemetry = { workspace = true }
+telemetry = { workspace = true, features = ["process-memory"] }
 game-assets = { workspace = true, features = ["graphql", "schemars", "utoipa"] }
 rate-limit = { workspace = true, features = ["redis"] }
 player-match-history = { workspace = true, features = ["utoipa"] }

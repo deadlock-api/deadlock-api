@@ -2,19 +2,23 @@
 name = "telemetry"
 version = "0.1.0"
 edition = "2024"
-description = "Console logging, OTLP trace and log export, and the Prometheus endpoint of the services"
+description = "Console logging, OTLP trace and log export, the Prometheus endpoint and process memory metrics of the services"
 
 [features]
 # Prometheus scrape endpoint for the `metrics` facade.
 prometheus = ["dep:metrics-exporter-prometheus", "dep:thiserror"]
+# `process_memory`: gauges of the process's memory by owner, from /proc/self.
+process-memory = ["dep:metrics", "dep:tokio"]
 
 [dependencies]
+metrics = { workspace = true, optional = true }
 metrics-exporter-prometheus = { version = "0.18", optional = true }
 opentelemetry = { workspace = true }
 opentelemetry_sdk = { workspace = true }
 opentelemetry-otlp = { workspace = true }
 opentelemetry-appender-tracing = { workspace = true, features = ["experimental_span_attributes"] }
 thiserror = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true, features = ["time"] }
 tracing = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }

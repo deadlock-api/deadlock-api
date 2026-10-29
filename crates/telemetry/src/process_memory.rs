@@ -6,10 +6,10 @@
 //! - `process_anon_memory_bytes{region}`: resident anonymous memory from `/proc/self/smaps`, by
 //!   the shape of its mapping, which tells the allocators apart:
 //!   - `large`: mappings of at least 256 MiB, mimalloc's arenas. mimalloc is the Rust global
-//!     allocator, so this is the Rust heap, query caches included ([`crate::services::ch_cache`]).
+//!     allocator of the services, so this is the Rust heap.
 //!   - `glibc_heaps`: `[heap]` and the 64 MiB-aligned mappings of at most 64 MiB that glibc's
-//!     malloc uses as per-thread arenas. The C and C++ libraries (`DuckDB`, zstd, `BoringSSL`,
-//!     ...) allocate there instead of through the Rust global allocator.
+//!     malloc uses as per-thread arenas. C and C++ libraries (`DuckDB`, zstd, `BoringSSL`, ...)
+//!     allocate there instead of through the Rust global allocator.
 //!   - `other`: the rest (thread stacks, blocks malloc maps on their own, ...).
 
 use core::time::Duration;
@@ -32,8 +32,8 @@ const LARGE_MAPPING_BYTES: u64 = 256 << 20;
 const GLIBC_HEAP_BYTES: u64 = 64 << 20;
 const GLIBC_HEAP_ALIGN_BITS: u32 = GLIBC_HEAP_BYTES.trailing_zeros();
 
-/// Starts the export loop.
-pub(crate) fn spawn() {
+/// Starts the export loop on the current Tokio runtime.
+pub fn spawn() {
     tokio::spawn(async {
         let mut interval = tokio::time::interval(INTERVAL);
         loop {

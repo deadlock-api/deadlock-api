@@ -7,7 +7,7 @@ api/ # rust api, served in production at https://api.deadlock-api.com
 workers/ # rust microservices for data ingestion and scraping; migrations/ holds the clickhouse + postgres migrations
 live-events/ # rust service for live match event streaming
 crates/ # libraries shared by the services:
-  telemetry/ # console logs + otlp export (all services); feature `prometheus` for the workers' scrape endpoint
+  telemetry/ # console logs + otlp export (all services); feature `prometheus` for the workers' scrape endpoint, `process-memory` for memory-by-owner gauges from /proc/self
   service-utils/ # env config, graceful shutdown, retries with backoff, shared http clients
   steam-id/ # SteamId: a player's account id <-> SteamID64/Steam3/Steam2; feature `serde` has the deserializers for account id query params
   steam-proxy/ # sv-proxy request/response types and client
