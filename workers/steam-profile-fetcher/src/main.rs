@@ -104,7 +104,15 @@ async fn main() -> Result<(), Error> {
     let mut interval = tokio::time::interval(*FETCH_INTERVAL);
     let mut queue = VecDeque::new();
     let mut pending_deletions = HashSet::new();
-    let mut last_deletion = Instant::now();
+    // From ClickHouse, not the process start: with deploys more often than DELETE_INTERVAL, a
+    // clock that restarts with the process never comes due. `None` means due now.
+    let mut last_deletion = match secs_since_last_deletion(&ch_client).await {
+        Ok(secs) => Instant::now().checked_sub(Duration::from_secs(secs)),
+        Err(e) => {
+            warn!("Failed to read the last profile deletion, waiting a full interval: {e}");
+            Some(Instant::now())
+        }
+    };
     service_utils::run_until_shutdown(async move {
         loop {
             interval.tick().await;
@@ -119,9 +127,11 @@ async fn main() -> Result<(), Error> {
             {
                 error!("Error updating Steam profiles: {e}");
             }
-            if !pending_deletions.is_empty() && last_deletion.elapsed() >= *DELETE_INTERVAL {
+            if !pending_deletions.is_empty()
+                && last_deletion.is_none_or(|t| t.elapsed() >= *DELETE_INTERVAL)
+            {
                 flush_profile_deletions(&ch_client, &mut pending_deletions).await;
-                last_deletion = Instant::now();
+                last_deletion = Some(Instant::now());
             }
         }
     })
@@ -473,6 +483,21 @@ async fn save_profiles(
     profiles: &[SteamPlayerSummary],
 ) -> clickhouse::error::Result<()> {
     clickhouse_utils::insert_rows(ch_client, "steam_profiles", profiles).await
+}
+
+/// Seconds since the last [`delete_profiles`] mutation was created (huge if there was none).
+async fn secs_since_last_deletion(
+    ch_client: &clickhouse::Client,
+) -> clickhouse::error::Result<u64> {
+    ch_client
+        .query(
+            "SELECT toUInt64(greatest(dateDiff('second', max(create_time), now()), 0)) FROM \
+             system.mutations WHERE database = currentDatabase() AND table = 'steam_profiles' \
+             AND startsWith(command, '(UPDATE _row_exists = 0') SETTINGS log_comment = \
+             'steam_profile_fetcher_last_deletion'",
+        )
+        .fetch_one()
+        .await
 }
 
 #[instrument(skip_all)]
