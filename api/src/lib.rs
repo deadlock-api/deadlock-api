@@ -34,7 +34,7 @@ pub mod utils;
 
 use core::time::Duration;
 
-use axum::extract::{Request, State};
+use axum::extract::{DefaultBodyLimit, Request, State};
 use axum::http::{HeaderValue, StatusCode, header};
 use axum::middleware::{Next, from_fn, from_fn_with_state};
 use axum::response::{IntoResponse, Redirect, Response};
@@ -43,7 +43,7 @@ use axum::{Json, Router};
 use axum_prometheus::PrometheusMetricLayer;
 pub use error::*;
 use tower::Layer as _;
-use tower::limit::ConcurrencyLimitLayer;
+use tower::limit::GlobalConcurrencyLimitLayer;
 use tower_http::compression::predicate::NotForContentType;
 use tower_http::compression::{
     CompressionLayer, CompressionLevel, DefaultPredicate, Predicate as _,
@@ -73,6 +73,7 @@ use crate::utils::observability;
 use crate::utils::request::parse_api_key_str;
 
 const DEFAULT_CACHE_TIME: u64 = 2 * 60; // Cloudflare Free Tier Minimal Cache Time
+const MAX_BODY_BYTES: usize = 10 * 1024 * 1024;
 
 pub static SHUTTING_DOWN: core::sync::atomic::AtomicBool =
     core::sync::atomic::AtomicBool::new(false);
@@ -191,8 +192,13 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
                 .quality(CompressionLevel::Precise(1))
                 .compress_when(DefaultPredicate::new().and(NotForContentType::new("text/event-stream"))),
         )
-        .layer(RequestBodyLimitLayer::new(10 * 1024 * 1024)) // 10MB limit
-        .layer(ConcurrencyLimitLayer::new(1000))
+        // Both limits: `RequestBodyLimitLayer` caps streamed bodies, while the `Json`/`Bytes`
+        // extractors apply their own 2 MiB default unless `DefaultBodyLimit` raises it.
+        .layer(DefaultBodyLimit::max(MAX_BODY_BYTES))
+        .layer(RequestBodyLimitLayer::new(MAX_BODY_BYTES))
+        // Global: `Router::layer` builds the layer once per route, and a plain
+        // `ConcurrencyLimitLayer` would give every route its own semaphore.
+        .layer(GlobalConcurrencyLimitLayer::new(1000))
         .layer(from_fn(no_store_on_error))
         .layer(
             TraceLayer::new_for_http()
