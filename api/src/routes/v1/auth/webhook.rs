@@ -105,11 +105,16 @@ pub(crate) async fn webhook(
         .first()
         .map(|t| t.id.clone());
 
+    // Annual patrons are charged (and entitled to) the yearly amount, so convert it to a
+    // monthly one like the hourly sync does.
+    let cadence = payload.data.attributes.pledge_cadence.unwrap_or(1).max(1);
     let pledge_amount_cents = payload
         .data
         .attributes
-        .pledge_amount_cents
-        .or(payload.data.attributes.currently_entitled_amount_cents);
+        .currently_entitled_amount_cents
+        .or(payload.data.attributes.pledge_amount_cents)
+        // `cadence` is at least 1, so the division cannot fail.
+        .map(|amount| amount.checked_div(cadence).unwrap_or(amount));
 
     let is_active = payload.data.attributes.patron_status.as_deref() == Some("active_patron");
 
