@@ -1,0 +1,12 @@
+CREATE USER dump_user IDENTIFIED WITH sha256_password SETTINGS max_threads = 4, max_insert_threads = 4, max_execution_time = 7200., max_memory_usage = 17179869184, priority = 10;
+GRANT CREATE TEMPORARY TABLE, KILL QUERY ON *.* TO dump_user;
+GRANT S3 ON *.* TO dump_user;
+GRANT SELECT ON default.hero_leaderboard TO dump_user;
+GRANT SELECT ON default.leaderboard TO dump_user;
+GRANT SELECT ON default.match_player TO dump_user;
+GRANT SELECT ON default.match_salts TO dump_user;
+GRANT SELECT ON default.steam_profile_observed_names TO dump_user;
+GRANT SELECT ON default.steam_profiles TO dump_user;
+GRANT SELECT ON dump.* TO dump_user;
+GRANT NAMED COLLECTION ON r2_dump TO dump_user;
+GRANT SELECT ON system.processes TO dump_user;

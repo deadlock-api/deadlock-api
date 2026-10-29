@@ -6,8 +6,8 @@ Monorepo for the [Deadlock API](https://deadlock-api.com) project.
 
 - **[`api/`](api/)** - Rust API (Axum) serving game data, analytics, leaderboards, and more
 - **[`website/`](website/)** - React frontend (Vite + React Router) for the Deadlock API website
-- **[`workers/`](workers/)** - Rust microservices for data ingestion, scraping, and pipeline processing,
-  plus the database migrations
+- **[`workers/`](workers/)** - Rust microservices for data ingestion, scraping, and pipeline processing
+- **[`db/`](db/)** - ClickHouse and Postgres schema, pulled from production
 - **[`live-events/`](live-events/)** - Rust service for live match event streaming via SSE
 - **[`crates/`](crates/)** - Rust libraries shared by the services, among them:
   - [`valveprotos/`](crates/valveprotos/) - Rust bindings for the Steam and Deadlock protobufs (formerly

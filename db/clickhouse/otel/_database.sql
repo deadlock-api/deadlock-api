@@ -1,0 +1,2 @@
+CREATE DATABASE otel
+ENGINE = Atomic;

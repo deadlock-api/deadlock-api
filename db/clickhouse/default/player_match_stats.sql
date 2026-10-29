@@ -1,0 +1,48 @@
+CREATE TABLE default.player_match_stats
+(
+    `account_id` UInt32,
+    `match_id` UInt64 CODEC(Delta(8), ZSTD(1)),
+    `hero_id` UInt8,
+    `won` Bool,
+    `kills` UInt32,
+    `deaths` UInt32,
+    `assists` UInt32,
+    `denies` UInt32,
+    `net_worth` UInt32,
+    `last_hits` UInt32,
+    `player_level` UInt32,
+    `max_level` UInt32,
+    `max_player_damage` UInt32,
+    `max_player_damage_taken` UInt32,
+    `max_damage_mitigated` UInt32,
+    `max_creep_kills` UInt32,
+    `max_neutral_kills` UInt32,
+    `max_boss_damage` UInt32,
+    `max_creep_damage` UInt32,
+    `max_neutral_damage` UInt32,
+    `max_max_health` UInt32,
+    `max_shots_hit` UInt32,
+    `max_shots_missed` UInt32,
+    `max_hero_bullets_hit` UInt32,
+    `max_hero_bullets_hit_crit` UInt32,
+    `duration_s` UInt32,
+    `start_time` DateTime CODEC(Delta(4), ZSTD(1)),
+    `average_badge` Nullable(UInt32) COMMENT 'Average rank badge of both teams: the team badges are mapped to a contiguous scale (badge - 4 * tier, 6 steps per tier), averaged, rounded and mapped back. Badge = tier * 10 + subrank; tiers (badge / 10): 0 Obscurus, 1 Initiate, 2 Seeker, 3 Acolyte, 4 Sentinel, 5 Mystic, 6 Ritualist, 7 Emissary, 8 Oracle, 9 Phantom, 10 Ascendant, 11 Eternus; subranks (badge % 10): 1-6 (I-VI), e.g. 116 = Eternus VI. NULL outside ranked matches. See https://api.deadlock-api.com/v1/assets/ranks',
+    `match_mode` Enum8('Invalid' = 0, 'Unranked' = 1, 'PrivateLobby' = 2, 'CoopBot' = 3, 'Ranked' = 4, 'ServerTest' = 5, 'Tutorial' = 6, 'HeroLabs' = 7, 'NewPlayerPlacement' = 8),
+    `game_mode` Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5, 'Internal' = 6),
+    `player_rank_initial_display_rank` Nullable(UInt32) COMMENT 'Rank badge the player entered the match with. Badge = tier * 10 + subrank; tiers (badge / 10): 0 Obscurus, 1 Initiate, 2 Seeker, 3 Acolyte, 4 Sentinel, 5 Mystic, 6 Ritualist, 7 Emissary, 8 Oracle, 9 Phantom, 10 Ascendant, 11 Eternus; subranks (badge % 10): 1-6 (I-VI), e.g. 116 = Eternus VI. Within Eternus the subrank is a percentile cut Valve recomputes daily. 0 while the player is in placement games, NULL outside ranked matches. See https://api.deadlock-api.com/v1/assets/ranks',
+    `player_rank_initial_flat_progress` Nullable(UInt32) COMMENT 'Ladder-wide rank progress the player entered the match with. Below 70000, each 1000 points is one step and each tier has 7 steps: step = progress / 1000, badge = (step / 7 + 1) * 10 + min(step % 7 + 1, 6), so subrank VI spans two steps (2000 points). From 70000 the player is Eternus, where progress keeps growing without a ceiling and the subrank is a percentile cut, so it cannot be derived from progress. NULL outside ranked matches.',
+    `player_rank_final_flat_progress` Nullable(UInt32) COMMENT 'Ladder-wide rank progress the player ended the match with. Below 70000, each 1000 points is one step and each tier has 7 steps: step = progress / 1000, badge = (step / 7 + 1) * 10 + min(step % 7 + 1, 6), so subrank VI spans two steps (2000 points). From 70000 the player is Eternus, where progress keeps growing without a ceiling and the subrank is a percentile cut, so it cannot be derived from progress. NULL outside ranked matches.',
+    `player_rank_desired_progress_change` Nullable(Int32) COMMENT 'Rank progress change the match was supposed to award, in flat progress points (1000 = one subrank step), before demotion protection is applied. NULL outside ranked matches.',
+    `player_rank_initial_calibration_games` Nullable(UInt32),
+    `player_rank_initial_demotion_protection_games` Nullable(UInt32),
+    `player_rank_consumed_demotion_protection` Nullable(Bool),
+    `player_rank_initial_win_streak` Nullable(UInt32),
+    `mvp_rank` Nullable(UInt32),
+    `permanent_buffs` Nullable(UInt32) DEFAULT NULL,
+    `first_permanent_buff_time_s` Nullable(UInt32) DEFAULT NULL
+)
+ENGINE = ReplacingMergeTree
+PARTITION BY tuple()
+ORDER BY (account_id, match_id)
+SETTINGS index_granularity = 1024;
