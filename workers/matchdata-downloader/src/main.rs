@@ -271,10 +271,6 @@ struct Cli {
 }
 
 #[tokio::main]
-#[expect(
-    clippy::infinite_loop,
-    reason = "the service runs until run_until_shutdown drops the loop on a shutdown signal"
-)]
 async fn main() -> Result<(), Error> {
     let _otel_guard = telemetry::init_tracing(env!("CARGO_PKG_NAME"));
     telemetry::init_metrics()?;
@@ -292,31 +288,35 @@ async fn main() -> Result<(), Error> {
     let state = State::new();
     let mut scan = Scan::default();
     let mut last_gc = tokio::time::Instant::now();
-    service_utils::run_until_shutdown(async move {
-        loop {
-            let started = tokio::time::Instant::now();
-            if let Err(e) = run_iteration(&ch_client, &store, &cache_store, &state, &mut scan).await
-            {
+    // Not `run_until_shutdown`: an iteration is never dropped midway, because the batch's
+    // verdicts are only stamped at its end. A shutdown stops the batch from starting new
+    // downloads (see `process_batch`), stamps the finished ones and exits here.
+    let shutdown = service_utils::shutdown_token();
+    while !shutdown.is_cancelled() {
+        let started = tokio::time::Instant::now();
+        let pause = match run_iteration(&ch_client, &store, &cache_store, &state, &mut scan).await {
+            Ok(()) => {
+                if last_gc.elapsed() >= GC_INTERVAL && !shutdown.is_cancelled() {
+                    last_gc = tokio::time::Instant::now();
+                    if let Err(e) = collect_garbage(&ch_client).await {
+                        warn!(
+                            "Collecting superseded salt candidates failed: {}",
+                            service_utils::ErrorChain(&e)
+                        );
+                    }
+                }
+                POLL_INTERVAL.saturating_sub(started.elapsed())
+            }
+            Err(e) => {
                 counter!("matchdata_downloader.iteration.failure").increment(1);
                 error!("Iteration failed: {}", service_utils::ErrorChain(&e));
-                sleep(ITERATION_BACKOFF).await;
-                continue;
+                ITERATION_BACKOFF
             }
-            if last_gc.elapsed() >= GC_INTERVAL {
-                last_gc = tokio::time::Instant::now();
-                if let Err(e) = collect_garbage(&ch_client).await {
-                    warn!(
-                        "Collecting superseded salt candidates failed: {}",
-                        service_utils::ErrorChain(&e)
-                    );
-                }
-            }
-            if let Some(remaining) = POLL_INTERVAL.checked_sub(started.elapsed()) {
-                sleep(remaining).await;
-            }
-        }
-    })
-    .await
+        };
+        shutdown.run_until_cancelled(sleep(pause)).await;
+    }
+    info!("Shutting down");
+    Ok(())
 }
 
 async fn download_from_file(
@@ -523,7 +523,11 @@ where
     B: ObjectStore + ?Sized,
     C: ObjectStore + ?Sized,
 {
+    // On shutdown, finish the downloads in progress but start no new ones, so their verdicts
+    // still get stamped: a match uploaded without one would stay pending for good.
+    let shutdown = service_utils::shutdown_token();
     futures::stream::iter(salts.iter())
+        .take_until(shutdown.cancelled())
         .map(|s| async move {
             let r = download_match(bucket, cache_bucket, s).await;
             match &r {
