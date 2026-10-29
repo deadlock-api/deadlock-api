@@ -101,14 +101,15 @@ fn shutdown_check() -> Result<(), DumpError> {
 impl DataDump {
     pub(crate) fn spawn(self) {
         let this = Arc::new(self);
-        tokio::spawn(async move {
+        // Tracked, so a shutdown waits for the tick to give up its lease (see `tick`).
+        crate::BACKGROUND_TASKS.spawn(async move {
             let mut tick = tokio::time::interval(TICK);
             tick.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Delay);
-            loop {
-                tick.tick().await;
-                if SHUTDOWN_TOKEN.is_cancelled() {
-                    return;
-                }
+            while SHUTDOWN_TOKEN
+                .run_until_cancelled(tick.tick())
+                .await
+                .is_some()
+            {
                 if !this.feature_flags.is_enabled(&DATA_DUMP) {
                     info!("data dump: disabled by its feature flag; skipping tick");
                     continue;
@@ -149,7 +150,15 @@ impl DataDump {
         };
         info!(run_id, "data dump tick started");
         let started = std::time::Instant::now();
-        match self.run(&run_id).await {
+        // Exports run for hours, longer than the shutdown grace period. Dropping one mid-way
+        // is safe: its queries keep running server-side and the next leader kills them first
+        // (`kill_orphans`), and nothing is published until the manifest write at the end.
+        // Releasing the lease right away lets the replica replacing this one take over.
+        let result = SHUTDOWN_TOKEN
+            .run_until_cancelled(self.run(&run_id))
+            .await
+            .unwrap_or(Err(DumpError::Shutdown));
+        match result {
             Ok(()) => info!(
                 run_id,
                 secs = started.elapsed().as_secs(),
