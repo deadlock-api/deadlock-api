@@ -67,6 +67,13 @@ fn describe(description: &str) -> String {
     )
 }
 
+/// Responses are cached for at least 10 minutes, and until the query results behind them expire:
+/// the endpoints cache those for an hour and answer from them until then.
+pub(crate) const CACHE_CONTROL: CacheControlMiddleware =
+    CacheControlMiddleware::new(Duration::from_mins(10))
+        .with_stale_while_revalidate(Duration::from_mins(20))
+        .until_cached_results_expire();
+
 pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
     let rate_limit_state = RateLimitState {
         client: state.rate_limit_client.clone(),
@@ -104,9 +111,6 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
                     .routes(routes!(hero_scoreboard::hero_scoreboard)),
             )
             .layer(from_fn_with_state(rate_limit_state, rate_limit))
-            .layer(
-                CacheControlMiddleware::new(Duration::from_mins(10))
-                    .with_stale_while_revalidate(Duration::from_mins(20)),
-            ),
+            .layer(CACHE_CONTROL),
     )
 }

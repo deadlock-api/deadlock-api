@@ -1,10 +1,12 @@
 use std::collections::HashSet;
+use std::time::SystemTime;
 
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
+use clickhouse_utils::cache::expiry::expires_by;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
 use strum::Display;
@@ -327,6 +329,8 @@ fn build_query(hero_id: u32, query: &HeroBuildStatsQuery) -> String {
 }
 
 async fn fetch_valid_build_ids(pg_client: &Pool<Postgres>, hero_id: u32) -> sqlx::Result<Vec<i32>> {
+    // Read live, so the response may change at any time, not just when the stats expire.
+    expires_by(SystemTime::now());
     sqlx::query_scalar::<_, i32>("SELECT DISTINCT build_id FROM hero_builds WHERE hero = $1")
         .bind(hero_id.cast_signed())
         .fetch_all(pg_client)

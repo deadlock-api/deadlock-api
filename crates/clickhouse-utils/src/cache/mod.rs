@@ -16,8 +16,12 @@
 //! Clients retry timed-out queries, and every retry burns the same CPU and times out again under
 //! the load it adds to. Both the timeout and the fail-fast answers carry the time left until the
 //! query runs again ([`QueryError::TimedOut`]).
+//!
+//! Every answer records its entry's deadline for [`expiry::track_expiry`], so an HTTP cache in
+//! front can keep a response until the results behind it expire.
 
 mod disk;
+pub mod expiry;
 mod memory;
 
 use core::any::TypeId;
@@ -200,6 +204,7 @@ where
             .await
             .map_err(|e: Arc<QueryError>| (*e).clone())
             .and_then(|entry| {
+                expiry::expires_by(entry.expires_at);
                 entry.value.downcast::<T>().map_err(|other| {
                     // Unreachable: the row type is part of the key.
                     QueryError::Clickhouse(Arc::new(clickhouse::error::Error::Custom(format!(
@@ -318,6 +323,30 @@ mod tests {
             .unwrap();
         assert_eq!(*hit, vec![1]);
         assert_eq!(calls.load(Ordering::Relaxed), 1);
+    }
+
+    #[tokio::test]
+    async fn answers_record_the_entry_deadline() {
+        let cache = cache(None, Duration::from_secs(600));
+        let before = SystemTime::now();
+        let (miss, missed_until) =
+            expiry::track_expiry(cache.get_or_fetch("SELECT 1", async { Ok(vec![1]) })).await;
+        miss.unwrap();
+        let missed_until = missed_until.unwrap();
+        assert!(missed_until >= before + Duration::from_secs(600));
+        // A hit keeps the deadline of the entry it reads, not a fresh ttl.
+        tokio::time::sleep(Duration::from_millis(20)).await;
+        let (hit, hit_until) =
+            expiry::track_expiry(cache.get_or_fetch("SELECT 1", async { Ok(vec![2]) })).await;
+        assert_eq!(*hit.unwrap(), vec![1]);
+        assert_eq!(hit_until, Some(missed_until));
+        // Errors record nothing.
+        let (busy, busy_until) = expiry::track_expiry(
+            cache.get_or_fetch("SELECT 2", async { Err(Busy::Timeout.into()) }),
+        )
+        .await;
+        assert!(matches!(busy, Err(QueryError::Busy(Busy::Timeout))));
+        assert_eq!(busy_until, None);
     }
 
     #[tokio::test]

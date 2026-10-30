@@ -137,6 +137,10 @@ pub(crate) async fn collect_invite_links(
     Ok(results.into_iter().flatten().collect())
 }
 
+pub(crate) const CACHE_CONTROL: CacheControlMiddleware =
+    CacheControlMiddleware::new(Duration::from_mins(5))
+        .with_stale_while_revalidate(Duration::from_mins(1));
+
 #[expect(deprecated, reason = "registers deprecated handlers")]
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
@@ -155,10 +159,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(rank::rank_predict_avg_image))
         .merge(mmr::router())
         .merge(steam::router())
-        .layer(
-            CacheControlMiddleware::new(Duration::from_mins(5))
-                .with_stale_while_revalidate(Duration::from_mins(1)),
-        )
+        .layer(CACHE_CONTROL)
 }
 
 #[cfg(test)]

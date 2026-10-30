@@ -14,12 +14,13 @@ use crate::middleware::cache::CacheControlMiddleware;
 #[openapi(tags((name = "Steam", description = "Steam related endpoints")))]
 struct ApiDoc;
 
+pub(crate) const CACHE_CONTROL: CacheControlMiddleware =
+    CacheControlMiddleware::new(Duration::from_hours(1))
+        .with_stale_while_revalidate(Duration::from_hours(1));
+
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(route::steam_search))
         .routes(routes!(route::steam))
-        .layer(
-            CacheControlMiddleware::new(Duration::from_hours(1))
-                .with_stale_while_revalidate(Duration::from_hours(1)),
-        )
+        .layer(CACHE_CONTROL)
 }
