@@ -13,7 +13,8 @@ import { Stat, StatGroup } from "~/components/ui/stat";
 import { StepMeter, StepMeterStep } from "~/components/ui/step-meter";
 import { Text } from "~/components/ui/text";
 import { trackDeadlockdle } from "~/lib/deadlockdle/analytics";
-import { getDayNumber } from "~/lib/deadlockdle/seed";
+import { getDayNumber, getTodayDate } from "~/lib/deadlockdle/seed";
+import { liveStreak } from "~/lib/deadlockdle/storage";
 import type { GameMode, GameStatus, StreakState } from "~/lib/deadlockdle/types";
 import { useCountdown } from "~/lib/deadlockdle/use-countdown";
 import { TONE_COLOR } from "~/lib/tone";
@@ -152,7 +153,7 @@ export function ResultModal({
                 <StatGroup variant="tiles" size="sm" className="grid-cols-2 gap-2 font-mono sm:grid-cols-4">
                   <Stat align="center" label="Played" value={streakState.gamesPlayed} />
                   <Stat align="center" label="Win %" value={`${winRate}%`} />
-                  <Stat align="center" label="Streak" value={streakState.currentStreak} />
+                  <Stat align="center" label="Streak" value={liveStreak(streakState, getTodayDate())} />
                   <Stat align="center" label="Best" value={streakState.maxStreak} />
                 </StatGroup>
               </motion.div>
