@@ -86,9 +86,9 @@ datafusion = { version = "55", default-features = false, features = [
 tokio-util = { version = "0.7.20", features = ["io", "rt"] }
 image = { version = "0.25.10", default-features = false, features = ["png", "webp"] }
 ab_glyph = "0.2.32"
-rmcp = { version = "3.7.0", default-features = false, features = ["macros", "server", "transport-streamable-http-server"] }
+rmcp = { version = "3.8.0", default-features = false, features = ["macros", "server", "transport-streamable-http-server"] }
 schemars = "1.2.3"
-duckdb = { version = "1.20000.0", features = ["bundled", "parquet", "json"] }
+duckdb = { version = "1.20000.1", features = ["bundled", "parquet", "json"] }
 # DuckDB pins arrow 60; enables the JSON writer on that version for MCP result formatting.
 arrow_duckdb = { package = "arrow", version = "60", default-features = false, features = ["chrono-tz", "json"] }
 toon-format = { version = "0.7", default-features = false }

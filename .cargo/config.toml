@@ -11,11 +11,3 @@ protocol = "sparse"
 # Network configuration
 [net]
 git-fetch-with-cli = true
-
-[env]
-# libduckdb-sys 1.20000.0 vendors DuckDB v2.0.0 (commit d54cbbe3df), but its cc build keeps the
-# source default version "v2.0.0-dev88614", so DuckDB fetches extensions (ducklake, httpfs) from
-# extensions.duckdb.org/d54cbbe3df/..., which 404s. Label the build as the release it is, so they
-# resolve under v2.0.0/ with matching metadata. Remove once duckdb-rs ships a cc build with the
-# release version (duckdb/duckdb-rs#918 fixed only the cmake build).
-CXXFLAGS = '-DDUCKDB_VERSION="v2.0.0" -DDUCKDB_PATCH_VERSION="0"'

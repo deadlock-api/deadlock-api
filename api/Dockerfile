@@ -11,9 +11,6 @@ WORKDIR /app
 # the target.cfg rustflags from cargo config. Use the short-name form so it
 # works for build scripts linked via gcc as well as the final target.
 ENV RUSTFLAGS="-Clink-arg=-fuse-ld=mold -Ctarget-cpu=znver2"
-# .cargo/ is not in the build context; mirror its [env] DuckDB version label (see the comment
-# there) so the bundled DuckDB installs extensions from extensions.duckdb.org/v2.0.0/.
-ENV CXXFLAGS='-DDUCKDB_VERSION="v2.0.0" -DDUCKDB_PATCH_VERSION="0"'
 # Build context is the repo root (one cargo workspace).
 COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
