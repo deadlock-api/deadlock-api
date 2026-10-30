@@ -9,8 +9,9 @@ pub enum TokenKind<'a> {
     LSquare,        // [
     RSquare,        // ]
     Asterisk,       // *
+    Comma,          // ,
     Ident(&'a str), // uint64, MAX_ABILITY_DRAFT_ABILITIES, etc..
-    Lit(&'a str),   // 256
+    Lit(&'a str),   // 256, -1
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -93,10 +94,11 @@ impl<'a> Tokenizer<'a> {
                 '[' => break Some(self.emit(TokenKind::LSquare)),
                 ']' => break Some(self.emit(TokenKind::RSquare)),
                 '*' => break Some(self.emit(TokenKind::Asterisk)),
+                ',' => break Some(self.emit(TokenKind::Comma)),
                 ch if is_ident_start(ch) => {
                     break Some(self.emit_run(is_ident_continue, TokenKind::Ident));
                 }
-                ch if ch.is_ascii_digit() => {
+                ch if ch.is_ascii_digit() || ch == '-' => {
                     break Some(self.emit_run(|ch| ch.is_ascii_digit(), TokenKind::Lit));
                 }
                 ch if ch.is_whitespace() => {

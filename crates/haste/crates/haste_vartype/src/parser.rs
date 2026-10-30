@@ -76,6 +76,7 @@ impl<'a> Parser<'a> {
                 TokenKind::LAngle => {
                     self.wrap()?;
                     let arg = self.parse()?;
+                    self.skip_extra_template_args()?;
 
                     let _rangle = self.expect_token(|k| matches!(k, TokenKind::RAngle))?;
                     expr = Expr::Template {
@@ -110,7 +111,7 @@ impl<'a> Parser<'a> {
                     self.wrap()?;
                     expr = Expr::Pointer(Box::new(expr));
                 }
-                TokenKind::RAngle | TokenKind::RSquare => {
+                TokenKind::RAngle | TokenKind::RSquare | TokenKind::Comma => {
                     self.prev_token = Some(next);
                     break;
                 }
@@ -119,6 +120,24 @@ impl<'a> Parser<'a> {
         }
 
         Ok(expr)
+    }
+
+    /// Skips the template arguments after the first one. Since the 2026-10-30 Deadlock update
+    /// some vectors name their network var and size in them (`CNetworkUtlVectorBase< EEvent,
+    /// NetworkVar_m_vecActiveEvents , -1, int >`); only the element type matters for decoding.
+    fn skip_extra_template_args(&mut self) -> Result<(), VarTypeError> {
+        while let Some(next) = self.next_token()? {
+            if next.kind != TokenKind::Comma {
+                self.prev_token = Some(next);
+                break;
+            }
+            let arg = self.next_token()?.ok_or(VarTypeError::UnexpectedEof)?;
+            if !matches!(arg.kind, TokenKind::Lit(_)) {
+                self.prev_token = Some(arg);
+                let _type = self.parse()?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -144,6 +163,19 @@ mod tests {
             assert!(matches!(parse(&input), Err(VarTypeError::TooDeep)));
         }
         parse("CNetworkUtlVectorBase< CHandle< CBaseEntity > >").unwrap();
+    }
+
+    #[test]
+    fn extra_template_args_are_skipped() {
+        let nested = parse(
+            "CNetworkUtlVectorBase< CNetworkUtlVectorBase< EEvent, NetworkVar_m_vecActiveEvents , -1, int > >",
+        )
+        .unwrap();
+        let plain = parse("CNetworkUtlVectorBase< CNetworkUtlVectorBase< EEvent > >").unwrap();
+        assert_eq!(nested, plain);
+        parse("A< B, C< D, 2 >, -1 >[3]").unwrap();
+        parse("A< B, >").unwrap_err();
+        parse("A< B, C").unwrap_err();
     }
 
     #[test]

@@ -293,5 +293,10 @@ mod tests {
         get_field_metadata(&field, "CUtlVector< int32 >").unwrap();
         get_field_metadata(&field, "uint8[4]").unwrap();
         get_field_metadata(&field, "CBodyComponent*").unwrap();
+        get_field_metadata(
+            &field,
+            "CNetworkUtlVectorBase< CNetworkUtlVectorBase< EEvent, NetworkVar_m_vecActiveEvents , -1, int > >",
+        )
+        .unwrap();
     }
 }
