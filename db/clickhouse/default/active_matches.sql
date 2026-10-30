@@ -16,7 +16,7 @@ CREATE TABLE default.active_matches
     `objectives_mask_team0` UInt16 STATISTICS(tdigest),
     `objectives_mask_team1` UInt16 STATISTICS(tdigest),
     `match_mode` Enum8('Invalid' = 0, 'Unranked' = 1, 'PrivateLobby' = 2, 'CoopBot' = 3, 'Ranked' = 4, 'ServerTest' = 5, 'Tutorial' = 6, 'HeroLabs' = 7, 'NewPlayerPlacement' = 8),
-    `game_mode` Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5, 'INTERNAL' = 6),
+    `game_mode` Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5, 'INTERNAL' = 6, 'Internal02' = 7),
     `match_score` UInt16 STATISTICS(tdigest),
     `region_mode` Enum8('Row' = 0, 'Europe' = 1, 'SEAsia' = 2, 'SAmerica' = 3, 'Russia' = 4, 'Oceania' = 5),
     `team_stats.team` Array(UInt8),

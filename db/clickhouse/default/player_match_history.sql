@@ -5,7 +5,7 @@ CREATE TABLE default.player_match_history
     `hero_id` UInt8 STATISTICS(tdigest),
     `hero_level` UInt32 STATISTICS(tdigest),
     `start_time` DateTime CODEC(Delta(4), ZSTD(1)),
-    `game_mode` Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5, 'INTERNAL' = 6),
+    `game_mode` Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5, 'INTERNAL' = 6, 'Internal02' = 7),
     `match_mode` Enum8('Invalid' = 0, 'Unranked' = 1, 'PrivateLobby' = 2, 'CoopBot' = 3, 'Ranked' = 4, 'ServerTest' = 5, 'Tutorial' = 6, 'HeroLabs' = 7, 'NewPlayerPlacement' = 8),
     `player_team` Enum8('Team0' = 0, 'Team1' = 1, 'Spectator' = 16) COMMENT 'player team id',
     `player_kills` UInt32 STATISTICS(tdigest),

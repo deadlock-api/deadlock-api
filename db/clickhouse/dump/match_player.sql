@@ -4,7 +4,7 @@ CREATE VIEW dump.match_player
     `start_time` DateTime,
     `duration_s` UInt32,
     `match_mode` Enum8('Invalid' = 0, 'Unranked' = 1, 'PrivateLobby' = 2, 'CoopBot' = 3, 'Ranked' = 4, 'ServerTest' = 5, 'Tutorial' = 6, 'HeroLabs' = 7, 'NewPlayerPlacement' = 8),
-    `game_mode` Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5, 'Internal' = 6),
+    `game_mode` Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5, 'Internal' = 6, 'Internal02' = 7),
     `average_badge_team0` Nullable(UInt32),
     `average_badge_team1` Nullable(UInt32),
     `winning_team` Enum8('Team0' = 0, 'Team1' = 1, 'Spectator' = 16),

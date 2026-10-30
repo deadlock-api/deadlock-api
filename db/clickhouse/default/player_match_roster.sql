@@ -3,7 +3,7 @@ CREATE TABLE default.player_match_roster
     `account_id` UInt32,
     `match_id` UInt64,
     `start_time` DateTime,
-    `game_mode` Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5, 'Internal' = 6),
+    `game_mode` Enum8('Invalid' = 0, 'Normal' = 1, 'OneVsOneTest' = 2, 'Sandbox' = 3, 'StreetBrawl' = 4, 'ExploreNYC' = 5, 'Internal' = 6, 'Internal02' = 7),
     `match_duration_s` UInt32,
     `won` Bool,
     `mate_ids` Array(UInt32),
