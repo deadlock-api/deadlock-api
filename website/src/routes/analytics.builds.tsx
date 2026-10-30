@@ -26,12 +26,13 @@ import { prefetchCached } from "~/lib/prefetch-safe";
 import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
 import { defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
-import { loadSeasons } from "~/queries/asset-queries";
+import { itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import {
   buildMetaBatches,
   heroBuildMetaQueryOptions,
   heroBuildStatsQueryOptions,
 } from "~/queries/hero-build-stats-query";
+import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 
 const DEFAULT_HERO_ID = 2;
 const DEFAULT_MIN_MATCHES = 20;
@@ -80,6 +81,23 @@ export const Route = createFileRoute("/analytics/builds")({
     const seasons = await loadSeasons(queryClient);
     const range = defaultUnixRange(seasons, preferences.dateFilter);
     if (deps.customDates) return { coverage: defaultTemporalCoverage(seasons, preferences.dateFilter) };
+    // The item names of the build tiles and the hero's own win rate the builds are read against, so the server HTML
+    // has them instead of "Item" and a placeholder. The heroes pages warm both, so they are usually cached.
+    const context = Promise.all([
+      prefetchCached(queryClient, itemUpgradesQueryOptions),
+      prefetchCached(
+        queryClient,
+        heroStatsQueryOptions({
+          gameMode: "normal",
+          matchMode: deps.matchMode,
+          minAverageBadge: deps.minRankId,
+          maxAverageBadge: deps.maxRankId,
+          ...range,
+          minDurationS: deps.minDurationS,
+          maxDurationS: deps.maxDurationS,
+        }),
+      ),
+    ]);
     const stats = await prefetchCached(
       queryClient,
       heroBuildStatsQueryOptions(
@@ -104,6 +122,7 @@ export const Route = createFileRoute("/analytics/builds")({
         ),
       );
     }
+    await context;
     return { coverage: defaultTemporalCoverage(seasons, preferences.dateFilter) };
   },
   head: ({ loaderData }) =>
