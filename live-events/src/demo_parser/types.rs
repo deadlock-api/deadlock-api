@@ -59,6 +59,16 @@ pub(super) enum DemoEventPayload {
         victim_player: Option<i32>,
         killfeed_gold: Option<i32>,
     },
+    /// A player got an item, bought or not.
+    ItemAcquired {
+        /// Entity index of the player that got the item.
+        player: Option<i32>,
+        /// Item id (as used by the assets API).
+        ability_id: Option<u32>,
+        upgrade_bits: Option<u32>,
+        /// Whether the player bought the item.
+        purchased: Option<bool>,
+    },
     HeroReleaseVote(CCitadelUserMsgHeroReleaseVote),
     CombatLogEntry(Box<CMsgCitadelCombatLogEntry>),
     CombatLogBulkData(CCitadelUserMsgCombatLogBulkData),
@@ -155,6 +165,29 @@ mod tests {
                 "game_time": 1829.5,
                 "event_type": "banned_heroes",
                 "banned_hero_ids": [18, 16, 14],
+            })
+        );
+    }
+
+    #[test]
+    fn test_item_acquired_payload() {
+        let (name, value) = event(DemoEventPayload::ItemAcquired {
+            player: Some(94),
+            ability_id: Some(787_198_704),
+            upgrade_bits: Some(0x0081_0000),
+            purchased: Some(true),
+        });
+        assert_eq!(name, "item_acquired");
+        assert_eq!(
+            value,
+            json!({
+                "tick": 120_300,
+                "game_time": 1829.5,
+                "event_type": "item_acquired",
+                "player": 94,
+                "ability_id": 787_198_704,
+                "upgrade_bits": 8_454_144,
+                "purchased": true,
             })
         );
     }

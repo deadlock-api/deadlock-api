@@ -128,6 +128,7 @@ Additional event names:
 - `hero_killed` — hero kill (includes `killfeed_gold` and `killer_ability_id`)
 - `banned_heroes` — heroes banned in the draft (`banned_hero_ids`); sent once the bans are known and again if they change
 - `soul_bag_pickup` — soul bag picked up (`pickup_player` / `victim_player` are entity indices, `killfeed_gold`)
+- `item_acquired` — a player got an item (`player` entity index, `ability_id` item id, packed `upgrade_bits`, `purchased`)
 - `hero_release_vote` — a player voted for a hero release (`player_slot`, `voted_hero_id`)
 - `combat_log_entry` / `combat_log_bulk_data` — combat log entries (`CMsgCitadelCombatLogEntry`)
 - `music_queue` — music cue (`queue`, `queue_name`; `corrupted_item_shop_announce` is the Broker's arrival)

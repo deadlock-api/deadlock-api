@@ -16,8 +16,9 @@ use valveprotos::common::{CMsgPlayerInfo, EDemoCommands};
 use valveprotos::deadlock::{
     CCitadelUserMsgBannedHeroes, CCitadelUserMsgChatMsg, CCitadelUserMsgCombatLogBulkData,
     CCitadelUserMsgHeroKilled, CCitadelUserMsgHeroReleaseVote, CCitadelUserMsgHudGameAnnouncement,
-    CCitadelUserMsgMusicQueue, CCitadelUserMsgPlayerTyping, CCitadelUserMsgSoulBagPickup,
-    CMsgCitadelCombatLogEntry, CitadelMusicMsgType, CitadelUserMessageIds,
+    CCitadelUserMsgItemAcquired, CCitadelUserMsgMusicQueue, CCitadelUserMsgPlayerTyping,
+    CCitadelUserMsgSoulBagPickup, CMsgCitadelCombatLogEntry, CitadelMusicMsgType,
+    CitadelUserMessageIds,
 };
 
 use crate::demo_parser::broker::BrokerStock;
@@ -347,6 +348,15 @@ impl SendingVisitor {
                     pickup_player: handle_to_entity_index(msg.pickup_player),
                     victim_player: handle_to_entity_index(msg.victim_player),
                     killfeed_gold: msg.killfeed_gold,
+                })
+            }
+            CitadelUserMessageIds::KEUserMsgItemAcquired => {
+                let msg = CCitadelUserMsgItemAcquired::decode(data).ok()?;
+                Some(DemoEventPayload::ItemAcquired {
+                    player: handle_to_entity_index(msg.player),
+                    ability_id: msg.ability_id,
+                    upgrade_bits: msg.upgrade_bits,
+                    purchased: msg.purchased,
                 })
             }
             CitadelUserMessageIds::KEUserMsgHeroReleaseVote => {

@@ -50,6 +50,7 @@ fn all_sse_events() -> Vec<String> {
                 "chat_message",
                 "banned_heroes",
                 "soul_bag_pickup",
+                "item_acquired",
                 "hero_release_vote",
                 "combat_log_entry",
                 "combat_log_bulk_data",
