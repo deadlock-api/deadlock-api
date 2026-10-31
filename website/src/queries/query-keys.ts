@@ -40,6 +40,7 @@ export const queryKeys = {
     /** Retired and unreleased heroes too. */
     heroesAll: () => ["assets-heroes-all"] as const,
     abilities: () => ["assets-items-abilities"] as const,
+    abilitiesFull: () => ["assets-items-abilities-full"] as const,
     npcUnits: () => ["assets-npc-units"] as const,
     sounds: () => ["assets-sounds"] as const,
     itemUpgrades: () => ["assets-items-upgrades"] as const,

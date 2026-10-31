@@ -311,7 +311,10 @@ async function main() {
   const nameOf = (id: number) => nameById.get(id) ?? `#${id}`;
 
   const hero = he.data.find((h) => h.id === HERO_ID);
-  const meta = getHeroAbilityMetadata(hero, ab.data as Ability[]);
+  const meta = getHeroAbilityMetadata(
+    hero,
+    (ab.data as Ability[]).map((a) => ({ ...a, max_level: (a.upgrades?.length ?? 0) + 1 })),
+  );
   const lookup = buildUpgradeChainLookup(assets);
   const impl = buildComponentImplications(assets);
   const cards = buildPlayerBuildCards(ma.data as unknown as BulkMatchMetadata[], HERO_ID, meta, lookup, {

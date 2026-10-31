@@ -222,7 +222,10 @@ async function main() {
   ]);
 
   const assetsItems = upgradesRes.data as Upgrade[];
-  const abilityItems = abilitiesRes.data as Ability[];
+  const abilityItems = (abilitiesRes.data as Ability[]).map((a) => ({
+    ...a,
+    max_level: (a.upgrades?.length ?? 0) + 1,
+  }));
   const heroesData = heroesRes.data;
   const matches = matchesRes.data as unknown as BulkMatchMetadata[];
 

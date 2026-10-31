@@ -59,7 +59,9 @@ import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
 import { computeSwapRates } from "~/lib/swap-rate";
 import { toneOf } from "~/lib/tone";
+import { abilityOrderTreeQueryOptions } from "~/queries/ability-order-query";
 import {
+  abilitiesQueryOptions,
   filterPlayableHeroes,
   heroesQueryOptions,
   itemUpgradesQueryOptions,
@@ -206,8 +208,28 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       }
       throw notFound({ data: { suggestion: closestNameBySlug(playable, params.heroName)?.name } });
     }
+    const statsPrefetch = prefetchCached(
+      queryClient,
+      heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter)),
+    );
+    // The skill order's request scales with the hero's match count, so it waits for the stats. Prefetched, the server
+    // HTML has the order instead of its loading state.
+    const skillOrderPrefetch = statsPrefetch.then((rows) => {
+      const heroMatches = rows?.find((row) => row.hero_id === hero.id)?.matches;
+      if (!heroMatches) return undefined;
+      return Promise.all([
+        prefetchCached(queryClient, abilitiesQueryOptions),
+        prefetchCached(
+          queryClient,
+          abilityOrderTreeQueryOptions({
+            ...currentAbilityOrderParams(seasons, heroMatches, preferences.dateFilter),
+            heroId: hero.id,
+          }),
+        ),
+      ]);
+    });
     const [stats, ranks, , , , matchups] = await Promise.all([
-      prefetchCached(queryClient, heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter))),
+      statsPrefetch,
       prefetchCached(queryClient, ranksQueryOptions),
       prefetchCached(queryClient, heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
       prefetchCached(
@@ -218,6 +240,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       catchPrefetch(fetchHeroMatchups({ data: matchupsRequest(hero.id, seasons, preferences.dateFilter) })),
       // Swaps come from the same demos as bans, so they take the ban filters.
       prefetchCached(queryClient, heroSwapStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
+      skillOrderPrefetch,
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;
     const summary = summarizeHeroStats(requireOnServer(stats, "Hero stats"), hero.id);

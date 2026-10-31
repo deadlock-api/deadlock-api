@@ -1,12 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import type { UseQueryOptions } from "@tanstack/react-query";
-import type { Ability } from "deadlock_api_client";
 
 import { isPlayableHero } from "~/lib/hero-roster";
 import {
   abilitiesQueryOptions,
   heroesQueryOptions,
   itemUpgradesQueryOptions,
+  type SlimAbility,
   type SlimHero,
   type SlimUpgrade,
 } from "~/queries/asset-queries";
@@ -46,7 +46,7 @@ export function useHeroById(heroId: number): { hero: SlimHero | undefined; isLoa
 }
 
 export function useAbilityById(abilityId: number): {
-  ability: Ability | undefined;
+  ability: SlimAbility | undefined;
   isLoading: boolean;
 } {
   const { data: ability, isLoading } = useAssetById(abilitiesQueryOptions, abilityId);

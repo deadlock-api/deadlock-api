@@ -367,7 +367,7 @@ test("a failed browser-storage write does not show a match as saved", async ({ p
 test("scoreboard shows the final build and the compact timeline fits wide and small screens", async ({ page }) => {
   await page.setViewportSize({ width: 2560, height: 1319 });
   await page.goto(TRACKER_URL);
-  await expect(page.getByRole("button", { name: "Final Item 11 details", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Final Item 11 item details", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Sold Item 1 details", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: "View Tracker Tester's build timeline", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Build timeline" });
@@ -841,11 +841,15 @@ test("a rate-limited ability catalog falls back without hiding final builds", as
     if (url.pathname === "/v1/assets/items/by-type/ability") restRequests += 1;
   });
   await page.goto(TRACKER_URL);
-  await expect(page.getByRole("button", { name: "Final Item 11 details", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Final Item 11 item details", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Test Pulse Level 3 of 4 ability details", exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "View Tracker Tester's build timeline", exact: true }).click();
   await expect(page.getByRole("dialog", { name: "Build timeline", exact: true })).toContainText("33 events");
   expect(abilityRequests).toBe(1);
-  expect(restRequests).toBe(1);
+  // The fallback is the Worker's slim ability list; the browser never downloads the full catalog.
+  expect(restRequests).toBe(0);
 });
 
 test("client HTTP errors allow a manual retry without repeating failed requests", async ({ page }) => {
@@ -882,7 +886,7 @@ test("failed build assets can be retried while scoreboard stats remain available
   expect(requests).toBe(1);
   available = true;
   await page.getByRole("button", { name: "Try again", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Final Item 11 details", exact: true })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Final Item 11 item details", exact: true })).toBeVisible();
   await expect(page.getByText("Could not load build details", { exact: true })).toHaveCount(0);
   expect(requests).toBe(2);
 });

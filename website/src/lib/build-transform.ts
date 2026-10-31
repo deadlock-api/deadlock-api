@@ -1,7 +1,5 @@
-import type { Ability } from "deadlock_api_client";
-
 import { day } from "~/dayjs";
-import type { SlimHero } from "~/queries/asset-queries";
+import type { SlimAbility, SlimHero } from "~/queries/asset-queries";
 
 export interface FullBuildItem {
   itemId: number;
@@ -49,7 +47,10 @@ export interface HeroAbilityMetadata {
   abilityIdToMaxLevel: Map<number, number>;
 }
 
-export function getHeroAbilityMetadata(heroData?: SlimHero, abilityItems?: Ability[]): HeroAbilityMetadata | null {
+export function getHeroAbilityMetadata(
+  heroData?: SlimHero,
+  abilityItems?: readonly SlimAbility[],
+): HeroAbilityMetadata | null {
   if (!heroData || !abilityItems) return null;
 
   const abilityEntries = HERO_ABILITY_SLOTS.map((slot, index) => {
@@ -62,7 +63,7 @@ export function getHeroAbilityMetadata(heroData?: SlimHero, abilityItems?: Abili
     return {
       abilityId: ability.id,
       slot: index + 1,
-      maxLevel: (ability.upgrades?.length ?? 0) + 1,
+      maxLevel: ability.max_level,
     };
   }).filter((entry): entry is { abilityId: number; slot: number; maxLevel: number } => entry != null);
 

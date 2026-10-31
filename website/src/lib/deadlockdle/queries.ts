@@ -3,7 +3,7 @@ import { useMemo } from "react";
 
 import { abilityMaxFirstQueryOptions } from "~/queries/ability-order-query";
 import {
-  abilitiesQueryOptions,
+  abilitiesFullQueryOptions,
   heroesFullQueryOptions,
   itemUpgradesFullQueryOptions,
   npcUnitsQueryOptions,
@@ -26,7 +26,7 @@ export function useItems() {
 }
 
 export function useAbilities() {
-  return useQuery(abilitiesQueryOptions);
+  return useQuery(abilitiesFullQueryOptions);
 }
 
 export function useSounds() {

@@ -3,7 +3,14 @@ import type { Ability, Hero, Upgrade } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
-import { fetchSlimHeroes, fetchSlimItemUpgrades, type SlimHero, type SlimUpgrade } from "~/lib/asset-fns";
+import {
+  fetchSlimAbilities,
+  fetchSlimHeroes,
+  fetchSlimItemUpgrades,
+  type SlimAbility,
+  type SlimHero,
+  type SlimUpgrade,
+} from "~/lib/asset-fns";
 import { buffInfoByType } from "~/lib/buffs";
 import { toCorruptionData } from "~/lib/corrupted-items";
 import { isPlayableHero } from "~/lib/hero-roster";
@@ -13,7 +20,7 @@ import { type SeasonInfo, toSeasons } from "~/lib/seasons";
 
 import { queryKeys } from "./query-keys";
 
-export type { SlimHero, SlimUpgrade };
+export type { SlimAbility, SlimHero, SlimUpgrade };
 
 /** Every hero, pre-release and disabled ones too: the games keep the playable ones. */
 async function fetchHeroes(): Promise<Hero[]> {
@@ -70,10 +77,15 @@ export function itemQueryOptions(itemId: number) {
 
 export const abilitiesQueryOptions = queryOptions({
   queryKey: queryKeys.assets.abilities(),
+  queryFn: () => fetchSlimAbilities(),
+  staleTime: CACHE_DURATIONS.FOREVER,
+});
+
+/** Every ability with its descriptions, properties and weapon info, which `abilitiesQueryOptions` strips. */
+export const abilitiesFullQueryOptions = queryOptions({
+  queryKey: queryKeys.assets.abilitiesFull(),
   queryFn: async () => {
-    const response = await api.items_api.getItemsByType({
-      type: "ability",
-    });
+    const response = await api.items_api.getItemsByType({ type: "ability" });
     return response.data as Ability[];
   },
   staleTime: CACHE_DURATIONS.FOREVER,

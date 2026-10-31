@@ -1,10 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
-import type { Hero, HeroImages, Upgrade } from "deadlock_api_client";
+import type { Ability, Hero, HeroImages, Upgrade } from "deadlock_api_client";
 
 import { api } from "~/lib/api";
 
-// The hero and upgrade lists are preloaded into the HTML of most game-data pages, and the full API answers are 1.3 MB
-// and 2 MB of balance tables, tooltips and lore. These lists name the fields the site reads; nothing else leaves the
+// The hero, upgrade and ability lists are preloaded into the HTML of most game-data pages, and the full API answers are
+// 1.3 MB, 2 MB and 4 MB of balance tables, tooltips and lore. These lists name the fields the site reads; nothing else leaves the
 // Worker, so a field the API adds later doesn't reach the page, and reading one not listed here fails typechecking.
 // Deadlockdle and the flashcards read the full answers (`*FullQueryOptions`) on demand.
 const HERO_FIELDS = [
@@ -50,11 +50,24 @@ const UPGRADE_FIELDS = [
   "shopable",
 ] as const satisfies readonly (keyof Upgrade)[];
 
+/** Ability icons, names and the class name a hero's signature slot points at; the balance tables stay behind. */
+const ABILITY_FIELDS = [
+  "id",
+  "name",
+  "class_name",
+  "image",
+  "image_webp",
+] as const satisfies readonly (keyof Ability)[];
+
 export type SlimHero = Pick<Hero, (typeof HERO_FIELDS)[number]> & {
   images: Pick<HeroImages, (typeof HERO_IMAGE_FIELDS)[number]>;
   items: Hero["items"];
 };
 export type SlimUpgrade = Pick<Upgrade, (typeof UPGRADE_FIELDS)[number]>;
+export type SlimAbility = Pick<Ability, (typeof ABILITY_FIELDS)[number]> & {
+  /** 1 plus the ability's upgrade tiers: the points a skill order can spend on it. */
+  max_level: number;
+};
 
 function pickKeys<T extends object, K extends keyof T>(obj: T, keys: readonly K[]): Pick<T, K> {
   return Object.fromEntries(keys.filter((key) => key in obj).map((key) => [key, obj[key]])) as Pick<T, K>;
@@ -78,4 +91,12 @@ export const fetchSlimHeroes = createServerFn({ method: "GET" }).handler(async (
 export const fetchSlimItemUpgrades = createServerFn({ method: "GET" }).handler(async (): Promise<SlimUpgrade[]> => {
   const response = await api.items_api.getItemsByType({ type: "upgrade" });
   return (response.data as Upgrade[]).map((item) => pickKeys(item, UPGRADE_FIELDS));
+});
+
+/** Every ability with only the fields the site reads. Runs in the Worker, also for a browser's request. */
+export const fetchSlimAbilities = createServerFn({ method: "GET" }).handler(async (): Promise<SlimAbility[]> => {
+  const response = await api.items_api.getItemsByType({ type: "ability" });
+  return (response.data as Ability[]).map((ability) =>
+    Object.assign(pickKeys(ability, ABILITY_FIELDS), { max_level: (ability.upgrades?.length ?? 0) + 1 }),
+  );
 });
