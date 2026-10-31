@@ -20,7 +20,27 @@ function formatProperty(prop: ItemProperty): string | null {
   } else if (prefix && !raw.startsWith(prefix)) {
     value = prefix + value;
   }
-  return prop.label ? `${value} ${prop.label}` : value;
+  const scaling = formatScaling(prop, postfix);
+  const text = prop.label ? `${value} ${prop.label}` : value;
+  return scaling ? `${text} (${scaling})` : text;
+}
+
+// Scale functions whose stat_scale multiplies the hero's spirit power, and those that add it once per boon (level).
+// Cooldown, duration and range scale functions carry no stat_scale; they follow the hero's own multipliers.
+const SPIRIT_SCALING = new Set(["scale_function_tech_damage", "scale_function_healing_spirit_scale"]);
+const BOON_SCALING = new Set(["scale_function_healing_boon_scale"]);
+
+function formatScaling(prop: ItemProperty, postfix: string): string | null {
+  const fn = prop.scale_function;
+  const scale = fn?.stat_scale;
+  if (!fn || !scale) return null;
+  const amount = scale.toLocaleString("en-US", { maximumFractionDigits: 3 });
+  const stat = fn.specific_stat_scale_type;
+  if (stat === "ETechPower" || (fn.class_name && SPIRIT_SCALING.has(fn.class_name))) return `+${amount}× Spirit`;
+  if (stat === "ELevelUpBoons" || (fn.class_name && BOON_SCALING.has(fn.class_name))) {
+    return `+${amount}${postfix} per Boon`;
+  }
+  return null;
 }
 
 function cleanText(html: string, hiddenName: string | undefined): string[] {
