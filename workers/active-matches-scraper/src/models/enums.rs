@@ -24,6 +24,7 @@ pub(crate) enum GameMode {
     StreetBrawl = 4,
     ExploreNYC = 5,
     Internal = 6,
+    Internal02 = 7,
 }
 
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug)]
