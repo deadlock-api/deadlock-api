@@ -205,11 +205,6 @@ function HeatmapPage() {
         </FilterToggleCell>
         <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull />
         <Filter.ModeWithRank value={{ mode, rank: [minRankId, maxRankId] }} onValueChange={handleModeWithRankChange} />
-        <Filter.SeasonPatchDate
-          value={{ startDate, endDate }}
-          onValueChange={({ startDate: start, endDate: end, action }) => handleDateChange(start, end, action)}
-          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-        />
         <Filter.TimeRange
           value={[minGameTime || undefined, maxGameTime < MAX_GAME_TIME_S ? maxGameTime : undefined]}
           onValueChange={([min, max]) => {
@@ -226,6 +221,11 @@ function HeatmapPage() {
           min={0}
           step={5}
           defaultValue={0}
+        />
+        <Filter.SeasonPatchDate
+          value={{ startDate, endDate }}
+          onValueChange={({ startDate: start, endDate: end, action }) => handleDateChange(start, end, action)}
+          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
       </Filter.Root>
 

@@ -352,7 +352,7 @@ export function Patterns() {
       <Specimen
         name="FilterBar cells"
         source="patterns/filter-bar/FilterBar · FilterCell · StringSelector · NumberSelector · TriStateSelector · DateRangePicker"
-        note="The filters of a page: two across on a phone, three on a tablet, one row on a desktop. A FilterToggleCell is as wide as its segments: where they do not fit beside the other cells it takes a row of its own rather than wrapping them. A changed filter is underlined and gets a reset. StringSelector shows up to five options as segments, more as a list; StringOptionGroups put headings over a long list (Rank by)."
+        note="The filters of a page: two across on a phone, three on a tablet, one row on a desktop. A FilterToggleCell is as wide as its segments: where they do not fit beside the other cells it takes a row of its own rather than wrapping them. A changed filter is underlined and gets a reset. The compact width is a narrow cell for a short value (Tags, Language here): a third of a phone's row, its content's width on a desktop. StringSelector shows up to five options as segments, more as a list; StringOptionGroups put headings over a long list (Rank by)."
       >
         <Variants className="block">
           <FilterBar>
@@ -386,6 +386,15 @@ export function Patterns() {
               min={0}
               defaultValue={50}
             />
+            <TriStateSelector label="Tags" width="compact">
+              <TriStateItem value={1} label="Spirit" />
+              <TriStateItem value={2} label="Gun" />
+            </TriStateSelector>
+            <StringSelector label="Language" defaultValue="" width="compact">
+              <StringOption value="">Any</StringOption>
+              <StringOption value="en">English</StringOption>
+              <StringOption value="de">German</StringOption>
+            </StringSelector>
             <TriStateSelector label="Items" value={items} onValueChange={setItems}>
               <TriStateItem value={1} label="Basic Magazine" />
               <TriStateItem value={2} label="Extra Health" />
@@ -397,6 +406,7 @@ export function Patterns() {
               active={Boolean(dates.startDate)}
               onReset={() => setDates({})}
             >
+              {/* Presets: Last 24h (open-ended, from the hour a day back), Last 7 days, Last 30 days. */}
               <DateRangePicker value={dates} onValueChange={setDates} />
             </FilterCell>
           </FilterBar>

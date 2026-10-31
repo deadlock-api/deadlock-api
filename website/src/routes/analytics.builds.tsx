@@ -15,6 +15,7 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { designerBuildFromGame, designerHref, stageNames } from "~/lib/build-designer-code";
 import {
+  analyticsMode,
   DEFAULT_MATCH_MODE,
   DEFAULT_MODE,
   getEffectiveRankRange,
@@ -42,7 +43,7 @@ const DESCRIPTION =
   "Win rates of the published Deadlock hero builds players start their matches with: how popular each is, its items and skill order, by rank and patch.";
 
 /** The hero builds analytics endpoint counts normal matches only; Street Brawl has no build to choose. */
-const MODES = ["normal_all", "normal_ranked", "normal_unranked"] as const;
+const MODES = ["normal_ranked", "normal_unranked"] as const;
 
 /** A choice re-renders the page in a transition, so the tap paints first; one choice is one history entry. */
 const together = { limitUrlUpdates: throttle(50) };
@@ -52,15 +53,14 @@ export const Route = createFileRoute("/analytics/builds")({
   // The filters live in the URL under nuqs; read them here so the loader warms the request the page will make, and a
   // shared link with a rank or mode renders its builds on the server too. A custom date range is left to the browser.
   loaderDeps: ({ search }) => {
-    const { hero, min_rank, max_rank, min_matches, min_duration_s, max_duration_s, game_mode, match_mode, date_range } =
-      search as Record<string, unknown>;
+    const { hero, min_rank, max_rank, game_mode, match_mode, date_range } = search as Record<string, unknown>;
     const integer = <T,>(value: unknown, fallback: T) =>
       typeof value === "number" && Number.isInteger(value) ? value : fallback;
     const urlMode = modeFromParams(
       game_mode === "street_brawl" ? "street_brawl" : "normal",
       MATCH_MODES.find((mode) => mode === match_mode) ?? DEFAULT_MATCH_MODE,
     );
-    const mode = urlMode === "street_brawl" ? DEFAULT_MODE : urlMode;
+    const mode = urlMode === "street_brawl" ? DEFAULT_MODE : analyticsMode(urlMode);
     const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(
       mode,
       integer(min_rank, DEFAULT_RANK_RANGE.min),
@@ -70,9 +70,6 @@ export const Route = createFileRoute("/analytics/builds")({
       heroId: integer(hero, DEFAULT_HERO_ID),
       minRankId: effectiveMinRankId,
       maxRankId: effectiveMaxRankId,
-      minMatches: integer(min_matches, DEFAULT_MIN_MATCHES),
-      minDurationS: integer(min_duration_s, undefined),
-      maxDurationS: integer(max_duration_s, undefined),
       matchMode: MODE_CONFIG[mode].matchMode,
       customDates: date_range !== undefined,
     };
@@ -93,8 +90,6 @@ export const Route = createFileRoute("/analytics/builds")({
           minAverageBadge: deps.minRankId,
           maxAverageBadge: deps.maxRankId,
           ...range,
-          minDurationS: deps.minDurationS,
-          maxDurationS: deps.maxDurationS,
         }),
       ),
     ]);
@@ -106,9 +101,7 @@ export const Route = createFileRoute("/analytics/builds")({
           minRankId: deps.minRankId,
           maxRankId: deps.maxRankId,
           ...range,
-          minDurationS: deps.minDurationS,
-          maxDurationS: deps.maxDurationS,
-          minMatches: deps.minMatches,
+          minMatches: DEFAULT_MIN_MATCHES,
           matchMode: deps.matchMode,
         }),
       ),
@@ -149,16 +142,14 @@ function BuildsPage() {
   const [buildId, setBuildId] = useQueryState("build", parseAsInteger);
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.min));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.max));
-  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
+  // Builds with fewer matches are left out: their win rates are noise. Not a filter; the loader warms the same minimum.
+  const minMatches = DEFAULT_MIN_MATCHES;
   const [minPlayers, setMinPlayers] = useQueryState("min_players", parseAsInteger.withDefault(DEFAULT_MIN_PLAYERS));
   const { mode: urlMode, setMode } = useModeState();
   // A Street Brawl link from another page reads as the default mode here.
   const mode = urlMode === "street_brawl" ? DEFAULT_MODE : urlMode;
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
-  const [duration, setDuration] = useQueryStates({ min_duration_s: parseAsInteger, max_duration_s: parseAsInteger });
-  const minDurationS = duration.min_duration_s ?? undefined;
-  const maxDurationS = duration.max_duration_s ?? undefined;
   // What a build is rather than how its matches went: one update sets both tag lists.
   const [tagParams, setTagParams] = useQueryStates({
     with_tags: parseAsArrayOf(parseAsInteger).withDefault([]),
@@ -183,8 +174,6 @@ function BuildsPage() {
     maxRankId: effectiveMaxRankId,
     minDate: startDate,
     maxDate: endDate,
-    minDurationS,
-    maxDurationS,
     minMatches,
     minPlayers,
     matchMode: MODE_CONFIG[mode].matchMode,
@@ -216,19 +205,6 @@ function BuildsPage() {
             });
           }}
         />
-        <Filter.BuildId
-          value={buildId}
-          onValueChange={(choice) =>
-            startTransition(() => {
-              void setHero(choice.heroId, together);
-              void setBuildId(choice.buildId, together);
-            })
-          }
-          // A player's own build, not published: it has no stats here, but opens in the Build Designer.
-          onUnpublishedBuild={(build) =>
-            void navigate({ href: designerHref(designerBuildFromGame(build, stageNames(false))) })
-          }
-        />
         <Filter.ModeWithRank
           value={{ mode, rank: [minRankId, maxRankId] }}
           defaultValue={{ mode: DEFAULT_MODE, rank: [DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max] }}
@@ -242,6 +218,11 @@ function BuildsPage() {
               });
             }
           }}
+        />
+        {/* What the build is: when it was updated, then the two short cells, which share a phone's row. */}
+        <Filter.BuildUpdated
+          value={updatedDays}
+          onValueChange={(next) => startTransition(() => void setUpdatedDays(next, together))}
         />
         <Filter.BuildTags
           tagIds={facets.tagIds}
@@ -261,30 +242,13 @@ function BuildsPage() {
           value={language}
           onValueChange={(next) => startTransition(() => void setLanguage(next, together))}
         />
-        <Filter.BuildUpdated
-          value={updatedDays}
-          onValueChange={(next) => startTransition(() => void setUpdatedDays(next, together))}
-        />
         <Filter.MinMatches
-          value={minMatches}
-          onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
-          defaultValue={DEFAULT_MIN_MATCHES}
-        />
-        <Filter.MinMatches
-          label="Min Players"
+          label="Players"
           step={5}
           min={DEFAULT_MIN_PLAYERS}
           value={minPlayers}
           onValueChange={(next) => startTransition(() => void setMinPlayers(next, together))}
           defaultValue={DEFAULT_MIN_PLAYERS}
-        />
-        <Filter.MatchDuration
-          value={[minDurationS, maxDurationS]}
-          onValueChange={([min, max]) =>
-            startTransition(
-              () => void setDuration({ min_duration_s: min ?? null, max_duration_s: max ?? null }, together),
-            )
-          }
         />
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
@@ -301,15 +265,23 @@ function BuildsPage() {
             maxRankId={effectiveMaxRankId}
             minDate={startDate}
             maxDate={endDate}
-            minDurationS={minDurationS}
-            maxDurationS={maxDurationS}
             minMatches={minMatches}
             minPlayers={minPlayers}
             metaFilters={metaFilters}
             matchMode={MODE_CONFIG[mode].matchMode}
             buildId={buildId}
             onBuildIdChange={(id) => void setBuildId(id)}
-            onMinMatchesChange={(next) => startTransition(() => void setMinMatches(next, together))}
+            // The search takes a build ID or a game code: a build of another hero switches the hero.
+            onBuildFound={(choice) =>
+              startTransition(() => {
+                void setHero(choice.heroId, together);
+                void setBuildId(choice.buildId, together);
+              })
+            }
+            // A player's own build, not published: it has no stats here, but opens in the Build Designer.
+            onUnpublishedBuild={(build) =>
+              void navigate({ href: designerHref(designerBuildFromGame(build, stageNames(false))) })
+            }
           />
         </Suspense>
       </ChunkErrorBoundary>

@@ -2,6 +2,7 @@ import { type Options, throttle, useQueryStates } from "nuqs";
 import { startTransition } from "react";
 
 import {
+  analyticsMode,
   type Mode,
   MODE_CONFIG,
   modeFromParams,
@@ -14,7 +15,7 @@ import {
  * Backs the single Mode filter with the long-standing `game_mode` / `match_mode` search params, so
  * existing links keep working. The returned `gameMode`/`matchMode` are the canonical pair for the
  * selected mode, which normalizes combinations a hand-edited URL could otherwise ask for. The analytics
- * pages start in Ranked, the tracker (`scope: "tracker"`) in All.
+ * pages start in Ranked and never read All, the tracker (`scope: "tracker"`) starts in All.
  */
 export function useModeState({ scope = "analytics" }: { scope?: "analytics" | "tracker" } = {}) {
   const tracker = scope === "tracker";
@@ -23,7 +24,9 @@ export function useModeState({ scope = "analytics" }: { scope?: "analytics" | "t
     match_mode: tracker ? parseAsTrackerMatchMode : parseAsMatchMode,
   });
 
-  const mode: Mode = modeFromParams(gameModeParam, matchModeParam);
+  const urlMode = modeFromParams(gameModeParam, matchModeParam);
+  // The analytics pages do not offer All; an old link to it reads as their default.
+  const mode: Mode = tracker ? urlMode : analyticsMode(urlMode);
 
   const setMode = (next: Mode, options?: Options) => {
     // One choice updates both parameters together, without the app's per-key debounce splitting browser history.

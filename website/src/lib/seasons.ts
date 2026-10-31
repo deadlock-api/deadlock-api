@@ -133,6 +133,8 @@ export function dateRangeLabel(
   const patch = startDate && patches.find((candidate) => patchMatches(candidate, startDate, endDate));
   if (patch) return patch.name;
   if (!startDate && !endDate) return "All Time";
+  // The "Last 24h" preset: an open range starting on the hour a day back.
+  if (startDate && !endDate && day().diff(startDate, "hour", true) <= 25) return "Last 24h";
   // The year only when it is not this one: "Jan 1 - Feb 1" for a range in 2030 read as this January.
   const thisYear = day().year();
   const withYear = [startDate, endDate].some((date) => date && date.year() !== thisYear);

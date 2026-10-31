@@ -1,3 +1,4 @@
+import { useQuery } from "@tanstack/react-query";
 import { ListOrdered } from "lucide-react";
 import {
   parseAsArrayOf,
@@ -35,6 +36,8 @@ import {
   TableRowHeader,
 } from "~/components/ui/table";
 import { day } from "~/dayjs";
+import { useHeroById } from "~/hooks/useAssetById";
+import { type BuildIdChoice, type BuildLookupResult, parseBuildId, useBuildLookup } from "~/hooks/useBuildLookup";
 import { BUILD_METRICS, type BuildMetric, type BuildPerformanceTotals } from "~/lib/build-performance";
 import {
   buildMatchesItems,
@@ -45,7 +48,9 @@ import {
 } from "~/lib/build-stats";
 import { formatPercent, formatSignedPoints } from "~/lib/format";
 import { toneOf } from "~/lib/tone";
-import { cn } from "~/lib/utils";
+import { cn, useDebouncedValue } from "~/lib/utils";
+import type { HeroBuild } from "~/lib/wasm/hero-build";
+import { heroBuildLookupQueryOptions } from "~/queries/hero-build-stats-query";
 import type { SteamProfileMap } from "~/queries/steam-queries";
 
 /** A column's sort key: one of the overview's, or `m:` and a metric's key. */
@@ -134,11 +139,15 @@ function fold(text: string): string {
   return text.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
 }
 
+/** How long typing must rest before a build ID that is not in the list is looked up. */
+const LOOKUP_DELAY_MS = 300;
+
 /** Where the bar beside a win rate reaches its edge: ten points over or under the average. */
 const VS_AVERAGE_SCALE = 0.1;
 
 /** Every played build, sortable; a row press shows it in the detail panel. */
 export function BuildTable({
+  heroId,
   rows,
   trends,
   trendsPending,
@@ -152,10 +161,14 @@ export function BuildTable({
   profilesPending,
   selectedId,
   onBuildIdChange,
+  onBuildFound,
+  onUnpublishedBuild,
   onBuildHover,
   highlightedId = null,
   className,
 }: {
+  /** The hero the listed builds are for. */
+  heroId: number;
   rows: readonly BuildRow[];
   /** Null while the recent window loads or when it has no matches. */
   trends: ReadonlyMap<number, BuildTrend> | null;
@@ -172,6 +185,13 @@ export function BuildTable({
   profilesPending: boolean;
   selectedId: number;
   onBuildIdChange: (buildId: number) => void;
+  /**
+   * The search also finds a build by its ID or a game code (Enter): one that is not in the list, perhaps another
+   * hero's, goes here. Without it the search only filters the list.
+   */
+  onBuildFound?: (choice: BuildIdChoice) => void;
+  /** A game code searched for whose build is not published. */
+  onUnpublishedBuild?: (build: HeroBuild) => void;
   /** The build under the pointer, null when it leaves the list: the chart lights its dot. */
   onBuildHover?: (buildId: number | null) => void;
   /** The build whose dot the chart's pointer is on: its row is marked. */
@@ -238,6 +258,50 @@ export function BuildTable({
     }
     return (sortValue[sort.sortKey] ?? sortValue.matches)(row, trends?.get(row.hero_build_id));
   };
+  // A build ID typed into the search: the list's own build is filtered to; one the list does not hold (another hero's,
+  // or one these filters leave out) is looked up once typing rests and offered above the list.
+  const typedId = parseBuildId(query);
+  const exactRow = typedId === null ? undefined : rows.find((row) => row.hero_build_id === typedId);
+  const lookupId = useDebouncedValue(exactRow ? null : typedId, LOOKUP_DELAY_MS);
+  const lookupQuery = useQuery({
+    ...heroBuildLookupQueryOptions(lookupId ?? 0),
+    enabled: onBuildFound !== undefined && lookupId !== null && lookupId === typedId,
+  });
+  const found = !exactRow && lookupQuery.data?.buildId === typedId ? lookupQuery.data : null;
+  // Until the lookup answers, an empty list says it is looking rather than that nothing matches.
+  const lookingUp =
+    onBuildFound !== undefined &&
+    typedId !== null &&
+    !exactRow &&
+    !found &&
+    (lookupId !== typedId || lookupQuery.isFetching);
+  const { hero: foundHero } = useHeroById(found?.heroId ?? 0);
+  // A found build is shown with the list whole again: the search did its job.
+  const showFound = (choice: BuildIdChoice) => {
+    holdHeight(itemParams.with_items.length > 0 || itemParams.without_items.length > 0);
+    void setQuery(null);
+    onBuildFound?.({ buildId: choice.buildId, heroId: choice.heroId });
+  };
+  const { lookUp } = useBuildLookup({ onFound: showFound, onUnpublishedBuild });
+  // What Enter found wrong, for the text it was pressed on: editing the search clears it.
+  const [searchProblem, setSearchProblem] = useState<{ query: string; message: string } | null>(null);
+  const [searching, setSearching] = useState(false);
+  const problem = searchProblem?.query === query ? searchProblem.message : null;
+  const submitSearch = async () => {
+    if (exactRow) {
+      onBuildIdChange(exactRow.hero_build_id);
+      return;
+    }
+    if (!onBuildFound || !query.trim()) return;
+    const text = query;
+    setSearching(true);
+    const result = await lookUp(text).catch((): BuildLookupResult => ({
+      status: "problem",
+      message: "The build could not be looked up, try again",
+    }));
+    setSearching(false);
+    if (result.status === "problem") setSearchProblem({ query: text, message: result.message });
+  };
   const needle = fold(query.trim());
   const byText = needle
     ? rows.filter((row) => {
@@ -284,12 +348,20 @@ export function BuildTable({
             holdHeight(next.trim() !== "" || filteringItems);
             void setQuery(next);
           }}
-          placeholder="Search builds…"
-          aria-label="Filter builds by name, author or ID"
+          onKeyDown={(event) => {
+            if (event.key !== "Enter") return;
+            event.preventDefault();
+            void submitSearch();
+          }}
+          loading={searching}
+          loadingLabel="Finding the build"
+          enterKeyHint="search"
+          placeholder="Search name or build ID…"
+          aria-label="Search builds by name, author or build ID; Enter finds a build ID or game code of any hero"
           // Names, handles and IDs, not prose: no autocorrect or spellcheck.
           kind="identifier"
           size="sm"
-          className="w-full @sm:ms-auto @sm:w-40"
+          className="w-full @sm:ms-auto @sm:w-60"
         />
         <Segmented size="sm" width="hug" value={view} onValueChange={setView} aria-label="Columns">
           <SegmentedItem value="overview">Overview</SegmentedItem>
@@ -322,6 +394,28 @@ export function BuildTable({
           </TableRow>
         </TableHeader>
         <TableBody onKeyDown={navigation.onKeyDown} onPointerLeave={() => onBuildHover?.(null)}>
+          {(found || problem) && (
+            <TableEmptyRow colSpan={columns.length + 2} aria-live="polite">
+              {found ? (
+                <span className="inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-2">
+                  <span>
+                    Build {found.buildId}
+                    {found.name && <> “{found.name}”</>}{" "}
+                    {found.heroId === heroId
+                      ? "is not in this list under these filters."
+                      : foundHero
+                        ? `is ${/^[aeiou]/i.test(foundHero.name) ? "an" : "a"} ${foundHero.name} build.`
+                        : "is another hero's build."}
+                  </span>
+                  <Button variant="outline" size="sm" onClick={() => showFound(found)}>
+                    Show build
+                  </Button>
+                </span>
+              ) : (
+                problem
+              )}
+            </TableEmptyRow>
+          )}
           {sorted.map((row, index) => {
             const selected = row.hero_build_id === selectedId;
             const author = row.meta ? profiles[row.meta.authorId] : undefined;
@@ -446,9 +540,13 @@ export function BuildTable({
               </TableRow>
             );
           })}
-          {sorted.length === 0 && (
+          {sorted.length === 0 && !found && !problem && (
             <TableEmptyRow colSpan={columns.length + 2}>
-              {needle ? `No build matches “${query}”` : "No build lists these items"}
+              {lookingUp
+                ? `Looking for build ${typedId}…`
+                : needle
+                  ? `No build matches “${query}”`
+                  : "No build lists these items"}
             </TableEmptyRow>
           )}
         </TableBody>

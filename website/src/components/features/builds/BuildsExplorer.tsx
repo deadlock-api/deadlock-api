@@ -16,6 +16,7 @@ import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { day, type Dayjs } from "~/dayjs";
+import type { BuildIdChoice } from "~/hooks/useBuildLookup";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { poolPerformance } from "~/lib/build-performance";
 import {
@@ -30,6 +31,7 @@ import {
 } from "~/lib/build-stats";
 import type { MatchMode } from "~/lib/game-mode";
 import { useDebouncedValue } from "~/lib/utils";
+import type { HeroBuild } from "~/lib/wasm/hero-build";
 import {
   buildMetaBatches,
   heroBuildMetaQueryOptions,
@@ -67,6 +69,10 @@ export interface BuildsExplorerProps {
   /** The build the detail panel shows; the most played one when null or not in the results. */
   buildId: number | null;
   onBuildIdChange: (buildId: number) => void;
+  /** A build the list's search found by its ID or game code, perhaps another hero's: the page shows it. */
+  onBuildFound?: (choice: BuildIdChoice) => void;
+  /** A game code the search was given of a build that is not published. */
+  onUnpublishedBuild?: (build: HeroBuild) => void;
   /** Lowers the minimum from the empty state. */
   onMinMatchesChange?: (minMatches: number) => void;
 }
@@ -219,6 +225,8 @@ function BuildsExplorerView({
   matchMode,
   buildId,
   onBuildIdChange,
+  onBuildFound,
+  onUnpublishedBuild,
   onMinMatchesChange,
   stale,
 }: BuildsExplorerProps & {
@@ -445,6 +453,7 @@ function BuildsExplorerView({
         style={heldRow?.key === answerKey ? { minHeight: heldRow.height } : undefined}
       >
         <BuildTable
+          heroId={heroId}
           rows={rows}
           trends={trends}
           trendsPending={recentQuery.isPending}
@@ -458,6 +467,8 @@ function BuildsExplorerView({
           profilesPending={profiles.pending}
           selectedId={selected.hero_build_id}
           onBuildIdChange={pickBuild}
+          onBuildFound={onBuildFound}
+          onUnpublishedBuild={onUnpublishedBuild}
           onBuildHover={setHoveredId}
           highlightedId={hoveredId}
           // Stacked, the list grows with its builds up to one height and scrolls inside it rather than pushing the

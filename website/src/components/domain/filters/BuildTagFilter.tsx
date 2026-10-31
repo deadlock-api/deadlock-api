@@ -11,7 +11,7 @@ import {
 } from "~/components/patterns/filter-bar/TriStateSelector";
 import { abilitiesQueryOptions, buildTagsQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 
-type BuildTagFilterProps = Omit<React.ComponentProps<typeof TriStateSelector>, "children" | "width"> & {
+type BuildTagFilterProps = Omit<React.ComponentProps<typeof TriStateSelector>, "children" | "popoverWidth"> & {
   /** The ability and item tags to offer, most used first; the style tags are always offered. */
   tagIds?: readonly number[];
 };
@@ -47,7 +47,14 @@ export function BuildTagFilter({
   });
 
   return (
-    <TriStateSelector label={label} value={value} defaultValue={defaultValue} width="wide" {...props}>
+    <TriStateSelector
+      label={label}
+      value={value}
+      defaultValue={defaultValue}
+      popoverWidth="wide"
+      width="compact"
+      {...props}
+    >
       <TriStateSection label="Tagged with">
         <TriStateGroup label="Style">
           {styleTags.map((tag) => (

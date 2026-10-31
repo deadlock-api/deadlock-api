@@ -33,7 +33,7 @@ type DateValue = Pick<SeasonPatchDatePickerValue, "startDate" | "endDate">;
 
 const ALL_TIME: DateValue = {};
 
-const TABS = ["season", "patch", "custom"] as const;
+const TABS = ["patch", "season", "custom"] as const;
 type PickerTab = (typeof TABS)[number];
 
 interface SeasonPatchDatePickerProps extends Omit<
@@ -137,8 +137,9 @@ export function SeasonPatchDatePicker({
     emit(patch?.startDate, patch?.endDate, "patch");
   };
 
+  // The picker hands over whole days from the calendar and the day presets, and an hour-aligned start from "Last 24h".
   const handleDateRangePickerChange = (range: { startDate?: Dayjs; endDate?: Dayjs }) => {
-    emit(range.startDate?.startOf("day"), range.endDate?.endOf("day"), "custom");
+    emit(range.startDate, range.endDate, "custom");
   };
 
   const [defaultStart, defaultEnd] = defaultValue
@@ -164,13 +165,13 @@ export function SeasonPatchDatePicker({
       <div className="flex flex-col gap-3">
         <Tabs value={tab} onValueChange={(value) => setQueryTab(value as PickerTab)}>
           <TabsList className="flex w-full">
-            <TabsTrigger value="season" className="flex flex-1 items-center gap-1 text-xs">
-              <TrophyIcon className="h-3 w-3" />
-              Season
-            </TabsTrigger>
             <TabsTrigger value="patch" className="flex flex-1 items-center gap-1 text-xs">
               <ClockIcon className="h-3 w-3" />
               Patch
+            </TabsTrigger>
+            <TabsTrigger value="season" className="flex flex-1 items-center gap-1 text-xs">
+              <TrophyIcon className="h-3 w-3" />
+              Season
             </TabsTrigger>
             <TabsTrigger value="custom" className="flex flex-1 items-center gap-1 text-xs">
               <CalendarIcon className="h-3 w-3" />

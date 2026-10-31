@@ -124,8 +124,8 @@ interface TriStateSelectorProps extends FilterCellPassthroughProps {
   value?: TriStateValue;
   defaultValue?: TriStateValue;
   onValueChange?: (value: TriStateValue) => void;
-  /** `wide` has room for a `TriStateSection` to lay three groups side by side. */
-  width?: "default" | "wide";
+  /** The popover's width: `wide` has room for a `TriStateSection` to lay three groups side by side. */
+  popoverWidth?: "default" | "wide";
   /** `TriStateItem`s, grouped by `TriStateGroup` and `TriStateSection` where the list is long. */
   children?: ReactNode;
 }
@@ -136,7 +136,7 @@ export function TriStateSelector({
   value: valueProp,
   defaultValue = NO_SELECTIONS,
   onValueChange,
-  width = "default",
+  popoverWidth = "default",
   icon,
   contentClassName,
   children,
@@ -164,13 +164,13 @@ export function TriStateSelector({
       icon={icon}
       contentClassName={cn(
         "max-h-100 max-w-(--radix-popover-content-available-width) overflow-auto p-2",
-        width === "wide" ? "w-160" : "w-64",
+        popoverWidth === "wide" ? "w-160" : "w-64",
         contentClassName,
       )}
       {...props}
     >
       <TriStateContext value={{ value, toggle }}>
-        <div data-slot="tri-state-list" className={cn("flex flex-col", width === "wide" ? "gap-3" : "gap-0.5")}>
+        <div data-slot="tri-state-list" className={cn("flex flex-col", popoverWidth === "wide" ? "gap-3" : "gap-0.5")}>
           {children}
         </div>
       </TriStateContext>

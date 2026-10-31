@@ -61,7 +61,8 @@ function AbilitiesPage() {
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(MAX_BADGE));
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
-  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
+  // Not a filter: the loader warms the same minimum.
+  const minMatches = DEFAULT_MIN_MATCHES;
   // In the URL like every other filter, so a shared or reloaded link and Back keep them. One update sets both lists.
   const [items, setItems] = useQueryStates({
     include_items: parseAsArrayOf(parseAsInteger).withDefault([]),
@@ -117,12 +118,6 @@ function AbilitiesPage() {
               void setMaxRankId(next.rank[1]);
             }
           }}
-        />
-        <Filter.MinMatches
-          value={minMatches}
-          onValueChange={setMinMatches}
-          min={0}
-          defaultValue={DEFAULT_MIN_MATCHES}
         />
         <Filter.Item selection="tri-state" value={itemSelections} onValueChange={setItemSelections} />
         <Filter.SeasonPatchDate

@@ -1,4 +1,3 @@
-import { BuildIdFilter } from "~/components/domain/filters/BuildIdFilter";
 import { BuildLanguageFilter } from "~/components/domain/filters/BuildLanguageFilter";
 import { BuildTagFilter } from "~/components/domain/filters/BuildTagFilter";
 import { BuildUpdatedFilter } from "~/components/domain/filters/BuildUpdatedFilter";
@@ -20,7 +19,6 @@ export const Filter = {
   SeasonPatchDate: SeasonPatchDatePicker,
   MatchDuration: MatchDurationFilter,
   TimeRange: MatchTimeRangeSelector,
-  BuildId: BuildIdFilter,
   BuildTags: BuildTagFilter,
   BuildLanguage: BuildLanguageFilter,
   BuildUpdated: BuildUpdatedFilter,

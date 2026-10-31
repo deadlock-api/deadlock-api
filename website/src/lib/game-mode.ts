@@ -64,8 +64,19 @@ export const MODE_CONFIG = {
 export type Mode = keyof typeof MODE_CONFIG;
 
 export const MODES = Object.keys(MODE_CONFIG) as Mode[];
+/**
+ * The modes the analytics pages offer. All is left out: it mixes lobbies a rank range cannot narrow with ones it can,
+ * and the stats read cleaner one mode at a time. A player's own matches (the tracker) still offer All.
+ */
+export const ANALYTICS_MODES = ["normal_ranked", "normal_unranked", "street_brawl"] as const satisfies readonly Mode[];
+export type AnalyticsMode = (typeof ANALYTICS_MODES)[number];
 /** The analytics pages start in Ranked, where the rank range applies. */
-export const DEFAULT_MODE: Mode = "normal_ranked";
+export const DEFAULT_MODE: AnalyticsMode = "normal_ranked";
+
+/** An analytics page's reading of a mode from the URL: an old link to All opens in the default mode. */
+export function analyticsMode(mode: Mode): AnalyticsMode {
+  return mode === "normal_all" ? DEFAULT_MODE : mode;
+}
 
 /** A player's own match history starts in All, so a player who plays unranked does not land on an empty tracker. */
 export const TRACKER_DEFAULT_MODE: Mode = "normal_all";

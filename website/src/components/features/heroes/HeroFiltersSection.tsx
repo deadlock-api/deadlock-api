@@ -2,19 +2,13 @@ import { throttle } from "nuqs";
 import { startTransition } from "react";
 
 import { Filter } from "~/components/domain/filters";
-import { STATS_TABS, type useHeroFilters } from "~/hooks/useHeroFilters";
+import type { useHeroFilters } from "~/hooks/useHeroFilters";
 import { DEFAULT_MODE } from "~/lib/game-mode";
 import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
 
 type HeroFiltersProps = Pick<
   ReturnType<typeof useHeroFilters>,
   | "tab"
-  | "minHeroMatches"
-  | "setMinHeroMatches"
-  | "minHeroMatchesTotal"
-  | "setMinHeroMatchesTotal"
-  | "minMatches"
-  | "setMinMatches"
   | "mode"
   | "setMode"
   | "minRankId"
@@ -31,12 +25,6 @@ const together = { limitUrlUpdates: throttle(50) };
 
 export function HeroFiltersSection({
   tab,
-  minHeroMatches,
-  setMinHeroMatches,
-  minHeroMatchesTotal,
-  setMinHeroMatchesTotal,
-  minMatches,
-  setMinMatches,
   mode,
   setMode,
   minRankId,
@@ -50,33 +38,6 @@ export function HeroFiltersSection({
 }: HeroFiltersProps) {
   return (
     <Filter.Root>
-      {STATS_TABS.includes(tab) ? (
-        <>
-          <Filter.MinMatches
-            value={minHeroMatches}
-            onValueChange={setMinHeroMatches}
-            label="Matches (range)"
-            step={10}
-          />
-          {/* By Experience buckets heroes by a player's own match count, which replaces the total threshold. */}
-          {tab !== "stats-by-experience" && (
-            <Filter.MinMatches
-              value={minHeroMatchesTotal}
-              onValueChange={setMinHeroMatchesTotal}
-              label="Matches (total)"
-              step={10}
-            />
-          )}
-        </>
-      ) : (
-        <Filter.MinMatches
-          value={minMatches}
-          onValueChange={setMinMatches}
-          label="Matches"
-          step={10}
-          defaultValue={10}
-        />
-      )}
       <Filter.ModeWithRank
         value={{ mode, rank: [minRankId, maxRankId] }}
         defaultValue={{ mode: DEFAULT_MODE, rank: [DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max] }}

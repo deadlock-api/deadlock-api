@@ -1,12 +1,12 @@
 import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { SegmentedItem } from "~/components/ui/segmented";
-import { DEFAULT_MODE, type Mode, MODE_CONFIG, MODES } from "~/lib/game-mode";
+import { ANALYTICS_MODES, DEFAULT_MODE, type Mode, MODE_CONFIG } from "~/lib/game-mode";
 
 export function ModeSelector({
   value,
   defaultValue = DEFAULT_MODE,
   onValueChange,
-  modes = MODES,
+  modes = ANALYTICS_MODES,
   disabledModes,
   ...props
 }: Omit<
@@ -17,7 +17,10 @@ export function ModeSelector({
   /** The mode it starts in when uncontrolled, and the one the reset returns to. */
   defaultValue?: Mode;
   onValueChange?: (mode: Mode) => void;
-  /** The modes offered, in this order; all of them by default. Leave out a mode a page can never show data for. */
+  /**
+   * The modes offered, in this order: the analytics modes (Ranked, Unranked, Brawl) by default. A player's own matches
+   * pass `MODES` to offer All too; leave out a mode a page can never show data for.
+   */
   modes?: readonly Mode[];
   /** Modes shown but not selectable, for views that have no data in them (no soul economy in Street Brawl). */
   disabledModes?: readonly Mode[];

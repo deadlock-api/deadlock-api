@@ -38,16 +38,16 @@ const ItemCombStatsTable = lazy(() =>
  */
 const together = { limitUrlUpdates: throttle(50) };
 
+/** Items, combos and build steps seen in fewer matches are left out; the server prefetches ask for the same. */
+const MIN_MATCHES = 10;
+
 export function ItemsPage() {
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.min));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.max));
-  const [minBoughtAtS, setMinBoughtAtS] = useQueryState("min_bought_at", parseAsInteger);
-  const [maxBoughtAtS, setMaxBoughtAtS] = useQueryState("max_bought_at", parseAsInteger);
   const [heroParam, setHero] = useQueryState("hero", parseAsInteger);
   const hero = useKnownHeroId(heroParam);
   const [enemies, setEnemies] = useQueryState("enemy", parseAsArrayOf(parseAsInteger).withDefault([]));
-  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(10));
   const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
 
@@ -78,11 +78,6 @@ export function ItemsPage() {
             onValueChange={(next) => startTransition(() => void setEnemies(next.length > 0 ? next : null, together))}
           />
         )}
-        <Filter.MinMatches
-          value={minMatches}
-          onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
-          defaultValue={10}
-        />
         <Filter.ModeWithRank
           value={{ mode, rank: [minRankId, maxRankId] }}
           defaultValue={{ mode: DEFAULT_MODE, rank: [DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max] }}
@@ -96,20 +91,6 @@ export function ItemsPage() {
             }
           }}
         />
-        {/* Build Designer and Item Combos do not take a purchase window; a filter there would silently do nothing. */}
-        {(tab === "item-stats" || tab === "item-purchase-analysis") && (
-          <Filter.TimeRange
-            value={[minBoughtAtS ?? undefined, maxBoughtAtS ?? undefined]}
-            onValueChange={([min, max]) =>
-              startTransition(() => {
-                void setMinBoughtAtS(min ?? null, together);
-                void setMaxBoughtAtS(max ?? null, together);
-              })
-            }
-            label="Time"
-            title="Purchase Time Window"
-          />
-        )}
         <Filter.SeasonPatchDate
           value={{ startDate, endDate }}
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
@@ -151,9 +132,7 @@ export function ItemsPage() {
                   prevMaxDate={prevEndDate}
                   hero={hero}
                   enemies={enemies}
-                  minMatches={minMatches}
-                  minBoughtAtS={minBoughtAtS ?? undefined}
-                  maxBoughtAtS={maxBoughtAtS ?? undefined}
+                  minMatches={MIN_MATCHES}
                   gameMode={gameMode}
                   matchMode={matchMode}
                 />
@@ -172,9 +151,7 @@ export function ItemsPage() {
                   maxDate={endDate || undefined}
                   hero={hero}
                   enemies={enemies}
-                  minMatches={minMatches}
-                  minBoughtAtS={minBoughtAtS ?? undefined}
-                  maxBoughtAtS={maxBoughtAtS ?? undefined}
+                  minMatches={MIN_MATCHES}
                   gameMode={gameMode}
                   matchMode={matchMode}
                 />
@@ -192,7 +169,7 @@ export function ItemsPage() {
                   maxRankId={effectiveMaxRankId}
                   minDate={startDate || undefined}
                   maxDate={endDate || undefined}
-                  minMatches={minMatches}
+                  minMatches={MIN_MATCHES}
                   gameMode={gameMode}
                   matchMode={matchMode}
                 />
@@ -209,7 +186,7 @@ export function ItemsPage() {
                   hero={hero}
                   minRankId={effectiveMinRankId}
                   maxRankId={effectiveMaxRankId}
-                  minMatches={minMatches}
+                  minMatches={MIN_MATCHES}
                   minDate={startDate || undefined}
                   maxDate={endDate || undefined}
                   prevMinDate={prevStartDate}

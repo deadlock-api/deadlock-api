@@ -15,6 +15,9 @@ const cellBase = "flex min-w-0 flex-col justify-center gap-0.5 px-4 py-2 text-st
 // The bar draws the hairlines as 1px gaps, so the bases leave room for them: two cells across a narrow bar, three
 // from `@md`, and as many as fit from `@2xl`. The queries read the width of the `FilterBar`.
 const cellInRoot = "grow basis-2/5 bg-card @md:basis-1/4 @2xl:min-w-28 @2xl:shrink-0 @2xl:basis-auto";
+// A compact cell holds a short value ("Any", "English"): three share a phone's row with a regular cell, and a wide bar
+// gives it its content's width instead of the regular minimum.
+const cellInRootCompact = "grow basis-1/5 bg-card @md:basis-1/6 @2xl:shrink-0 @2xl:basis-auto";
 const cellStandalone = "rounded-lg border bg-card";
 const activeUnderline = "shadow-active-underline";
 const CELL_SELECTOR = '[data-slot="filter-cell"], [data-slot="filter-toggle-cell"]';
@@ -94,6 +97,11 @@ interface FilterCellProps extends Omit<React.ComponentProps<"div">, "children"> 
    * `FilterBar variant="toolbar"`. Cells of a `cells` bar are laid out by the bar and stay `default`.
    */
   size?: "default" | "sm";
+  /**
+   * `compact` is a narrow cell of a `cells` bar, for a filter whose value is a word or two (tags, a language): a third
+   * of a phone's row and its content's width on a wide bar. Outside a bar it changes nothing.
+   */
+  width?: "default" | "compact";
   /** Whether the editor is showing; a single-choice selector closes it once a choice is made. */
   open?: boolean;
   defaultOpen?: boolean;
@@ -122,6 +130,7 @@ export function FilterCell({
   className,
   align = "start",
   size = "default",
+  width = "default",
   open,
   defaultOpen = false,
   onOpenChange,
@@ -129,17 +138,21 @@ export function FilterCell({
 }: FilterCellProps) {
   const inRoot = useContext(FilterRootContext);
   const compact = size === "sm" && !inRoot;
+  const narrow = width === "compact" && inRoot;
   return (
     <Popover open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       <div
         data-slot="filter-cell"
         data-active={active || undefined}
         data-size={compact ? "sm" : "default"}
+        data-width={narrow ? "compact" : undefined}
         className={cn(
           "grid",
           // In a bar a cell is never narrower than its longest word: the value wraps between words, and a share of a
           // phone-wide bar cut "Ascendant 1+" to "Ascendan".
-          inRoot ? cn(cellInRoot, "static min-w-min @2xl:relative") : cn(cellStandalone, "relative min-w-0"),
+          inRoot
+            ? cn(narrow ? cellInRootCompact : cellInRoot, "static min-w-min @2xl:relative")
+            : cn(cellStandalone, "relative min-w-0"),
           compact && "h-8 rounded-md",
           active && activeUnderline,
           className,
@@ -156,6 +169,7 @@ export function FilterCell({
               "col-start-1 row-start-1 hover:bg-accent focus-visible:bg-accent focus-visible:ring-inset data-[state=open]:bg-accent",
               // The cell's grid takes the button's minimum: its longest word, not 0.
               inRoot && "min-w-min",
+              narrow && "px-3",
               compact && "flex-row items-center justify-start gap-2 rounded-md px-3 py-0",
               // The reset's room is kept while there is nothing to reset: setting the filter must not widen the
               // control and re-wrap the toolbar around it.

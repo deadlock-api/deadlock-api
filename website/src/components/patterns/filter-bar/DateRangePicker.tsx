@@ -26,7 +26,19 @@ interface DateRangePickerProps extends Omit<React.ComponentProps<"div">, "childr
   onValueChange?: (value: DateRangeValue) => void;
 }
 
-const DAY_PRESETS = [7, 14, 30];
+/**
+ * The quick ranges under the calendar. A day preset ends with today, like a range picked on the calendar (midnight
+ * would drop today's matches east of UTC). The hour preset starts on the hour, so everyone asking within the same hour
+ * shares one request, and stays open-ended up to now.
+ */
+const PRESETS = [
+  { value: "24h", label: "Last 24h", range: () => ({ startDate: day().subtract(24, "hour").startOf("hour") }) },
+  ...[7, 30].map((days) => ({
+    value: `${days}d`,
+    label: `Last ${days} days`,
+    range: () => ({ startDate: day().subtract(days, "day").startOf("day"), endDate: day().endOf("day") }),
+  })),
+] satisfies { value: string; label: string; range: () => DateRangeValue }[];
 const NO_RANGE: DateRangeValue = {};
 
 export function DateRangePicker({
@@ -54,14 +66,17 @@ export function DateRangePicker({
     });
   }
 
+  // A start inside a day (the hour preset) shows its time: "since Oct 30" would read as the whole day.
+  const formatStart = (date: Dayjs) =>
+    date.format(date.valueOf() === date.startOf("day").valueOf() ? "MMM DD, YYYY" : "MMM DD, YYYY HH:mm");
   let displayText = "Select a date range";
-  if (startDate && endDate) displayText = `${startDate.format("MMM DD, YYYY")} - ${endDate.format("MMM DD, YYYY")}`;
-  else if (startDate) displayText = `since ${startDate.format("MMM DD, YYYY")}`;
+  if (startDate && endDate) displayText = `${formatStart(startDate)} - ${endDate.format("MMM DD, YYYY")}`;
+  else if (startDate) displayText = `since ${formatStart(startDate)}`;
   else if (endDate) displayText = `until ${endDate.format("MMM DD, YYYY")}`;
 
-  function selectLastDays(days: number) {
-    // Ends with today, like a range picked on the calendar; midnight would drop today's matches east of UTC.
-    onDateRangeChange({ startDate: day().subtract(days, "day").startOf("day"), endDate: day().endOf("day") });
+  function selectPreset(value: string) {
+    const preset = PRESETS.find((candidate) => candidate.value === value);
+    if (preset) onDateRangeChange(preset.range());
   }
 
   return (
@@ -85,6 +100,8 @@ export function DateRangePicker({
       </div>
       <Suspense fallback={<Skeleton className="mx-auto h-72 w-64" />}>
         <Calendar
+          // A preset can start in another month: the calendar opens on the month the range starts in.
+          key={startDate?.format("YYYY-MM")}
           mode="range"
           defaultMonth={startDate?.toDate()}
           selected={dateRange}
@@ -94,10 +111,10 @@ export function DateRangePicker({
           className="mx-auto p-0"
         />
       </Suspense>
-      <Segmented value="" onValueChange={(v) => selectLastDays(Number(v))} aria-label="Presets" className="flex-nowrap">
-        {DAY_PRESETS.map((days) => (
-          <SegmentedItem key={days} value={String(days)}>
-            Last {days} days
+      <Segmented value="" onValueChange={selectPreset} aria-label="Presets" className="flex-nowrap">
+        {PRESETS.map((preset) => (
+          <SegmentedItem key={preset.value} value={preset.value}>
+            {preset.label}
           </SegmentedItem>
         ))}
       </Segmented>
