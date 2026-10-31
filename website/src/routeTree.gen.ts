@@ -118,6 +118,8 @@ import { Route as GamesFlashcardsItemUpgradesRouteImport } from './routes/games_
 import { Route as GamesFlashcardsItemsRouteImport } from './routes/games_.flashcards/items'
 import { Route as TrackerPlayersIndexRouteImport } from './routes/tracker_.players.index'
 import { Route as TrackerPlayersAccountIdRouteImport } from './routes/tracker_.players.$accountId'
+import { Route as DevLabVariantHeroesHeroNameRouteImport } from './routes/dev.lab.$variant.heroes.$heroName'
+import { Route as DevLabVariantItemsItemNameRouteImport } from './routes/dev.lab.$variant.items.$itemName'
 import { Route as StreamkitWidgetsRegionAccountIdWidgetTypeRouteImport } from './routes/streamkit/widgets/$region/$accountId/$widgetType'
 
 const IndexRoute = IndexRouteImport.update({
@@ -680,6 +682,18 @@ const TrackerPlayersAccountIdRoute = TrackerPlayersAccountIdRouteImport.update({
   path: '/tracker/players/$accountId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DevLabVariantHeroesHeroNameRoute =
+  DevLabVariantHeroesHeroNameRouteImport.update({
+    id: '/dev/lab/$variant/heroes/$heroName',
+    path: '/dev/lab/$variant/heroes/$heroName',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DevLabVariantItemsItemNameRoute =
+  DevLabVariantItemsItemNameRouteImport.update({
+    id: '/dev/lab/$variant/items/$itemName',
+    path: '/dev/lab/$variant/items/$itemName',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const StreamkitWidgetsRegionAccountIdWidgetTypeRoute =
   StreamkitWidgetsRegionAccountIdWidgetTypeRouteImport.update({
     id: '/streamkit/widgets/$region/$accountId/$widgetType',
@@ -797,6 +811,8 @@ export interface FileRoutesByFullPath {
   '/games/deadlockdle/': typeof GamesDeadlockdleIndexRoute
   '/games/flashcards/': typeof GamesFlashcardsIndexRoute
   '/tracker/players/': typeof TrackerPlayersIndexRoute
+  '/dev/lab/$variant/heroes/$heroName': typeof DevLabVariantHeroesHeroNameRoute
+  '/dev/lab/$variant/items/$itemName': typeof DevLabVariantItemsItemNameRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 export interface FileRoutesByTo {
@@ -898,6 +914,8 @@ export interface FileRoutesByTo {
   '/games/deadlockdle': typeof GamesDeadlockdleIndexRoute
   '/games/flashcards': typeof GamesFlashcardsIndexRoute
   '/tracker/players': typeof TrackerPlayersIndexRoute
+  '/dev/lab/$variant/heroes/$heroName': typeof DevLabVariantHeroesHeroNameRoute
+  '/dev/lab/$variant/items/$itemName': typeof DevLabVariantItemsItemNameRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 export interface FileRoutesById {
@@ -1011,6 +1029,8 @@ export interface FileRoutesById {
   '/games_/deadlockdle/': typeof GamesDeadlockdleIndexRoute
   '/games_/flashcards/': typeof GamesFlashcardsIndexRoute
   '/tracker_/players/': typeof TrackerPlayersIndexRoute
+  '/dev/lab/$variant/heroes/$heroName': typeof DevLabVariantHeroesHeroNameRoute
+  '/dev/lab/$variant/items/$itemName': typeof DevLabVariantItemsItemNameRoute
   '/streamkit/widgets/$region/$accountId/$widgetType': typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 export interface FileRouteTypes {
@@ -1125,6 +1145,8 @@ export interface FileRouteTypes {
     | '/games/deadlockdle/'
     | '/games/flashcards/'
     | '/tracker/players/'
+    | '/dev/lab/$variant/heroes/$heroName'
+    | '/dev/lab/$variant/items/$itemName'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -1226,6 +1248,8 @@ export interface FileRouteTypes {
     | '/games/deadlockdle'
     | '/games/flashcards'
     | '/tracker/players'
+    | '/dev/lab/$variant/heroes/$heroName'
+    | '/dev/lab/$variant/items/$itemName'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   id:
     | '__root__'
@@ -1338,6 +1362,8 @@ export interface FileRouteTypes {
     | '/games_/deadlockdle/'
     | '/games_/flashcards/'
     | '/tracker_/players/'
+    | '/dev/lab/$variant/heroes/$heroName'
+    | '/dev/lab/$variant/items/$itemName'
     | '/streamkit/widgets/$region/$accountId/$widgetType'
   fileRoutesById: FileRoutesById
 }
@@ -1395,6 +1421,8 @@ export interface RootRouteChildren {
   AuthPatreonCallbackRoute: typeof AuthPatreonCallbackRoute
   TrackerPlayersAccountIdRoute: typeof TrackerPlayersAccountIdRoute
   TrackerPlayersIndexRoute: typeof TrackerPlayersIndexRoute
+  DevLabVariantHeroesHeroNameRoute: typeof DevLabVariantHeroesHeroNameRoute
+  DevLabVariantItemsItemNameRoute: typeof DevLabVariantItemsItemNameRoute
   StreamkitWidgetsRegionAccountIdWidgetTypeRoute: typeof StreamkitWidgetsRegionAccountIdWidgetTypeRoute
 }
 
@@ -2163,6 +2191,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TrackerPlayersAccountIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/dev/lab/$variant/heroes/$heroName': {
+      id: '/dev/lab/$variant/heroes/$heroName'
+      path: '/dev/lab/$variant/heroes/$heroName'
+      fullPath: '/dev/lab/$variant/heroes/$heroName'
+      preLoaderRoute: typeof DevLabVariantHeroesHeroNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dev/lab/$variant/items/$itemName': {
+      id: '/dev/lab/$variant/items/$itemName'
+      path: '/dev/lab/$variant/items/$itemName'
+      fullPath: '/dev/lab/$variant/items/$itemName'
+      preLoaderRoute: typeof DevLabVariantItemsItemNameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/streamkit/widgets/$region/$accountId/$widgetType': {
       id: '/streamkit/widgets/$region/$accountId/$widgetType'
       path: '/streamkit/widgets/$region/$accountId/$widgetType'
@@ -2444,6 +2486,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthPatreonCallbackRoute: AuthPatreonCallbackRoute,
   TrackerPlayersAccountIdRoute: TrackerPlayersAccountIdRoute,
   TrackerPlayersIndexRoute: TrackerPlayersIndexRoute,
+  DevLabVariantHeroesHeroNameRoute: DevLabVariantHeroesHeroNameRoute,
+  DevLabVariantItemsItemNameRoute: DevLabVariantItemsItemNameRoute,
   StreamkitWidgetsRegionAccountIdWidgetTypeRoute:
     StreamkitWidgetsRegionAccountIdWidgetTypeRoute,
 }
