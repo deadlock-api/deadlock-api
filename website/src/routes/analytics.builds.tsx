@@ -53,7 +53,8 @@ export const Route = createFileRoute("/analytics/builds")({
   // The filters live in the URL under nuqs; read them here so the loader warms the request the page will make, and a
   // shared link with a rank or mode renders its builds on the server too. A custom date range is left to the browser.
   loaderDeps: ({ search }) => {
-    const { hero, min_rank, max_rank, game_mode, match_mode, date_range } = search as Record<string, unknown>;
+    const { hero, min_rank, max_rank, min_matches, min_duration_s, max_duration_s, game_mode, match_mode, date_range } =
+      search as Record<string, unknown>;
     const integer = <T,>(value: unknown, fallback: T) =>
       typeof value === "number" && Number.isInteger(value) ? value : fallback;
     const urlMode = modeFromParams(
@@ -70,6 +71,9 @@ export const Route = createFileRoute("/analytics/builds")({
       heroId: integer(hero, DEFAULT_HERO_ID),
       minRankId: effectiveMinRankId,
       maxRankId: effectiveMaxRankId,
+      minMatches: integer(min_matches, DEFAULT_MIN_MATCHES),
+      minDurationS: integer(min_duration_s, undefined),
+      maxDurationS: integer(max_duration_s, undefined),
       matchMode: MODE_CONFIG[mode].matchMode,
       customDates: date_range !== undefined,
     };
@@ -90,6 +94,8 @@ export const Route = createFileRoute("/analytics/builds")({
           minAverageBadge: deps.minRankId,
           maxAverageBadge: deps.maxRankId,
           ...range,
+          minDurationS: deps.minDurationS,
+          maxDurationS: deps.maxDurationS,
         }),
       ),
     ]);
@@ -101,7 +107,9 @@ export const Route = createFileRoute("/analytics/builds")({
           minRankId: deps.minRankId,
           maxRankId: deps.maxRankId,
           ...range,
-          minMatches: DEFAULT_MIN_MATCHES,
+          minDurationS: deps.minDurationS,
+          maxDurationS: deps.maxDurationS,
+          minMatches: deps.minMatches,
           matchMode: deps.matchMode,
         }),
       ),
@@ -142,8 +150,13 @@ function BuildsPage() {
   const [buildId, setBuildId] = useQueryState("build", parseAsInteger);
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.min));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.max));
-  // Builds with fewer matches are left out: their win rates are noise. Not a filter; the loader warms the same minimum.
-  const minMatches = DEFAULT_MIN_MATCHES;
+  // Builds with fewer matches are left out: their win rates are noise. An advanced filter, as is the match duration.
+  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
+  const [duration, setDuration] = useQueryStates({ min_duration_s: parseAsInteger, max_duration_s: parseAsInteger });
+  const minDurationS = duration.min_duration_s ?? undefined;
+  const maxDurationS = duration.max_duration_s ?? undefined;
+  const advancedCount =
+    Number(minMatches !== DEFAULT_MIN_MATCHES) + Number(minDurationS !== undefined || maxDurationS !== undefined);
   const [minPlayers, setMinPlayers] = useQueryState("min_players", parseAsInteger.withDefault(DEFAULT_MIN_PLAYERS));
   const { mode: urlMode, setMode } = useModeState();
   // A Street Brawl link from another page reads as the default mode here.
@@ -174,6 +187,8 @@ function BuildsPage() {
     maxRankId: effectiveMaxRankId,
     minDate: startDate,
     maxDate: endDate,
+    minDurationS,
+    maxDurationS,
     minMatches,
     minPlayers,
     matchMode: MODE_CONFIG[mode].matchMode,
@@ -255,6 +270,29 @@ function BuildsPage() {
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
           defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
+        <Filter.Advanced
+          activeCount={advancedCount}
+          onReset={() =>
+            startTransition(() => {
+              void setMinMatches(null, together);
+              void setDuration({ min_duration_s: null, max_duration_s: null }, together);
+            })
+          }
+        >
+          <Filter.MinMatches
+            value={minMatches}
+            onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
+            defaultValue={DEFAULT_MIN_MATCHES}
+          />
+          <Filter.MatchDuration
+            value={[minDurationS, maxDurationS]}
+            onValueChange={([min, max]) =>
+              startTransition(
+                () => void setDuration({ min_duration_s: min ?? null, max_duration_s: max ?? null }, together),
+              )
+            }
+          />
+        </Filter.Advanced>
       </Filter.Root>
 
       <ChunkErrorBoundary>
@@ -265,12 +303,15 @@ function BuildsPage() {
             maxRankId={effectiveMaxRankId}
             minDate={startDate}
             maxDate={endDate}
+            minDurationS={minDurationS}
+            maxDurationS={maxDurationS}
             minMatches={minMatches}
             minPlayers={minPlayers}
             metaFilters={metaFilters}
             matchMode={MODE_CONFIG[mode].matchMode}
             buildId={buildId}
             onBuildIdChange={(id) => void setBuildId(id)}
+            onMinMatchesChange={(next) => startTransition(() => void setMinMatches(next, together))}
             // The search takes a build ID or a game code: a build of another hero switches the hero.
             onBuildFound={(choice) =>
               startTransition(() => {

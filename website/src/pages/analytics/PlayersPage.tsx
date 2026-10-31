@@ -78,8 +78,8 @@ export function PlayersPage({
   // Street Brawl has no soul economy: a net worth sort chosen in another mode falls back, the URL keeps it.
   const sortBy = sortByIn(chosenSortBy, gameMode, "kills");
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
-  // The scoreboard leaves out players with fewer matches in the range; not a filter, the server prefetch asks the same.
-  const minMatches = DEFAULT_MIN_MATCHES;
+  // An advanced filter; its default is the minimum the server prefetch asks for.
+  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(MAX_BADGE));
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
@@ -143,6 +143,25 @@ export function PlayersPage({
           }}
           defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
+        {tab === "scoreboard" && (
+          <Filter.Advanced
+            activeCount={Number(minMatches !== DEFAULT_MIN_MATCHES)}
+            onReset={() => {
+              void setMinMatches(null, together);
+              firstPage();
+            }}
+          >
+            <Filter.MinMatches
+              value={minMatches}
+              onValueChange={(n) => {
+                void setMinMatches(n, together);
+                firstPage();
+              }}
+              min={0}
+              defaultValue={DEFAULT_MIN_MATCHES}
+            />
+          </Filter.Advanced>
+        )}
       </Filter.Root>
 
       <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">

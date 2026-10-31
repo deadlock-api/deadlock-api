@@ -21,7 +21,7 @@ import { SortableHeader } from "~/components/patterns/data-table/SortableHeader"
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { DateRangePicker } from "~/components/patterns/filter-bar/DateRangePicker";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
-import { FilterCell, FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
+import { FilterAdvanced, FilterCell, FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { NumberSelector } from "~/components/patterns/filter-bar/NumberSelector";
 import { StringOption, StringOptionGroup, StringSelector } from "~/components/patterns/filter-bar/StringSelector";
 import { type TriState, TriStateItem, TriStateSelector } from "~/components/patterns/filter-bar/TriStateSelector";
@@ -351,8 +351,8 @@ export function Patterns() {
 
       <Specimen
         name="FilterBar cells"
-        source="patterns/filter-bar/FilterBar · FilterCell · StringSelector · NumberSelector · TriStateSelector · DateRangePicker"
-        note="The filters of a page: two across on a phone, three on a tablet, one row on a desktop. A FilterToggleCell is as wide as its segments: where they do not fit beside the other cells it takes a row of its own rather than wrapping them. A changed filter is underlined and gets a reset. The compact width is a narrow cell for a short value (Tags, Language here): a third of a phone's row, its content's width on a desktop. StringSelector shows up to five options as segments, more as a list; StringOptionGroups put headings over a long list (Rank by)."
+        source="patterns/filter-bar/FilterBar · FilterCell · FilterAdvanced · StringSelector · NumberSelector · TriStateSelector · DateRangePicker"
+        note="The filters of a page: two across on a phone, three on a tablet, one row on a desktop. A FilterToggleCell is as wide as its segments: where they do not fit beside the other cells it takes a row of its own rather than wrapping them. A changed filter is underlined and gets a reset. The compact width is a narrow cell for a short value (Tags, Language here): a third of a phone's row, its content's width on a desktop. StringSelector shows up to five options as segments, more as a list; StringOptionGroups put headings over a long list (Rank by). FilterAdvanced is the last cell: a popover holding the rarely used filters (Min matches here), each a standalone cell; it counts the ones set and resets them together."
       >
         <Variants className="block">
           <FilterBar>
@@ -378,14 +378,6 @@ export function Patterns() {
                 <StringOption value="deaths">Deaths</StringOption>
               </StringOptionGroup>
             </StringSelector>
-            <NumberSelector
-              label="Min matches"
-              value={minMatches}
-              onValueChange={setMinMatches}
-              step={10}
-              min={0}
-              defaultValue={50}
-            />
             <TriStateSelector label="Tags" width="compact">
               <TriStateItem value={1} label="Spirit" />
               <TriStateItem value={2} label="Gun" />
@@ -409,6 +401,16 @@ export function Patterns() {
               {/* Presets: Last 24h (open-ended, from the hour a day back), Last 7 days, Last 30 days. */}
               <DateRangePicker value={dates} onValueChange={setDates} />
             </FilterCell>
+            <FilterAdvanced activeCount={Number(minMatches !== 50)} onReset={() => setMinMatches(50)}>
+              <NumberSelector
+                label="Min matches"
+                value={minMatches}
+                onValueChange={setMinMatches}
+                step={10}
+                min={0}
+                defaultValue={50}
+              />
+            </FilterAdvanced>
           </FilterBar>
         </Variants>
       </Specimen>

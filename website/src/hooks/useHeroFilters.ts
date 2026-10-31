@@ -19,15 +19,20 @@ export const STATS_TABS: readonly HeroTab[] = [
 
 export type HeroTab = AnalyticsTab<"heroes">;
 
+/** The fewest shared matches a matchup or combo pair needs, unless the advanced filter changes it. */
+export const DEFAULT_MIN_MATCHES = 10;
+
 export function useHeroFilters() {
   const { mode, setMode, gameMode, matchMode } = useModeState();
-  // The matchup and combo tabs leave out pairs with fewer shared matches; not a filter, the server prefetches ask for the
-  // same minimum.
-  const minMatches = 10;
-  // The stats tabs count every hero, without a minimum of matches in the range or in total: the page's server
-  // prefetches ask for the same 0, so their queries are the ones the tabs read.
-  const minHeroMatches = 0;
-  const minHeroMatchesTotal = 0;
+  // Advanced filters. The defaults are the minimums the page's server prefetches ask for, so an untouched page reads
+  // the prefetched queries: pairs with fewer shared matches are left out of the matchup and combo tabs, the stats tabs
+  // count every hero.
+  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
+  const [minHeroMatches, setMinHeroMatches] = useQueryState("min_hero_matches", parseAsInteger.withDefault(0));
+  const [minHeroMatchesTotal, setMinHeroMatchesTotal] = useQueryState(
+    "min_hero_matches_total",
+    parseAsInteger.withDefault(0),
+  );
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.min));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.max));
   const [sameLaneFilter, setSameLaneFilter] = useQueryState("same_lane", parseAsBoolean.withDefault(true));
@@ -64,8 +69,11 @@ export function useHeroFilters() {
     gameMode,
     matchMode,
     minMatches,
+    setMinMatches,
     minHeroMatches,
+    setMinHeroMatches,
     minHeroMatchesTotal,
+    setMinHeroMatchesTotal,
     minRankId,
     setMinRankId,
     maxRankId,

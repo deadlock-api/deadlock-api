@@ -61,8 +61,8 @@ function AbilitiesPage() {
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(MAX_BADGE));
   const { mode, setMode, gameMode, matchMode } = useModeState();
   const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
-  // Not a filter: the loader warms the same minimum.
-  const minMatches = DEFAULT_MIN_MATCHES;
+  // An advanced filter; its default is the minimum the loader warms.
+  const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
   // In the URL like every other filter, so a shared or reloaded link and Back keep them. One update sets both lists.
   const [items, setItems] = useQueryStates({
     include_items: parseAsArrayOf(parseAsInteger).withDefault([]),
@@ -125,6 +125,17 @@ function AbilitiesPage() {
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
           defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
+        <Filter.Advanced
+          activeCount={Number(minMatches !== DEFAULT_MIN_MATCHES)}
+          onReset={() => void setMinMatches(null)}
+        >
+          <Filter.MinMatches
+            value={minMatches}
+            onValueChange={setMinMatches}
+            min={0}
+            defaultValue={DEFAULT_MIN_MATCHES}
+          />
+        </Filter.Advanced>
       </Filter.Root>
 
       <ChunkErrorBoundary>

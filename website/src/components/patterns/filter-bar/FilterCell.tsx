@@ -306,3 +306,42 @@ export function FilterToggleCell<T extends string>({
     </div>
   );
 }
+
+interface FilterAdvancedProps extends FilterCellPassthroughProps {
+  /** Names the cell and its popover. */
+  label?: string;
+  /** How many of the filters inside differ from their defaults: the cell says so and is underlined like a changed one. */
+  activeCount?: number;
+  /** Puts every filter inside back to its default; the reset shows while one differs. */
+  onReset?: () => void;
+  /** The filters, each a `FilterCell` or a selector built on one. */
+  children?: React.ReactNode;
+}
+
+/**
+ * The rarely used filters of a bar, in the popover of one cell. A filter inside still applies while the popover is
+ * closed: the cell counts the ones that are set.
+ */
+export function FilterAdvanced({
+  label = "Advanced",
+  activeCount = 0,
+  onReset,
+  contentClassName,
+  children,
+  ...props
+}: FilterAdvancedProps) {
+  return (
+    <FilterCell
+      label={label}
+      value={activeCount > 0 ? `${activeCount} set` : "None"}
+      active={activeCount > 0}
+      onReset={onReset}
+      width="compact"
+      contentClassName={cn("flex w-64 flex-col gap-2", contentClassName)}
+      {...props}
+    >
+      {/* Its filters stand alone in the popover, each a bordered cell of its own, not a share of the bar's row. */}
+      <FilterRootContext.Provider value={false}>{children}</FilterRootContext.Provider>
+    </FilterCell>
+  );
+}
