@@ -1,7 +1,7 @@
 import { useRouteContext } from "@tanstack/react-router";
 import { useState } from "react";
 
-import type { DateFilterPreference } from "~/lib/date-filter-preference";
+import { DEFAULT_DATE_FILTER, type DateFilterPreference } from "~/lib/date-filter-preference";
 import { savePreferences } from "~/lib/preferences";
 
 /** Start with the preference serialized by SSR; only explicit picks change this page. */
@@ -14,5 +14,5 @@ export function useDateFilterPreference() {
     savePreferences({ dateFilter: preference });
   };
 
-  return { preference: selectedPreference ?? preferences.dateFilter ?? "season", selectPreference };
+  return { preference: selectedPreference ?? preferences.dateFilter ?? DEFAULT_DATE_FILTER, selectPreference };
 }

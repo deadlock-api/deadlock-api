@@ -4,7 +4,7 @@ import type { AnalyticsHeroStats, HeroBanStats } from "deadlock_api_client";
 import { type AnalyticsTab, analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
-import type { DateFilterPreference } from "~/lib/date-filter-preference";
+import { DEFAULT_DATE_FILTER, type DateFilterPreference } from "~/lib/date-filter-preference";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { heroSlug } from "~/lib/hero-slug";
@@ -24,7 +24,10 @@ import type { RouterContext } from "~/router";
 
 const DEFAULT_MIN_MATCHES = 10;
 
-function defaultHeroStatsRanges(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
+function defaultHeroStatsRanges(
+  seasons: readonly SeasonInfo[],
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
+) {
   return { range: defaultUnixRange(seasons, preference), prevRange: defaultPrevUnixRange(seasons, preference) };
 }
 

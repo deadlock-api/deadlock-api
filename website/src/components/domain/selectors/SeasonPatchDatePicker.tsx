@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
 import type { Dayjs } from "~/dayjs";
 import { useSeasons } from "~/hooks/useSeasons";
 import { PATCHES, type PatchInfo } from "~/lib/constants";
-import type { DateFilterAction } from "~/lib/date-filter-preference";
+import { DEFAULT_DATE_FILTER, type DateFilterAction } from "~/lib/date-filter-preference";
 import {
   type SeasonInfo,
   computePreviousPeriod,
@@ -43,7 +43,7 @@ interface SeasonPatchDatePickerProps extends Omit<
   value?: DateValue;
   /**
    * The range it starts at, and the one the reset returns to. Without it the picker starts at all time and resets to
-   * the current season.
+   * the site's default period (`DEFAULT_DATE_FILTER`).
    */
   defaultValue?: DateValue;
   onValueChange?: (value: SeasonPatchDatePickerValue) => void;
@@ -93,7 +93,7 @@ export function SeasonPatchDatePicker({
   value: valueProp,
   defaultValue,
   onValueChange,
-  defaultTab = "season",
+  defaultTab = DEFAULT_DATE_FILTER,
   className,
   ...props
 }: SeasonPatchDatePickerProps) {

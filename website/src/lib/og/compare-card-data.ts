@@ -3,6 +3,7 @@ import { isAxiosError } from "axios";
 
 import { day } from "~/dayjs";
 import { compareFilterSearch } from "~/lib/compare-share";
+import { DEFAULT_DATE_FILTER } from "~/lib/date-filter-preference";
 import { hasSoulEconomy, MODE_CONFIG } from "~/lib/game-mode";
 import { extractBadgeMap } from "~/lib/leaderboard";
 import {
@@ -70,13 +71,13 @@ export interface CompareCardData {
   partial: boolean;
 }
 
-/** The page's filters (the current season for dates), and the dates as the card names them. */
+/** The page's filters (the site's default period for dates), and the dates as the card names them. */
 async function resolveFilters(search: URLSearchParams, client: QueryClient) {
   // Loaded even when the URL names its dates: the seasons register the exact patch boundaries, without which a
   // pinned season start (a patch instant) rounds down to midnight and the card counts matches the page does not.
   const seasons = await loadSeasons(client);
   const { filters, mode, range } = await resolveCompareFilters(compareFilterSearch(search), async () =>
-    defaultUnixRange(seasons, "season"),
+    defaultUnixRange(seasons, DEFAULT_DATE_FILTER),
   );
   // An open end is the day the card is drawn, written as that day; the years only when the dates span two of them.
   const end = range?.[1] ?? day();

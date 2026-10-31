@@ -2,7 +2,7 @@ import type { RankedSeason } from "deadlock_api_client";
 
 import { type Dayjs, day } from "~/dayjs";
 import { PATCHES, type PatchInfo } from "~/lib/constants";
-import type { DateFilterPreference, DateRange } from "~/lib/date-filter-preference";
+import { DEFAULT_DATE_FILTER, type DateFilterPreference, type DateRange } from "~/lib/date-filter-preference";
 import { normalizeUnixRange, registerExactBoundaries } from "~/lib/time-normalize";
 
 export interface SeasonInfo {
@@ -66,7 +66,7 @@ export function previousSeasonRange(seasons: readonly SeasonInfo[], index: numbe
 /** The selected current period, with a patch fallback when seasons are unavailable. */
 export function defaultDateRange(
   seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = "season",
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
 ): DateRange {
   const season = preference === "season" ? currentSeason(seasons) : undefined;
   return season ? [season.startDate, season.endDate] : [PATCHES[0].startDate, PATCHES[0].endDate];
@@ -75,7 +75,7 @@ export function defaultDateRange(
 /** `defaultDateRange` as an ISO 8601 interval for Dataset `temporalCoverage`, open-ended ("2026-08-21/..") while it runs. */
 export function defaultTemporalCoverage(
   seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = "season",
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
 ): string | undefined {
   const [start, end] = defaultDateRange(seasons, preference);
   if (!start) return undefined;
@@ -85,14 +85,14 @@ export function defaultTemporalCoverage(
 /** How copy names `defaultDateRange`: "this season", or "the current patch" (also the fallback without a season). */
 export function defaultPeriodLabel(
   seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = "season",
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
 ): "this season" | "the current patch" {
   return preference === "season" && currentSeason(seasons) ? "this season" : "the current patch";
 }
 
 export function defaultPrevDateRange(
   seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = "season",
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
 ): DateRange {
   return preference === "season" && currentSeason(seasons)
     ? previousSeasonRange(seasons, 0)
@@ -100,11 +100,17 @@ export function defaultPrevDateRange(
 }
 
 /** Exact bounds shared by server prefetching and the hydrated UI. */
-export function defaultUnixRange(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
+export function defaultUnixRange(
+  seasons: readonly SeasonInfo[],
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
+) {
   return normalizeUnixRange(defaultDateRange(seasons, preference));
 }
 
-export function defaultPrevUnixRange(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
+export function defaultPrevUnixRange(
+  seasons: readonly SeasonInfo[],
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
+) {
   return normalizeUnixRange(defaultPrevDateRange(seasons, preference));
 }
 
