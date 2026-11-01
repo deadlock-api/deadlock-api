@@ -27,73 +27,37 @@ const FIELD_PATH_MAX_LEN: usize = 7;
 
 // NOTE: clarity's encodes all components into u64; see impl [1], and tech explanation [2].
 //
-// pretty cool stuff! but won't bring really any benefits / speedups to rust implemtnation; only
-// cause extra overhead. unless i'm missing something, am i?
+// `read_field_paths` decodes into such a packed u64 too (see `PackedFieldPath`): unlike a byte
+// array indexed by a variable component index, it stays in a register across the ops (measured
+// -3..-4% cpu for a whole deadlock replay). the decoded paths are stored as `FieldPath`s.
 //
 // [1] https://github.com/skadistats/clarity/blob/6dcdad4abe94a519b0c797576517461401adedee/src/main/java/skadistats/clarity/model/s2/S2LongFieldPathFormat.java
 // [2] https://github.com/skadistats/clarity/commit/212eaddf7dc8b716c22faaec37952236f521a804#commitcomment-86037653
 
 #[derive(Debug, Clone)]
 pub struct FieldPath {
-    pub(crate) data: [u8; FIELD_PATH_MAX_LEN],
+    /// components `0..=last`; the 8th byte is padding (always zero) so that a path is copied with
+    /// a single 8 byte store.
+    pub(crate) data: [u8; 8],
     pub(crate) last: usize,
-    pub(crate) finished: bool,
 }
 
 impl Default for FieldPath {
     fn default() -> Self {
         Self {
-            data: [255, 0, 0, 0, 0, 0, 0],
+            data: [255, 0, 0, 0, 0, 0, 0, 0],
             last: 0,
-            finished: false,
         }
     }
 }
 
 impl FieldPath {
-    // ops
-
-    fn inc_at(&mut self, i: usize, delta: u8) -> Result<(), FieldPathError> {
-        let component = self.data.get_mut(i).ok_or(FieldPathError::TooDeep)?;
-        *component = component.wrapping_add(delta);
-        Ok(())
-    }
-
-    fn inc_last(&mut self, delta: u8) -> Result<(), FieldPathError> {
-        self.inc_at(self.last, delta)
-    }
-
-    fn inc_penultimate(&mut self, delta: u8) -> Result<(), FieldPathError> {
-        let i = self.last.checked_sub(1).ok_or(FieldPathError::Underflow)?;
-        self.inc_at(i, delta)
-    }
-
-    fn push(&mut self, v: u8) -> Result<(), FieldPathError> {
-        let next = self.last.saturating_add(1);
-        let slot = self.data.get_mut(next).ok_or(FieldPathError::TooDeep)?;
-        *slot = v;
-        self.last = next;
-        Ok(())
-    }
-
-    fn pop(&mut self, n: usize) -> Result<(), FieldPathError> {
-        let new_last = self.last.checked_sub(n).ok_or(FieldPathError::Underflow)?;
-        let components = self
-            .data
-            .get_mut(new_last..=self.last)
-            .ok_or(FieldPathError::TooDeep)?;
-        if let Some((_, popped)) = components.split_first_mut() {
-            popped.fill(0);
-        }
-        self.last = new_last;
-        Ok(())
-    }
-
     // public api
 
     #[must_use]
     pub fn get(&self, index: usize) -> Option<usize> {
         self.data
+            .get(..FIELD_PATH_MAX_LEN)?
             .get(index)
             .map(|component| usize::from(*component))
     }
@@ -105,6 +69,86 @@ impl FieldPath {
 
     pub fn iter(&self) -> impl Iterator<Item = &u8> {
         self.data.iter().take(self.last.saturating_add(1))
+    }
+}
+
+/// the field path that [`read_field_paths`] decodes into: components packed into the bytes of a
+/// `u64` (component `i` in byte `i`), so that the ops work on a register instead of indexing a
+/// byte array in memory. copied out as a [`FieldPath`] for every decoded path.
+#[derive(Debug, Clone, Copy)]
+struct PackedFieldPath {
+    data: u64,
+    last: usize,
+}
+
+impl Default for PackedFieldPath {
+    fn default() -> Self {
+        // same as `FieldPath::default`: first component 255 (the first op increments it to 0).
+        Self {
+            data: 0xFF,
+            last: 0,
+        }
+    }
+}
+
+impl PackedFieldPath {
+    /// bit offset of component `i`, if `i` is in bounds.
+    #[inline]
+    fn shift(i: usize) -> Result<u32, FieldPathError> {
+        if i >= FIELD_PATH_MAX_LEN {
+            return Err(FieldPathError::TooDeep);
+        }
+        // `i` < 7, so this is at most 48.
+        let i = u32::try_from(i).map_err(|_err| FieldPathError::TooDeep)?;
+        Ok(i.saturating_mul(8))
+    }
+
+    #[inline]
+    fn inc_at(&mut self, i: usize, delta: u8) -> Result<(), FieldPathError> {
+        let shift = Self::shift(i)?;
+        let [component, ..] = self.data.wrapping_shr(shift).to_le_bytes();
+        let component = u64::from(component.wrapping_add(delta));
+        self.data = (self.data & !(0xFF_u64.wrapping_shl(shift))) | component.wrapping_shl(shift);
+        Ok(())
+    }
+
+    #[inline]
+    fn inc_last(&mut self, delta: u8) -> Result<(), FieldPathError> {
+        self.inc_at(self.last, delta)
+    }
+
+    #[inline]
+    fn inc_penultimate(&mut self, delta: u8) -> Result<(), FieldPathError> {
+        let i = self.last.checked_sub(1).ok_or(FieldPathError::Underflow)?;
+        self.inc_at(i, delta)
+    }
+
+    #[inline]
+    fn push(&mut self, v: u8) -> Result<(), FieldPathError> {
+        let next = self.last.saturating_add(1);
+        let shift = Self::shift(next)?;
+        // components past `last` are always zero (see `pop`).
+        self.data |= u64::from(v).wrapping_shl(shift);
+        self.last = next;
+        Ok(())
+    }
+
+    #[inline]
+    fn pop(&mut self, n: usize) -> Result<(), FieldPathError> {
+        let new_last = self.last.checked_sub(n).ok_or(FieldPathError::Underflow)?;
+        // keep components `0..=new_last` (at most 7 bytes, so the shift is at most 56).
+        let keep_bits = Self::shift(new_last)?.saturating_add(8);
+        self.data &= 1_u64.wrapping_shl(keep_bits).wrapping_sub(1);
+        self.last = new_last;
+        Ok(())
+    }
+
+    #[inline]
+    const fn to_field_path(self) -> FieldPath {
+        FieldPath {
+            data: self.data.to_le_bytes(),
+            last: self.last,
+        }
     }
 }
 
@@ -146,35 +190,35 @@ fn pop_count(n: u32) -> usize {
 
 // PlusOne
 #[inline]
-fn plus_one(fp: &mut FieldPath, _br: &mut BitReader) -> Result<(), FieldPathError> {
+fn plus_one(fp: &mut PackedFieldPath, _br: &mut BitReader) -> Result<(), FieldPathError> {
     fp.inc_last(1)?;
     Ok(())
 }
 
 // PlusTwo
 #[inline]
-fn plus_two(fp: &mut FieldPath, _br: &mut BitReader) -> Result<(), FieldPathError> {
+fn plus_two(fp: &mut PackedFieldPath, _br: &mut BitReader) -> Result<(), FieldPathError> {
     fp.inc_last(2)?;
     Ok(())
 }
 
 // PlusThree
 #[inline]
-fn plus_three(fp: &mut FieldPath, _br: &mut BitReader) -> Result<(), FieldPathError> {
+fn plus_three(fp: &mut PackedFieldPath, _br: &mut BitReader) -> Result<(), FieldPathError> {
     fp.inc_last(3)?;
     Ok(())
 }
 
 // PlusFour
 #[inline]
-fn plus_four(fp: &mut FieldPath, _br: &mut BitReader) -> Result<(), FieldPathError> {
+fn plus_four(fp: &mut PackedFieldPath, _br: &mut BitReader) -> Result<(), FieldPathError> {
     fp.inc_last(4)?;
     Ok(())
 }
 
 // PlusN
 #[inline]
-fn plus_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
+fn plus_n(fp: &mut PackedFieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
     fp.inc_last(br.read_ubitvarfp()?.component().wrapping_add(5))?;
     Ok(())
 }
@@ -182,7 +226,7 @@ fn plus_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> 
 // PushOneLeftDeltaZeroRightZero
 #[inline]
 fn push_one_left_delta_zero_right_zero(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     _br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.push(0)?;
@@ -192,7 +236,7 @@ fn push_one_left_delta_zero_right_zero(
 // PushOneLeftDeltaZeroRightNonZero
 #[inline]
 fn push_one_left_delta_zero_right_non_zero(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.push(br.read_ubitvarfp()?.component())?;
@@ -202,7 +246,7 @@ fn push_one_left_delta_zero_right_non_zero(
 // PushOneLeftDeltaOneRightZero
 #[inline]
 fn push_one_left_delta_one_right_zero(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     _br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.inc_last(1)?;
@@ -213,7 +257,7 @@ fn push_one_left_delta_one_right_zero(
 // PushOneLeftDeltaOneRightNonZero
 #[inline]
 fn push_one_left_delta_one_right_non_zero(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.inc_last(1)?;
@@ -224,7 +268,7 @@ fn push_one_left_delta_one_right_non_zero(
 // PushOneLeftDeltaNRightZero
 #[inline]
 fn push_one_left_delta_n_right_zero(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.inc_last(br.read_ubitvarfp()?.component())?;
@@ -235,7 +279,7 @@ fn push_one_left_delta_n_right_zero(
 // PushOneLeftDeltaNRightNonZero
 #[inline]
 fn push_one_left_delta_n_right_non_zero(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.inc_last(br.read_ubitvarfp()?.component().wrapping_add(2))?;
@@ -246,7 +290,7 @@ fn push_one_left_delta_n_right_non_zero(
 // PushOneLeftDeltaNRightNonZeroPack6Bits
 #[inline]
 fn push_one_left_delta_n_right_non_zero_pack6_bits(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.inc_last(br.read_ubit64(3)?.component().wrapping_add(2))?;
@@ -257,7 +301,7 @@ fn push_one_left_delta_n_right_non_zero_pack6_bits(
 // PushOneLeftDeltaNRightNonZeroPack8Bits
 #[inline]
 fn push_one_left_delta_n_right_non_zero_pack8_bits(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.inc_last(br.read_ubit64(4)?.component().wrapping_add(2))?;
@@ -267,7 +311,10 @@ fn push_one_left_delta_n_right_non_zero_pack8_bits(
 
 // PushTwoLeftDeltaZero
 #[inline]
-fn push_two_left_delta_zero(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
+fn push_two_left_delta_zero(
+    fp: &mut PackedFieldPath,
+    br: &mut BitReader,
+) -> Result<(), FieldPathError> {
     fp.push(br.read_ubitvarfp()?.component())?;
     fp.push(br.read_ubitvarfp()?.component())?;
     Ok(())
@@ -275,7 +322,10 @@ fn push_two_left_delta_zero(fp: &mut FieldPath, br: &mut BitReader) -> Result<()
 
 // PushTwoLeftDeltaOne
 #[inline]
-fn push_two_left_delta_one(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
+fn push_two_left_delta_one(
+    fp: &mut PackedFieldPath,
+    br: &mut BitReader,
+) -> Result<(), FieldPathError> {
     fp.inc_last(1)?;
     fp.push(br.read_ubitvarfp()?.component())?;
     fp.push(br.read_ubitvarfp()?.component())?;
@@ -284,7 +334,10 @@ fn push_two_left_delta_one(fp: &mut FieldPath, br: &mut BitReader) -> Result<(),
 
 // PushTwoLeftDeltaN
 #[inline]
-fn push_two_left_delta_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
+fn push_two_left_delta_n(
+    fp: &mut PackedFieldPath,
+    br: &mut BitReader,
+) -> Result<(), FieldPathError> {
     fp.inc_last(br.read_ubitvar()?.component().wrapping_add(2))?;
     fp.push(br.read_ubitvarfp()?.component())?;
     fp.push(br.read_ubitvarfp()?.component())?;
@@ -294,7 +347,7 @@ fn push_two_left_delta_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), F
 // PushTwoPack5LeftDeltaZero
 #[inline]
 fn push_two_pack5_left_delta_zero(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.push(br.read_ubit64(5)?.component())?;
@@ -305,7 +358,7 @@ fn push_two_pack5_left_delta_zero(
 // PushTwoPack5LeftDeltaOne
 #[inline]
 fn push_two_pack5_left_delta_one(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.inc_last(1)?;
@@ -317,7 +370,7 @@ fn push_two_pack5_left_delta_one(
 // PushTwoPack5LeftDeltaN
 #[inline]
 fn push_two_pack5_left_delta_n(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.inc_last(br.read_ubitvar()?.component().wrapping_add(2))?;
@@ -329,7 +382,7 @@ fn push_two_pack5_left_delta_n(
 // PushThreeLeftDeltaZero
 #[inline]
 fn push_three_left_delta_zero(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.push(br.read_ubitvarfp()?.component())?;
@@ -340,7 +393,10 @@ fn push_three_left_delta_zero(
 
 // PushThreeLeftDeltaOne
 #[inline]
-fn push_three_left_delta_one(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
+fn push_three_left_delta_one(
+    fp: &mut PackedFieldPath,
+    br: &mut BitReader,
+) -> Result<(), FieldPathError> {
     fp.inc_last(1)?;
     fp.push(br.read_ubitvarfp()?.component())?;
     fp.push(br.read_ubitvarfp()?.component())?;
@@ -350,7 +406,10 @@ fn push_three_left_delta_one(fp: &mut FieldPath, br: &mut BitReader) -> Result<(
 
 // PushThreeLeftDeltaN
 #[inline]
-fn push_three_left_delta_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
+fn push_three_left_delta_n(
+    fp: &mut PackedFieldPath,
+    br: &mut BitReader,
+) -> Result<(), FieldPathError> {
     fp.inc_last(br.read_ubitvar()?.component().wrapping_add(2))?;
     fp.push(br.read_ubitvarfp()?.component())?;
     fp.push(br.read_ubitvarfp()?.component())?;
@@ -361,7 +420,7 @@ fn push_three_left_delta_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(),
 // PushThreePack5LeftDeltaZero
 #[inline]
 fn push_three_pack5_left_delta_zero(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.push(br.read_ubit64(5)?.component())?;
@@ -373,7 +432,7 @@ fn push_three_pack5_left_delta_zero(
 // PushThreePack5LeftDeltaOne
 #[inline]
 fn push_three_pack5_left_delta_one(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.inc_last(1)?;
@@ -386,7 +445,7 @@ fn push_three_pack5_left_delta_one(
 // PushThreePack5LeftDeltaN
 #[inline]
 fn push_three_pack5_left_delta_n(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.inc_last(br.read_ubitvar()?.component().wrapping_add(2))?;
@@ -398,7 +457,7 @@ fn push_three_pack5_left_delta_n(
 
 // PushN
 #[inline]
-fn push_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
+fn push_n(fp: &mut PackedFieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
     let n = br.read_ubitvar()?;
     fp.inc_last(br.read_ubitvar()?.component())?;
     for _ in 0..n {
@@ -410,7 +469,7 @@ fn push_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> 
 // PushNAndNonTopographical
 #[inline]
 fn push_n_and_non_topographical(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     for i in 0..=fp.last {
@@ -427,7 +486,7 @@ fn push_n_and_non_topographical(
 
 // PopOnePlusOne
 #[inline]
-fn pop_one_plus_one(fp: &mut FieldPath, _br: &mut BitReader) -> Result<(), FieldPathError> {
+fn pop_one_plus_one(fp: &mut PackedFieldPath, _br: &mut BitReader) -> Result<(), FieldPathError> {
     fp.pop(1)?;
     fp.inc_last(1)?;
     Ok(())
@@ -435,7 +494,7 @@ fn pop_one_plus_one(fp: &mut FieldPath, _br: &mut BitReader) -> Result<(), Field
 
 // PopOnePlusN
 #[inline]
-fn pop_one_plus_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
+fn pop_one_plus_n(fp: &mut PackedFieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
     fp.pop(1)?;
     fp.inc_last(br.read_ubitvarfp()?.component().wrapping_add(1))?;
     Ok(())
@@ -443,7 +502,10 @@ fn pop_one_plus_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPat
 
 // PopAllButOnePlusOne
 #[inline]
-fn pop_all_but_one_plus_one(fp: &mut FieldPath, _br: &mut BitReader) -> Result<(), FieldPathError> {
+fn pop_all_but_one_plus_one(
+    fp: &mut PackedFieldPath,
+    _br: &mut BitReader,
+) -> Result<(), FieldPathError> {
     fp.pop(fp.last)?;
     fp.inc_last(1)?;
     Ok(())
@@ -451,7 +513,10 @@ fn pop_all_but_one_plus_one(fp: &mut FieldPath, _br: &mut BitReader) -> Result<(
 
 // PopAllButOnePlusN
 #[inline]
-fn pop_all_but_one_plus_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
+fn pop_all_but_one_plus_n(
+    fp: &mut PackedFieldPath,
+    br: &mut BitReader,
+) -> Result<(), FieldPathError> {
     fp.pop(fp.last)?;
     fp.inc_last(br.read_ubitvarfp()?.component().wrapping_add(1))?;
     Ok(())
@@ -460,7 +525,7 @@ fn pop_all_but_one_plus_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), 
 // PopAllButOnePlusNPack3Bits
 #[inline]
 fn pop_all_but_one_plus_n_pack3_bits(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.pop(fp.last)?;
@@ -471,7 +536,7 @@ fn pop_all_but_one_plus_n_pack3_bits(
 // PopAllButOnePlusNPack6Bits
 #[inline]
 fn pop_all_but_one_plus_n_pack6_bits(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.pop(fp.last)?;
@@ -481,7 +546,7 @@ fn pop_all_but_one_plus_n_pack6_bits(
 
 // PopNPlusOne
 #[inline]
-fn pop_n_plus_one(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
+fn pop_n_plus_one(fp: &mut PackedFieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
     fp.pop(pop_count(br.read_ubitvarfp()?))?;
     fp.inc_last(1)?;
     Ok(())
@@ -489,7 +554,7 @@ fn pop_n_plus_one(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPat
 
 // PopNPlusN
 #[inline]
-fn pop_n_plus_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
+fn pop_n_plus_n(fp: &mut PackedFieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
     fp.pop(pop_count(br.read_ubitvarfp()?))?;
     fp.inc_last(br.read_varint32()?.component())?;
     Ok(())
@@ -498,7 +563,7 @@ fn pop_n_plus_n(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathE
 // PopNAndNonTopographical
 #[inline]
 fn pop_n_and_non_topographical(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.pop(pop_count(br.read_ubitvarfp()?))?;
@@ -512,7 +577,7 @@ fn pop_n_and_non_topographical(
 
 // NonTopoComplex
 #[inline]
-fn non_topo_complex(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
+fn non_topo_complex(fp: &mut PackedFieldPath, br: &mut BitReader) -> Result<(), FieldPathError> {
     for i in 0..=fp.last {
         if br.read_bool()? {
             fp.inc_at(i, br.read_varint32()?.component())?;
@@ -524,7 +589,7 @@ fn non_topo_complex(fp: &mut FieldPath, br: &mut BitReader) -> Result<(), FieldP
 // NonTopoPenultimatePluseOne
 #[inline]
 fn non_topo_penultimate_pluse_one(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     _br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     fp.inc_penultimate(1)?;
@@ -534,7 +599,7 @@ fn non_topo_penultimate_pluse_one(
 // NonTopoComplexPack4Bits
 #[inline]
 fn non_topo_complex_pack4_bits(
-    fp: &mut FieldPath,
+    fp: &mut PackedFieldPath,
     br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
     for i in 0..=fp.last {
@@ -552,11 +617,10 @@ fn non_topo_complex_pack4_bits(
 )]
 #[inline]
 const fn field_path_encode_finish(
-    fp: &mut FieldPath,
+    _fp: &mut PackedFieldPath,
     _br: &mut BitReader,
 ) -> Result<(), FieldPathError> {
-    // NOCOMMIT
-    fp.finished = true;
+    // the read loop stops at this op before applying it.
     Ok(())
 }
 
@@ -571,7 +635,7 @@ macro_rules! field_ops {
         #[inline]
         fn apply_field_op(
             idx: u8,
-            fp: &mut FieldPath,
+            fp: &mut PackedFieldPath,
             br: &mut BitReader,
         ) -> Result<(), FieldPathError> {
             match idx {
@@ -624,6 +688,9 @@ field_ops! {
     38 => (99, non_topo_complex_pack4_bits),
     39 => (25474, field_path_encode_finish),
 }
+
+/// index of [`plus_one`] in [`field_ops!`].
+const PLUS_ONE: u8 = 0;
 
 /// index of [`field_path_encode_finish`] in [`field_ops!`].
 const FIELD_PATH_ENCODE_FINISH: u8 = 39;
@@ -853,7 +920,7 @@ pub(crate) fn read_field_paths(
         .as_ref()
         .ok_or(FieldPathError::MalformedOpTree)?;
 
-    let mut fp = FieldPath::default();
+    let mut fp = PackedFieldPath::default();
     let mut i: usize = 0;
 
     loop {
@@ -861,9 +928,15 @@ pub(crate) fn read_field_paths(
         if op == FIELD_PATH_ENCODE_FINISH {
             return Ok(i);
         }
-        apply_field_op(op, &mut fp, br)?;
+        // plus one is by far the most frequent op; a predictable branch is cheaper than the
+        // indirect jump of the `match`.
+        if op == PLUS_ONE {
+            fp.inc_last(1)?;
+        } else {
+            apply_field_op(op, &mut fp, br)?;
+        }
         let max = fps.len();
-        *fps.get_mut(i).ok_or(FieldPathError::TooMany(max))? = fp.clone();
+        *fps.get_mut(i).ok_or(FieldPathError::TooMany(max))? = fp.to_field_path();
         i = i.saturating_add(1);
     }
 }
@@ -874,22 +947,26 @@ mod tests {
 
     #[test]
     fn test_push_pop_bounds() {
-        let mut fp = FieldPath::default();
+        let mut fp = PackedFieldPath::default();
         for i in 1..FIELD_PATH_MAX_LEN {
             fp.push(u8::try_from(i).unwrap()).unwrap();
         }
-        assert_eq!(fp.last(), FIELD_PATH_MAX_LEN - 1);
+        assert_eq!(fp.last, FIELD_PATH_MAX_LEN - 1);
+        assert_eq!(fp.to_field_path().data, [255, 1, 2, 3, 4, 5, 6, 0]);
         assert!(matches!(fp.push(0), Err(FieldPathError::TooDeep)));
 
         fp.pop(2).unwrap();
-        assert_eq!(fp.last(), FIELD_PATH_MAX_LEN - 3);
-        assert_eq!(fp.data[FIELD_PATH_MAX_LEN - 2..], [0, 0]);
+        assert_eq!(fp.last, FIELD_PATH_MAX_LEN - 3);
+        assert_eq!(fp.to_field_path().data, [255, 1, 2, 3, 4, 0, 0, 0]);
+        fp.inc_at(0, 1).unwrap();
+        fp.inc_last(255).unwrap();
+        assert_eq!(fp.to_field_path().data, [0, 1, 2, 3, 3, 0, 0, 0]);
         assert!(matches!(
             fp.pop(FIELD_PATH_MAX_LEN),
             Err(FieldPathError::Underflow)
         ));
 
-        let mut fp = FieldPath::default();
+        let mut fp = PackedFieldPath::default();
         assert!(matches!(
             fp.inc_penultimate(1),
             Err(FieldPathError::Underflow)
@@ -906,7 +983,7 @@ mod tests {
             panic!("no field op tree");
         };
         let root = flatten_branch(&left, &right, &mut nodes).unwrap();
-        let mut fp = FieldPath::default();
+        let mut fp = PackedFieldPath::default();
         let mut i = 0;
         let mut node = &nodes[root as usize];
         loop {
@@ -917,12 +994,12 @@ mod tests {
             };
             match child {
                 FlatChild::Leaf(op) => {
-                    apply_field_op(*op, &mut fp, br)?;
-                    if fp.finished {
+                    if *op == FIELD_PATH_ENCODE_FINISH {
                         return Ok(i);
                     }
+                    apply_field_op(*op, &mut fp, br)?;
                     let max = fps.len();
-                    *fps.get_mut(i).ok_or(FieldPathError::TooMany(max))? = fp.clone();
+                    *fps.get_mut(i).ok_or(FieldPathError::TooMany(max))? = fp.to_field_path();
                     i += 1;
                     node = &nodes[root as usize];
                 }
