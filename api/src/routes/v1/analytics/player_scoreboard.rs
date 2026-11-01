@@ -12,7 +12,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    default_min_matches_u32, filter_protected_accounts, is_non_empty, range_filters,
+    MatchScope, default_min_matches_u32, filter_protected_accounts, is_non_empty, range_filters,
     round_timestamps,
 };
 use crate::context::AppState;
@@ -172,13 +172,12 @@ FROM (
 }
 
 fn build_query(query: &PlayerScoreboardQuery) -> String {
-    let match_info_filters = query.match_info().build();
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    let mut inner_filters = vec![
-        "account_id > 0".to_owned(),
-        format!("{match_mode_filter} AND {game_mode_filter} {match_info_filters}"),
-    ];
+    let scope = MatchScope::new(
+        query.match_mode.as_deref(),
+        query.game_mode,
+        query.match_info(),
+    );
+    let mut inner_filters = vec!["account_id > 0".to_owned(), scope.sql()];
     // Account-scoped reads are primary-key ranges on player_match_stats but open every part of
     // match_player, and an all-time scan aggregates there in sort order instead of hashing
     // every account (~15 GiB peak). Time and hero filters stay on match_player, whose
@@ -190,7 +189,7 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
     // `player_match_stats` has no build column.
     let table = if query.sort_by.is_buff_sort() || query.hero_build_id.is_some() {
         "match_player"
-    } else if has_account_filter || (match_info_filters.is_empty() && query.hero_id.is_none()) {
+    } else if has_account_filter || (scope.info_sql().is_empty() && query.hero_id.is_none()) {
         "player_match_stats"
     } else {
         "match_player"
