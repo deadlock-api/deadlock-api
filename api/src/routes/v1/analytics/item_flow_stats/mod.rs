@@ -1116,7 +1116,20 @@ mod proptests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::utils::proptest_utils::assert_valid_sql;
+    use crate::utils::proptest_utils::{assert_valid_sql, dump_sql};
+
+    #[test]
+    fn sql_dump() {
+        dump_sql("item_flow_stats", |q: &ItemFlowStatsQuery| {
+            let parts = query_parts(q);
+            [
+                build_totals_query(&parts),
+                build_nodes_query(q, &parts),
+                build_edges_query(q, &parts),
+            ]
+            .join("\n")
+        });
+    }
 
     proptest! {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]

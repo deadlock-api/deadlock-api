@@ -4,11 +4,50 @@
 //! and panics with a pretty error list on failure, or when the query sets no
 //! `log_comment` (query cost is attributed by it). `assert_valid_and_fragment`
 //! wraps a ` AND ...` fragment (or empty) in a minimal `SELECT` template so
-//! bare predicates can still be grammar-checked.
+//! bare predicates can still be grammar-checked. `dump_sql` writes generated SQL to disk to
+//! diff it across a refactor.
 #![cfg(test)]
+
+use core::fmt::Write as _;
 
 use clickhouse_sql_parser::validate;
 use proptest::prelude::*;
+use proptest::strategy::ValueTree as _;
+use proptest::test_runner::TestRunner;
+
+/// Number of queries [`dump_sql`] generates per builder.
+const SQL_DUMP_CASES: usize = 1_000;
+
+/// Writes the SQL `build` returns for [`SQL_DUMP_CASES`] deterministic `Arbitrary` values of
+/// `T` to `$SQL_DUMP_DIR/{name}.sql`, each after its input. Does nothing without
+/// `SQL_DUMP_DIR`, so it runs as a no-op test.
+///
+/// The cached query helpers key their results by the SQL string, so a refactor of a query
+/// builder that changes even whitespace starts that route's cache empty after the deploy. To
+/// keep the SQL byte-identical, dump before and after and compare:
+///
+/// ```sh
+/// SQL_DUMP_DIR=~/tmp/sql/before cargo test -p deadlock-api sql_dump
+/// # refactor
+/// SQL_DUMP_DIR=~/tmp/sql/after cargo test -p deadlock-api sql_dump
+/// diff -r ~/tmp/sql/before ~/tmp/sql/after
+/// ```
+///
+/// The inputs only stay the same while `T` and its strategies do.
+pub(crate) fn dump_sql<T: Arbitrary>(name: &str, build: impl Fn(&T) -> String) {
+    let Some(dir) = std::env::var_os("SQL_DUMP_DIR") else {
+        return;
+    };
+    let strategy = any::<T>();
+    let mut runner = TestRunner::deterministic();
+    let mut out = String::new();
+    for case in 0..SQL_DUMP_CASES {
+        let value = strategy.new_tree(&mut runner).unwrap().current();
+        writeln!(out, "-- case {case}: {value:?}\n{}\n", build(&value)).unwrap();
+    }
+    std::fs::create_dir_all(&dir).unwrap();
+    std::fs::write(std::path::Path::new(&dir).join(format!("{name}.sql")), out).unwrap();
+}
 
 /// Bounded strategy for `Option<Vec<u32>>` fields (`account_ids`, `hero_ids`, etc.).
 /// Caps at 4 elements — enough to cover empty/singleton/multi cases without

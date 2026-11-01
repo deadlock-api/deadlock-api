@@ -1523,7 +1523,26 @@ mod proptests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::utils::proptest_utils::assert_valid_sql;
+    use crate::utils::proptest_utils::{assert_valid_sql, dump_sql};
+
+    #[test]
+    fn sql_dump() {
+        dump_sql("item_stats", |q: &ItemStatsQuery| {
+            [
+                Some(build_query(q)),
+                build_mv_query(q),
+                build_cohort_mv_query(q),
+                build_enemy_mv_query(q),
+            ]
+            .into_iter()
+            .flatten()
+            .collect::<Vec<_>>()
+            .join(
+                "
+",
+            )
+        });
+    }
 
     proptest! {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]

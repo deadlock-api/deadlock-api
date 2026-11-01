@@ -612,7 +612,14 @@ mod proptests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::utils::proptest_utils::assert_valid_sql;
+    use crate::utils::proptest_utils::{assert_valid_sql, dump_sql};
+
+    #[test]
+    fn sql_dump() {
+        dump_sql("player_scoreboard", |q: &PlayerScoreboardQuery| {
+            [build_query(q), build_block_queries(q, 0, 100).join("\n")].join("\n")
+        });
+    }
 
     proptest! {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]

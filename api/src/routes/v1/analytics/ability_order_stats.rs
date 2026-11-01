@@ -507,7 +507,19 @@ mod proptests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::utils::proptest_utils::assert_valid_sql;
+    use crate::utils::proptest_utils::{assert_valid_sql, dump_sql};
+
+    #[test]
+    fn sql_dump() {
+        dump_sql("ability_order_stats", |q: &AbilityOrderStatsQuery| {
+            [
+                build_query(q),
+                build_tree_query(q),
+                build_max_first_query(q),
+            ]
+            .join("\n")
+        });
+    }
 
     proptest! {
         #![proptest_config(ProptestConfig { cases: 32, max_shrink_iters: 16, failure_persistence: None, .. ProptestConfig::default() })]

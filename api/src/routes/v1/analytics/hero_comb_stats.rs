@@ -398,7 +398,12 @@ mod proptests {
     use proptest::prelude::*;
 
     use super::*;
-    use crate::utils::proptest_utils::assert_valid_sql;
+    use crate::utils::proptest_utils::{assert_valid_sql, dump_sql};
+
+    #[test]
+    fn sql_dump() {
+        dump_sql("hero_comb_stats", build_query);
+    }
 
     #[test]
     fn comb_size_validation() {
