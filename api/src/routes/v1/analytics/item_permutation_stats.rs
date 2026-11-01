@@ -10,7 +10,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, default_min_matches_u32, filter_protected_accounts, join_filters,
+    MatchScope, PlayerFilters, default_min_matches_u32, filter_protected_accounts, join_filters,
     not_corrupted_sql, round_timestamps, with_legacy_id,
 };
 use crate::context::AppState;
@@ -151,7 +151,6 @@ struct ItemPermutationStats {
     reason = "one linear query builder with two long query shapes reads clearer than split helpers"
 )]
 fn build_query(query: &ItemPermutationStatsQuery) -> String {
-    let info_filters = query.match_info().build();
     #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let hero_ids = with_legacy_id(query.hero_ids.as_deref(), query.hero_id);
     #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
@@ -168,8 +167,12 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         }
         .build(),
     );
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    let scope_filters = MatchScope::new(
+        query.match_mode.as_deref(),
+        query.game_mode,
+        query.match_info(),
+    )
+    .sql();
     // `min_matches`/`max_matches` are pure post-aggregation filters, so keeping them out of the
     // SQL lets every value share one cached result instead of triggering a fresh multi-second
     // scan per value. The floor is clamped rather than dropped so the cached superset stays no
@@ -219,7 +222,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             wins + losses AS matches
         FROM match_player
         WHERE hasAll(items.item_id, {items_list}){corrupted_filter}
-            AND {match_mode_filter} AND {game_mode_filter} {info_filters}
+            AND {scope_filters}
             {player_filters}
         GROUP BY item_ids
         {having_clause}
@@ -269,7 +272,7 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
             t_players AS (SELECT arrayMap(x -> transform(x, u_ids, arrayMap(i -> toUInt8(i), arrayEnumerate(u_ids)), toUInt8(0)), {owned_items})
              as p_items, won
                 FROM match_player
-                WHERE {match_mode_filter} AND {game_mode_filter} {info_filters} {player_filters})
+                WHERE {scope_filters} {player_filters})
         SELECT [{decoded_items}] AS item_ids,
                countIf(won)      AS wins,
                countIf(not won)  AS losses,
