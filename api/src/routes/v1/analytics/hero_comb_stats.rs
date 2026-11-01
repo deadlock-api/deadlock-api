@@ -14,8 +14,8 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    DEFAULT_MIN_MATCHES, PlayerFilters, default_min_matches_u32, filter_protected_accounts,
-    join_filters, round_timestamps, with_legacy_id,
+    DEFAULT_MIN_MATCHES, MatchScope, PlayerFilters, default_min_matches_u32,
+    filter_protected_accounts, join_filters, round_timestamps, with_legacy_id,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -168,7 +168,6 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
     } else {
         6
     };
-    let info_filters = query.match_info().build();
     let player_filters = join_filters(
         &PlayerFilters {
             min_networth: query.min_networth,
@@ -225,8 +224,12 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         having_filters.push(format!("matches <= {max_matches}"));
     }
     let having_clause = having_clause(&having_filters);
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    let scope_filters = MatchScope::new(
+        query.match_mode.as_deref(),
+        query.game_mode,
+        query.match_info(),
+    )
+    .sql();
 
     let required_hero_ids = [&query.include_hero_ids, &query.include_enemy_hero_ids]
         .into_iter()
@@ -242,8 +245,8 @@ fn build_query(query: &HeroCombStatsQuery) -> String {
         let hero_list = id_list(&required_hero_ids);
         let hero_mask = hero_id_mask(&required_hero_ids);
         format!(
-            " AND match_id IN (SELECT match_id FROM match_player WHERE {match_mode_filter} AND \
-             {game_mode_filter} {info_filters} AND hero_id IN ({hero_list}) GROUP BY match_id \
+            " AND match_id IN (SELECT match_id FROM match_player WHERE {scope_filters} AND \
+             hero_id IN ({hero_list}) GROUP BY match_id \
              HAVING groupBitOr(bitShiftLeft(toUInt128(1), hero_id)) = {hero_mask})"
         )
     };
@@ -265,7 +268,7 @@ WITH hero_combinations AS (
         anyIf(won, team = 'Team0') AS team0_won,
         anyIf(won, team = 'Team1') AS team1_won{cte_account_select}
     FROM match_player
-    WHERE {match_mode_filter} AND {game_mode_filter} {info_filters}{account_prefilter}{hero_prefilter} {player_filters}
+    WHERE {scope_filters}{account_prefilter}{hero_prefilter} {player_filters}
     GROUP BY match_id
     HAVING bitCount(team0_mask) = {team_size} AND bitCount(team1_mask) = {team_size}
 )
