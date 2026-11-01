@@ -9,16 +9,16 @@ use uuid::Uuid;
 
 use crate::context::AppState;
 use crate::error::APIError;
-use crate::services::ch_admission::{CH_CLIENT, Caller};
+use crate::services::ch_admission::{CH_CALLER, Caller};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
-/// Runs the request with its client in [`CH_CLIENT`], so the `ClickHouse` admission limiter can
+/// Runs the request with its caller in [`CH_CALLER`], so the `ClickHouse` admission limiter can
 /// cap the query slots one client holds. Clients are told apart like the rate limiter does: by
 /// API key, else by IP or Cloudflare worker.
 ///
 /// Requests with an invalid API key are rejected. Most routes never check the key, so any
 /// well-formed UUID would otherwise lift the cap and let one client take every slot.
-pub(crate) async fn scope_ch_client(
+pub(crate) async fn scope_ch_caller(
     State(state): State<AppState>,
     mut key: RateLimitKey,
     req: Request,
@@ -37,7 +37,7 @@ pub(crate) async fn scope_ch_client(
         }
     }
     let caller = Caller::new(key.client_id(), key.api_key.is_none());
-    CH_CLIENT.scope(caller, next.run(req)).await
+    CH_CALLER.scope(caller, next.run(req)).await
 }
 
 /// Bounds the Postgres lookup behind an uncached key, so a slow or down Postgres doesn't hold up

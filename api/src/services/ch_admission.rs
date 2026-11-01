@@ -14,9 +14,9 @@ pub(crate) use clickhouse_utils::admission::{Busy, Caller, Permit};
 
 tokio::task_local! {
     /// The client (API key, IP or Cloudflare worker) the current request comes from, set by
-    /// [`crate::middleware::ch_client::scope_ch_client`]. Unless it has a valid API key, its share
+    /// [`crate::middleware::ch_caller::scope_ch_caller`]. Unless it has a valid API key, its share
     /// of the slots is capped, so one client cannot take all of them.
-    pub(crate) static CH_CLIENT: Caller;
+    pub(crate) static CH_CALLER: Caller;
 }
 
 /// The process-wide admission limiter. A static, as the `cached_ch_query!` bodies get no state.
@@ -29,9 +29,9 @@ pub(crate) fn spawn_controller(ch_client: clickhouse::Client) {
     LazyLock::force(&CH_ADMISSION).spawn_controller(ch_client, ControllerConfig::default());
 }
 
-/// Waits for a query slot for the current request's client (see [`CH_CLIENT`]).
+/// Waits for a query slot for the current request's client (see [`CH_CALLER`]).
 pub(crate) async fn acquire() -> Result<Permit<'static>, Busy> {
-    let caller = CH_CLIENT
+    let caller = CH_CALLER
         .try_with(Clone::clone)
         .unwrap_or_else(|_| Caller::new("unknown", true));
     CH_ADMISSION.acquire(caller).await
