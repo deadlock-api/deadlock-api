@@ -329,6 +329,12 @@ struct QueryParts {
     /// scanned row: a narrow badge range keeps ~3% of them. Measured on a 2.5-month, badge 91+, two
     /// lock request: nodes -23% and edges -27% wall time; with a hero filter, edges -89%.
     prewhere: String,
+    /// ` AND hasAll(<item ids column>, [<locked ids>])` (empty without locks), appended to the
+    /// nodes and edges `PREWHERE`. Implied by the lock clauses, but cheap: it drops the rows
+    /// outside the build path before the hero path rebuilds `upgrade_*` from `items.*`/`stats.*`
+    /// (a `dictHas` per item). Measured on a 6-lock, one-hero, 2-week sweep: nodes -36% and edges
+    /// -38% CPU, -27/-33% wall time, -9/-14% memory, identical results.
+    locked_prewhere: String,
     /// Array player filters (items, ability order) including the locked build path.
     player_filters: String,
     /// Array player filters excluding the locked build path (for the baseline population).
@@ -470,6 +476,23 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     };
     let base_player_filters = join_filters(&base_filter_vec);
     let player_filters = format!("{base_player_filters}{}", join_filters(&locked_clauses));
+    let locked_ids = query
+        .locked_item_ids
+        .iter()
+        .flatten()
+        .zip(query.locked_columns.iter().flatten())
+        .map(|(id, _)| id.to_string())
+        .collect_vec();
+    let locked_prewhere = if locked_ids.is_empty() {
+        String::new()
+    } else {
+        let ids_column = if reads_base_upgrades(query, is_brawl) {
+            "upgrades.item_id"
+        } else {
+            "items.item_id"
+        };
+        format!(" AND hasAll({ids_column}, [{}])", locked_ids.join(", "))
+    };
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
     let prewhere = format!(
@@ -530,6 +553,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
 
     QueryParts {
         prewhere,
+        locked_prewhere,
         player_filters,
         base_player_filters,
         locked_predicate,
@@ -598,6 +622,7 @@ fn build_totals_query(parts: &QueryParts) -> String {
 fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
     let QueryParts {
         prewhere,
+        locked_prewhere,
         player_filters,
         column_expr,
         extra_select,
@@ -639,7 +664,7 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
                     upgrade_buy_times AS buy_time,
                     upgrade_net_worths AS nw,
                     {first_purchase} AS first
-                PREWHERE {prewhere}
+                PREWHERE {prewhere}{locked_prewhere}
                 WHERE TRUE {player_filters}
                     AND buy_time > 0 AND nw > 0
             ) e
@@ -719,6 +744,7 @@ fn nodes_from_cells(
 fn build_edges_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
     let QueryParts {
         prewhere,
+        locked_prewhere,
         player_filters,
         by_column_select,
         upgrades_with,
@@ -747,7 +773,7 @@ fn build_edges_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
         {upgrades_with}
         SELECT won, {by_column_select}
         FROM match_player
-        PREWHERE {prewhere}
+        PREWHERE {prewhere}{locked_prewhere}
         WHERE TRUE {player_filters}
     )
     ARRAY JOIN arrayPopBack(arrayEnumerate(by_column)) AS i
@@ -1047,6 +1073,33 @@ mod tests {
         assert_valid_sql(&sql);
         assert!(sql.contains("hasAll(items.item_id, [1])"));
         assert!(!sql.contains("upgrades.item_id"));
+    }
+
+    #[test]
+    fn locks_prefilter_nodes_and_edges_but_not_totals() {
+        let hero = ItemFlowStatsQuery {
+            hero_ids: Some(vec![15]),
+            locked_item_ids: Some(vec![7, 9]),
+            locked_columns: Some(vec![0, 2]),
+            ..Default::default()
+        };
+        let parts = query_parts(&hero);
+        for sql in [
+            build_nodes_query(&hero, &parts),
+            build_edges_query(&hero, &parts),
+        ] {
+            assert_valid_sql(&sql);
+            assert!(sql.contains("AND hasAll(items.item_id, [7, 9])\n"), "{sql}");
+        }
+        assert!(!build_totals_query(&parts).contains("hasAll("));
+
+        let no_hero = ItemFlowStatsQuery {
+            hero_ids: None,
+            ..hero
+        };
+        let sql = build_nodes_query(&no_hero, &query_parts(&no_hero));
+        assert_valid_sql(&sql);
+        assert!(sql.contains("AND hasAll(upgrades.item_id, [7, 9])\n"));
     }
 
     #[test]
