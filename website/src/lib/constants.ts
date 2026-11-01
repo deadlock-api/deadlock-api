@@ -17,10 +17,17 @@ export interface PatchInfo {
 
 export const PATCHES: readonly PatchInfo[] = [
   {
+    id: "2026-10-30",
+    name: "Halloween (2026-10-30)",
+    shortName: "Halloween",
+    startDate: day.utc("2026-10-30T20:51:49Z").local(),
+  },
+  {
     id: "2026-09-29",
     name: "City Never Sleeps (2026-09-29)",
     shortName: "City Never Sleeps",
     startDate: day.utc("2026-09-29T20:25:11Z").local(),
+    endDate: day.utc("2026-10-30T20:51:49Z").local(),
   },
   {
     id: "2026-09-16",
