@@ -52,7 +52,7 @@ async-compression = "0.4.51"
 base64 = "0.23.1"
 cached = "4.0"
 clap = { version = "4.6.7", features = ["derive", "env"] }
-clickhouse = { version = "0.15.3", features = ["zstd"] }
+clickhouse = { version = "0.15.3" }
 futures = "0.3.34"
 itertools = "0.15.0"
 metrics = "0.24.6"
