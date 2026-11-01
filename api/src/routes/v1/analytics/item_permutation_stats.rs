@@ -341,9 +341,9 @@ async fn get_item_permutation_stats(
     path = "/item-permutation-stats",
     params(ItemPermutationStatsQuery),
     responses(
-        (status = OK, description = "Item Stats", body = [ItemPermutationStats]),
+        (status = OK, description = "Item Permutation Stats", body = [ItemPermutationStats]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
-        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch item stats")
+        (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch item permutation stats")
     ),
     tags = ["Analytics"],
     summary = "Item Permutation Stats",

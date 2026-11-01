@@ -1,4 +1,5 @@
-//! MCP (Model Context Protocol) server exposing read-only SQL over the public parquet dumps.
+//! MCP (Model Context Protocol) server exposing read-only SQL over the public parquet dumps,
+//! plus lookup tools for heroes, items and patch notes.
 //!
 //! Served statelessly (no `Mcp-Session-Id`) because the API runs several replicas behind
 //! one hostname.

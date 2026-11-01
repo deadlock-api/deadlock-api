@@ -322,7 +322,7 @@ pub(crate) struct ItemStatsQuery {
     #[serde(default = "default_min_matches_u32")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u32>,
-    /// The maximum number of matches played for a hero combination to be included in the response.
+    /// The maximum number of matches played for an item to be included in the response.
     #[serde(default)]
     #[param(minimum = 1)]
     max_matches: Option<u32>,
@@ -1476,17 +1476,16 @@ cached_ch_query! {
 }
 
 cached_ch_query! {
-    /// Separate cache for per-account base-table queries: ~100k a day, cheap (~30ms) and
-    /// almost never repeated, they evicted the shared cache every ~15 minutes and made
-    /// the expensive global queries (10s+) rerun several times per TTL.
+    /// Per-account base-table queries (~100k a day, cheap, almost never repeated). Like every
+    /// `QueryCache` it shares the process-wide memory tier with all other caches; being a
+    /// separate cache only gives it its own disk directory, metrics label and timeout cooldowns.
     fn run_account_query(3600) -> Vec<ItemStats>;
 }
 
 cached_ch_query! {
-    /// Separate cache for the pre-aggregated rollup queries (`item_stats_agg_v2`, cohort and
-    /// enemy rollups): the long tail of per-account base-table queries would otherwise
-    /// evict these few, heavily repeated entries from the shared cache long before
-    /// their TTL.
+    /// The pre-aggregated rollup queries (`item_stats_agg_v2`, cohort and enemy rollups). Like
+    /// every `QueryCache` it shares the process-wide memory tier with all other caches; being a
+    /// separate cache only gives it its own disk directory, metrics label and timeout cooldowns.
     fn run_rollup_query(3600) -> Vec<ItemStats>;
 }
 

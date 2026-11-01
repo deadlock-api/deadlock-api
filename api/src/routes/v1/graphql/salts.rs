@@ -11,8 +11,7 @@ use serde::Deserialize;
 use crate::context::AppState;
 use crate::routes::v1::graphql::assets::found;
 use crate::routes::v1::graphql::filters::{U32Filter, U64Filter};
-use crate::routes::v1::graphql::schema::run_built_query;
-use crate::routes::v1::graphql::sql::OrderDir;
+use crate::routes::v1::graphql::schema::{OrderDirection, run_built_query};
 
 const COLUMNS: &str =
     "match_id, cluster_id, metadata_salt, replay_salt, toUnixTimestamp(created_at) AS created_at";
@@ -94,7 +93,7 @@ impl MatchSaltsWhere {
 /// Only the selected ids are then merged.
 fn build_match_salts_query(
     filters: &[String],
-    order_dir: OrderDir,
+    order_dir: OrderDirection,
     limit: u32,
     offset: u32,
 ) -> Result<String, core::fmt::Error> {
@@ -121,7 +120,7 @@ fn build_match_salts_query(
 pub(super) async fn load_match_salts_page(
     ctx: &Context<'_>,
     where_: Option<MatchSaltsWhere>,
-    order_dir: OrderDir,
+    order_dir: OrderDirection,
     limit: u32,
     offset: u32,
 ) -> GqlResult<Vec<MatchSalts>> {
@@ -173,8 +172,8 @@ mod tests {
 
     #[test]
     fn pages_ids_before_merging() {
-        let sql =
-            build_match_salts_query(&["match_id > 5".into()], OrderDir::Desc, 10, 20).unwrap();
+        let sql = build_match_salts_query(&["match_id > 5".into()], OrderDirection::Desc, 10, 20)
+            .unwrap();
         assert!(sql.starts_with(
             "WITH t_matches AS (SELECT DISTINCT match_id FROM match_salts WHERE match_id > 5 AND metadata_salt > 0 AND cluster_id > 0 ORDER BY match_id DESC LIMIT 10 OFFSET 20) "
         ));

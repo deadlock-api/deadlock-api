@@ -63,7 +63,7 @@ pub(crate) struct PlayerScoreboardQuery {
     #[serde(default = "default_min_matches_u32")]
     #[param(minimum = 1, default = 20)]
     min_matches: Option<u32>,
-    /// The maximum number of matches played for a hero combination to be included in the response.
+    /// The maximum number of matches played for a player to be included in the scoreboard.
     #[serde(default)]
     #[param(minimum = 1)]
     max_matches: Option<u32>,

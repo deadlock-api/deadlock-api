@@ -79,9 +79,9 @@ struct LiveUrl {
 pub(super) struct IngestLiveUrl {
     match_id: u64,
     broadcast_url: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     lobby_id: Option<u64>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(default)]
     started_at: Option<i64>,
 }
 

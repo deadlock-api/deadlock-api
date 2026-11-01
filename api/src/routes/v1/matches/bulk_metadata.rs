@@ -755,9 +755,9 @@ fn build_query(
         // be applied before the expensive per-player aggregation.
         // An account-scoped selection is a primary-key range on player_match_stats, where
         // match_player opens one granule per match of the account through the bloom-filter
-        // index (measured -15% wall, -59% read_rows). The history subquery in info_filters
-        // stays so the match set is unchanged. Item filters and pool flags need columns only
-        // match_player has.
+        // index (measured -15% wall, -59% read_rows). The player-filter subquery stays as the
+        // join in join_clause, so the match set is unchanged. Item filters and pool flags need
+        // columns only match_player has.
         let join_clause = player_filter_subquery.as_ref().map_or_default(|sub| {
             format!(
                 " INNER JOIN (SELECT DISTINCT match_id AS _pf_match_id FROM ({sub})) pf \

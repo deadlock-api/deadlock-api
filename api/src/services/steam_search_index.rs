@@ -169,7 +169,8 @@ impl SteamSearchIndex {
         }
     }
 
-    /// Load the newest complete persisted `v_*` index, if any. Returns whether one was loaded.
+    /// Load the newest complete persisted `VERSION_PREFIX` index, if any. Returns whether one
+    /// was loaded.
     pub(crate) fn try_load_persisted(&self) -> bool {
         let Ok(entries) = std::fs::read_dir(&self.inner.base_path) else {
             return false;
@@ -208,7 +209,7 @@ impl SteamSearchIndex {
         false
     }
 
-    /// Full rebuild into a fresh `v_<ts>/` dir, atomic swap, GC old dirs.
+    /// Full rebuild into a fresh `<VERSION_PREFIX><ts>/` dir, atomic swap, GC old dirs.
     ///
     /// Rows are streamed from `ClickHouse` through a bounded channel into a blocking task that
     /// owns the Tantivy writer, so neither the fetch nor the indexing/commit/filesystem work runs
@@ -246,7 +247,8 @@ impl SteamSearchIndex {
             tokio::task::spawn_blocking(
                 move || -> Result<(IndexReader, u32, usize), RebuildError> {
                     // Eagerly remove any incompatible-format dirs (legacy prefix or
-                    // half-written v2_ dirs from a previous failed run) before building.
+                    // half-written `VERSION_PREFIX` dirs from a previous failed run) before
+                    // building.
                     // The currently-live dir, if any, is preserved so existing readers
                     // keep serving until we swap.
                     let current = inner.current_dir.load_full();

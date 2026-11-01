@@ -33,7 +33,7 @@ use crate::routes::v1::graphql::projection::{
 };
 use crate::routes::v1::graphql::salts::{MatchSalts, MatchSaltsWhere, load_match_salts_page};
 use crate::routes::v1::graphql::sql::{
-    BuildArgs, MatchHistoryBuildArgs, OrderDir, OrderKey, build_match_history_query,
+    BuildArgs, MatchHistoryBuildArgs, OrderKey, build_match_history_query,
     build_match_players_query, build_matches_query,
 };
 use crate::routes::v1::graphql::types::{Match, MatchHistoryEntry, MatchPlayer};
@@ -152,11 +152,11 @@ pub(super) enum OrderDirection {
     Asc,
 }
 
-impl From<OrderDirection> for OrderDir {
-    fn from(v: OrderDirection) -> Self {
-        match v {
-            OrderDirection::Desc => Self::Desc,
-            OrderDirection::Asc => Self::Asc,
+impl OrderDirection {
+    pub(super) const fn as_sql(self) -> &'static str {
+        match self {
+            Self::Asc => "ASC",
+            Self::Desc => "DESC",
         }
     }
 }
@@ -190,7 +190,7 @@ impl QueryRoot {
             projection: &projection,
             filters: &filters,
             order_by: order_by.unwrap_or(OrderByMatch::MatchId).into(),
-            order_dir: order_direction.unwrap_or_default().into(),
+            order_dir: order_direction.unwrap_or_default(),
             limit: limit.clamp(1, MAX_LIMIT),
             offset,
             via_player_match_stats,
@@ -224,7 +224,7 @@ impl QueryRoot {
             projection: &projection,
             filters: &filters,
             order_by: order_by.unwrap_or(OrderByMatchPlayer::MatchId).into(),
-            order_dir: order_direction.unwrap_or_default().into(),
+            order_dir: order_direction.unwrap_or_default(),
             limit: limit.clamp(1, MAX_LIMIT),
             offset,
             via_player_match_stats,
@@ -255,7 +255,7 @@ impl QueryRoot {
             columns: &columns,
             filters: &filters,
             order_by: order_by.unwrap_or(OrderByMatchHistory::MatchId).into(),
-            order_dir: order_direction.unwrap_or_default().into(),
+            order_dir: order_direction.unwrap_or_default(),
             limit: limit.clamp(1, MAX_LIMIT),
             offset,
             excluded_accounts: &excluded_accounts,
@@ -279,7 +279,7 @@ impl QueryRoot {
         load_match_salts_page(
             ctx,
             where_,
-            order_direction.unwrap_or_default().into(),
+            order_direction.unwrap_or_default(),
             limit.clamp(1, MAX_LIMIT),
             offset,
         )

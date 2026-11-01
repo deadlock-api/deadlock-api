@@ -2,7 +2,7 @@ use clickhouse::Row;
 use itertools::Itertools as _;
 use serde::{Deserialize, Deserializer, Serialize};
 use strum::{Display, EnumString, FromRepr};
-use utoipa::{IntoParams, ToSchema};
+use utoipa::ToSchema;
 use valveprotos::deadlock::c_msg_dev_match_info::{MatchPlayer, Team};
 use valveprotos::deadlock::{CMsgClientToGcGetMatchMetaDataResponse, CMsgDevMatchInfo};
 
@@ -434,7 +434,6 @@ impl From<Team> for ActiveMatchTeamStats {
 }
 
 #[derive(Debug, Clone, Serialize, ToSchema)]
-#[serde(rename_all(deserialize = "camelCase"))]
 pub(super) struct ActiveMatch {
     start_time: Option<u32>,
     winning_team: Option<i32>,
@@ -493,7 +492,7 @@ impl From<CMsgDevMatchInfo> for ActiveMatch {
     }
 }
 
-#[derive(Debug, Clone, IntoParams, ToSchema, Row, Serialize, Deserialize)]
+#[derive(Debug, Clone, ToSchema, Row, Serialize, Deserialize)]
 pub(crate) struct ClickhouseSalts {
     pub(crate) match_id: u64,
     pub(crate) metadata_salt: Option<u32>,

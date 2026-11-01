@@ -158,7 +158,7 @@ async fn fetch_and_store_builds(
     Ok(results)
 }
 
-/// Rate limits of the endpoints that hit the Game Coordinator.
+/// Converts a Game Coordinator build result to the API's `Build` through its JSON form.
 fn to_build(result: &HeroBuildResult) -> APIResult<Build> {
     Ok(serde_json::from_value(serde_json::to_value(result)?)?)
 }

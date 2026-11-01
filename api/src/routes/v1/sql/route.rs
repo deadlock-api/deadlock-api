@@ -9,7 +9,7 @@ use axum_extra::extract::Query;
 use serde::{Deserialize, Serialize};
 use tokio_util::sync::CancellationToken;
 use tracing::{debug, warn};
-use utoipa::IntoParams;
+use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult, LogInternal as _};
@@ -57,7 +57,7 @@ pub(super) struct TableQuery {
     table: String,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub struct TableSchemaRow {
     name: String,
     r#type: String,
@@ -208,7 +208,7 @@ pub(super) async fn list_tables(
     params(TableQuery),
     path = "/tables/{table}/schema",
     responses(
-        (status = OK, body = HashMap<String, String>),
+        (status = OK, body = [TableSchemaRow]),
         (status = INTERNAL_SERVER_ERROR, body = String)
     ),
     tags = ["SQL"],

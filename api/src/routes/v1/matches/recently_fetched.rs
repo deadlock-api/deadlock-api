@@ -70,7 +70,7 @@ impl From<ClickhouseMatchInfoRow> for ClickhouseMatchInfo {
 }
 
 #[cached(ttl_secs = 60, convert = "{ 0 }", key = "u8", sync_writes = "default")]
-async fn get_recently_fetched_match_ids(
+async fn get_recently_fetched_matches(
     ch_client: &clickhouse::Client,
 ) -> clickhouse::error::Result<Arc<Vec<ClickhouseMatchInfo>>> {
     // optimize_aggregation_in_order: the GROUP BY match_id matches the sort key, so
@@ -87,7 +87,7 @@ async fn get_recently_fetched_match_ids(
         any(average_badge) AS average_badge,
         groupUniqArray(account_id) AS player_account_ids
     FROM match_player
-    WHERE match_player.created_at > now() - 600 AND match_player.match_mode IN ('Ranked', 'Unranked') AND (match_player.match_id > 70426318 OR now() >= '2026-03-31 00:00:00')
+    WHERE match_player.created_at > now() - 600 AND match_player.match_mode IN ('Ranked', 'Unranked')
     GROUP BY match_id
     ORDER BY max(match_player.created_at) DESC
     SETTINGS log_comment = 'recently_fetched', apply_patch_parts = 0, optimize_aggregation_in_order = 1
@@ -107,7 +107,7 @@ async fn get_recently_fetched_match_ids(
     summary = "Recently Fetched",
     description = describe(
         "
-This endpoint returns a list of match ids that have been fetched within the last 10 minutes.
+This endpoint returns the matches (match info with player account ids) that have been fetched within the last 10 minutes.
 
     ",
         DOCUMENTED_DEFAULT,
@@ -117,6 +117,6 @@ pub(super) async fn recently_fetched(
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
     Ok(Json(
-        get_recently_fetched_match_ids(&state.ch_client_ro).await?,
+        get_recently_fetched_matches(&state.ch_client_ro).await?,
     ))
 }

@@ -5,14 +5,13 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use cached::Cached as _;
 use serde::Deserialize;
-use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::steam::client::GET_PROTECTED_USERS_CACHED;
 use crate::utils::sql::id_list;
 
-#[derive(Clone, Deserialize, IntoParams, ToSchema)]
+#[derive(Clone, Deserialize)]
 pub(crate) struct DataPrivacyRequest {
     #[serde(deserialize_with = "steam_id::de::account_id")]
     steam_id: u32,

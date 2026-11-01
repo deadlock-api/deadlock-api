@@ -10,7 +10,7 @@ use crate::context::AppState;
 #[derive(OpenApi)]
 #[openapi(tags((name = "Info", description = "
 System status and info endpoints.
-Provides health checks for monitoring service availability (Clickhouse, Postgres, Redis) and API statistics including database table sizes, match fetching rates, and missed matches.
+Provides health checks for monitoring service availability (Clickhouse, Postgres, Redis) and API statistics including database table sizes and match fetching rates.
 ")))]
 struct ApiDoc;
 

@@ -1,11 +1,11 @@
-//! GraphQL input types for filtering `match_player` rows.
+//! GraphQL input types for filtering matches, `match_player` rows and match history entries.
 //!
 //! Each scalar `*Filter` exposes the standard set of operators and compiles
 //! into a SQL fragment. Values are inlined as literals (integers / quoted
 //! strings) — the filter values come from async-graphql's parser so they're
 //! constrained to safe primitives, and string values get single-quote escaped.
 //!
-//! Multiple field filters on a `MatchWhere` / `MatchPlayerWhere` are AND-ed.
+//! Multiple field filters on a `MatchPlayerWhere` / `MatchHistoryWhere` are AND-ed.
 
 use async_graphql::InputObject;
 use itertools::Itertools as _;

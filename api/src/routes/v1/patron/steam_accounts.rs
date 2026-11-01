@@ -126,7 +126,8 @@ async fn get_owned_account(
 /// Validation rules:
 /// - `SteamID3` must be a valid 32-bit unsigned integer (0 to 4,294,967,295)
 /// - Total active accounts + accounts in cooldown must not exceed `slot_limit`
-/// - The specific `steam_id3` must not be in cooldown (deleted within 24 hours)
+/// - If the patron removed this `steam_id3` earlier, that entry is restored instead of creating a
+///   new one; an entry still in cooldown (removed within 24 hours) already holds its slot
 #[utoipa::path(
     post,
     path = "/steam-accounts",
@@ -497,7 +498,6 @@ pub(crate) async fn reactivate_steam_account(
     Ok(Json(SteamAccountResponse::from(reactivated)))
 }
 
-/// Whether a prioritized account is friends with one of the bots
 impl From<ReactivateRejection> for APIError {
     fn from(rejection: ReactivateRejection) -> Self {
         match rejection {
@@ -510,6 +510,7 @@ impl From<ReactivateRejection> for APIError {
     }
 }
 
+/// Whether a prioritized account is friends with one of the bots
 #[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct BotFriendStatus {
     is_friend: bool,

@@ -632,7 +632,7 @@ fn prepare_capped<'conn>(
         // An interrupted prepare is no reason to run the query without the cap.
         check_cancelled(cancelled)?;
         let stmt = conn.prepare(sql)?;
-        warn!("MCP query runs without the row cap, its canonical form failed: {capped_error}");
+        warn!("SQL query runs without the row cap, its canonical form failed: {capped_error}");
         Ok(stmt)
     })
 }

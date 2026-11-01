@@ -1,13 +1,14 @@
-//! GraphQL output types for the `match_player` table.
+//! GraphQL output types: matches and their `match_player` rows, `player_match_history`
+//! entries and stored Steam profiles.
 //!
 //! Every supported column is exposed as an `Option<T>` field. The resolver
 //! projects only the GraphQL-requested fields into the underlying SQL SELECT,
 //! so absent fields deserialize to `None` and are omitted from the response.
 //!
-//! Nested (`Nested(...)`) and `Map(...)` columns are surfaced as a JSON scalar
-//! passthrough — clients still get column-level projection (the SELECT only
-//! includes the requested column) without us having to model dozens of nested
-//! `ClickHouse` types as GraphQL objects in v1.
+//! The `items`, `upgrades` and `stats` Nested columns are typed objects (`Item`,
+//! `UpgradePurchase`, `Stat`); the other Nested, `Map(...)` and array columns are
+//! surfaced as a JSON scalar passthrough, so clients still get column-level
+//! projection without each nested `ClickHouse` type being modelled as a GraphQL object.
 
 use async_graphql::SimpleObject;
 use serde::{Deserialize, Serialize};

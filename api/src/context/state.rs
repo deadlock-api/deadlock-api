@@ -204,8 +204,9 @@ impl AppState {
 
         // Start the steam search index. The on-disk index is loaded
         // synchronously (cheap) so search is live immediately after restart;
-        // the rebuild loop refreshes every 30 minutes. Path is overridable via
-        // the STEAM_SEARCH_INDEX_PATH env var.
+        // the refresh loop runs incrementals every INCREMENTAL_INTERVAL_SECS and a
+        // full rebuild every FULL_REBUILD_INTERVAL_SECS (see steam_search_index.rs).
+        // Path is overridable via the STEAM_SEARCH_INDEX_PATH env var.
         debug!("Starting steam search index");
         let steam_search_index_path: std::path::PathBuf =
             std::env::var_os("STEAM_SEARCH_INDEX_PATH").map_or_else(

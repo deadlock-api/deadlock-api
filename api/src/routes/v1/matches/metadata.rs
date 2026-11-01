@@ -79,7 +79,8 @@ impl BatchQueryMulti for DemoPlayerQuery {
 
 pub(crate) type DemoPlayerBatcher = ClickhouseBatcherMulti<DemoPlayerQuery>;
 
-/// Wrapper around `CMsgMatchMetaDataContents` that adds hero build IDs from demo analysis.
+/// Wrapper around `CMsgMatchMetaDataContents` that adds hero build IDs, pre-game hero IDs and
+/// banned hero IDs from demo analysis.
 #[derive(serde::Serialize)]
 struct MatchMetadataResponse {
     #[serde(flatten)]
@@ -364,11 +365,15 @@ pub(super) async fn metadata_raw(
         "
 This endpoint returns the match metadata for the given `match_id` parsed into JSON.
 
-Each player object is enriched with a `hero_build_id` field (if available) from demo analysis.
+The response adds three top-level fields from demo analysis (empty when not available):
+
+`hero_build_ids` maps `account_id` to the player's `hero_build_id`.
 
 > **Note:** The `hero_build_id` represents the first build the player had selected when the game started. It does not reflect any build changes made during the match.
 
 `pregame_hero_ids` maps `account_id` to the hero the player had locked before the pre-game swap window (if available from demo analysis). A player swapped heroes when it differs from their `hero_id`.
+
+`banned_hero_ids` lists the hero IDs that were banned in the match.
 
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
 

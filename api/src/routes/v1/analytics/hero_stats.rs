@@ -397,9 +397,9 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     }
     let split = DaySplit::new(query.min_unix_timestamp, query.max_unix_timestamp)?;
 
-    // Pick the rollup: the hourly 65-day `hero_stats_agg` for windows that start
+    // Pick the rollup: the hourly 65-day `hero_stats_agg_v2` for windows that start
     // comfortably inside its horizon (freshest data), else the 6-hourly full-history
-    // `hero_stats_agg_all` (covers all-time / old windows the hot view can't).
+    // `hero_stats_agg_all_v2` (covers all-time / old windows the hot view can't).
     let oldest_servable = rollup_oldest_servable(MV_HORIZON_DAYS)?;
     let (mv_table, mv_log_comment) = if query
         .min_unix_timestamp
@@ -745,8 +745,6 @@ fn build_query(query: &HeroStatsQuery) -> String {
     )
 }
 
-// Concurrent misses of one query share a single run. by_key holds a hashed bucket lock (hits
-// included) for the whole query; this endpoint runs few queries at once, so collisions are rare.
 cached_ch_query! {
     fn run_query(3600) -> Vec<AnalyticsHeroStats>;
 }

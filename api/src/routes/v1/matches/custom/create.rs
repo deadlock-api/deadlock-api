@@ -16,7 +16,7 @@ use steam_proxy::{SteamProxyOptions, SteamProxyReply};
 use tokio::time::sleep;
 use tracing::{debug, error};
 use tryhard::RetryPolicy;
-use utoipa::{IntoParams, ToSchema};
+use utoipa::ToSchema;
 use valveprotos::deadlock::c_msg_client_to_gc_party_action::EAction;
 use valveprotos::deadlock::{
     CMsgClientToGcPartyAction, CMsgClientToGcPartyActionResponse, CMsgClientToGcPartyCreate,
@@ -34,41 +34,33 @@ use crate::services::rate_limiter::describe;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 
-#[derive(Clone, Deserialize, IntoParams, ToSchema)]
+#[derive(Clone, Deserialize, ToSchema)]
 pub(super) struct CreateCustomRequest {
     /// If a callback url is provided, we will send a POST request to this url when the match starts.
     #[serde(default)]
-    #[param(default)]
     callback_url: Option<String>,
     /// If auto-ready is disabled, the bot will not automatically ready up.
     /// You need to call the `ready` endpoint to ready up.
     #[serde(default)]
-    #[param(default)]
     disable_auto_ready: Option<bool>,
     #[serde(default)]
-    #[param(default)]
     server_region: Option<ServerRegion>,
     #[serde(default = "GameMode::default_option")]
-    #[param(default = "normal")]
+    #[schema(default = "normal")]
     game_mode: Option<GameMode>,
     #[serde(default)]
-    #[param(default, minimum = 1, maximum = 12)]
+    #[schema(minimum = 1, maximum = 12)]
     min_roster_size: Option<u32>,
     #[serde(default)]
-    #[param(default)]
     randomize_lanes: Option<bool>,
     #[serde(default)]
-    #[param(default)]
     is_publicly_visible: Option<bool>,
     #[serde(default)]
-    #[param(default)]
     cheats_enabled: Option<bool>,
     #[serde(default)]
-    #[param(default)]
     duplicate_heroes_enabled: Option<bool>,
     /// Minute of the match at which the Broker's corrupted item shop first spawns.
     #[serde(default)]
-    #[param(default)]
     corrupted_item_shop_spawn_minutes: Option<u32>,
 }
 
@@ -191,7 +183,7 @@ async fn switch_to_spectator_slot(
     path = "/create",
     request_body = CreateCustomRequest,
     responses(
-        (status = 200, description = "Successfully fetched custom match id.", body = CreateCustomResponse),
+        (status = 200, description = "Successfully created the custom match.", body = CreateCustomResponse),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Creating custom match failed")

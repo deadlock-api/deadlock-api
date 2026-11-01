@@ -71,7 +71,8 @@ flags! {
     REQUEST_LOGGING: Feature "request_logging" = true,
         "Logs every request to the `ClickHouse` `request_logs` table.";
     COHORT_AGG_REFRESH: Job "cohort_agg_refresh" = true,
-        "Refreshes the item, cohort, enemy and perf-curve rollups every 30 minutes.";
+        "Refreshes all day-partitioned analytics rollups (item stats, cohort, enemy, perf-curve, \
+         item-flow, game-stats and hero-pair) every 30 minutes.";
     PATREON_VERIFICATION: Job "patreon_verification" = true,
         "Refreshes Patreon tokens and memberships hourly and retries failed verifications.";
     STEAM_SEARCH_INDEX_REFRESH: Job "steam_search_index_refresh" = true,

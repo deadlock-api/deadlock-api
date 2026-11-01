@@ -10,7 +10,7 @@ use crate::context::AppState;
 
 #[derive(OpenApi)]
 #[openapi(tags((
-    name = "Assets",
+    name = "Assets Bucket",
     description = "File-tree indexes of static assets (images, icons, sounds, fonts, models) \
                    hosted on the CDN, mapping each asset's name to its public URL."
 )))]

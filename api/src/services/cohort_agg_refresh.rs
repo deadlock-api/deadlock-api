@@ -1,3 +1,10 @@
+//! Refreshes every day-partitioned analytics rollup every 30 minutes, not just the cohort ones
+//! the name comes from: `item_stats_agg_v2`, the cohort rollups by buy time and net worth, the
+//! enemy-hero rollup, `player_performance_curve_agg_v2`, the three item-flow rollups (nodes,
+//! edges, totals), `game_stats_agg` and `hero_pair_stats_agg`. Each run rebuilds only the days
+//! whose source matches grew past [`rebuild_threshold`] since their last build, plus the days a
+//! [`History`] rollup has due by age.
+
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 
@@ -57,8 +64,9 @@ fn rebuild_threshold(day_matches: u64) -> u64 {
 
 /// Persistent record of the source state each agg day partition was last built
 /// from: `max(created_at)` and the match count at build time. A day is rebuilt only
-/// once its source match count has grown by more than `MIN_NEW_MATCHES`, so we do
-/// targeted incremental work and never a blind full-horizon rebuild.
+/// once its source match count has grown by [`rebuild_threshold`] (~2% of the day, at least
+/// [`MIN_NEW_MATCHES`]), so we do targeted incremental work and never a blind full-horizon
+/// rebuild.
 pub(crate) const STATE_TABLE: &str = "default.cohort_agg_refresh_state";
 
 struct CohortSpec {
@@ -110,8 +118,7 @@ enum Source {
 }
 
 // The _v2 tables carry uniqCombined(14) player states (migration 40); the plain uniq states
-// of the v1 tables were ~90% of item_stats_cohort_mv's CPU. Pointing the job here builds them
-// from scratch while the API keeps reading v1 until they cover the horizon.
+// of the former v1 tables were ~90% of item_stats_cohort_mv's CPU.
 fn cohort_specs() -> [CohortSpec; 10] {
     let item_flow = |kind: item_flow_agg::Kind| CohortSpec {
         table: kind.table(),

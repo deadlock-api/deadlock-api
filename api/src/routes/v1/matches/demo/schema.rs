@@ -20,7 +20,7 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::compression::ZSTD_MAGIC;
 
 /// Decompressed bytes to pull per growth step while hunting for the send-tables.
-/// One pull is normally enough — the send-tables sit within the first bzip2 block.
+/// One pull is normally enough — the send-tables sit near the start of the demo.
 const STEP: u64 = 1 << 20; // 1 MiB
 
 #[derive(Debug, Clone, Row, Deserialize)]
@@ -152,7 +152,7 @@ pub(super) async fn schema(
     }))
 }
 
-/// Stream just enough of the bzip2-compressed demo to decode its send-tables, then stop.
+/// Stream just enough of the (bzip2- or zstd-compressed) demo to decode its send-tables, then stop.
 ///
 /// Nothing is cached here; the schema endpoint's 24h `Cache-Control` covers repeat requests.
 pub(super) async fn fetch_demo_schema(url: &str) -> Result<Vec<TableSchema>, APIError> {

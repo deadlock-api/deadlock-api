@@ -64,7 +64,7 @@ pub(super) struct DemoQueryJobResponse {
     description = describe(
         "
 Submit a SQL query against a match's demo file. The work (download + decompress + parse +
-query) takes ~55s, so this is asynchronous: the endpoint returns a `job_id` you poll via
+query) takes ~20s on average and up to about a minute, so this is asynchronous: the endpoint returns a `job_id` you poll via
 `/demo/query/{job_id}`. Once done, the status response carries a public URL to the result
 artifact (Parquet or NDJSON).
 

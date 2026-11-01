@@ -34,11 +34,7 @@ pub(super) enum VariableResolveError {
     #[error("No data found for {0}")]
     NoData(&'static str),
     #[error(transparent)]
-    SQLx(#[from] sqlx::Error),
-    #[error(transparent)]
     Clickhouse(#[from] clickhouse::error::Error),
-    #[error(transparent)]
-    Request(#[from] reqwest::Error),
     #[error(transparent)]
     Api(#[from] APIError),
     #[error(transparent)]
@@ -492,7 +488,7 @@ impl Variable {
 
     #[expect(
         clippy::too_many_lines,
-        reason = "one linear query builder reads clearer than split helpers"
+        reason = "one match arm per variable, each resolving it in a few lines"
     )]
     pub(super) async fn resolve(
         &self,

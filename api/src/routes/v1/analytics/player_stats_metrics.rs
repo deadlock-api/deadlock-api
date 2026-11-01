@@ -458,8 +458,6 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     )
 }
 
-// Concurrent misses of one query share a single run. by_key holds a hashed bucket lock (hits
-// included) for the whole query; this endpoint runs few queries at once, so collisions are rare.
 cached_ch_query! {
     fn run_query(3600) -> AnalyticsPlayerStatsMetricsRow = fetch_one;
 }
@@ -486,7 +484,7 @@ async fn get_player_stats_metrics(
     path = "/player-stats/metrics",
     params(PlayerStatsMetricsQuery),
     responses(
-        (status = OK, description = "Hero Stats", body = AnalyticsPlayerStatsMetrics),
+        (status = OK, description = "Player Stats Metrics", body = AnalyticsPlayerStatsMetrics),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch player stats metrics")
     ),

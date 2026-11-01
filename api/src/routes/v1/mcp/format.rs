@@ -15,7 +15,12 @@ use super::catalog::QueryOutput;
 use super::server::toon;
 
 const MAX_CHARS: usize = 50_000;
-const MAX_ROWS_WARNING: &str = "Results limited to 1,024 rows. Query returned more data.";
+
+/// The query cut its result off, at the row cap or at the result memory cap of the catalog, so
+/// the warning names the rows actually kept rather than the row cap.
+fn truncated_warning(rows: usize) -> String {
+    format!("Results limited to {rows} rows. Query returned more data.")
+}
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -46,6 +51,7 @@ pub(super) fn format_query_output(output: &QueryOutput) -> Result<QueryResult, A
         .map(|f| sql_type_name(f.data_type()))
         .collect();
     let rows = rows_as_objects(&output.batches)?;
+    let warning = output.truncated.then(|| truncated_warning(rows.len()));
     let mut result = QueryResult {
         success: true,
         columns,
@@ -53,7 +59,7 @@ pub(super) fn format_query_output(output: &QueryOutput) -> Result<QueryResult, A
         row_count: rows.len(),
         rows,
         truncated: output.truncated.then_some(true),
-        warning: output.truncated.then(|| MAX_ROWS_WARNING.to_owned()),
+        warning,
     };
     let mut chars = toon(&result).len();
     while !result.rows.is_empty() && chars > MAX_CHARS {
@@ -197,7 +203,7 @@ pub(super) fn sql_type_name(data_type: &DataType) -> String {
 mod tests {
     use duckdb::Connection;
 
-    use super::super::catalog::run_query;
+    use super::super::catalog::{MAX_ROWS, run_query};
     use super::*;
 
     fn run(sql: &str) -> QueryResult {
@@ -294,7 +300,7 @@ mod tests {
         assert_eq!(json["rows"].as_array().unwrap().len(), 1024);
         assert_eq!(json["rows"][0], serde_json::json!({ "i": 1 }));
         assert_eq!(json["truncated"], true);
-        assert_eq!(json["warning"], MAX_ROWS_WARNING);
+        assert_eq!(json["warning"], truncated_warning(MAX_ROWS));
     }
 
     #[test]

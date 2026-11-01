@@ -94,7 +94,7 @@ pub(crate) enum SteamAccountNameError {
     RateLimitExceeded(String),
 }
 
-/// Error type for Steam account name fetching
+/// Error type for verifying a Steam `OpenID` login proves ownership of a Steam account
 #[derive(Debug, Error)]
 pub(crate) enum SteamAccountVerifyError {
     #[error(transparent)]

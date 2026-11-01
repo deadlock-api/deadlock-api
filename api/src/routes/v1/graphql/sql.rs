@@ -5,6 +5,7 @@ use core::fmt::Write as _;
 
 use crate::routes::v1::graphql::filters::MatchHistorySqlFilters;
 use crate::routes::v1::graphql::projection::{Column, MATCH_HISTORY_COLUMNS, Projection};
+use crate::routes::v1::graphql::schema::OrderDirection;
 use crate::routes::v1::players::match_history::{COALESCED_COLUMNS, ETERNUS_MAX_BADGE};
 use crate::utils::sql::{id_list, where_clause};
 
@@ -17,22 +18,6 @@ pub(super) enum OrderKey {
     /// A plain column of both `match_player` and `player_match_stats`. Only the
     /// player-row query orders by it; the other shapes fall back to `match_id`.
     PlayerColumn(&'static str),
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub(super) enum OrderDir {
-    #[default]
-    Asc,
-    Desc,
-}
-
-impl OrderDir {
-    pub(super) const fn as_sql(self) -> &'static str {
-        match self {
-            Self::Asc => "ASC",
-            Self::Desc => "DESC",
-        }
-    }
 }
 
 /// `filters` plus one dropping the rows of `excluded_accounts`.
@@ -124,7 +109,7 @@ pub(super) struct BuildArgs<'a> {
     pub(super) projection: &'a Projection,
     pub(super) filters: &'a [String],
     pub(super) order_by: OrderKey,
-    pub(super) order_dir: OrderDir,
+    pub(super) order_dir: OrderDirection,
     pub(super) limit: u32,
     pub(super) offset: u32,
     /// Select rows on `player_match_stats`. Only valid for filters from
@@ -326,7 +311,7 @@ pub(super) struct MatchHistoryBuildArgs<'a> {
     pub(super) columns: &'a [Column],
     pub(super) filters: &'a MatchHistorySqlFilters,
     pub(super) order_by: OrderKey,
-    pub(super) order_dir: OrderDir,
+    pub(super) order_dir: OrderDirection,
     pub(super) limit: u32,
     pub(super) offset: u32,
     /// Protected accounts, whose rows the query drops (see [`BuildArgs::excluded_accounts`]).
@@ -478,7 +463,7 @@ mod tests {
             projection: &projection,
             filters: &[],
             order_by: OrderKey::MatchId,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 10,
             offset: 0,
             via_player_match_stats: false,
@@ -507,7 +492,7 @@ mod tests {
             projection: &projection,
             filters: &["account_id = 123".into()],
             order_by: OrderKey::AccountId,
-            order_dir: OrderDir::Asc,
+            order_dir: OrderDirection::Asc,
             limit: 5,
             offset: 0,
             via_player_match_stats: false,
@@ -544,7 +529,7 @@ mod tests {
                 "match_mode = 'Ranked'".into(),
             ],
             order_by: OrderKey::StartTime,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 50,
             offset: 0,
             via_player_match_stats: false,
@@ -572,7 +557,7 @@ mod tests {
             projection: &projection,
             filters: &[],
             order_by: OrderKey::MatchId,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 1,
             offset: 0,
             via_player_match_stats: false,
@@ -601,7 +586,7 @@ mod tests {
                 projection: &projection,
                 filters: &[],
                 order_by: OrderKey::MatchId,
-                order_dir: OrderDir::Desc,
+                order_dir: OrderDirection::Desc,
                 limit: 1,
                 offset: 0,
                 via_player_match_stats: false,
@@ -632,7 +617,7 @@ mod tests {
             projection: &projection,
             filters: &[],
             order_by: OrderKey::MatchId,
-            order_dir: OrderDir::Asc,
+            order_dir: OrderDirection::Asc,
             limit: 1,
             offset: 0,
             via_player_match_stats: false,
@@ -652,7 +637,7 @@ mod tests {
             projection: &match_id_only(),
             filters: &["match_mode = 'Ranked'".into()],
             order_by: OrderKey::MatchId,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 10,
             offset: 0,
             via_player_match_stats: false,
@@ -676,7 +661,7 @@ mod tests {
             projection: &projection,
             filters: &[],
             order_by: OrderKey::AccountId,
-            order_dir: OrderDir::Asc,
+            order_dir: OrderDirection::Asc,
             limit: 5,
             offset: 0,
             via_player_match_stats: false,
@@ -706,7 +691,7 @@ mod tests {
             columns: &columns,
             filters: &filters,
             order_by: OrderKey::MatchId,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 10,
             offset: 0,
             excluded_accounts: &[],
@@ -730,7 +715,7 @@ mod tests {
             columns: &columns,
             filters: &MatchHistorySqlFilters::default(),
             order_by: OrderKey::MatchId,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 10,
             offset: 0,
             excluded_accounts: &[],
@@ -752,7 +737,7 @@ mod tests {
             columns: &columns,
             filters: &filters,
             order_by: OrderKey::MatchId,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 10,
             offset: 0,
             excluded_accounts: &[],
@@ -771,7 +756,7 @@ mod tests {
             columns: &columns,
             filters: &MatchHistorySqlFilters::default(),
             order_by: OrderKey::StartTime,
-            order_dir: OrderDir::Asc,
+            order_dir: OrderDirection::Asc,
             limit: 10,
             offset: 5,
             excluded_accounts: &[],
@@ -796,7 +781,7 @@ mod tests {
             projection: &projection,
             filters: &["account_id = 123".into()],
             order_by: OrderKey::AccountId,
-            order_dir: OrderDir::Asc,
+            order_dir: OrderDirection::Asc,
             limit: 5,
             offset: 0,
             via_player_match_stats: false,
@@ -820,7 +805,7 @@ mod tests {
             projection: &projection,
             filters: &["account_id IN (1,2)".into(), "hero_id = 7".into()],
             order_by: OrderKey::MatchId,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 10,
             offset: 20,
             via_player_match_stats: true,
@@ -842,7 +827,7 @@ mod tests {
             projection: &match_id_only(),
             filters: &["account_id = 1".into()],
             order_by: OrderKey::StartTime,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 5,
             offset: 0,
             via_player_match_stats: true,
@@ -864,7 +849,7 @@ mod tests {
             projection: &projection,
             filters: &filters,
             order_by,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 5,
             offset: 0,
             via_player_match_stats: false,
@@ -890,7 +875,7 @@ mod tests {
             projection: &match_id_only(),
             filters: &["hero_id = 1".into()],
             order_by: OrderKey::MatchId,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 5,
             offset: 0,
             via_player_match_stats: false,
@@ -909,7 +894,7 @@ mod tests {
             projection: &match_id_only(),
             filters: &["account_id = 7".into()],
             order_by: OrderKey::MatchId,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 5,
             offset: 0,
             via_player_match_stats: true,
@@ -926,7 +911,7 @@ mod tests {
             columns: &columns,
             filters: &MatchHistorySqlFilters::default(),
             order_by: OrderKey::MatchId,
-            order_dir: OrderDir::Desc,
+            order_dir: OrderDirection::Desc,
             limit: 10,
             offset: 0,
             excluded_accounts: &[7, 9],
@@ -993,8 +978,8 @@ mod proptests {
         ]
     }
 
-    fn arb_order_dir() -> impl Strategy<Value = OrderDir> {
-        prop_oneof![Just(OrderDir::Asc), Just(OrderDir::Desc)]
+    fn arb_order_dir() -> impl Strategy<Value = OrderDirection> {
+        prop_oneof![Just(OrderDirection::Asc), Just(OrderDirection::Desc)]
     }
 
     fn arb_filters() -> impl Strategy<Value = Vec<String>> {

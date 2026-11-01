@@ -16,7 +16,8 @@ use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 pub struct StatusServices {
     /// Whether Clickhouse is reachable.
     clickhouse: bool,
-    /// Whether Postgres is reachable.
+    /// Whether the Postgres connection pool is open. No query is run, so this does not prove
+    /// the server is reachable.
     postgres: bool,
     /// Whether Redis is reachable.
     redis: bool,
