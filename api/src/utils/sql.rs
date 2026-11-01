@@ -278,6 +278,26 @@ pub(crate) fn having_clause(filters: &[String]) -> String {
     }
 }
 
+/// Formats `filters` as ` WHERE ... AND ... ` (spaces around it), or an empty string when there
+/// are none.
+pub(crate) fn where_clause(filters: &[String]) -> String {
+    if filters.is_empty() {
+        String::new()
+    } else {
+        format!(" WHERE {} ", filters.join(" AND "))
+    }
+}
+
+/// Joins `predicates` with ` AND `, or `1` (always true) when there are none, for spots that
+/// need a predicate either way, like `countIf(...)`.
+pub(crate) fn and_all<S: AsRef<str>>(predicates: &[S]) -> String {
+    if predicates.is_empty() {
+        "1".to_owned()
+    } else {
+        itertools::Itertools::join(&mut predicates.iter().map(AsRef::as_ref), " AND ")
+    }
+}
+
 /// Formats a filter vec as ` AND ...` or empty string.
 pub(crate) fn join_filters(filters: &[String]) -> String {
     if filters.is_empty() {
@@ -295,6 +315,16 @@ mod tests {
     fn test_empty_filters() {
         let filters = MatchInfoFilters::default();
         assert_eq!(filters.build(), "");
+    }
+
+    #[test]
+    fn test_clause_helpers() {
+        let none: [String; 0] = [];
+        let two = ["a = 1".to_owned(), "b = 2".to_owned()];
+        assert_eq!(where_clause(&none), "");
+        assert_eq!(where_clause(&two), " WHERE a = 1 AND b = 2 ");
+        assert_eq!(and_all(&none), "1");
+        assert_eq!(and_all(&["x", "y"]), "x AND y");
     }
 
     #[test]

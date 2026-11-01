@@ -1321,7 +1321,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
         } else {
             (
                 ",\n    items.upgrade_info AS upgrade_info".to_owned(),
-                format!(" AND {}", variant_filters.join(" AND ")),
+                join_filters(&variant_filters),
             )
         };
         (

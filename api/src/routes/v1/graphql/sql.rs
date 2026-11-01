@@ -6,7 +6,7 @@ use core::fmt::Write as _;
 use crate::routes::v1::graphql::filters::MatchHistorySqlFilters;
 use crate::routes::v1::graphql::projection::{Column, MATCH_HISTORY_COLUMNS, Projection};
 use crate::routes::v1::players::match_history::{COALESCED_COLUMNS, ETERNUS_MAX_BADGE};
-use crate::utils::sql::id_list;
+use crate::utils::sql::{id_list, where_clause};
 
 #[derive(Clone, Copy, Debug)]
 pub(super) enum OrderKey {
@@ -48,14 +48,6 @@ fn with_excluded_accounts(filters: &[String], excluded_accounts: &[u32]) -> Vec<
 fn excluded_accounts_filter(column: &str, excluded_accounts: &[u32]) -> Option<String> {
     (!excluded_accounts.is_empty())
         .then(|| format!("identity({column}) NOT IN ({})", id_list(excluded_accounts)))
-}
-
-fn where_clause(filters: &[String]) -> String {
-    if filters.is_empty() {
-        String::new()
-    } else {
-        format!(" WHERE {} ", filters.join(" AND "))
-    }
 }
 
 /// Emit a `Nested` parent column projection limited to the requested subfields.

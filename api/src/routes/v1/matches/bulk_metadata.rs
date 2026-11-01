@@ -1,5 +1,7 @@
 use crate::services::ch_admission;
-use crate::utils::sql::{DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, id_list};
+use crate::utils::sql::{
+    DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, id_list, where_clause,
+};
 use core::time::Duration;
 use std::collections::HashSet;
 
@@ -745,11 +747,7 @@ fn build_query(
             .chain(player_filter_in.map(|f| format!("match_player.{f}")))
             .chain(players_filter)
             .collect();
-        let outer_where = if qualified.is_empty() {
-            String::new()
-        } else {
-            format!(" WHERE {} ", qualified.join(" AND "))
-        };
+        let outer_where = where_clause(&qualified);
         format!("{select} FROM match_player{outer_where}{tail}")
     } else {
         // CTE path: materialize qualifying match_ids first, then aggregate.

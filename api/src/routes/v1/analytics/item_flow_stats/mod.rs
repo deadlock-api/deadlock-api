@@ -18,7 +18,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
-use crate::utils::sql::{cached_ch_query, impl_match_info};
+use crate::utils::sql::{and_all, cached_ch_query, impl_match_info};
 
 pub(crate) mod agg;
 
@@ -450,11 +450,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
                 .filter(|(i, _)| *i != skip)
                 .map(|(_, name)| name.as_str())
                 .collect_vec();
-            if rest.is_empty() {
-                "1".to_owned()
-            } else {
-                rest.join(" AND ")
-            }
+            and_all(&rest)
         })
         .collect_vec();
     let leave_one_out_select = if others.is_empty() {
@@ -469,11 +465,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
             others.iter().map(|p| format!("countIf({p})")).join(", "),
         )
     };
-    let locked_predicate = if locked_names.is_empty() {
-        "1".to_owned()
-    } else {
-        locked_names.join(" AND ")
-    };
+    let locked_predicate = and_all(&locked_names);
     let base_player_filters = join_filters(&base_filter_vec);
     let player_filters = format!("{base_player_filters}{}", join_filters(&locked_clauses));
     let locked_ids = query
