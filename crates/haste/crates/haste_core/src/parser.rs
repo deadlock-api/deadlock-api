@@ -176,19 +176,29 @@ pub struct Context {
     /// When set, `SvcPacketEntities` messages are not decoded. Used to fast-forward state without
     /// paying for entity decode in a warm-up region whose rows are discarded anyway.
     skip_entity_packets: bool,
+    /// set from [`Visitor::decode_entities`] for every demo packet; like `skip_entity_packets`,
+    /// but owned by the visitor (warm-ups toggle the other one).
+    visitor_skips_entities: bool,
 }
 
 /// reads one `(command, body)` message of a `CDemoPacket`'s data into `buf`.
+/// the body of a `skip` message is skipped instead of read (`None`).
 fn read_packet_message<'b, 'd: 'b>(
     br: &mut BitReader<'d>,
     buf: &'b mut [u8],
-) -> Result<(u32, &'b [u8]), ParseError> {
+    skip: Option<u32>,
+) -> Result<(u32, Option<&'b [u8]>), ParseError> {
     let command = br.read_ubitvar()?;
     let size = br.read_uvarint32()? as usize;
 
+    if skip == Some(command) {
+        br.skip_bits(size.saturating_mul(8))?;
+        return Ok((command, None));
+    }
+
     // a byte aligned body is borrowed from the packet; only unaligned ones are copied (shifted).
     if let Some(body) = br.read_bytes_aligned(size) {
-        return Ok((command, body));
+        return Ok((command, Some(body)));
     }
 
     let buf_len = buf.len();
@@ -196,7 +206,7 @@ fn read_packet_message<'b, 'd: 'b>(
         return Err(ParseError::PacketMessageTooLarge { size, buf_len });
     };
     br.read_bytes(buf)?;
-    Ok((command, buf))
+    Ok((command, Some(buf)))
 }
 
 /// cursor over the entity deltas of a `CSVCMsg_PacketEntities` message.
@@ -243,6 +253,7 @@ impl Context {
             field_decode_ctx: FieldDecodeContext::default(),
             string_table_buf: Vec::new(),
             skip_entity_packets: false,
+            visitor_skips_entities: false,
         }
     }
 
@@ -343,7 +354,10 @@ impl Context {
                 self.handle_svc_update_string_table(&msg)?;
             }
 
-            c if c == SvcMessages::SvcPacketEntities as u32 && !self.skip_entity_packets => {
+            c if c == SvcMessages::SvcPacketEntities as u32
+                && !self.skip_entity_packets
+                && !self.visitor_skips_entities =>
+            {
                 return Ok(Some(decode_packet_entities(buf)?));
             }
 
@@ -572,6 +586,43 @@ impl Context {
 /// flattened serializers from `DemSendTables` and entity classes from `DemClassInfo`, reference
 /// counted so that parsers of the same demo can share them instead of parsing them again (see
 /// [`Parser::shared_state`] and [`Parser::set_shared_state`]).
+/// positions and string tables of a demo's full packets, built once by
+/// [`Parser::index_full_packets`] so that [`Parser::run_full_packet_indexed`] can seek straight to
+/// a segment instead of reading (and decompressing) everything before it.
+#[derive(Debug, Clone, Default)]
+pub struct FullPacketIndex {
+    /// stream position of each full packet's cmd header.
+    offsets: Vec<u64>,
+    /// tick of each full packet.
+    ticks: Vec<i32>,
+    /// tick of the cmd right before each full packet (the parser's tick when it reaches it).
+    prev_ticks: Vec<i32>,
+    /// the string tables of each full packet, decoded once.
+    string_tables: Vec<Option<CDemoStringTables>>,
+    /// whether sign-on commands (send tables, class info, sign-on packets) only appear before the
+    /// first full packet; seeking past the region between full packets relies on it.
+    signon_before_first: bool,
+}
+
+impl FullPacketIndex {
+    /// number of full packets.
+    #[must_use]
+    pub const fn len(&self) -> usize {
+        self.offsets.len()
+    }
+
+    #[must_use]
+    pub const fn is_empty(&self) -> bool {
+        self.offsets.is_empty()
+    }
+
+    /// tick of each full packet (what [`Parser::scan_full_packet_ticks`] returns).
+    #[must_use]
+    pub fn ticks(&self) -> &[i32] {
+        &self.ticks
+    }
+}
+
 #[derive(Clone)]
 pub struct SharedState {
     serializers: Arc<FlattenedSerializerContainer>,
@@ -589,6 +640,17 @@ pub trait Visitor {
     /// The default tracks everything.
     #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn should_track_entity(&self, serializer_name_hash: u64) -> bool {
+        true
+    }
+
+    /// Whether `SvcPacketEntities` messages should be decoded at all. Returning `false` skips them
+    /// entirely (no entity is created, updated or reported, nothing is decoded just to skip it,
+    /// and they are not passed to `on_packet`), which makes parsing much cheaper for consumers
+    /// that only need other packets / events. String tables, serializers and every other message
+    /// are still handled.
+    ///
+    /// It is asked once per demo packet. The default decodes entities.
+    fn decode_entities(&self) -> bool {
         true
     }
 
@@ -652,6 +714,17 @@ pub trait AsyncVisitor {
     /// The default tracks everything.
     #[expect(unused_variables, reason = "the default ignores its arguments")]
     fn should_track_entity(&self, serializer_name_hash: u64) -> bool {
+        true
+    }
+
+    /// Whether `SvcPacketEntities` messages should be decoded at all. Returning `false` skips them
+    /// entirely (no entity is created, updated or reported, nothing is decoded just to skip it,
+    /// and they are not passed to `on_packet`), which makes parsing much cheaper for consumers
+    /// that only need other packets / events. String tables, serializers and every other message
+    /// are still handled.
+    ///
+    /// It is asked once per demo packet. The default decodes entities.
+    fn decode_entities(&self) -> bool {
         true
     }
 
@@ -847,9 +920,17 @@ impl<D: DemoStream, V: Visitor> Parser<D, V> {
         buf: &mut [u8],
         data: &[u8],
     ) -> Result<(), ParserError<V::Error>> {
+        ctx.visitor_skips_entities = !visitor.decode_entities();
+        // entity packets the visitor doesn't want are skipped without being copied.
+        let skip = ctx
+            .visitor_skips_entities
+            .then_some(SvcMessages::SvcPacketEntities as u32);
         let mut br = BitReader::new(data);
         while br.num_bits_left() > 8 {
-            let (command, buf) = read_packet_message(&mut br, buf)?;
+            let (command, buf) = read_packet_message(&mut br, buf, skip)?;
+            let Some(buf) = buf else {
+                continue;
+            };
             visitor
                 .on_packet(ctx, command, buf)
                 .map_err(ParserError::Visitor)?;
@@ -1105,6 +1186,133 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
     /// re-creates all live entities and brings its own table changes) before collecting forward. Because every command belongs to exactly one
     /// full packet's segment and boundaries fall on the full-packet command itself, concatenating
     /// the per-ordinal outputs in order reproduces a single end-to-end parse exactly.
+    /// like [`Self::scan_full_packet_ticks`], but also records where each full packet starts and
+    /// decodes its string tables, for [`Self::run_full_packet_indexed`]. The stream is left rewound
+    /// to its start position.
+    pub fn index_full_packets(&mut self) -> Result<FullPacketIndex, ParseError> {
+        self.reset()?;
+        let mut index = FullPacketIndex {
+            signon_before_first: true,
+            ..FullPacketIndex::default()
+        };
+        let mut prev_tick = self.ctx.tick;
+        loop {
+            match self.demo_stream.read_cmd_header() {
+                Ok(cmd_header) => {
+                    match cmd_header.cmd {
+                        EDemoCommands::DemFullPacket => {
+                            self.demo_stream.unread_cmd_header(&cmd_header)?;
+                            index.offsets.push(self.demo_stream.stream_position()?);
+                            index.ticks.push(cmd_header.tick);
+                            index.prev_ticks.push(prev_tick);
+                            let cmd_header = self.demo_stream.read_cmd_header()?;
+                            let string_tables = if D::CMD_FORMAT == CmdFormat::Broadcast {
+                                // broadcast full packets carry no string tables.
+                                self.demo_stream.skip_cmd(&cmd_header)?;
+                                None
+                            } else {
+                                let cmd_body = self.demo_stream.read_cmd(&cmd_header)?;
+                                decode_full_packet_string_tables(cmd_body)?
+                            };
+                            index.string_tables.push(string_tables);
+                        }
+                        EDemoCommands::DemSendTables
+                        | EDemoCommands::DemClassInfo
+                        | EDemoCommands::DemSignonPacket => {
+                            if !index.offsets.is_empty() {
+                                index.signon_before_first = false;
+                            }
+                            self.demo_stream.skip_cmd(&cmd_header)?;
+                        }
+                        _ => self.demo_stream.skip_cmd(&cmd_header)?,
+                    }
+                    prev_tick = cmd_header.tick;
+                }
+                Err(_) if self.demo_stream.is_at_eof().unwrap_or_default() => break,
+                Err(err) => return Err(err.into()),
+            }
+        }
+        self.reset()?;
+        Ok(index)
+    }
+
+    /// same result as [`Self::run_full_packet`], but instead of reading through every command
+    /// before the segment (and decompressing every earlier full packet for its string tables), it
+    /// handles the sign-on region, applies the earlier string tables from `index` and seeks to the
+    /// segment's full packet. Falls back to [`Self::run_full_packet`] when the index can't be used
+    /// (segment 0, sign-on commands after the first full packet, or an ordinal out of range).
+    pub fn run_full_packet_indexed(
+        &mut self,
+        index: &FullPacketIndex,
+        ordinal: usize,
+    ) -> Result<(), ParserError<V::Error>> {
+        let (Some(&offset), Some(&prev_tick), Some(earlier)) = (
+            index.offsets.get(ordinal),
+            index.prev_ticks.get(ordinal),
+            index.string_tables.get(..ordinal),
+        ) else {
+            return self.run_full_packet(ordinal);
+        };
+        if ordinal == 0 || !index.signon_before_first {
+            return self.run_full_packet(ordinal);
+        }
+
+        self.reset()?;
+        self.visitor.set_collecting(false);
+        self.ctx.skip_entity_packets = true;
+        let result = self.run_indexed_segment(earlier, offset, prev_tick);
+        self.ctx.skip_entity_packets = false;
+        result
+    }
+
+    fn run_indexed_segment(
+        &mut self,
+        earlier_string_tables: &[Option<CDemoStringTables>],
+        offset: u64,
+        prev_tick: i32,
+    ) -> Result<(), ParserError<V::Error>> {
+        // the sign-on region before the first full packet, handled exactly like the warm-up of
+        // `run_full_packet`.
+        self.run_seekable(|s: &mut Self, cmd_header: &CmdHeader| {
+            Ok(match cmd_header.cmd {
+                EDemoCommands::DemFullPacket => None,
+                EDemoCommands::DemSendTables if s.ctx.serializers.is_some() => {
+                    Some(ControlFlow::Skip)
+                }
+                EDemoCommands::DemClassInfo if s.ctx.entity_classes.is_some() => {
+                    Some(ControlFlow::Skip)
+                }
+                EDemoCommands::DemSendTables
+                | EDemoCommands::DemClassInfo
+                | EDemoCommands::DemSignonPacket => Some(ControlFlow::Handle),
+                _ => Some(ControlFlow::Skip),
+            })
+        })?;
+
+        // the string table state at our full packet is the sum of all earlier snapshots (a full
+        // packet only restates the tables that changed since the previous one).
+        for string_tables in earlier_string_tables.iter().flatten() {
+            self.ctx.handle_cmd_string_tables(string_tables)?;
+        }
+
+        // our full packet and the deltas up to the next one.
+        self.demo_stream.seek(SeekFrom::Start(offset))?;
+        self.ctx.tick = prev_tick;
+        let mut started = false;
+        self.run_seekable(|s: &mut Self, cmd_header: &CmdHeader| {
+            if cmd_header.cmd == EDemoCommands::DemFullPacket {
+                if started {
+                    // the next full packet begins the following segment.
+                    return Ok(None);
+                }
+                started = true;
+                s.visitor.set_collecting(true);
+                s.ctx.skip_entity_packets = false;
+            }
+            Ok(Some(ControlFlow::Handle))
+        })
+    }
+
     pub fn run_full_packet(&mut self, ordinal: usize) -> Result<(), ParserError<V::Error>> {
         self.reset()?;
 
@@ -1313,9 +1521,17 @@ impl<D: AsyncDemoStream, V: AsyncVisitor> AsyncStreamingParser<D, V> {
         buf: &mut [u8],
         data: &[u8],
     ) -> Result<(), ParserError<V::Error>> {
+        ctx.visitor_skips_entities = !visitor.decode_entities();
+        // entity packets the visitor doesn't want are skipped without being copied.
+        let skip = ctx
+            .visitor_skips_entities
+            .then_some(SvcMessages::SvcPacketEntities as u32);
         let mut br = BitReader::new(data);
         while br.num_bits_left() > 8 {
-            let (command, buf) = read_packet_message(&mut br, buf)?;
+            let (command, buf) = read_packet_message(&mut br, buf, skip)?;
+            let Some(buf) = buf else {
+                continue;
+            };
             visitor
                 .on_packet(ctx, command, buf)
                 .await
