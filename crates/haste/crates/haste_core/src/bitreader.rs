@@ -69,6 +69,12 @@ impl<'a> BitReader<'a> {
 
     /// delegated from [`dungers::bitbuf::BitReader`].
     #[inline]
+    pub fn read_bytes_aligned(&mut self, len: usize) -> Option<&'a [u8]> {
+        self.inner.read_bytes_aligned(len)
+    }
+
+    /// delegated from [`dungers::bitbuf::BitReader`].
+    #[inline]
     pub const fn skip_bits(&mut self, num_bits: usize) -> Result<(), BitError> {
         self.inner.skip(num_bits)
     }

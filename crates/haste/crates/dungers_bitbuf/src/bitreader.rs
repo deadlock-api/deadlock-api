@@ -210,6 +210,19 @@ impl<'a> BitReader<'a> {
         Ok(())
     }
 
+    /// if the reader is at a byte boundary, consumes the next `len` bytes and returns them without
+    /// copying. returns `None` (and consumes nothing) when unaligned or when fewer bytes are left.
+    #[inline]
+    pub fn read_bytes_aligned(&mut self, len: usize) -> Option<&'a [u8]> {
+        if self.cur_bit & 7 != 0 {
+            return None;
+        }
+        let start = self.cur_bit >> 3;
+        let bytes = self.data.get(start..start.checked_add(len)?)?;
+        self.cur_bit = self.cur_bit.checked_add(len.checked_mul(8)?)?;
+        Some(bytes)
+    }
+
     #[inline]
     pub fn read_bytes(&mut self, buf: &mut [u8]) -> Result<(), BitError> {
         self.read_bits(buf, buf.len() << 3)

@@ -179,12 +179,17 @@ pub struct Context {
 }
 
 /// reads one `(command, body)` message of a `CDemoPacket`'s data into `buf`.
-fn read_packet_message<'b>(
-    br: &mut BitReader,
+fn read_packet_message<'b, 'd: 'b>(
+    br: &mut BitReader<'d>,
     buf: &'b mut [u8],
 ) -> Result<(u32, &'b [u8]), ParseError> {
     let command = br.read_ubitvar()?;
     let size = br.read_uvarint32()? as usize;
+
+    // a byte aligned body is borrowed from the packet; only unaligned ones are copied (shifted).
+    if let Some(body) = br.read_bytes_aligned(size) {
+        return Ok((command, body));
+    }
 
     let buf_len = buf.len();
     let Some(buf) = buf.get_mut(..size) else {
