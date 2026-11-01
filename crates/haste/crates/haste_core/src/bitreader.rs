@@ -371,22 +371,24 @@ impl<'a> BitReader<'a> {
 
     #[inline]
     pub fn read_ubitvarfp(&mut self) -> Result<u32, BitError> {
-        #[expect(
-            clippy::same_functions_in_if_condition,
-            reason = "every read_bool consumes the next bit"
-        )]
-        let ret = if self.read_bool()? {
-            self.read_ubit64(2)?
-        } else if self.read_bool()? {
-            self.read_ubit64(4)?
-        } else if self.read_bool()? {
-            self.read_ubit64(10)?
-        } else if self.read_bool()? {
-            self.read_ubit64(17)?
+        // a unary prefix of up to 4 zero bits selects the payload width: `1` -> 2 bits, `01` -> 4,
+        // `001` -> 10, `0001` -> 17, `0000` -> 31. one peek covers prefix and payload (at most 35
+        // bits), so the prefix is decoded with `trailing_zeros` instead of a read per bit.
+        const WIDTHS: [usize; 5] = [2, 4, 10, 17, 31];
+        let window = self.peek_ubit64_zero_extended(35);
+        // `| 0x10` caps the count at 4 (the all-zero prefix has no terminating one).
+        let zeros = (window | 0x10).trailing_zeros();
+        let prefix_len = if zeros >= 4 {
+            4
         } else {
-            self.read_ubit64(31)?
+            zeros.saturating_add(1)
         };
-        ret.try_into().map_err(BitError::TryFromIntError)
+        let width = WIDTHS.get(zeros as usize).copied().unwrap_or(31);
+        let value = window.wrapping_shr(prefix_len) & ((1_u64 << width).wrapping_sub(1));
+        // fails (without consuming anything) if prefix and payload don't fit, which is where the
+        // bit by bit read would have run out too.
+        self.skip_bits((prefix_len as usize).saturating_add(width))?;
+        value.try_into().map_err(BitError::TryFromIntError)
     }
 }
 
@@ -398,6 +400,57 @@ impl<'a> BitReader<'a> {
 )]
 mod test {
     use super::*;
+
+    /// the bit by bit reference for `read_ubitvarfp`.
+    #[expect(
+        clippy::same_functions_in_if_condition,
+        reason = "every read_bool consumes the next bit"
+    )]
+    fn read_ubitvarfp_reference(br: &mut BitReader) -> Result<u32, BitError> {
+        let ret = if br.read_bool()? {
+            br.read_ubit64(2)?
+        } else if br.read_bool()? {
+            br.read_ubit64(4)?
+        } else if br.read_bool()? {
+            br.read_ubit64(10)?
+        } else if br.read_bool()? {
+            br.read_ubit64(17)?
+        } else {
+            br.read_ubit64(31)?
+        };
+        Ok(ret.try_into()?)
+    }
+
+    #[test]
+    fn test_read_ubitvarfp_matches_reference() {
+        let mut state = 0x2545_f491_4f6c_dd1du64;
+        for len in 0..512 {
+            let buf: Vec<u8> = (0..len % 24)
+                .map(|_| {
+                    state ^= state << 13;
+                    state ^= state >> 7;
+                    state ^= state << 17;
+                    let [b0, b1, ..] = state.to_le_bytes();
+                    // bias towards zero bits so that the long prefixes show up.
+                    if len % 2 == 0 { b0 & b1 } else { b0 }
+                })
+                .collect();
+            let mut got_br = BitReader::new(&buf);
+            let mut want_br = BitReader::new(&buf);
+            loop {
+                let got = got_br.read_ubitvarfp();
+                let want = read_ubitvarfp_reference(&mut want_br);
+                match (got, want) {
+                    (Ok(got), Ok(want)) => {
+                        assert_eq!(got, want);
+                        assert_eq!(got_br.num_bits_read(), want_br.num_bits_read());
+                    }
+                    (Err(_), Err(_)) => break,
+                    (got, want) => panic!("got {got:?}, want {want:?} for {buf:?}"),
+                }
+            }
+        }
+    }
 
     #[test]
     fn test_read_string() {
