@@ -3,9 +3,10 @@
 //! One replica (redis lease) runs a tick every hour: hourly delta files for incremental
 //! tables, fresh snapshots for the small ones, a bounded amount of partition rebuilds
 //! (compaction), a `DuckLake` catalog, and finally a conditional write of `manifest.json`,
-//! the only state there is. Any failure leaves the manifest untouched and the next tick
-//! resumes from it; objects a published manifest dropped are swept at the start of the next
-//! tick, so they outlive it by less than an hour.
+//! the only state readers see. Any failure leaves the manifest untouched; the next tick
+//! resumes from the working manifest checkpointed after every export (`checkpoint`), or from
+//! the published one. Objects a published manifest dropped are swept at the start of the
+//! next tick, so they outlive it by less than an hour.
 //!
 //! Privacy deletions need no work here: the row policies hide protected accounts from every
 //! export, and the rolling refresh rebuilds each partition within `max_base_age_secs`.
@@ -33,6 +34,7 @@ use crate::routes::v1::data_privacy::update_row_policy;
 use crate::services::feature_flags::{DATA_DUMP, FeatureFlags};
 
 pub(crate) mod catalog;
+mod checkpoint;
 mod compaction;
 mod export;
 pub(crate) mod manifest;
@@ -89,6 +91,35 @@ fn ts(unix: i64) -> String {
         || unix.to_string(),
         |d| d.format("%Y%m%dT%H%M%SZ").to_string(),
     )
+}
+
+/// Takes the `dump` view's current `columns` into `state`, starting a new generation when
+/// they changed incompatibly (or when the table has none yet).
+fn adopt_columns(name: &str, state: &mut TableState, columns: Vec<Column>) {
+    if state.generation == 0 && state.building.is_none() {
+        state.building = Some(1);
+    }
+    let old_shape: Vec<_> = state.columns.iter().map(Column::shape).collect();
+    let new_shape: Vec<_> = columns.iter().map(Column::shape).collect();
+    if new_shape != old_shape {
+        let additive = old_shape.iter().all(|c| new_shape.contains(c));
+        if additive {
+            info!(
+                "data dump: {name} gained columns; keeping generation {}",
+                state.generation
+            );
+        } else if state.building.is_none() {
+            let next = state.generation.saturating_add(1);
+            warn!("data dump: {name} schema changed incompatibly; building generation {next}");
+            state.building = Some(next);
+        } else {
+            warn!(
+                "data dump: {name} schema changed again while generation {:?} is building",
+                state.building
+            );
+        }
+    }
+    state.columns = columns;
 }
 
 fn shutdown_check() -> Result<(), DumpError> {
@@ -152,7 +183,8 @@ impl DataDump {
         let started = std::time::Instant::now();
         // Exports run for hours, longer than the shutdown grace period. Dropping one mid-way
         // is safe: its queries keep running server-side and the next leader kills them first
-        // (`kill_orphans`), and nothing is published until the manifest write at the end.
+        // (`kill_orphans`), nothing is published until the manifest write at the end, and the
+        // next leader resumes from the last checkpoint.
         // Releasing the lease right away lets the replica replacing this one take over.
         let result = SHUTDOWN_TOKEN
             .run_until_cancelled(self.run(&run_id))
@@ -199,6 +231,17 @@ impl DataDump {
             warn!("data dump: sweep failed: {e}");
         }
 
+        // Resume an unfinished tick. Its uploads are newer than the published manifest, so the
+        // sweep above left them alone.
+        if let Some(working) = checkpoint::load(&self.redis, &manifest).await {
+            info!(
+                version = manifest.version,
+                "data dump: resuming the unfinished tick from its checkpoint"
+            );
+            manifest = working;
+            manifest.public_url = self.config.public_url.trim_end_matches('/').to_owned();
+        }
+
         // The policies filter protected accounts out of the INVOKER views for the dump user.
         update_row_policy(&self.pg, &self.ch_admin).await?;
 
@@ -229,6 +272,7 @@ impl DataDump {
                 }
                 first_error.get_or_insert(e);
             }
+            checkpoint::save(&self.redis, &manifest).await;
         }
         if fold_due {
             manifest.last_fold_at = Some(Utc::now());
@@ -255,6 +299,7 @@ impl DataDump {
         manifest.version = next_version;
         manifest.generated_at = Some(Utc::now());
         manifest::publish(&self.store, &manifest_key, &manifest, e_tag.as_deref()).await?;
+        checkpoint::clear(&self.redis).await;
         info!(
             version = manifest.version,
             url = manifest.url(&manifest_key),
@@ -355,11 +400,43 @@ impl DataDump {
         Ok(())
     }
 
-    #[expect(clippy::too_many_lines, reason = "one sequential export pipeline")]
+    /// Takes the table's state out of `manifest` for the export and puts it back however the
+    /// export ends, so a failed table still publishes the progress it made.
     async fn export_incremental(
         &self,
         exporter: &Exporter,
         manifest: &mut Manifest,
+        table: &TablePolicy,
+        now_hi: i64,
+        fold_due: bool,
+    ) -> Result<(), DumpError> {
+        let name = table.name;
+        let columns = self.fetch_columns(exporter, name).await?;
+        let mut state = manifest
+            .tables
+            .remove(name)
+            .unwrap_or_else(|| TableState::new(PolicyKind::Incremental, columns.clone()));
+        adopt_columns(name, &mut state, columns);
+        let result = self
+            .export_incremental_state(exporter, manifest, &mut state, table, now_hi, fold_due)
+            .await;
+        manifest.tables.insert(name.to_owned(), state);
+        result
+    }
+
+    /// Saves `manifest` with `state` as the table `name` as the tick's checkpoint.
+    async fn checkpoint(&self, manifest: &Manifest, name: &str, state: &TableState) {
+        let mut working = manifest.clone();
+        working.tables.insert(name.to_owned(), state.clone());
+        checkpoint::save(&self.redis, &working).await;
+    }
+
+    #[expect(clippy::too_many_lines, reason = "one sequential export pipeline")]
+    async fn export_incremental_state(
+        &self,
+        exporter: &Exporter,
+        manifest: &Manifest,
+        state: &mut TableState,
         table: &TablePolicy,
         now_hi: i64,
         fold_due: bool,
@@ -373,37 +450,8 @@ impl DataDump {
         };
         let nc = self.config.named_collection.as_str();
         let name = table.name;
-        let columns = self.fetch_columns(exporter, name).await?;
-        let state = manifest
-            .tables
-            .entry(name.to_owned())
-            .or_insert_with(|| TableState::new(PolicyKind::Incremental, columns.clone()));
         state.watermark = Some(watermark.to_owned());
         state.partition_expr = Some(partition_expr.to_owned());
-        if state.generation == 0 && state.building.is_none() {
-            state.building = Some(1);
-        }
-        let old_shape: Vec<_> = state.columns.iter().map(Column::shape).collect();
-        let new_shape: Vec<_> = columns.iter().map(Column::shape).collect();
-        if new_shape != old_shape {
-            let additive = old_shape.iter().all(|c| new_shape.contains(c));
-            if additive {
-                info!(
-                    "data dump: {name} gained columns; keeping generation {}",
-                    state.generation
-                );
-            } else if state.building.is_none() {
-                let next = state.generation.saturating_add(1);
-                warn!("data dump: {name} schema changed incompatibly; building generation {next}");
-                state.building = Some(next);
-            } else {
-                warn!(
-                    "data dump: {name} schema changed again while generation {:?} is building",
-                    state.building
-                );
-            }
-        }
-        state.columns = columns;
         let generations: Vec<u32> = (state.generation > 0)
             .then_some(state.generation)
             .into_iter()
@@ -444,6 +492,7 @@ impl DataDump {
                     state.files.extend(entries);
                     state.watermark_hi = Some(hi);
                     lo = hi;
+                    self.checkpoint(manifest, name, state).await;
                 }
             }
         }
@@ -505,6 +554,7 @@ impl DataDump {
                     "data dump: {name} g{generation} folded {} hourly deltas",
                     fold.keys.len()
                 );
+                self.checkpoint(manifest, name, state).await;
             }
         }
 
@@ -551,6 +601,7 @@ impl DataDump {
                 "data dump: {name} g{target_gen} rebuilt partition {p} ({:?})",
                 rebuild.reason
             );
+            self.checkpoint(manifest, name, state).await;
         }
 
         // A building generation becomes current once every partition has a base.
