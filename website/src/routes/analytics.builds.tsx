@@ -15,7 +15,6 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { designerBuildFromGame, designerHref, stageNames } from "~/lib/build-designer-code";
 import {
-  analyticsMode,
   DEFAULT_MATCH_MODE,
   DEFAULT_MODE,
   getEffectiveRankRange,
@@ -43,7 +42,7 @@ const DESCRIPTION =
   "Win rates of the published Deadlock hero builds players start their matches with: how popular each is, its items and skill order, by rank and patch.";
 
 /** The hero builds analytics endpoint counts normal matches only; Street Brawl has no build to choose. */
-const MODES = ["normal_ranked", "normal_unranked"] as const;
+const MODES = ["normal_all", "normal_ranked", "normal_unranked"] as const;
 
 /** A choice re-renders the page in a transition, so the tap paints first; one choice is one history entry. */
 const together = { limitUrlUpdates: throttle(50) };
@@ -61,7 +60,7 @@ export const Route = createFileRoute("/analytics/builds")({
       game_mode === "street_brawl" ? "street_brawl" : "normal",
       MATCH_MODES.find((mode) => mode === match_mode) ?? DEFAULT_MATCH_MODE,
     );
-    const mode = urlMode === "street_brawl" ? DEFAULT_MODE : analyticsMode(urlMode);
+    const mode = urlMode === "street_brawl" ? DEFAULT_MODE : urlMode;
     const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(
       mode,
       integer(min_rank, DEFAULT_RANK_RANGE.min),
