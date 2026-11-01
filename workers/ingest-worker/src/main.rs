@@ -37,7 +37,7 @@ use tokio::sync::Semaphore;
 use tokio::time::timeout;
 use tokio_util::task::TaskTracker;
 use tracing::{debug, error, info, warn};
-use valveprotos::deadlock::c_msg_match_meta_data_contents::{EMatchOutcome, MatchInfo};
+use valveprotos::deadlock::c_msg_match_meta_data_contents::{EMatchOutcome, MatchInfo, Players};
 use valveprotos::deadlock::{
     CMsgMatchMetaData, CMsgMatchMetaDataContents, CMsgMatchMetaDataContentsPatched,
 };
@@ -622,11 +622,18 @@ async fn fetch_and_parse_match(
     Ok(decompress_and_parse(data, |m| build_parsed_match(&m)).await??)
 }
 
+/// Anonymous players all report `account_id` 0 (or none), so they can't be told apart and would
+/// share `match_player`'s `(match_id, account_id)` key. They are kept out of every table.
+fn is_identified(player: &Players) -> bool {
+    player.account_id.is_some_and(|id| id != 0)
+}
+
 fn build_parsed_match(match_info: &MatchInfo) -> ParsedMatch {
     let players = build_ch_players(match_info);
     let history: Vec<PlayerMatchHistoryEntry> = match_info
         .players
         .iter()
+        .filter(|p| is_identified(p))
         .filter_map(|p| {
             PlayerMatchHistoryEntry::from_info_and_player(match_info, p, calibration_matches())
         })
@@ -640,7 +647,7 @@ fn build_ch_players(match_info: &MatchInfo) -> Vec<ClickhouseMatchPlayer> {
     match_info
         .players
         .iter()
-        .filter(|p| p.hero_id.is_some_and(|h| h > 0))
+        .filter(|p| p.hero_id.is_some_and(|h| h > 0) && is_identified(p))
         .map(|p| {
             (
                 &shared,
@@ -819,5 +826,34 @@ async fn move_object(
             error!("Error moving object: {e}");
             Err(e)
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn anonymous_players_are_not_ingested() {
+        let player = |account_id| Players {
+            account_id,
+            hero_id: Some(1),
+            ..Default::default()
+        };
+        let match_info = MatchInfo {
+            match_id: Some(1),
+            players: vec![player(Some(7)), player(Some(0)), player(None)],
+            ..Default::default()
+        };
+        let parsed = build_parsed_match(&match_info);
+        assert_eq!(
+            parsed
+                .players
+                .iter()
+                .map(|p| p.account_id)
+                .collect::<Vec<_>>(),
+            [7]
+        );
+        assert!(parsed.history.iter().all(|h| h.account_id == 7));
     }
 }
