@@ -12,6 +12,7 @@ import {
 import { ItemEffectCard } from "~/components/features/items/ItemEffectCard";
 import { CheckboxField } from "~/components/ui/checkbox-field";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { giveawayNameWords } from "~/lib/item-name-mask";
 import { pageTitle, seo } from "~/lib/seo";
 import { filterShopableItems, itemUpgradesFullQueryOptions } from "~/queries/asset-queries";
 
@@ -31,9 +32,11 @@ export const Route = createFileRoute("/games_/flashcards/item-effects")({
 });
 
 /** The prompt: the item's effects to name it from, or its name to find its effects for. */
-function ItemPrompt({ direction }: { direction: Direction }) {
+function ItemPrompt({ direction, hiddenWords }: { direction: Direction; hiddenWords: Map<number, string[]> }) {
   const item = useFlashcardEntry<Upgrade>();
-  if (direction === "effects-to-name") return <ItemEffectCard item={item} className="p-5" hideName />;
+  if (direction === "effects-to-name") {
+    return <ItemEffectCard item={item} className="p-5" hideName hiddenWords={hiddenWords.get(item.id)} />;
+  }
   return (
     <div className="flex items-center gap-4 p-5">
       <img src={item.shop_image_webp ?? ""} alt="" className="size-16 shrink-0 object-contain" draggable={false} />
@@ -52,9 +55,11 @@ function ItemNameOption() {
   );
 }
 
-function ItemEffectsOption() {
+function ItemEffectsOption({ hiddenWords }: { hiddenWords: Map<number, string[]> }) {
   const item = useFlashcardEntry<Upgrade>();
-  return <ItemEffectCard item={item} className="w-full py-1 font-normal" hideName />;
+  return (
+    <ItemEffectCard item={item} className="w-full py-1 font-normal" hideName hiddenWords={hiddenWords.get(item.id)} />
+  );
 }
 
 function ItemEffectFlashcards() {
@@ -62,12 +67,16 @@ function ItemEffectFlashcards() {
   const [direction, setDirection] = useState<Direction>("effects-to-name");
   const [excludeLegendary, setExcludeLegendary] = useState(false);
 
-  const pool = useMemo(() => {
-    if (!items) return [];
-    return filterShopableItems(items).filter(
-      (item) => (item.tooltip_sections?.length ?? 0) > 0 && !(excludeLegendary && item.item_tier === LEGENDARY_TIER),
-    );
-  }, [items, excludeLegendary]);
+  const described = useMemo(
+    () => (items ? filterShopableItems(items).filter((item) => (item.tooltip_sections?.length ?? 0) > 0) : []),
+    [items],
+  );
+  // From every described item, not the pool: excluding legendaries must not change what a card hides.
+  const hiddenWords = useMemo(() => giveawayNameWords(described), [described]);
+  const pool = useMemo(
+    () => (excludeLegendary ? described.filter((item) => item.item_tier !== LEGENDARY_TIER) : described),
+    [described, excludeLegendary],
+  );
 
   const effectsToName = direction === "effects-to-name";
 
@@ -102,9 +111,11 @@ function ItemEffectFlashcards() {
       masteredLabel="All item effects mastered"
     >
       <FlashcardPrompt size="wide">
-        <ItemPrompt direction={direction} />
+        <ItemPrompt direction={direction} hiddenWords={hiddenWords} />
       </FlashcardPrompt>
-      <FlashcardOptions>{effectsToName ? <ItemNameOption /> : <ItemEffectsOption />}</FlashcardOptions>
+      <FlashcardOptions>
+        {effectsToName ? <ItemNameOption /> : <ItemEffectsOption hiddenWords={hiddenWords} />}
+      </FlashcardOptions>
     </FlashcardGame>
   );
 }

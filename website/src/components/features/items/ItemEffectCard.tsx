@@ -2,6 +2,7 @@ import type { ItemProperty, Upgrade, UpgradeTooltipSection } from "deadlock_api_
 
 import { Badge } from "~/components/ui/badge";
 import { Text } from "~/components/ui/text";
+import { locStringText, maskName } from "~/lib/item-name-mask";
 import { cn } from "~/lib/utils";
 
 // Property texts can be a full sentence; a Badge does not wrap by default and would overflow a narrow card.
@@ -43,26 +44,35 @@ function formatScaling(prop: ItemProperty, postfix: string): string | null {
   return null;
 }
 
-function cleanText(html: string, hiddenName: string | undefined): string[] {
+interface HiddenName {
+  name: string;
+  words: readonly string[] | undefined;
+}
+
+function cleanText(html: string, hidden: HiddenName | undefined): string[] {
   return html
-    .replace(/<svg[\s\S]*?<\/svg>/gi, "")
     .split(/<br\s*\/?>/i)
     .map((part) => {
-      const text = part.replace(/<[^>]*>/g, "");
-      return (hiddenName ? text.replace(new RegExp(hiddenName, "gi"), "???") : text).trim();
+      const text = locStringText(part);
+      return (hidden ? maskName(text, hidden.name, hidden.words) : text).trim();
     })
     .filter((part) => part.length > 0);
 }
 
-/** Renders an item's tooltip sections. `hideName` masks the item's own name in the text for guessing games. */
+/**
+ * Renders an item's tooltip sections. `hideName` masks the item's own name in the text for guessing games, plus the
+ * `hiddenWords` from `giveawayNameWords` ("the carpet" in Magic Carpet).
+ */
 export function ItemEffectCard({
   item,
   className,
   hideName = false,
+  hiddenWords,
 }: {
   item: Upgrade;
   className?: string;
   hideName?: boolean;
+  hiddenWords?: readonly string[];
 }) {
   const props = item.properties ?? {};
   const sections = item.tooltip_sections ?? [];
@@ -73,7 +83,7 @@ export function ItemEffectCard({
           key={JSON.stringify(section)}
           section={section}
           props={props}
-          hiddenName={hideName ? item.name : undefined}
+          hidden={hideName ? { name: item.name, words: hiddenWords } : undefined}
         />
       ))}
     </div>
@@ -83,11 +93,11 @@ export function ItemEffectCard({
 function ItemEffectSection({
   section,
   props,
-  hiddenName,
+  hidden,
 }: {
   section: UpgradeTooltipSection;
   props: Record<string, ItemProperty>;
-  hiddenName: string | undefined;
+  hidden: HiddenName | undefined;
 }) {
   const label = section.section_type;
   return (
@@ -104,7 +114,7 @@ function ItemEffectSection({
         return (
           <div key={JSON.stringify(attr)} className="flex flex-col gap-1.5">
             {attr.loc_string &&
-              cleanText(attr.loc_string, hiddenName).map((paragraph) => (
+              cleanText(attr.loc_string, hidden).map((paragraph) => (
                 <p key={paragraph} className="font-sans text-sm leading-snug text-foreground">
                   {paragraph}
                 </p>
