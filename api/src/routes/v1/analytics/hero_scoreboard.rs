@@ -9,7 +9,9 @@ use std::sync::Arc;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
-use super::common_filters::{PlayerFilters, filter_protected_accounts, round_timestamps};
+use super::common_filters::{
+    MatchScope, PlayerFilters, filter_protected_accounts, round_timestamps,
+};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::analytics::scoreboard_types::ScoreboardQuerySortBy;
@@ -99,12 +101,14 @@ pub struct HeroEntry {
 }
 
 fn build_query(query: &HeroScoreboardQuery) -> String {
-    let match_info_filters = query.match_info().build();
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    let mut player_filters = vec![format!(
-        "{match_mode_filter} AND {game_mode_filter} {match_info_filters}"
-    )];
+    let mut player_filters = vec![
+        MatchScope::new(
+            query.match_mode.as_deref(),
+            query.game_mode,
+            query.match_info(),
+        )
+        .sql(),
+    ];
     #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     player_filters.extend(
         PlayerFilters {
