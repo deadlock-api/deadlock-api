@@ -10,15 +10,13 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, filter_protected_accounts, range_filters, round_timestamps,
+    MatchScope, PlayerFilters, filter_protected_accounts, range_filters, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
-use crate::utils::sql::{
-    DURATION_COLUMN, MatchPoolFilters, cached_ch_query, impl_match_info, join_filters,
-};
+use crate::utils::sql::{MatchPoolFilters, cached_ch_query, impl_match_info, join_filters};
 
 #[derive(Debug, Clone, Default, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -164,16 +162,18 @@ fn kill_source(match_filters: &str, player_filters: &str, game_time_filters: &st
 }
 
 fn build_query(query: &KillDeathStatsQuery) -> String {
-    let mut info_filters = query.match_info().predicates("", DURATION_COLUMN);
-    info_filters.extend(
-        MatchPoolFilters {
+    let scope = MatchScope {
+        pool: MatchPoolFilters {
             is_high_skill_range_parties: query.is_high_skill_range_parties,
             is_low_pri_pool: query.is_low_pri_pool,
             is_new_player_pool: query.is_new_player_pool,
-        }
-        .predicates(),
-    );
-    let info_filters = join_filters(&info_filters);
+        },
+        ..MatchScope::new(
+            query.match_mode.as_deref(),
+            query.game_mode,
+            query.match_info(),
+        )
+    };
     let mut player_filters = PlayerFilters {
         account_ids: query.account_ids.as_deref(),
         hero_ids: query.hero_ids.as_deref(),
@@ -197,9 +197,7 @@ fn build_query(query: &KillDeathStatsQuery) -> String {
         death_join_cols.push("death_details.game_time_s AS g_time");
     }
     let death_array_join = death_join_cols.join(", ");
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    let match_filters = format!("{match_mode_filter} AND {game_mode_filter} {info_filters}");
+    let match_filters = scope.sql();
     let kill_source = kill_source(&match_filters, &player_filters, &game_time_filters);
     let mut raster_filters = range_filters(
         "deaths",
