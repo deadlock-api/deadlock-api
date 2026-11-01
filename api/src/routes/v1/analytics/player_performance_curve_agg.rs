@@ -116,6 +116,7 @@ FROM (
     WHERE match_mode IN ('Ranked', 'Unranked')
         AND {since_clause}
         AND duration_s > 0
+        AND account_id != 0
 )
 ARRAY JOIN [false, true] AS relative
 ARRAY JOIN if(relative, percent_times, absolute_times) AS game_time{join}

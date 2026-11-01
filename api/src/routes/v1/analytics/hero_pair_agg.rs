@@ -120,7 +120,7 @@ fn agg_rows(
             game_mode, match_mode, average_badge, start_time,
             groupArray({player_tuple}) AS players
         FROM default.match_player FINAL
-        PREWHERE match_mode IN ('Ranked', 'Unranked') AND {where_clause}
+        PREWHERE match_mode IN ('Ranked', 'Unranked') AND account_id != 0 AND {where_clause}
         WHERE team IN ('Team0', 'Team1')
         GROUP BY match_id, game_mode, match_mode, average_badge, start_time"
         ),
@@ -133,7 +133,7 @@ fn agg_rows(
                 match_id, game_mode, match_mode, average_badge, start_time,
                 argMax({player_tuple}, created_at) AS player
             FROM default.match_player
-            WHERE match_mode IN ('Ranked', 'Unranked') AND {where_clause}
+            WHERE match_mode IN ('Ranked', 'Unranked') AND account_id != 0 AND {where_clause}
             GROUP BY match_id, account_id, game_mode, match_mode, average_badge, start_time
         )
         WHERE player.2 IN ('Team0', 'Team1')

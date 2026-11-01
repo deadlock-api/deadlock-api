@@ -86,7 +86,7 @@ FROM
         permanent_buffs,
         first_permanent_buff_time_s
     FROM default.match_player
-    WHERE (match_mode IN ('Ranked', 'Unranked')) AND (start_time >= (now() - toIntervalDay(65)))
+    WHERE (match_mode IN ('Ranked', 'Unranked')) AND (account_id != 0) AND (start_time >= (now() - toIntervalDay(65)))
     LIMIT 1 BY
         match_id,
         account_id

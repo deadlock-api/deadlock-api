@@ -243,6 +243,7 @@ ARRAY JOIN arrayDistinct(items.item_id) AS cohort_item_id
 WHERE match_mode IN ('Ranked', 'Unranked')
     AND {since_clause}
     AND duration_s > 0
+    AND account_id != 0
 GROUP BY game_mode, match_mode, day, cohort_item_id, item_id, {bucket_col}"
     )
 }
@@ -283,7 +284,7 @@ FROM (
         SELECT match_id, team AS enemy_team, groupUniqArray(hero_id) AS enemy_hero_ids
         FROM default.match_player
         WHERE match_mode IN ('Ranked', 'Unranked') AND team IN ('Team0', 'Team1')
-            AND {since_clause}
+            AND {since_clause} AND account_id != 0
         GROUP BY match_id, team
         {enemy_team_having}
     ) AS enemies ON enemies.match_id = buyers.match_id
@@ -291,6 +292,7 @@ FROM (
     WHERE match_mode IN ('Ranked', 'Unranked')
         AND {since_clause}
         AND duration_s > 0
+        AND account_id != 0
 )
 ARRAY JOIN
     item_ids AS upgrade_item_id,
@@ -312,7 +314,8 @@ fn day_window_clause(day: &str, built_through: u32) -> String {
 
 /// Source filter mirroring `select_body`'s WHERE; used by the staleness probe so
 /// the watermark only advances for rows that actually feed the aggregate.
-const SOURCE_FILTER: &str = "match_mode IN ('Ranked', 'Unranked') AND duration_s > 0";
+const SOURCE_FILTER: &str =
+    "match_mode IN ('Ranked', 'Unranked') AND duration_s > 0 AND account_id != 0";
 
 #[derive(Row, Deserialize)]
 struct DayRow {

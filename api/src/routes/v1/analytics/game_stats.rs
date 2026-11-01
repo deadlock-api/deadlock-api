@@ -448,7 +448,7 @@ fn agg_rows(
         "SELECT
     {grain_select}{measures}
 FROM default.match_player
-WHERE match_mode IN ('Ranked', 'Unranked') AND {where_clause}{group_by}"
+WHERE match_mode IN ('Ranked', 'Unranked') AND account_id != 0 AND {where_clause}{group_by}"
     )
 }
 

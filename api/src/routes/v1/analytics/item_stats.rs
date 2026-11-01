@@ -556,7 +556,7 @@ ARRAY JOIN
     `upgrades.item_id` AS upgrade_item_id,
     `upgrades.game_time_s` AS buy_time,
     `upgrades.sold_time_s` AS sold_time
-WHERE match_mode IN ('Ranked', 'Unranked') AND {where_clause} AND duration_s > 0
+WHERE match_mode IN ('Ranked', 'Unranked') AND {where_clause} AND duration_s > 0 AND account_id != 0
 GROUP BY {group_by}"
     )
 }

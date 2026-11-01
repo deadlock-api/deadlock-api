@@ -171,8 +171,9 @@ fn agg_rows(
     } else {
         format!("\nGROUP BY {group_by}")
     };
-    let prewhere =
-        format!("match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 AND {where_clause}");
+    let prewhere = format!(
+        "match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 AND account_id != 0 AND {where_clause}"
+    );
     match kind {
         // As the nodes query: purchases with a buy time and a net worth at buy.
         Kind::Nodes => {

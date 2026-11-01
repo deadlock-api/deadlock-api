@@ -79,8 +79,9 @@ async fn unprotect_account(pg_client: &sqlx::Pool<sqlx::Postgres>, steam_id: u32
     Ok(())
 }
 
-/// Row policies hiding protected accounts, by the table they guard. Every table with an
-/// `account_id` column that `api_readonly_user` or `dump_user` can read needs one.
+/// Row policies hiding protected accounts and anonymous players (`account_id = 0`), by the table
+/// they guard. Every table with an `account_id` column that `api_readonly_user` or `dump_user` can
+/// read needs one.
 const GDPR_ROW_POLICIES: [(&str, &str); 6] = [
     ("gdpr_protection_mp", "match_player"),
     ("gdpr_protection_sp", "steam_profiles"),
@@ -101,27 +102,30 @@ pub(crate) async fn update_row_policy(
         .map(|record| record.steam_id.cast_unsigned())
         .collect();
 
-    if protected_accounts.is_empty() {
-        for (policy, table) in GDPR_ROW_POLICIES {
-            ch_client
-                .query(&format!("DROP ROW POLICY IF EXISTS {policy} ON {table}"))
-                .execute()
-                .await?;
-        }
-        return Ok(());
-    }
-
-    let protected_accounts_list = id_list(&protected_accounts);
+    let filter = row_policy_filter(&protected_accounts);
     for (policy, table) in GDPR_ROW_POLICIES {
         ch_client
             .query(&format!(
-                "CREATE ROW POLICY OR REPLACE {policy} ON {table} AS RESTRICTIVE FOR SELECT USING (account_id NOT IN ({protected_accounts_list})) TO api_readonly_user, dump_user"
+                "CREATE ROW POLICY OR REPLACE {policy} ON {table} AS RESTRICTIVE FOR SELECT USING {filter} TO api_readonly_user, dump_user"
             ))
             .execute()
             .await?;
     }
 
     Ok(())
+}
+
+/// Hides protected accounts and `account_id = 0`. Anonymous players all share that id, so they
+/// can't be told apart and must not show up in any result (2026-11-01).
+fn row_policy_filter(protected_accounts: &[u32]) -> String {
+    if protected_accounts.is_empty() {
+        "(account_id != 0)".to_owned()
+    } else {
+        format!(
+            "(account_id != 0 AND account_id NOT IN ({}))",
+            id_list(protected_accounts)
+        )
+    }
 }
 
 pub(crate) async fn request_deletion(
@@ -148,4 +152,18 @@ pub(crate) async fn request_tracking(
     unprotect_account(&state.pg_client, steam_id).await?;
     update_row_policy(&state.pg_client, &state.ch_client).await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn row_policy_always_hides_anonymous_players() {
+        assert_eq!(row_policy_filter(&[]), "(account_id != 0)");
+        assert_eq!(
+            row_policy_filter(&[7, 9]),
+            "(account_id != 0 AND account_id NOT IN (7, 9))"
+        );
+    }
 }
