@@ -363,7 +363,29 @@ impl<'a> BitReader<'a> {
 
     #[inline]
     pub fn read_string_to_end(&mut self, buf: &mut Vec<u8>, line: bool) -> Result<usize, BitError> {
+        // 7 bytes per step (one peek yields at least 57 bits, the string needs not be byte aligned):
+        // find the first zero byte of the word with the "has zero byte" bit trick instead of a
+        // bounds checked read per byte. lines (which also stop at '\n') take the byte loop.
+        const LO: u64 = 0x0001_0101_0101_0101;
+        const HI: u64 = 0x0080_8080_8080_8080;
         let mut num_chars: usize = 0;
+        while !line && self.num_bits_left() >= 56 {
+            let word = self.peek_ubit64_zero_extended(56);
+            let zeros = word.wrapping_sub(LO) & !word & HI;
+            let len = if zeros == 0 {
+                7
+            } else {
+                (zeros.trailing_zeros() / 8) as usize
+            };
+            buf.extend_from_slice(word.to_le_bytes().get(..len).unwrap_or_default());
+            num_chars = num_chars.saturating_add(len);
+            if zeros != 0 {
+                // the string plus its terminator.
+                self.skip_bits(len.saturating_add(1).saturating_mul(8))?;
+                return Ok(num_chars);
+            }
+            self.skip_bits(56)?;
+        }
         loop {
             let val = self.read_byte()?;
             if val == 0 || (line && val == b'\n') {
@@ -454,6 +476,31 @@ mod test {
                     (Err(_), Err(_)) => break,
                     (got, want) => panic!("got {got:?}, want {want:?} for {buf:?}"),
                 }
+            }
+        }
+    }
+
+    #[test]
+    fn test_read_string_to_end_matches_byte_loop() {
+        // strings of every length around the 7 byte step, at every bit offset.
+        for len in 0..40_usize {
+            for offset in 0..8 {
+                let text: Vec<u8> = (b'a'..=b'z').cycle().take(len).collect();
+                let mut data = vec![0u8; len + 16];
+                let mut bw = bitbuf::BitWriter::new(&mut data);
+                bw.write_ubit64(0, offset).unwrap();
+                for &b in &text {
+                    bw.write_ubit64(u64::from(b), 8).unwrap();
+                }
+                bw.write_ubit64(0, 8).unwrap();
+                bw.write_ubit64(0x5a, 8).unwrap();
+                let mut br = BitReader::new(&data);
+                br.skip_bits(offset).unwrap();
+                let mut out = Vec::new();
+                assert_eq!(br.read_string_to_end(&mut out, false).unwrap(), len);
+                assert_eq!(out, text);
+                assert_eq!(br.num_bits_read(), offset + (len + 1) * 8);
+                assert_eq!(br.read_byte().unwrap(), 0x5a);
             }
         }
     }
