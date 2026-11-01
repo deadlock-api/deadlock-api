@@ -25,6 +25,8 @@ pub(crate) use player_match_history::{ETERNUS_MAX_BADGE, PlayerMatchHistoryEntry
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::assets::common::{Language, resolve_version};
+use crate::services::bot_friends::lookup_bot_for_friend;
+use crate::services::protected_accounts::ensure_not_protected;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::services::steam::client::SteamClient;
@@ -419,12 +421,12 @@ pub(super) async fn match_history(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<(StatusCode, HeaderMap, Json<PlayerMatchHistory>)> {
-    super::ensure_not_protected(&state, &[account_id]).await?;
+    ensure_not_protected(&state, &[account_id]).await?;
 
     // The stored history and the bot friend lookup are independent, so run them concurrently.
     let (ch_match_history, bot_username) = tokio::join!(
         fetch_ch_match_history(&state.batchers.match_history_read, account_id),
-        super::lookup_bot_for_friend(&state.pg_client, account_id),
+        lookup_bot_for_friend(&state.pg_client, account_id),
     );
     let ch_match_history = ch_match_history?;
     let bot_username = bot_username.ok().flatten();

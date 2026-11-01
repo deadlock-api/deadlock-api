@@ -30,8 +30,8 @@ use self::manifest::{Column, FileEntry, FileKind, Manifest, PolicyKind, TableSta
 use self::policy::{Policy, TABLES, TablePolicy};
 use crate::SHUTDOWN_TOKEN;
 use crate::context::DataDumpConfig;
-use crate::routes::v1::data_privacy::update_row_policy;
 use crate::services::feature_flags::{DATA_DUMP, FeatureFlags};
+use crate::services::protected_accounts::update_row_policy;
 
 pub(crate) mod catalog;
 mod checkpoint;

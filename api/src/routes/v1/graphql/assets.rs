@@ -22,6 +22,7 @@ use crate::routes::v1::graphql::schema::app_state;
 use crate::routes::v1::graphql::types::{
     Item as GameplayItem, Match, MatchHistoryEntry, MatchPlayer, SteamProfile,
 };
+use crate::services::protected_accounts::is_protected;
 
 /// Resolve version + language and run a cached asset builder, mapping the
 /// REST-layer error into a GraphQL error. Reuses [`load_localized`].
@@ -150,9 +151,7 @@ pub(super) async fn load_steam_profile(
     state: &AppState,
     account_id: u32,
 ) -> GqlResult<Option<SteamProfile>> {
-    if state
-        .steam_client
-        .is_user_protected(&state.pg_client, account_id)
+    if is_protected(&state.pg_client, account_id)
         .await
         .map_err(|e| async_graphql::Error::new(format!("Protected user lookup failed: {e}")))?
     {

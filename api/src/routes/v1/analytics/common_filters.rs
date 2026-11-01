@@ -1,6 +1,7 @@
 use core::fmt::Display;
 
 use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::services::protected_accounts::protected_accounts;
 use crate::utils::parse::MIN_DEMO_PLAYER_TIMESTAMP;
 use crate::utils::sql::{
     DURATION_COLUMN, MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchPoolFilters,
@@ -621,10 +622,7 @@ pub(super) async fn filter_protected_accounts(
     if account_ids.is_none() && account_id.is_none() {
         return Ok(());
     }
-    let protected_users = state
-        .steam_client
-        .get_protected_users(&state.pg_client)
-        .await?;
+    let protected_users = protected_accounts(&state.pg_client).await?;
     if let Some(ids) = account_ids.take() {
         let filtered: Vec<_> = ids
             .into_iter()

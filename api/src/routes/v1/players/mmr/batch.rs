@@ -11,7 +11,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::mmr::mmr_history::MMRHistory;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
-use crate::routes::v1::players::without_protected;
+use crate::services::protected_accounts::without_protected;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::sql::{cached_ch_query, id_list};
 

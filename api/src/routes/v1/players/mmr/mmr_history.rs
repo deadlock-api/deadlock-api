@@ -8,8 +8,8 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::players::ensure_not_protected;
 use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
+use crate::services::protected_accounts::ensure_not_protected;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::types::AccountIdQuery;
 

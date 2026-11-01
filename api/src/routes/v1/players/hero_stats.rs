@@ -12,7 +12,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
-use crate::routes::v1::players::{ensure_not_protected, without_protected};
+use crate::services::protected_accounts::{ensure_not_protected, without_protected};
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 use crate::utils::parse::comma_separated_deserialize_option;
 use crate::utils::types::AccountIdQuery;

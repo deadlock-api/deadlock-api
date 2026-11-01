@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::players::ensure_not_protected;
+use crate::services::protected_accounts::ensure_not_protected;
 use crate::utils::types::AccountIdQuery;
 
 /// How recent an ingest tool upload must be for the account to count as running the tool.

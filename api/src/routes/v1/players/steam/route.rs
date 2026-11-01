@@ -18,7 +18,9 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::steam::update::{
     MAX_REFRESH_ACCOUNT_IDS, SteamProfileInsertRow, refresh_steam_profiles,
 };
-use crate::routes::v1::players::{ensure_not_protected, without_protected};
+use crate::services::protected_accounts::{
+    ensure_not_protected, protected_accounts, without_protected,
+};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 use crate::services::steam_search_index::IndexedProfile;
@@ -123,10 +125,7 @@ fn steam_friends(friends: impl IntoIterator<Item = (u32, u32)>) -> Vec<SteamFrie
 /// Drops the protected accounts from each profile's friends list, so a protected account can't be
 /// found through the friends lists of the players it is friends with.
 async fn hide_protected_friends(state: &AppState, profiles: &mut [SteamProfile]) -> APIResult<()> {
-    let protected_users = state
-        .steam_client
-        .get_protected_users(&state.pg_client)
-        .await?;
+    let protected_users = protected_accounts(&state.pg_client).await?;
     for profile in profiles {
         profile
             .friends
@@ -518,10 +517,7 @@ async fn search_steam(
         }
     }
 
-    let protected_users = state
-        .steam_client
-        .get_protected_users(&state.pg_client)
-        .await?;
+    let protected_users = protected_accounts(&state.pg_client).await?;
     profiles.retain(|p| !protected_users.contains(&p.account_id));
     for profile in &mut profiles {
         profile

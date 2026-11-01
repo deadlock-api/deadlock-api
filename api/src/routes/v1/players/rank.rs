@@ -15,7 +15,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::players::{ensure_not_protected, without_protected};
+use crate::services::protected_accounts::{ensure_not_protected, without_protected};
 use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};

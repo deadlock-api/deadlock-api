@@ -37,6 +37,7 @@ use crate::routes::v1::graphql::sql::{
     build_match_players_query, build_matches_query,
 };
 use crate::routes::v1::graphql::types::{Match, MatchHistoryEntry, MatchPlayer};
+use crate::services::protected_accounts;
 
 pub(super) fn app_state<'a>(ctx: &'a Context<'_>) -> GqlResult<&'a AppState> {
     ctx.data::<AppState>()
@@ -352,9 +353,7 @@ impl QueryRoot {
 
 /// The protected accounts, sorted, for [`BuildArgs::excluded_accounts`].
 async fn protected_accounts(state: &AppState) -> GqlResult<Vec<u32>> {
-    let protected = state
-        .steam_client
-        .get_protected_users(&state.pg_client)
+    let protected = protected_accounts::protected_accounts(&state.pg_client)
         .await
         .map_err(|e| async_graphql::Error::new(format!("Protected user lookup failed: {e}")))?;
     let mut accounts: Vec<u32> = protected.iter().copied().collect();

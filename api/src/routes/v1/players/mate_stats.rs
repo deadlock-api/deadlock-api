@@ -13,9 +13,9 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::types::GameMode;
-use crate::routes::v1::players::ensure_not_protected;
 use crate::routes::v1::players::roster_stats::{RosterSide, RosterStatsQuery};
 use crate::routes::v1::players::steam::route::SteamProfileBatcher;
+use crate::services::protected_accounts::{ensure_not_protected, protected_accounts};
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 use crate::utils::sql::{cached_ch_query, impl_match_info};
 use crate::utils::types::AccountIdQuery;
@@ -155,10 +155,7 @@ pub(super) async fn mate_stats(
     )
     .await?;
     // Filtered after the cached query so the cache entry stays independent of the protected list.
-    let protected_users = state
-        .steam_client
-        .get_protected_users(&state.pg_client)
-        .await?;
+    let protected_users = protected_accounts(&state.pg_client).await?;
     Ok(Json(
         mates
             .iter()

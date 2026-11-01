@@ -1,6 +1,5 @@
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 
 use cached::macros::cached;
 use metrics::counter;
@@ -16,6 +15,7 @@ use wreq_util::Emulation;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::middleware::cors::is_own_origin;
+use crate::services::protected_accounts;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope};
 use crate::services::steam::types::{
@@ -109,17 +109,6 @@ impl SteamClient {
         &self.steam_api_key
     }
 
-    /// Is the given Steam ID in the protected users list
-    pub(crate) async fn is_user_protected(
-        &self,
-        pg_client: &sqlx::Pool<sqlx::Postgres>,
-        steam_id: u32,
-    ) -> sqlx::Result<bool> {
-        get_protected_users_cached(pg_client)
-            .await
-            .map(|p| p.contains(&steam_id))
-    }
-
     /// Verifies a Steam `OpenID` assertion issued to deadlock-api.com proves ownership of
     /// `steam_id`.
     pub(crate) async fn verify_user_owns_steam_id(
@@ -155,14 +144,6 @@ impl SteamClient {
         Ok(())
     }
 
-    /// Get protected users list
-    pub(crate) async fn get_protected_users(
-        &self,
-        pg_client: &sqlx::Pool<sqlx::Postgres>,
-    ) -> sqlx::Result<Arc<HashSet<u32>>> {
-        get_protected_users_cached(pg_client).await
-    }
-
     /// Fetch a Steam account name by Steam ID
     pub(crate) async fn fetch_steam_account_name(
         &self,
@@ -170,8 +151,7 @@ impl SteamClient {
         state: &AppState,
         steam_id: u32,
     ) -> Result<String, SteamAccountNameError> {
-        if self
-            .is_user_protected(&state.pg_client, steam_id)
+        if protected_accounts::is_protected(&state.pg_client, steam_id)
             .await
             .unwrap_or(false)
         {
@@ -341,25 +321,6 @@ async fn fetch_combined_patch_feed(http_client: &wreq::Client) -> Result<Vec<Fee
         .collect();
     items.sort_by_key(|i| core::cmp::Reverse(i.pub_date()));
     Ok(items)
-}
-
-#[cached(
-    ttl_secs = 86400,
-    convert = "{ 0 }",
-    key = "u8",
-    result_fallback = true
-)]
-pub(crate) async fn get_protected_users_cached(
-    ph_client: &sqlx::Pool<sqlx::Postgres>,
-) -> sqlx::Result<Arc<HashSet<u32>>> {
-    let protected_users = sqlx::query!("SELECT steam_id FROM protected_user_accounts")
-        .fetch_all(ph_client)
-        .await?
-        .into_iter()
-        .map(|r| r.steam_id)
-        .map(i32::cast_unsigned)
-        .collect();
-    Ok(Arc::new(protected_users))
 }
 
 #[derive(serde::Deserialize)]

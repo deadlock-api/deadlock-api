@@ -13,7 +13,7 @@ use crate::routes::v1::patron::slots::{
     self, AddAction, ReactivateRejection, ReplaceRejection, SlotLimitExceeded,
 };
 use crate::routes::v1::patron::{account_counts, fetch_patron};
-use crate::routes::v1::players::{collect_invite_links, lookup_bot_for_friend};
+use crate::services::bot_friends::{collect_invite_links, lookup_bot_for_friend};
 use crate::services::patreon::extractor::PatronSession;
 use crate::services::patreon::steam_accounts_repository::{
     SteamAccount, SteamAccountsRepository, SteamAccountsRepositoryError,
