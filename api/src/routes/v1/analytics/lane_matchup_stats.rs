@@ -5,7 +5,7 @@ use axum::extract::State;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
-use itertools::izip;
+use itertools::{Itertools as _, izip};
 use serde::{Deserialize, Serialize};
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
@@ -286,9 +286,10 @@ const GRID_TICKS_EXACT_SINCE_UNIX_TIMESTAMP: i64 = 1_762_992_000;
 const GRID_TICKS_EXACT_SINCE_MATCH_ID: u64 = 47_056_362;
 
 /// Reads `lane_matchups` (migrations 51/52) instead of `match_player`: each 2v2 lane's winner and
-/// net worth totals at every grid sample all four players reached, kept current by a materialized
-/// view. Only grid samples are stored, so an off-grid `sample_time_s` (first tick at or after it
-/// may be a match's final, off-grid tick), extra `stats` and `account_ids` use the base query.
+/// per-side totals of the [`LaneStats::in_lane_table`] stats at every grid sample all four players
+/// reached, kept current by a materialized view. Only grid samples are stored, so an off-grid
+/// `sample_time_s` (first tick at or after it may be a match's final, off-grid tick), other
+/// `stats` and `account_ids` use the base query.
 ///
 /// Equivalent on grid samples because a player still in the match at a grid time has a tick
 /// exactly there, so the base query's "first tick at or after" lands on it for all four. That only
@@ -302,7 +303,7 @@ fn build_table_query(query: &LaneMatchupStatsQuery, stats: &LaneStats) -> Option
         || query
             .min_match_id
             .is_some_and(|id| id >= GRID_TICKS_EXACT_SINCE_MATCH_ID);
-    if !stats.requested.is_empty()
+    if !stats.in_lane_table(query.min_unix_timestamp, query.min_match_id)
         || query.account_ids.is_some()
         || !is_grid_sample(sample_time_s)
         || !grid_ticks_exact
@@ -318,6 +319,12 @@ fn build_table_query(query: &LaneMatchupStatsQuery, stats: &LaneStats) -> Option
         duos: &duo_filters,
     }
     .build();
+    let stats_filter = stats.lane_table_filter();
+    let side_samples = stats.computed.iter().format_with("", |stat, f| {
+        f(&format_args!(
+            ",\n        toFloat64({stat}_team0[sample_index]) AS {stat}_t0,\n        toFloat64({stat}_team1[sample_index]) AS {stat}_t1"
+        ))
+    });
     let matchup_select =
         matchup_select(query, stats, &duo_filters.side_filters("duo", "enemy_duo"));
     // PREWHERE: under FINAL, ClickHouse only moves sorting-key conditions there itself, so the
@@ -335,11 +342,9 @@ WITH lane_duos AS (
         team0_won,
         team1_won,
         indexOf(sample_times_s, {sample_time_s}) AS sample_index,
-        sample_index > 0 AS both_sampled,
-        toFloat64(net_worth_team0[sample_index]) AS net_worth_t0,
-        toFloat64(net_worth_team1[sample_index]) AS net_worth_t1
+        sample_index > 0 AS both_sampled{side_samples}
     FROM lane_matchups FINAL
-    PREWHERE {table_filters}
+    PREWHERE {table_filters}{stats_filter}
 )
 {matchup_select}
 SETTINGS log_comment = 'lane_matchup_stats_table', apply_patch_parts = 0, do_not_merge_across_partitions_select_final = 1
@@ -555,6 +560,42 @@ mod tests {
                 "hero_id IN (3, 15, 31) GROUP BY match_id HAVING uniqExact(hero_id) = 3)"
             )
         );
+    }
+
+    #[test]
+    fn table_serves_the_stats_it_stores() {
+        let query = LaneMatchupStatsQuery {
+            min_unix_timestamp: Some(1_790_899_200),
+            sample_time_s: Some(900),
+            ..Default::default()
+        };
+        let none = LaneStats::new(None).unwrap();
+        let souls_only = build_table_query(&query, &none).unwrap();
+        assert!(souls_only.contains("toFloat64(net_worth_team1[sample_index]) AS net_worth_t1"));
+        assert!(!souls_only.contains("length(sample_times_s)"));
+
+        let stored = LaneStats::new(Some(&[LaneStat::Kills, LaneStat::Level])).unwrap();
+        let table = build_table_query(&query, &stored).unwrap();
+        assert!(table.contains("toFloat64(kills_team0[sample_index]) AS kills_t0"));
+        assert!(table.contains("toFloat64(level_team1[sample_index]) AS level_t1"));
+        assert!(table.contains(" AND length(kills_team0) = length(sample_times_s)"));
+
+        let unstored = LaneStats::new(Some(&[LaneStat::Kills, LaneStat::PlayerHealing])).unwrap();
+        assert!(build_table_query(&query, &unstored).is_none());
+
+        // Stats before the backfill cutoff fall back; net worth alone is stored for every lane.
+        let old_window = LaneMatchupStatsQuery {
+            min_unix_timestamp: Some(GRID_TICKS_EXACT_SINCE_UNIX_TIMESTAMP),
+            sample_time_s: Some(900),
+            ..Default::default()
+        };
+        assert!(build_table_query(&old_window, &stored).is_none());
+        assert!(build_table_query(&old_window, &none).is_some());
+        let by_match_id = LaneMatchupStatsQuery {
+            min_match_id: Some(108_800_000),
+            ..old_window
+        };
+        assert!(build_table_query(&by_match_id, &stored).is_some());
     }
 
     #[test]

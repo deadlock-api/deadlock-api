@@ -12,8 +12,22 @@ CREATE TABLE default.lane_matchups
     `team0_won` Bool,
     `team1_won` Bool,
     `sample_times_s` Array(UInt32) CODEC(Delta(4), ZSTD(1)),
-    `net_worth_team0` Array(UInt64) CODEC(ZSTD(1)),
-    `net_worth_team1` Array(UInt64) CODEC(ZSTD(1))
+    `net_worth_team0` Array(UInt32) CODEC(T64, LZ4),
+    `net_worth_team1` Array(UInt32) CODEC(T64, LZ4),
+    `kills_team0` Array(UInt16) CODEC(T64, LZ4),
+    `kills_team1` Array(UInt16) CODEC(T64, LZ4),
+    `deaths_team0` Array(UInt16) CODEC(T64, LZ4),
+    `deaths_team1` Array(UInt16) CODEC(T64, LZ4),
+    `assists_team0` Array(UInt16) CODEC(T64, LZ4),
+    `assists_team1` Array(UInt16) CODEC(T64, LZ4),
+    `denies_team0` Array(UInt16) CODEC(T64, LZ4),
+    `denies_team1` Array(UInt16) CODEC(T64, LZ4),
+    `creep_kills_team0` Array(UInt16) CODEC(T64, LZ4),
+    `creep_kills_team1` Array(UInt16) CODEC(T64, LZ4),
+    `player_damage_team0` Array(UInt32) CODEC(T64, LZ4),
+    `player_damage_team1` Array(UInt32) CODEC(T64, LZ4),
+    `level_team0` Array(UInt16) CODEC(T64, LZ4),
+    `level_team1` Array(UInt16) CODEC(T64, LZ4)
 )
 ENGINE = ReplacingMergeTree
 PARTITION BY toYYYYMM(start_time)

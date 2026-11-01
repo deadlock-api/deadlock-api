@@ -463,24 +463,45 @@ ORDER BY matches_played DESC"
     )
 }
 
-/// Reads `lane_matchups` (migration 51) instead of `match_player`: each 2v2 lane's net worth
-/// totals at every grid sample all four players reached, kept current by a materialized view.
-/// Re-aggregating the per-tick `stats` arrays of every lane in the window is what makes the
-/// base query cost ~6-10 CPU-s for 30 days. The table holds net worth only and no per-player
-/// rows, so extra `stats` and `account_ids` use the base query.
+/// Reads `lane_matchups` (migration 51) instead of `match_player`: each 2v2 lane's per-side totals
+/// of the [`LaneStats::in_lane_table`] stats at every grid sample all four players reached, kept
+/// current by a materialized view. Re-aggregating the per-tick `stats` arrays of every lane in the
+/// window is what makes the base query cost ~6-10 CPU-s for 30 days. The table holds no
+/// per-player rows, so other `stats` and `account_ids` use the base query.
 fn build_table_query(query: &LaneSoulCurveQuery, stats: &LaneStats) -> Option<String> {
-    if !stats.requested.is_empty() || query.account_ids.is_some() {
+    if !stats.in_lane_table(query.min_unix_timestamp, query.min_match_id)
+        || query.account_ids.is_some()
+    {
         return None;
     }
     let duo_filters = duo_filters(query);
-    let table_filters = LaneTableFilters {
-        game_mode: query.game_mode,
-        match_mode: query.match_mode.as_deref(),
-        info: query.match_info(),
-        assigned_lanes: query.assigned_lanes.as_deref(),
-        duos: &duo_filters,
-    }
-    .build();
+    // The stats filter also guards the `ARRAY JOIN` below, which fails on arrays of unequal size.
+    let table_filters = format!(
+        "{}{}",
+        LaneTableFilters {
+            game_mode: query.game_mode,
+            match_mode: query.match_mode.as_deref(),
+            info: query.match_info(),
+            assigned_lanes: query.assigned_lanes.as_deref(),
+            duos: &duo_filters,
+        }
+        .build(),
+        stats.lane_table_filter()
+    );
+    let (sample_columns, sample_array_join) = stats
+        .computed
+        .iter()
+        .map(|stat| {
+            (
+                format!(
+                    ",\n        toFloat64({stat}_sample_t0) AS {stat}_t0,\n        toFloat64({stat}_sample_t1) AS {stat}_t1"
+                ),
+                format!(
+                    ",\n        {stat}_team0 AS {stat}_sample_t0,\n        {stat}_team1 AS {stat}_sample_t1"
+                ),
+            )
+        })
+        .collect::<(String, String)>();
     let time_bounds = time_bounds(query, "t");
     let grouping = LaneGrouping::new(query.group_by.as_deref());
     // Drops matchups with fewer lanes than `min_matches` before the per-sample pass: a matchup's
@@ -529,14 +550,10 @@ lane_samples AS (
         assigned_lane,
         t,
         team0,
-        team1,
-        toFloat64(net_worth_sample_t0) AS net_worth_t0,
-        toFloat64(net_worth_sample_t1) AS net_worth_t1
+        team1{sample_columns}
     FROM lane_matchups FINAL
     ARRAY JOIN
-        sample_times_s AS t,
-        net_worth_team0 AS net_worth_sample_t0,
-        net_worth_team1 AS net_worth_sample_t1
+        sample_times_s AS t{sample_array_join}
     PREWHERE {table_filters}
     WHERE true{time_bounds}
 ),
@@ -724,6 +741,36 @@ pub(super) async fn lane_soul_curve(
     get_lane_soul_curve(&state.ch_client_ro, query)
         .await
         .map(Json)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn table_serves_the_stats_it_stores() {
+        let query = LaneSoulCurveQuery {
+            min_unix_timestamp: Some(1_790_899_200),
+            ..Default::default()
+        };
+        let stored = LaneStats::new(Some(&[LaneStat::Denies])).unwrap();
+        let table = build_table_query(&query, &stored).unwrap();
+        assert!(table.contains("denies_team0 AS denies_sample_t0"));
+        assert!(table.contains("toFloat64(denies_sample_t1) AS denies_t1"));
+        assert!(table.contains("net_worth_team1 AS net_worth_sample_t1"));
+        assert!(table.contains(" AND length(denies_team0) = length(sample_times_s)"));
+
+        let unstored = LaneStats::new(Some(&[LaneStat::BossDamage])).unwrap();
+        assert!(build_table_query(&query, &unstored).is_none());
+
+        // Stats before the backfill cutoff fall back; net worth alone is stored for every lane.
+        let old_window = LaneSoulCurveQuery {
+            min_unix_timestamp: Some(1_770_000_000),
+            ..Default::default()
+        };
+        assert!(build_table_query(&old_window, &stored).is_none());
+        assert!(build_table_query(&old_window, &LaneStats::new(None).unwrap()).is_some());
+    }
 }
 
 #[cfg(test)]

@@ -22,6 +22,14 @@ pub(super) const fn is_grid_sample(time_s: u32) -> bool {
 
 const MAX_STATS: usize = 8;
 
+/// The `lane_matchups` stat columns other than net worth (added 2026-11-01) were backfilled for
+/// matches from here on only: older windows were not requested with `stats` (7 days to
+/// 2026-11-01), and the backfill re-aggregates `match_player`'s per-tick arrays at ~900 CPU-s per
+/// million match ids.
+const LANE_STATS_SINCE_MATCH_ID: u64 = 84_000_000;
+/// No match below [`LANE_STATS_SINCE_MATCH_ID`] started after 2026-05-31 15:00 UTC.
+const LANE_STATS_SINCE_UNIX_TIMESTAMP: i64 = 1_780_272_000;
+
 /// Per-tick columns of `match_player.stats`. Every variant's `snake_case` name *is* its column name.
 #[derive(
     Debug,
@@ -92,6 +100,24 @@ pub enum LaneStat {
     GoldDeathLoss,
 }
 
+impl LaneStat {
+    /// Whether `lane_matchups` stores the stat, as `<stat>_team0` / `<stat>_team1` arrays aligned
+    /// with `sample_times_s`. These cover ~99% of the `stats` requests (7 days to 2026-11-01).
+    const fn in_lane_table(self) -> bool {
+        matches!(
+            self,
+            Self::NetWorth
+                | Self::Kills
+                | Self::Deaths
+                | Self::Assists
+                | Self::Denies
+                | Self::CreepKills
+                | Self::PlayerDamage
+                | Self::Level
+        )
+    }
+}
+
 pub(super) struct LaneStats {
     pub requested: Vec<LaneStat>,
     /// `requested` prefixed with `net_worth`, which both endpoints report unconditionally.
@@ -145,6 +171,34 @@ impl LaneStats {
                 ))
             })
             .to_string()
+    }
+
+    /// Whether `lane_matchups` can serve every computed stat for a window starting at
+    /// `min_unix_timestamp` / `min_match_id`. Net worth is stored for every lane; the other stats
+    /// only from [`LANE_STATS_SINCE_MATCH_ID`] on (see [`LANE_STATS_SINCE_UNIX_TIMESTAMP`]).
+    pub(super) fn in_lane_table(
+        &self,
+        min_unix_timestamp: Option<i64>,
+        min_match_id: Option<u64>,
+    ) -> bool {
+        let backfilled = min_unix_timestamp.is_some_and(|ts| ts >= LANE_STATS_SINCE_UNIX_TIMESTAMP)
+            || min_match_id.is_some_and(|id| id >= LANE_STATS_SINCE_MATCH_ID);
+        self.computed.iter().all(|stat| stat.in_lane_table())
+            && (backfilled || self.computed.iter().all(|stat| *stat == LaneStat::NetWorth))
+    }
+
+    /// ` AND ...` keeping only the `lane_matchups` rows that carry the requested stats. The
+    /// non-net-worth columns were added on 2026-11-01 and backfilled from `match_player`; a row the
+    /// backfill did not rewrite keeps empty stat arrays and must not read as zeros. All stat
+    /// columns are written together, so checking one of them is enough. Empty when only net worth
+    /// is read.
+    pub(super) fn lane_table_filter(&self) -> String {
+        self.requested
+            .iter()
+            .find(|stat| **stat != LaneStat::NetWorth)
+            .map_or_else(String::new, |stat| {
+                format!(" AND length({stat}_team0) = length(sample_times_s)")
+            })
     }
 
     pub(super) fn side_swap(&self) -> String {
@@ -389,9 +443,11 @@ impl LaneScanFilters<'_> {
                 self.required_heroes.len()
             )
         };
+        // `account_id = 0` players are excluded, as in `lane_matchups`: they share a sorting key, so
+        // merges keep only one of them per match and their lanes can't be rebuilt.
         format!(
             "{match_mode} AND {game_mode}{info} AND team IN ('Team0', 'Team1') AND assigned_lane > \
-             0{lanes}{}{}{matches}",
+             0 AND account_id != 0{lanes}{}{}{matches}",
             self.accounts, self.heroes,
         )
     }
