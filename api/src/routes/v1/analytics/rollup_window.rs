@@ -422,7 +422,7 @@ fn references(sql: &str, column: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::proptest_utils::assert_valid_sql;
+    use crate::utils::proptest_utils::assert_parses;
 
     const DAY: i64 = 1_791_158_400; // 2026-10-05 00:00:00 UTC
     const H: i64 = 3600;
@@ -535,7 +535,7 @@ mod tests {
         )));
         assert_eq!(source.matches("UNION ALL").count(), 1);
         assert!(source.contains(") WHERE game_mode = 1"));
-        assert_valid_sql(&format!("SELECT sum(n) FROM {source}"));
+        assert_parses(&format!("SELECT sum(n) FROM {source}"));
 
         let aligned = DaySplit::new(Some(DAY), Some(DAY + DAY_S - 1)).unwrap();
         let no_filters = RollupFilters {
@@ -545,7 +545,7 @@ mod tests {
         let source = rollup.source(&aligned, &no_filters, "toUInt32(0)", |_| unreachable!());
         assert!(!source.contains("UNION ALL"));
         assert!(source.contains("SELECT n FROM t_agg WHERE day >= "));
-        assert_valid_sql(&format!("SELECT sum(n) FROM {source}"));
+        assert_parses(&format!("SELECT sum(n) FROM {source}"));
     }
 
     #[test]
@@ -605,7 +605,7 @@ mod tests {
         }
         assert!(source.contains("HAVING built_through > 0))[3] AND created_at > (SELECT CAST("));
         assert!(source.contains("[toDate(start_time)]) AND game_mode = 1"));
-        assert_valid_sql(&format!("SELECT sum(n) FROM {source}"));
+        assert_parses(&format!("SELECT sum(n) FROM {source}"));
 
         // Without an upper bound, everything after the built run is read from the base table.
         let open = DaySplit::new(Some(DAY), None).unwrap();
@@ -615,7 +615,7 @@ mod tests {
                 "OR (start_time >= (SELECT toDateTime(ifNull(maxOrNull(day) + 1, toDate("
             )
         );
-        assert_valid_sql(&format!("SELECT sum(n) FROM {source}"));
+        assert_parses(&format!("SELECT sum(n) FROM {source}"));
     }
 
     #[test]

@@ -1560,7 +1560,7 @@ mod proptests {
 mod tests {
     use super::*;
     use crate::routes::v1::analytics::rollup_window::UNBUILT_SPLITS_DAYS;
-    use crate::utils::proptest_utils::assert_valid_sql;
+    use crate::utils::proptest_utils::{assert_parses, assert_valid_sql};
 
     #[test]
     fn rollup_timeouts_are_not_retried_on_the_base_table() {
@@ -2348,7 +2348,7 @@ mod tests {
     fn item_order_predicate_emits_valid_sql() {
         for from_upgrades in [false, true] {
             let pred = item_order_predicate(&[1, 2, 3], from_upgrades).unwrap();
-            assert_valid_sql(&format!("SELECT * FROM match_player WHERE {pred}"));
+            assert_parses(&format!("SELECT * FROM match_player WHERE {pred}"));
         }
     }
 

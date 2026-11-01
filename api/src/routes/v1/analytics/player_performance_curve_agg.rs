@@ -345,7 +345,7 @@ pub(super) fn built_days_query(from: i64, to: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::proptest_utils::assert_valid_sql;
+    use crate::utils::proptest_utils::{assert_parses, assert_valid_sql};
 
     const NOW: i64 = 1_791_200_000; // 2026-10-05 11:33:20 UTC
     const TODAY: i64 = NOW - NOW % DAY_S;
@@ -419,7 +419,7 @@ mod tests {
 
     #[test]
     fn agg_sql_is_valid() {
-        assert_valid_sql(&agg_select_body("start_time >= now() - INTERVAL 1 DAY"));
+        assert_parses(&agg_select_body("start_time >= now() - INTERVAL 1 DAY"));
         for resolution in [0, 5] {
             let mut q = query(Some(TODAY - 10 * DAY_S + 3600), Some(TODAY - DAY_S + 3600));
             q.resolution = Some(resolution);

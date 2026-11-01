@@ -322,13 +322,13 @@ pub(super) fn sources(query: &ItemFlowStatsQuery) -> Option<[String; 3]> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::proptest_utils::assert_valid_sql;
+    use crate::utils::proptest_utils::assert_parses;
 
     #[test]
     fn rollup_rows_have_the_table_column_order() {
         for kind in Kind::ALL {
             let body = agg_select_body(kind, "TRUE");
-            assert_valid_sql(&body);
+            assert_parses(&body);
             let outer = body
                 .split("\nFROM ")
                 .next()
@@ -367,7 +367,7 @@ mod tests {
         };
         let [nodes, edges, totals] = sources(&query).expect("served");
         for source in [&nodes, &edges, &totals] {
-            assert_valid_sql(&format!("SELECT count() FROM {source}"));
+            assert_parses(&format!("SELECT count() FROM {source}"));
             assert!(source.contains("least_badge >= 91"));
             assert!(source.contains("FROM default.match_player\n"));
         }

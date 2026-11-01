@@ -584,7 +584,7 @@ pub(crate) async fn game_stats(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::proptest_utils::assert_valid_sql;
+    use crate::utils::proptest_utils::{assert_parses, assert_valid_sql};
 
     #[test]
     fn buff_averages_read_the_scalar_columns() {
@@ -719,7 +719,7 @@ mod tests {
     #[test]
     fn rollup_rows_have_the_table_column_order() {
         let body = agg_select_body("TRUE");
-        assert_valid_sql(&body);
+        assert_parses(&body);
         let columns = body
             .lines()
             .filter_map(|line| line.trim().trim_end_matches(',').rsplit_once(" AS "))

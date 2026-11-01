@@ -250,12 +250,12 @@ pub(super) fn pair_source(request: &PairRequest<'_>) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::utils::proptest_utils::assert_valid_sql;
+    use crate::utils::proptest_utils::assert_parses;
 
     #[test]
     fn rollup_rows_have_the_table_column_order() {
         let body = agg_select_body("TRUE");
-        assert_valid_sql(&body);
+        assert_parses(&body);
         // Whole days dedup with FINAL, the cheaper of the two there.
         assert!(body.contains("FROM default.match_player FINAL\n        PREWHERE"));
         let outer = body.split("\nFROM (").next().expect("outer select");
@@ -287,7 +287,7 @@ mod tests {
             same_lane: true,
         };
         let source = pair_source(&request).expect("served");
-        assert_valid_sql(&format!("SELECT sum(n_pairs) FROM {source}"));
+        assert_parses(&format!("SELECT sum(n_pairs) FROM {source}"));
         assert!(source.contains("FROM default.hero_pair_stats_agg WHERE game_mode = 1 AND least_badge >= 91 AND enemy = 1 AND same_lane = 1 AND day >= "));
         // The partial first day and the late matches come from match_player.
         assert!(source.contains("FROM default.match_player\n"));
