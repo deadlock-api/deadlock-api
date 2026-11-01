@@ -11,6 +11,7 @@ import { heroSlug } from "~/lib/hero-slug";
 import { rankHeroes, type Tier } from "~/lib/hero-tiers";
 import { prefetchCached } from "~/lib/prefetch-safe";
 import {
+  currentPatchLabel,
   defaultPeriodLabel,
   defaultPrevUnixRange,
   defaultTemporalCoverage,
@@ -333,8 +334,10 @@ export const heroesPageOptions = {
       // The loader's default range feeds the overall table and the tier list; the other views pick their own windows.
       temporalCoverage: tab === "stats" || tab === "tier-list" ? loaderData?.coverage : undefined,
     });
+    // The data covers the newest patch unless the visitor prefers seasons; the loader names which.
+    const patchTitle = loaderData?.period === "the current patch" ? view.patchTitle?.(currentPatchLabel()) : undefined;
     return seo({
-      title: pageTitle(view.title),
+      title: pageTitle(patchTitle ?? view.title),
       description: view.description + lead,
       path,
       jsonLd: tierList.length > 0 ? [dataset, tierListJsonLd(view.heading, tierList)] : dataset,

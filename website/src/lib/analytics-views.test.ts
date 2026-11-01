@@ -22,6 +22,9 @@ test("analytics titles and descriptions fit a search result", () => {
     assert.ok(pageTitle(view.title).endsWith(" | Deadlock API"), view.title);
     // Room for the data-driven sentence the heroes and items views append.
     assert.ok(view.description.length <= 115, view.description);
+    // The widest patch label ("Sep 30 Patch") still fits, with or without the suffix.
+    const patchTitle = view.patchTitle?.("Sep 30 Patch");
+    if (patchTitle) assert.ok(pageTitle(patchTitle).length <= 60, patchTitle);
   }
 });
 

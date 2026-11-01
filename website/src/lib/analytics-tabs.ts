@@ -77,6 +77,8 @@ export function redirectAnalyticsTab({ location }: { location: { href: string } 
 export interface AnalyticsViewCopy {
   /** Document title before the site suffix. */
   title: string;
+  /** The title while the view shows the current patch ("Oct 30 Patch"), so searchers see how fresh it is. */
+  patchTitle?: (patch: string) => string;
   /** The page's main heading. */
   heading: string;
   /** Line under the heading. */
@@ -98,6 +100,7 @@ export const ANALYTICS_VIEWS: { [S in AnalyticsSection]: Record<AnalyticsTab<S>,
     },
     "tier-list": {
       title: "Deadlock Tier List: Best Heroes by Win Rate",
+      patchTitle: (patch) => `Deadlock Tier List (${patch}): Best Heroes by Win Rate`,
       heading: "Deadlock Hero Tier List",
       summary: "Every hero ranked S to D by win, pick and ban rate.",
       description: "Deadlock hero tier list from live matches: every hero ranked S to D, by hero type, rank and patch.",

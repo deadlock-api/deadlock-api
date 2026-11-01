@@ -90,6 +90,11 @@ export function defaultPeriodLabel(
   return preference === "season" && currentSeason(seasons) ? "this season" : "the current patch";
 }
 
+/** The patch `defaultDateRange` covers while it is not a season, as titles name it: "Oct 30 Patch" (its release day, UTC). */
+export function currentPatchLabel(): string {
+  return `${day.utc(PATCHES[0].id).format("MMM D")} Patch`;
+}
+
 export function defaultPrevDateRange(
   seasons: readonly SeasonInfo[],
   preference: DateFilterPreference = DEFAULT_DATE_FILTER,
