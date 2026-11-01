@@ -14,10 +14,10 @@ use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
     CORRUPTED_ITEMS_MIN_MATCH_ID, CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP, ENHANCED_ITEMS_MIN_MATCH_ID,
-    ENHANCED_ITEMS_MIN_UNIX_TIMESTAMP, MatchInfoFilters, PlayerFilters, account_match_prefilter,
-    corrupted_sql, default_min_matches_u32, enhanced_sql, filter_protected_accounts, is_non_empty,
-    item_first_buy_sql, item_owned_sql, join_filters, not_corrupted_sql, not_enhanced_sql,
-    range_filters, round_timestamps, with_legacy_id,
+    ENHANCED_ITEMS_MIN_UNIX_TIMESTAMP, MatchInfoFilters, MatchScope, PlayerFilters,
+    account_match_prefilter, corrupted_sql, default_min_matches_u32, enhanced_sql,
+    filter_protected_accounts, is_non_empty, item_first_buy_sql, item_owned_sql, join_filters,
+    not_corrupted_sql, not_enhanced_sql, range_filters, round_timestamps, with_legacy_id,
 };
 use super::rollup_window::{Coverage, DaySplit, EdgeRows, Reach, Rollup, RollupFilters};
 use crate::context::AppState;
@@ -1089,13 +1089,16 @@ fn build_query(query: &ItemStatsQuery) -> String {
         ),
         None => (query.min_unix_timestamp, query.min_match_id),
     };
-    let info_filters = MatchInfoFilters {
-        min_unix_timestamp,
-        min_match_id,
-        ..query.match_info()
-    };
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    let scope = MatchScope::new(
+        query.match_mode.as_deref(),
+        query.game_mode,
+        MatchInfoFilters {
+            min_unix_timestamp,
+            min_match_id,
+            ..query.match_info()
+        },
+    );
+    let scope_filters = scope.sql();
 
     /* ---------- match_player filters ---------- */
     let hero_ids = query.all_hero_ids();
@@ -1120,13 +1123,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
         ..Default::default()
     };
     let mut player_filters = player_filter_inputs.build();
-    player_filters.extend(account_match_prefilter(
-        player_filter_inputs,
-        &info_filters,
-        &match_mode_filter,
-        &game_mode_filter,
-    ));
-    let info_filters = info_filters.build();
+    player_filters.extend(account_match_prefilter(player_filter_inputs, &scope));
     player_filters.extend(range_filters(
         "buy_time",
         query.min_bought_at_s,
@@ -1188,7 +1185,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
             match_id,
             team AS enemy_team{lanes_col}
         FROM match_player
-        WHERE {match_mode_filter} AND {game_mode_filter} {info_filters}
+        WHERE {scope_filters}
             AND team IN ('Team0', 'Team1')
             AND hero_id IN ({})
         GROUP BY match_id, team{enemy_having_clause}
@@ -1276,8 +1273,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     .flatten()
     .map(|pred| format!(" AND arrayExists(u -> {pred}, items.upgrade_info)"))
     .join("");
-    let match_filters =
-        format!("{match_mode_filter} AND {game_mode_filter} {info_filters}{has_variant_filter}");
+    let match_filters = format!("{scope_filters}{has_variant_filter}");
     // With an enemy filter the match filters move to PREWHERE alongside the semi-join, so
     // the array-joined `WHERE` only keeps the predicates that need the joined aliases.
     let (prewhere_clause, where_match_filters) = if enemy_prewhere.is_empty() {

@@ -10,8 +10,8 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, account_match_prefilter, filter_protected_accounts, join_filters, range_filters,
-    round_timestamps,
+    MatchScope, PlayerFilters, account_match_prefilter, filter_protected_accounts, join_filters,
+    range_filters, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -180,9 +180,11 @@ pub struct AnalyticsAbilityMaxFirstStats {
 
 /// The `WHERE` clause of all three endpoints: the hero's matches and players that pass the filters.
 fn where_clause(query: &AbilityOrderStatsQuery) -> String {
-    let info_filters = query.match_info();
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
+    let scope = MatchScope::new(
+        query.match_mode.as_deref(),
+        query.game_mode,
+        query.match_info(),
+    );
     #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let player_filter_inputs = PlayerFilters {
         hero_id: Some(query.hero_id),
@@ -198,22 +200,13 @@ fn where_clause(query: &AbilityOrderStatsQuery) -> String {
         ..Default::default()
     };
     let mut player_filters = player_filter_inputs.build();
-    player_filters.extend(account_match_prefilter(
-        player_filter_inputs,
-        &info_filters,
-        &match_mode_filter,
-        &game_mode_filter,
-    ));
-    let info_filters = info_filters.build();
+    player_filters.extend(account_match_prefilter(player_filter_inputs, &scope));
     player_filters.extend(range_filters(
         "length(abilities)",
         query.min_ability_upgrades,
         query.max_ability_upgrades,
     ));
-    format!(
-        "{match_mode_filter} AND {game_mode_filter} {info_filters} {}",
-        join_filters(&player_filters)
-    )
+    format!("{} {}", scope.sql(), join_filters(&player_filters))
 }
 
 fn build_query(query: &AbilityOrderStatsQuery) -> String {

@@ -1,7 +1,10 @@
 use core::fmt::Display;
 
+use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::utils::parse::MIN_DEMO_PLAYER_TIMESTAMP;
-use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
+use crate::utils::sql::{
+    DURATION_COLUMN, MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchPoolFilters,
+};
 pub(super) use crate::utils::sql::{MatchInfoFilters, id_list, join_filters};
 use itertools::Itertools as _;
 use serde::Deserialize;
@@ -313,6 +316,62 @@ fn badge_filters(
     filters
 }
 
+/// The matches an analytics query reads: its match modes, game mode, match info and pool
+/// filters, which every row of `match_player` (and `player_match_stats`) can be tested on.
+#[derive(Default)]
+pub(super) struct MatchScope<'a> {
+    pub match_mode: Option<&'a [MatchMode]>,
+    pub game_mode: Option<GameMode>,
+    pub info: MatchInfoFilters,
+    pub pool: MatchPoolFilters,
+}
+
+impl<'a> MatchScope<'a> {
+    pub(super) fn new(
+        match_mode: Option<&'a [MatchMode]>,
+        game_mode: Option<GameMode>,
+        info: MatchInfoFilters,
+    ) -> Self {
+        Self {
+            match_mode,
+            game_mode,
+            info,
+            ..Default::default()
+        }
+    }
+
+    /// The match mode predicate, `Ranked` and `Unranked` without a match mode.
+    pub(super) fn match_mode_sql(&self) -> String {
+        MatchMode::sql_filter(self.match_mode)
+    }
+
+    /// The game mode predicate, `1=1` without a game mode.
+    pub(super) fn game_mode_sql(&self) -> String {
+        GameMode::sql_filter(self.game_mode)
+    }
+
+    /// The match info and pool predicates as ` AND ...`, or empty without any.
+    pub(super) fn info_sql(&self) -> String {
+        let mut filters = self.info.predicates("", DURATION_COLUMN);
+        filters.extend(self.pool.predicates());
+        join_filters(&filters)
+    }
+
+    /// The whole scope as one predicate: `{match_mode} AND {game_mode} AND ...`.
+    ///
+    /// The space before [`Self::info_sql`] doubles up with its leading one, or trails without
+    /// any info filter. It stays: results are cached by the SQL string, so dropping it would
+    /// start every route's cache empty on deploy.
+    pub(super) fn sql(&self) -> String {
+        format!(
+            "{} AND {} {}",
+            self.match_mode_sql(),
+            self.game_mode_sql(),
+            self.info_sql()
+        )
+    }
+}
+
 /// `match_id IN (SELECT ... FROM player_match_stats ...)` for account-scoped reads of
 /// `match_player`, or `None` without an account filter.
 ///
@@ -324,9 +383,7 @@ fn badge_filters(
 /// evaluate, so it only ever narrows to matches the outer predicate keeps anyway.
 pub(super) fn account_match_prefilter(
     player_filters: PlayerFilters<'_>,
-    info_filters: &MatchInfoFilters,
-    match_mode_filter: &str,
-    game_mode_filter: &str,
+    scope: &MatchScope<'_>,
 ) -> Option<String> {
     let has_account_filter = player_filters.account_id.is_some()
         || player_filters
@@ -346,9 +403,13 @@ pub(super) fn account_match_prefilter(
         ..Default::default()
     }
     .build();
+    // Not `scope.sql()`: this subquery has no space before the match info filters, and
+    // `player_match_stats` has no pool flag columns.
     Some(format!(
-        "match_id IN (SELECT match_id FROM player_match_stats WHERE {match_mode_filter} AND {game_mode_filter}{}{})",
-        info_filters.build(),
+        "match_id IN (SELECT match_id FROM player_match_stats WHERE {} AND {}{}{})",
+        scope.match_mode_sql(),
+        scope.game_mode_sql(),
+        scope.info.build(),
         join_filters(&stats_filters)
     ))
 }
@@ -594,8 +655,7 @@ mod tests {
             hero_build_id: Some(2),
             ..Default::default()
         };
-        let prefilter =
-            account_match_prefilter(filters, &MatchInfoFilters::default(), "true", "true").unwrap();
+        let prefilter = account_match_prefilter(filters, &MatchScope::default()).unwrap();
         assert!(!prefilter.contains("hero_build_id"), "{prefilter}");
     }
 
