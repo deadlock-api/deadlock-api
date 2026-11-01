@@ -131,31 +131,16 @@ impl F32Decoder {
         }
     }
 
-    fn skip_bits(&self, br: &mut BitReader) -> Result<usize, BitError> {
+    fn skip_bits(&self, br: &mut BitReader) -> Result<(), BitError> {
         match self {
-            Self::SimulationTime => {
-                let start = br.num_bits_read();
-                br.read_uvarint32()?;
-                Ok(br.num_bits_read().saturating_sub(start))
-            }
+            Self::SimulationTime => br.skip_uvarint(5),
             Self::Coord {
                 integer_bits,
                 fractional_bits,
-            } => {
-                let start = br.num_bits_read();
-                br.read_bitcoord_with(*integer_bits, *fractional_bits)?;
-                Ok(br.num_bits_read().saturating_sub(start))
-            }
-            Self::Normal { fractional_bits } => {
-                // sign bit + fractional part
-                let bits = fractional_bits.saturating_add(1);
-                br.skip_bits(bits)?;
-                Ok(bits)
-            }
-            Self::NoScale => {
-                br.skip_bits(32)?;
-                Ok(32)
-            }
+            } => br.skip_bitcoord(*integer_bits, *fractional_bits),
+            // sign bit + fractional part
+            Self::Normal { fractional_bits } => br.skip_bits(fractional_bits.saturating_add(1)),
+            Self::NoScale => br.skip_bits(32),
             Self::Quantized(qf) => qf.skip_bits(br),
         }
     }
@@ -390,71 +375,53 @@ impl FieldDecoder {
         })
     }
 
-    /// advances the reader past a value without materializing it; returns the number of bits
-    /// skipped.
-    pub(crate) fn skip_bits(&self, br: &mut BitReader) -> Result<usize, DecoderError> {
-        let fixed = |br: &mut BitReader, bits: usize| -> Result<usize, DecoderError> {
-            br.skip_bits(bits)?;
-            Ok(bits)
-        };
-        let start = br.num_bits_read();
+    /// advances the reader past a value without materializing it.
+    pub(crate) fn skip_bits(&self, br: &mut BitReader) -> Result<(), DecoderError> {
         match self {
             Self::None => return Err(DecoderError::NoDecoder),
 
-            Self::I64 => {
-                br.read_varint64()?;
-            }
-            Self::I64Fixed8 | Self::U64Fixed8 => return fixed(br, 8),
+            Self::I64 | Self::U64 => br.skip_uvarint(10)?,
+            Self::I64Fixed8 | Self::U64Fixed8 => br.skip_bits(8)?,
+            Self::U64Fixed64 => br.skip_bits(64)?,
 
-            Self::U64 => {
-                br.read_uvarint64()?;
-            }
-            Self::U64Fixed64 => return fixed(br, 64),
-
-            Self::Bool => return fixed(br, 1),
-            Self::String => while br.read_byte()? != 0 {},
+            Self::Bool => br.skip_bits(1)?,
+            Self::String => br.skip_string()?,
             Self::BinaryBlock => {
                 let len = br.read_uvarint32()? as usize;
                 br.skip_bits(len.saturating_mul(8))?;
             }
 
-            Self::F32(d) => return Ok(d.skip_bits(br)?),
-            Self::Vector2(d) => return Ok(d.skip_bits(br)?.saturating_add(d.skip_bits(br)?)),
+            Self::F32(d) => d.skip_bits(br)?,
+            Self::Vector2(d) => {
+                d.skip_bits(br)?;
+                d.skip_bits(br)?;
+            }
             Self::Vector3(d) => {
-                return Ok(d
-                    .skip_bits(br)?
-                    .saturating_add(d.skip_bits(br)?)
-                    .saturating_add(d.skip_bits(br)?));
+                d.skip_bits(br)?;
+                d.skip_bits(br)?;
+                d.skip_bits(br)?;
             }
-            Self::Vector3Normal { fractional_bits } => {
-                br.read_bitvec3normal_with(*fractional_bits)?;
-            }
+            Self::Vector3Normal { fractional_bits } => br.skip_bitvec3normal(*fractional_bits)?,
             Self::Vector4(d) => {
-                return Ok(d
-                    .skip_bits(br)?
-                    .saturating_add(d.skip_bits(br)?)
-                    .saturating_add(d.skip_bits(br)?)
-                    .saturating_add(d.skip_bits(br)?));
+                d.skip_bits(br)?;
+                d.skip_bits(br)?;
+                d.skip_bits(br)?;
+                d.skip_bits(br)?;
             }
 
-            Self::QAnglePitchYaw { bit_count } => return fixed(br, bit_count.saturating_mul(2)),
+            Self::QAnglePitchYaw { bit_count } => br.skip_bits(bit_count.saturating_mul(2))?,
             Self::QAngleNoBitCount {
                 integer_bits,
                 fractional_bits,
-            } => {
-                br.read_bitvec3coord_with(*integer_bits, *fractional_bits)?;
-            }
+            } => br.skip_bitvec3coord(*integer_bits, *fractional_bits)?,
             Self::QAnglePrecise { angle_bits } => {
-                let rx = br.read_bool()?;
-                let ry = br.read_bool()?;
-                let rz = br.read_bool()?;
-                let num_values = [rx, ry, rz].into_iter().filter(|&r| r).count();
-                let value_bits = angle_bits.saturating_mul(num_values);
-                br.skip_bits(value_bits)?;
+                let flags = br.peek_ubit64_zero_extended(3);
+                let num_values = flags.count_ones() as usize;
+                br.skip_bits(3_usize.saturating_add(angle_bits.saturating_mul(num_values)))?;
             }
-            Self::QAngleBitCount { bit_count } => return fixed(br, bit_count.saturating_mul(3)),
+            Self::QAngleBitCount { bit_count } => br.skip_bits(bit_count.saturating_mul(3))?,
         }
-        Ok(br.num_bits_read().saturating_sub(start))
+        Ok(())
     }
 }
 
@@ -477,10 +444,9 @@ mod tests {
         let mut br = BitReader::new(buf);
         let value = decoder.decode(&mut ctx, &mut br).unwrap();
         let mut br_skip = BitReader::new(buf);
-        let skipped = decoder.skip_bits(&mut br_skip).unwrap();
-        assert_eq!(skipped, br.num_bits_read());
-        assert_eq!(skipped, br_skip.num_bits_read());
-        (value, skipped)
+        decoder.skip_bits(&mut br_skip).unwrap();
+        assert_eq!(br_skip.num_bits_read(), br.num_bits_read());
+        (value, br.num_bits_read())
     }
 
     #[test]

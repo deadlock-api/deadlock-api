@@ -318,6 +318,95 @@ impl<'a> BitReader<'a> {
         Ok(ret)
     }
 
+    /// skips a varint of at most `max_bytes` bytes without assembling its value: one peek finds
+    /// the first byte without the continuation bit. longer (or malformed) varints take
+    /// [`Self::read_uvarint64`], which reports them.
+    #[inline]
+    pub fn skip_uvarint(&mut self, max_bytes: usize) -> Result<(), BitError> {
+        // the continuation bits of 7 whole bytes (a peek yields at least 57 bits).
+        const CONTINUE: u64 = 0x0080_8080_8080_8080;
+        let word = self.peek_ubit64_zero_extended(56);
+        let ends = !word & CONTINUE;
+        let len = (ends.trailing_zeros() / 8) as usize + 1;
+        if ends != 0 && len <= max_bytes {
+            // bytes past the end of the buffer peek as zero (which ends a varint); `skip_bits`
+            // fails if the varint isn't actually all there.
+            return self.skip_bits(len.saturating_mul(8));
+        }
+        if max_bytes <= 5 {
+            self.read_uvarint32().map(|_| ())
+        } else {
+            self.read_uvarint64().map(|_| ())
+        }
+    }
+
+    /// skips a [`Self::read_bitcoord_with`] value: reads only the two flags.
+    #[inline]
+    pub fn skip_bitcoord(
+        &mut self,
+        integer_bits: usize,
+        fractional_bits: usize,
+    ) -> Result<(), BitError> {
+        let flags = self.peek_ubit64_zero_extended(2);
+        let mut bits: usize = 2;
+        if flags != 0 {
+            // sign bit, then the parts that are present.
+            bits = bits.saturating_add(1);
+            if flags & 1 != 0 {
+                bits = bits.saturating_add(integer_bits);
+            }
+            if flags & 2 != 0 {
+                bits = bits.saturating_add(fractional_bits);
+            }
+        }
+        self.skip_bits(bits)
+    }
+
+    /// skips a [`Self::read_bitvec3coord_with`] value.
+    #[inline]
+    pub fn skip_bitvec3coord(
+        &mut self,
+        integer_bits: usize,
+        fractional_bits: usize,
+    ) -> Result<(), BitError> {
+        let flags = self.peek_ubit64_zero_extended(3);
+        self.skip_bits(3)?;
+        for i in 0..3 {
+            if (flags >> i) & 1 != 0 {
+                self.skip_bitcoord(integer_bits, fractional_bits)?;
+            }
+        }
+        Ok(())
+    }
+
+    /// skips a [`Self::read_bitvec3normal_with`] value without computing the implied component.
+    #[inline]
+    pub fn skip_bitvec3normal(&mut self, fractional_bits: usize) -> Result<(), BitError> {
+        let flags = self.peek_ubit64_zero_extended(2);
+        // the x / y flags, sign + fraction of each present one, and the z sign.
+        let normal_bits = fractional_bits.saturating_add(1);
+        let present = (flags & 1).saturating_add(flags >> 1) as usize;
+        self.skip_bits(3_usize.saturating_add(present.saturating_mul(normal_bits)))
+    }
+
+    /// skips a null terminated string, 7 bytes per step (see [`Self::read_string_to_end`]).
+    #[inline]
+    pub fn skip_string(&mut self) -> Result<(), BitError> {
+        const LO: u64 = 0x0001_0101_0101_0101;
+        const HI: u64 = 0x0080_8080_8080_8080;
+        while self.num_bits_left() >= 56 {
+            let word = self.peek_ubit64_zero_extended(56);
+            let zeros = word.wrapping_sub(LO) & !word & HI;
+            if zeros != 0 {
+                let len = (zeros.trailing_zeros() / 8) as usize;
+                return self.skip_bits(len.saturating_add(1).saturating_mul(8));
+            }
+            self.skip_bits(56)?;
+        }
+        while self.read_byte()? != 0 {}
+        Ok(())
+    }
+
     // Always reads to the end of the string (so you can read the next piece of data waiting).
     //
     // If line is true, it stops when it reaches a '\n' or a null-terminator.
@@ -475,6 +564,73 @@ mod test {
                     }
                     (Err(_), Err(_)) => break,
                     (got, want) => panic!("got {got:?}, want {want:?} for {buf:?}"),
+                }
+            }
+        }
+    }
+
+    /// every skip helper must end exactly where the matching read ends, or fail where it fails.
+    #[test]
+    fn test_skips_match_reads() {
+        let mut state = 0x9e37_79b9_7f4a_7c15u64;
+        for round in 0..4000 {
+            let len = round % 40;
+            let buf: Vec<u8> = (0..len)
+                .map(|_| {
+                    state ^= state << 13;
+                    state ^= state >> 7;
+                    state ^= state << 17;
+                    let [b0, b1, ..] = state.to_le_bytes();
+                    // bias some rounds towards zero bits (short varints, empty coords, terminators).
+                    if round % 3 == 0 { b0 & b1 } else { b0 }
+                })
+                .collect();
+            for offset in [0, 3, 7] {
+                type Read = fn(&mut BitReader) -> Result<(), BitError>;
+                let pairs: [(Read, Read); 6] = [
+                    (
+                        |br| br.read_uvarint64().map(|_| ()),
+                        |br| br.skip_uvarint(10),
+                    ),
+                    (
+                        |br| br.read_uvarint32().map(|_| ()),
+                        |br| br.skip_uvarint(5),
+                    ),
+                    (
+                        |br| br.read_bitcoord_with(14, 5).map(|_| ()),
+                        |br| br.skip_bitcoord(14, 5),
+                    ),
+                    (
+                        |br| br.read_bitvec3coord_with(11, 3).map(|_| ()),
+                        |br| br.skip_bitvec3coord(11, 3),
+                    ),
+                    (
+                        |br| br.read_bitvec3normal_with(11).map(|_| ()),
+                        |br| br.skip_bitvec3normal(11),
+                    ),
+                    (
+                        |br| {
+                            let mut out = Vec::new();
+                            br.read_string_to_end(&mut out, false).map(|_| ())
+                        },
+                        |br| br.skip_string(),
+                    ),
+                ];
+                for (read, skip) in pairs {
+                    let mut want = BitReader::new(&buf);
+                    let mut got = BitReader::new(&buf);
+                    if want.skip_bits(offset).is_err() || got.skip_bits(offset).is_err() {
+                        continue;
+                    }
+                    loop {
+                        match (read(&mut want), skip(&mut got)) {
+                            (Ok(()), Ok(())) => {
+                                assert_eq!(got.num_bits_read(), want.num_bits_read(), "{buf:?}");
+                            }
+                            (Err(_), Err(_)) => break,
+                            (w, g) => panic!("read {w:?}, skip {g:?} for {buf:?} at {offset}"),
+                        }
+                    }
                 }
             }
         }

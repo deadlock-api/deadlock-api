@@ -286,32 +286,20 @@ impl QuantizedFloat {
         Ok(self.low_value + range * (value as f32 * self.decode_mul))
     }
 
-    pub(crate) fn skip_bits(&self, br: &mut BitReader) -> Result<usize, BitError> {
-        let mut bits_read: usize = 0;
-
-        if (self.encode_flags & QFE_ROUNDDOWN) != 0 {
-            bits_read = bits_read.saturating_add(1);
-            if br.read_bool()? {
-                return Ok(bits_read);
+    pub(crate) fn skip_bits(&self, br: &mut BitReader) -> Result<(), BitError> {
+        // the (up to 3) flag bits come from one peek; a set flag ends the value.
+        let flags = br.peek_ubit64_zero_extended(3);
+        let mut pos: u32 = 0;
+        for flag in [QFE_ROUNDDOWN, QFE_ROUNDUP, QFE_ENCODE_ZERO_EXACTLY] {
+            if self.encode_flags & flag != 0 {
+                let set = (flags >> pos) & 1 != 0;
+                pos = pos.saturating_add(1);
+                if set {
+                    return br.skip_bits(pos as usize);
+                }
             }
         }
-
-        if (self.encode_flags & QFE_ROUNDUP) != 0 {
-            bits_read = bits_read.saturating_add(1);
-            if br.read_bool()? {
-                return Ok(bits_read);
-            }
-        }
-
-        if (self.encode_flags & QFE_ENCODE_ZERO_EXACTLY) != 0 {
-            bits_read = bits_read.saturating_add(1);
-            if br.read_bool()? {
-                return Ok(bits_read);
-            }
-        }
-
-        br.skip_bits(usize::from(self.bit_count))?;
-        Ok(bits_read.saturating_add(usize::from(self.bit_count)))
+        br.skip_bits((pos as usize).saturating_add(usize::from(self.bit_count)))
     }
 }
 
