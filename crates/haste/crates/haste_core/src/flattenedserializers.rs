@@ -138,10 +138,29 @@ impl CoordSizeParams {
 /// it might be reasonable to actually incorporate it if there will be a need to run this parser in
 /// an environment that processes high volumes of replays. theoretically flattened serializers can
 /// be parsed once and then reused for future parse passes.
+/// whether a field is an array, cached out of [`FieldMetadata::special_descriptor`] for the field
+/// path walk.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) enum ArrayKind {
+    #[default]
+    None,
+    Fixed,
+    Dynamic,
+}
+
+// NOTE: `repr(C)` keeps the fields that the field path walk of every decoded value reads (child
+// serializer, key, name hash, array kind, decoder) together at the front, so that they share one or
+// two cache lines instead of being spread over the whole (~250 byte) struct.
 #[derive(Debug, Clone, Default)]
+#[repr(C)]
 pub struct FlattenedSerializerField {
-    pub var_type: Symbol,
+    pub field_serializer: Option<Arc<FlattenedSerializer>>,
+    pub(crate) key: u64,
     pub var_name: Symbol,
+    pub(crate) array_kind: ArrayKind,
+    pub(crate) metadata: FieldMetadata,
+
+    pub var_type: Symbol,
     pub bit_count: Option<i32>,
     pub low_value: Option<f32>,
     pub high_value: Option<f32>,
@@ -153,10 +172,6 @@ pub struct FlattenedSerializerField {
     /// introduced in deadlock build 6712).
     pub is_signed_enum: bool,
     pub coord_size_params: CoordSizeParams,
-
-    pub field_serializer: Option<Arc<FlattenedSerializer>>,
-    pub(crate) metadata: FieldMetadata,
-    pub(crate) key: u64,
 }
 
 // TODO: try to split flattened serializer field initialization into 3 clearly separate stages
@@ -242,10 +257,16 @@ impl FlattenedSerializerField {
 
             field_serializer: None,
             metadata: FieldMetadata::default(),
+            array_kind: ArrayKind::None,
             key,
         };
         ret.resolve_quantized_float_encoder_alias(quantized_float_encoder_aliases);
         ret.metadata = get_field_metadata(&ret, var_type)?;
+        ret.array_kind = match ret.metadata.special_descriptor.as_ref() {
+            Some(sd) if sd.is_fixed_array() => ArrayKind::Fixed,
+            Some(sd) if sd.is_dynamic_array() => ArrayKind::Dynamic,
+            _ => ArrayKind::None,
+        };
         Ok(ret)
     }
 
@@ -284,10 +305,7 @@ impl FlattenedSerializerField {
 
     #[must_use]
     pub fn is_dynamic_array(&self) -> bool {
-        self.metadata
-            .special_descriptor
-            .as_ref()
-            .is_some_and(FieldSpecialDescriptor::is_dynamic_array)
+        self.array_kind == ArrayKind::Dynamic
     }
 
     /// Returns true if this field is a fixed-size array (e.g. `int32[6]`). Its element fields are
@@ -295,10 +313,7 @@ impl FlattenedSerializerField {
     /// index rather than by name (see `Entity::parse`).
     #[must_use]
     pub fn is_fixed_array(&self) -> bool {
-        self.metadata
-            .special_descriptor
-            .as_ref()
-            .is_some_and(FieldSpecialDescriptor::is_fixed_array)
+        self.array_kind == ArrayKind::Fixed
     }
 
     /// Returns true if this field is a Pointer type (like `CBodyComponent`).

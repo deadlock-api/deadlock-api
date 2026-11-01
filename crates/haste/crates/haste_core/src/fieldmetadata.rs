@@ -84,10 +84,13 @@ impl FieldSpecialDescriptor {
     }
 }
 
+// NOTE: `repr(C)`: the decoder is read for every decoded value, the descriptor only while building
+// serializers (see `FlattenedSerializerField`).
 #[derive(Debug, Clone)]
+#[repr(C)]
 pub(crate) struct FieldMetadata {
-    pub(crate) special_descriptor: Option<FieldSpecialDescriptor>,
     pub(crate) decoder: FieldDecoder,
+    pub(crate) special_descriptor: Option<FieldSpecialDescriptor>,
 }
 
 impl Default for FieldMetadata {
