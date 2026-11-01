@@ -9,13 +9,13 @@ use crate::routes::v1::matches::metadata::DemoPlayerBatcher;
 use crate::routes::v1::matches::salts::{
     MatchInfoExistsBatcher, MatchSaltsExistsBatcher, MatchSaltsReadBatcher,
 };
-use crate::routes::v1::matches::to_fetch::{EstimatedStartTimeBatcher, PendingMatchInsertBatcher};
 use crate::routes::v1::players::hero_stats::PlayerHeroStatsBatcher;
 use crate::routes::v1::players::match_history::{
     MatchHistoryInsertBatcher, MatchHistoryReadBatcher,
 };
 use crate::routes::v1::players::rank::PlayerRankBatcher;
 use crate::routes::v1::players::steam::route::{SteamProfileBatcher, SteamProfileGraphQlBatcher};
+use crate::services::pending_matches::{EstimatedStartTimeBatcher, PendingMatchInsertBatcher};
 
 #[derive(Clone)]
 pub(crate) struct Batchers {

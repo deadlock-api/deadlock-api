@@ -22,7 +22,7 @@ use valveprotos::gcsdk::EgcPlatform;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::to_fetch::queue_live_match;
+use crate::services::pending_matches::queue_live_match;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::services::steam::client::SteamClient;

@@ -19,9 +19,9 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use tracing::{Instrument as _, debug, info_span, warn};
 
-use super::catalog::{DATABASE, MAX_ROWS, QueryError, SCHEMA, SnapshotCatalog};
 use super::format::format_query_output;
 use crate::error::APIError;
+use crate::services::data_lake::{DATABASE, MAX_ROWS, QueryError, SCHEMA, SnapshotCatalog};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, RateLimitClient, Scope};
 use crate::services::steam::client::SteamClient;

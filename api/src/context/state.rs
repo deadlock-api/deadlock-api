@@ -14,10 +14,10 @@ use tracing::{debug, error, warn};
 
 use crate::context::batchers::{Batchers, insert_batcher};
 use crate::context::config::Config;
-use crate::routes::v1::mcp::{CatalogError, SnapshotCatalog};
 use crate::services::ch_admission;
 use crate::services::ch_cache;
 use crate::services::data_dump::DataDump;
+use crate::services::data_lake::{CatalogError, SnapshotCatalog};
 use crate::services::feature_flags::FeatureFlags;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::request_logger::RequestLogger;
@@ -80,7 +80,7 @@ pub(crate) struct AppStateInner {
     pub(crate) steam_search_index: SteamSearchIndex,
     pub(crate) version_store: VersionStore,
     pub(crate) demo_query_queue: crate::routes::v1::matches::demo::DemoQueryQueue,
-    pub(crate) mcp_catalog: Arc<SnapshotCatalog>,
+    pub(crate) data_lake: Arc<SnapshotCatalog>,
 }
 
 impl AppState {
@@ -257,8 +257,8 @@ impl AppState {
         );
 
         debug!("Creating MCP snapshot catalog");
-        let mcp_catalog = Arc::new(SnapshotCatalog::try_new(&config.mcp_snapshot)?);
-        Arc::clone(&mcp_catalog).spawn_refresh_loop();
+        let data_lake = Arc::new(SnapshotCatalog::try_new(&config.mcp_snapshot)?);
+        Arc::clone(&data_lake).spawn_refresh_loop();
 
         if config.data_dump.enabled {
             debug!("Starting data dump");
@@ -290,7 +290,7 @@ impl AppState {
             steam_search_index,
             version_store,
             demo_query_queue,
-            mcp_catalog,
+            data_lake,
         })))
     }
 }

@@ -19,13 +19,13 @@ use valveprotos::deadlock::{CMsgClientToGcGetLeaderboardResponse, ECitadelMatchM
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::assets::common::{Language, resolve_version};
-use crate::routes::v1::leaderboard::route::fetch_leaderboard_raw;
-use crate::routes::v1::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
 use crate::routes::v1::players::match_history::{
     MatchHistoryInsertBatcher, MatchHistoryReadBatcher, PlayerMatchHistory,
     PlayerMatchHistoryEntry, fetch_steam_match_history,
 };
 use crate::routes::v1::players::rank::fetch_last_ranked_match;
+use crate::services::leaderboard::fetch_leaderboard_raw;
+use crate::services::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
 

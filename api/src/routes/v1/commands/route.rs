@@ -15,7 +15,7 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::commands::variables::{ResolverContext, Variable, VariableCategory};
-use crate::routes::v1::leaderboard::types::LeaderboardRegion;
+use crate::services::leaderboard::types::LeaderboardRegion;
 use crate::services::protected_accounts::ensure_not_protected;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};

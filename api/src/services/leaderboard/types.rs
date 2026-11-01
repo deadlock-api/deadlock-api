@@ -24,7 +24,7 @@ pub(crate) struct LeaderboardEntry {
     /// The account name of the player.
     pub(crate) account_name: Option<String>,
     /// The possible account IDs of the player. **CAVEAT: This is not always correct, as Steam account names are not unique.**
-    pub(super) possible_account_ids: Vec<u32>,
+    pub(crate) possible_account_ids: Vec<u32>,
     /// The rank of the player (tier = first digits, subtier = last digit). See more: <https://api.deadlock-api.com/v1/assets/ranks>
     pub(crate) rank: Option<u32>,
     /// The top hero IDs of the player, as the game sends them. Since 2026-07-31 the game leaves
@@ -50,7 +50,7 @@ pub(crate) struct Leaderboard {
 }
 
 #[derive(Debug, Clone, Serialize, Row)]
-pub(super) struct LeaderboardClickhouse {
+pub(crate) struct LeaderboardClickhouse {
     pub fetched_at: u32,
     pub region: i8,
     pub account_name: Option<String>,
@@ -60,7 +60,7 @@ pub(super) struct LeaderboardClickhouse {
 }
 
 #[derive(Debug, Clone, Serialize, Row)]
-pub(super) struct HeroLeaderboardClickhouse {
+pub(crate) struct HeroLeaderboardClickhouse {
     pub fetched_at: u32,
     pub region: i8,
     pub hero_id: u8,

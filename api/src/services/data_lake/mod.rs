@@ -1,3 +1,8 @@
+//! The public data lake (the parquet dumps on R2) as a read-only `DuckDB` catalog, refreshed
+//! from the dump manifest, for `/v1/sql` and the MCP server.
+
+pub(crate) mod json;
+
 use core::sync::atomic::{AtomicBool, Ordering};
 use core::time::Duration;
 use std::collections::{BTreeMap, HashMap};

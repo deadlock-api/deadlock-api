@@ -20,9 +20,9 @@ use valveprotos::deadlock::{
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::to_fetch::{queue_requested_match, resolve_invalid_match};
 use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::feature_flags::STEAM_SALTS_FALLBACK;
+use crate::services::pending_matches::{queue_requested_match, resolve_invalid_match};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::utils::types::MatchIdQuery;

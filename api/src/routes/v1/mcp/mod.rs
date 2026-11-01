@@ -11,18 +11,15 @@ use rmcp::transport::streamable_http_server::StreamableHttpServerConfig;
 use rmcp::transport::streamable_http_server::session::never::NeverSessionManager;
 use utoipa_axum::router::OpenApiRouter;
 
-pub(crate) use self::catalog::{CatalogError, QueryError, SnapshotCatalog};
-pub(crate) use self::format::write_json;
 use self::server::McpServer;
 use crate::SHUTDOWN_TOKEN;
 use crate::context::AppState;
 
-mod catalog;
 mod format;
 mod server;
 
 pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
-    let catalog = Arc::clone(&state.mcp_catalog);
+    let catalog = Arc::clone(&state.data_lake);
     let assets = state.assets_client.clone();
     let rate_limit = state.rate_limit_client.clone();
     let steam = state.steam_client.clone();

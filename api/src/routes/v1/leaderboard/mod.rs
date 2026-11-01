@@ -1,5 +1,4 @@
-pub(super) mod route;
-pub(super) mod types;
+mod route;
 
 use core::time::Duration;
 

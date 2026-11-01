@@ -13,7 +13,8 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult, LogInternal as _};
-use crate::routes::v1::mcp::{QueryError, write_json};
+use crate::services::data_lake::QueryError;
+use crate::services::data_lake::json::write_json;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
 use crate::utils::json_stream::ResponseFormat;
@@ -105,7 +106,7 @@ pub(super) async fn sql(
     // Interrupts the query when the client disconnects and this handler is dropped.
     let cancel = CancellationToken::new();
     let _cancel_on_drop = cancel.clone().drop_guard();
-    let catalog = std::sync::Arc::clone(&state.mcp_catalog);
+    let catalog = std::sync::Arc::clone(&state.data_lake);
     let output = tokio::spawn(async move { catalog.query(query.query, MAX_ROWS, cancel).await })
         .await
         .log_internal("SQL query task failed", "Query execution failed")?
@@ -197,7 +198,7 @@ pub(super) async fn list_tables(
     check_access(&state, &rate_limit_key, LIST_TABLES_RATE_LIMIT).await?;
 
     let snapshot = state
-        .mcp_catalog
+        .data_lake
         .snapshot()
         .ok_or_else(|| query_error(&QueryError::NotReady))?;
     Ok(Json(snapshot.tables.keys().cloned().collect::<Vec<_>>()))
@@ -237,7 +238,7 @@ pub(super) async fn table_schema(
     check_access(&state, &rate_limit_key, TABLE_SCHEMA_RATE_LIMIT).await?;
 
     let snapshot = state
-        .mcp_catalog
+        .data_lake
         .snapshot()
         .ok_or_else(|| query_error(&QueryError::NotReady))?;
     let info = snapshot
