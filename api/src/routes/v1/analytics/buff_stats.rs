@@ -9,7 +9,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+    MatchScope, PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::APIResult;
@@ -133,7 +133,6 @@ pub(super) struct AnalyticsBuffStats {
 }
 
 fn build_query(query: &BuffStatsQuery) -> String {
-    let info_filters = query.match_info().build();
     let player_filters = join_filters(
         &PlayerFilters {
             account_ids: query.account_ids.as_deref(),
@@ -144,10 +143,12 @@ fn build_query(query: &BuffStatsQuery) -> String {
         }
         .build(),
     );
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    let filters =
-        format!("{match_mode_filter} AND {game_mode_filter} {info_filters} {player_filters}");
+    let scope = MatchScope::new(
+        query.match_mode.as_deref(),
+        query.game_mode,
+        query.match_info(),
+    );
+    let filters = format!("{} {player_filters}", scope.sql());
     // The sentinel row carries the denominators (all player-matches, and those with timings)
     // from a scan of only the filter columns. Prepending a sentinel entry to every row's buff
     // arrays instead would copy all five arrays per row and cost more CPU than the second scan.
