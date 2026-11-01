@@ -104,11 +104,6 @@ static MIN_MATCH_ID_IN_CACHE: OnceCell<u64> = OnceCell::const_new();
 static METADATA_FETCH_FAILURES: LazyLock<NegativeCache> =
     LazyLock::new(|| negative_cache(Duration::from_mins(1)));
 
-/// Negative cache of match IDs whose metadata Valve's replay CDN answered with 404. Unlike
-/// transient failures, these rarely resolve quickly, so they are remembered for longer.
-static METADATA_NOT_FOUND: LazyLock<NegativeCache> =
-    LazyLock::new(|| negative_cache(Duration::from_hours(1)));
-
 type NegativeCache = Cache<u64, ()>;
 
 /// A negative cache of match IDs. Concurrent lookups don't contend on a lock, and expired
@@ -198,9 +193,6 @@ async fn fetch_match_metadata_raw(
     is_custom: bool,
     disable_steam: bool,
 ) -> APIResult<Bytes> {
-    if is_cached(&METADATA_NOT_FOUND, match_id) {
-        return Err(metadata_not_found());
-    }
     if is_cached(&METADATA_FETCH_FAILURES, match_id) {
         return Err(APIError::status_msg(
             StatusCode::SERVICE_UNAVAILABLE,
@@ -244,10 +236,7 @@ async fn fetch_match_metadata_raw(
         .await
     {
         Ok(metadata) => Ok(metadata.into()),
-        Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => {
-            remember(&METADATA_NOT_FOUND, match_id).await;
-            Err(metadata_not_found())
-        }
+        Err(e) if e.status() == Some(StatusCode::NOT_FOUND) => Err(metadata_not_found()),
         Err(e) => {
             remember(&METADATA_FETCH_FAILURES, match_id).await;
             Err(e.into())
