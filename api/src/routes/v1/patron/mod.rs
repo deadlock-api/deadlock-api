@@ -11,6 +11,7 @@ use crate::services::patreon::repository::PatronRepository;
 use crate::services::patreon::steam_accounts_repository::SteamAccountsRepository;
 use crate::services::patreon::types::Patron;
 
+mod slots;
 mod status;
 mod steam_accounts;
 

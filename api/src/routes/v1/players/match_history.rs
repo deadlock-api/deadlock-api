@@ -177,21 +177,27 @@ pub(crate) struct MatchHistoryQuery {
     force_refetch: bool,
 }
 
-/// Queues for insertion whatever `ClickHouse` is missing or has no ranked data for,
-/// then merges both sides. Steam wins, but keeps ranked fields only `ClickHouse`
-/// has: the ranked call covers just the current interval, so older ranked matches
-/// are stored, never re-fetched.
-fn merge_and_store(
-    state: &AppState,
+/// The stored and the Steam history merged, newest first, and the Steam entries to store.
+#[derive(Debug, PartialEq, Eq)]
+struct MergedHistory {
+    merged: PlayerMatchHistory,
+    /// Entries `ClickHouse` is missing or has no ranked data for.
+    to_store: PlayerMatchHistory,
+}
+
+/// Merges both sides. Steam wins, but keeps ranked fields only `ClickHouse` has: the
+/// ranked call covers just the current interval, so older ranked matches are stored,
+/// never re-fetched.
+fn merge_histories(
     ch_match_history: PlayerMatchHistory,
     steam_match_history: PlayerMatchHistory,
-) -> PlayerMatchHistory {
+) -> MergedHistory {
     let mut ch_by_match: HashMap<u64, PlayerMatchHistoryEntry> = ch_match_history
         .into_iter()
         .map(|e| (e.match_id, e))
         .collect();
 
-    let pending = steam_match_history
+    let to_store = steam_match_history
         .iter()
         .filter(|e| {
             ch_by_match
@@ -200,7 +206,6 @@ fn merge_and_store(
         })
         .cloned()
         .collect_vec();
-    state.batchers.match_history_insert.try_insert(pending);
 
     let merged = steam_match_history
         .into_iter()
@@ -209,10 +214,11 @@ fn merge_and_store(
             None => e,
         })
         .collect_vec();
-    chain!(merged, ch_by_match.into_values())
+    let merged = chain!(merged, ch_by_match.into_values())
         .sorted_by_key(|e| e.match_id)
         .rev()
-        .collect_vec()
+        .collect_vec();
+    MergedHistory { merged, to_store }
 }
 
 /// `None` skips the ranked call, leaving the ranked_* fields to `ClickHouse`.
@@ -464,12 +470,9 @@ pub(super) async fn match_history(
         }
     };
 
-    let combined_match_history = merge_and_store(&state, ch_match_history, steam_match_history);
-    Ok((
-        StatusCode::OK,
-        called_steam(true),
-        Json(combined_match_history),
-    ))
+    let MergedHistory { merged, to_store } = merge_histories(ch_match_history, steam_match_history);
+    state.batchers.match_history_insert.try_insert(to_store);
+    Ok((StatusCode::OK, called_steam(true), Json(merged)))
 }
 
 /// The `Called-Steam` header, telling whether the response includes a fresh Steam fetch.
@@ -509,5 +512,85 @@ mod tests {
         for column in PlayerMatchHistoryEntry::COLUMN_NAMES {
             assert!(query.contains(column), "{column} missing from {query}");
         }
+    }
+
+    fn entry(match_id: u64, ranked_display_badge: Option<u32>) -> PlayerMatchHistoryEntry {
+        PlayerMatchHistoryEntry {
+            account_id: 1,
+            match_id,
+            hero_id: 2,
+            hero_level: 30,
+            start_time: 1_790_000_000,
+            game_mode: 1,
+            match_mode: 4,
+            player_team: 0,
+            player_kills: 5,
+            player_deaths: 3,
+            player_assists: 7,
+            denies: 10,
+            net_worth: 40_000,
+            last_hits: 200,
+            abandoned_time_s: None,
+            match_duration_s: 1_800,
+            match_result: 0,
+            objectives_mask_team0: 0,
+            objectives_mask_team1: 0,
+            brawl_score_team0: None,
+            brawl_score_team1: None,
+            brawl_avg_round_time_s: None,
+            player_match_outcome: 1,
+            ranked_display_badge,
+            ranked_delta: ranked_display_badge.map(|_| 25),
+            ranked_calibration_match: None,
+            ranked_used_demotion_protection: None,
+            low_pri_pool: None,
+        }
+    }
+
+    fn ids(history: &[PlayerMatchHistoryEntry]) -> Vec<u64> {
+        history.iter().map(|e| e.match_id).collect()
+    }
+
+    #[test]
+    fn merge_keeps_both_sides_newest_first() {
+        let MergedHistory { merged, to_store } = merge_histories(
+            vec![entry(3, None), entry(1, None)],
+            vec![entry(4, None), entry(2, None)],
+        );
+        assert_eq!(ids(&merged), [4, 3, 2, 1]);
+        assert_eq!(ids(&to_store), [4, 2]);
+    }
+
+    #[test]
+    fn merge_prefers_steam_but_keeps_stored_ranked_fields() {
+        let mut steam = entry(1, None);
+        steam.player_kills = 9;
+        let MergedHistory { merged, to_store } =
+            merge_histories(vec![entry(1, Some(85))], vec![steam]);
+        let [merged] = merged.as_slice() else {
+            panic!("expected one entry, got {merged:?}");
+        };
+        assert_eq!(merged.player_kills, 9);
+        assert_eq!(merged.ranked_display_badge, Some(85));
+        assert_eq!(merged.ranked_delta, Some(25));
+        // ClickHouse already has the match, with more data than Steam returned.
+        assert_eq!(to_store, PlayerMatchHistory::new());
+    }
+
+    #[test]
+    fn merge_stores_ranked_data_the_stored_entry_lacks() {
+        let MergedHistory { merged, to_store } =
+            merge_histories(vec![entry(1, None)], vec![entry(1, Some(85))]);
+        assert_eq!(merged, [entry(1, Some(85))]);
+        assert_eq!(to_store, [entry(1, Some(85))]);
+    }
+
+    #[test]
+    fn merge_stores_nothing_already_stored() {
+        let MergedHistory { to_store, .. } = merge_histories(
+            vec![entry(1, None), entry(2, Some(85))],
+            vec![entry(1, None), entry(2, Some(90))],
+        );
+        assert_eq!(to_store, PlayerMatchHistory::new());
     }
 }
