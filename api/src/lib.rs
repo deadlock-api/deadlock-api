@@ -139,8 +139,8 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         patreon_verification_job.start_background_verification();
     }
 
-    let (mut prometheus_layer, metric_handle) = PrometheusMetricLayer::pair();
-    prometheus_layer.enable_response_body_size();
+    let (mut metrics_layer, metric_handle) = PrometheusMetricLayer::pair();
+    metrics_layer.enable_response_body_size();
 
     let infra = OpenApiRouter::new()
         // Redirect root to /docs
@@ -166,7 +166,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .merge(infra)
         // Add application routes
         .merge(routes::router(&state))
-        .layer(prometheus_layer)
+        .layer(metrics_layer)
         // Add Middlewares
         .layer(from_fn_with_state(state.clone(), feature_flags))
         .layer(from_fn(reject_cache_busts))
