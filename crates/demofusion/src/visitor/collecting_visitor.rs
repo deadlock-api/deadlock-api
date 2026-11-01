@@ -36,8 +36,12 @@ struct EventCollector {
 }
 
 pub(crate) struct CollectingVisitor {
-    entities: HashMap<u64, EntityCollector>,
-    events: HashMap<u32, EventCollector>,
+    // NOTE: a query references a handful of tables, so these are searched linearly; that beats
+    // hashing the key (std's SipHash) on every entity update and packet.
+    /// collectors by serializer name hash.
+    entities: Vec<(u64, EntityCollector)>,
+    /// collectors by event message id.
+    events: Vec<(u32, EventCollector)>,
     /// When false, callbacks update no builders. Set during the warm-up fast-forward that
     /// establishes parser state for a later segment without emitting its rows.
     collecting: bool,
@@ -52,26 +56,35 @@ impl CollectingVisitor {
         entities: &[(EntitySchema, Option<Arc<[usize]>>)],
         event_types: &[EventType],
     ) -> Result<Self, DemoError> {
-        let mut entity_map = HashMap::with_capacity(entities.len());
+        let mut entity_map: Vec<(u64, EntityCollector)> = Vec::with_capacity(entities.len());
         for (schema, projection) in entities {
-            entity_map.insert(
-                schema.serializer_hash,
-                EntityCollector {
-                    name: Arc::clone(&schema.serializer_name),
-                    builder: EntityBatchBuilder::new_projected(schema, projection.as_deref())?,
-                },
-            );
+            let collector = EntityCollector {
+                name: Arc::clone(&schema.serializer_name),
+                builder: EntityBatchBuilder::new_projected(schema, projection.as_deref())?,
+            };
+            // later entries replace earlier ones with the same key, as a map insert would.
+            match entity_map
+                .iter_mut()
+                .find(|(hash, _)| *hash == schema.serializer_hash)
+            {
+                Some((_, slot)) => *slot = collector,
+                None => entity_map.push((schema.serializer_hash, collector)),
+            }
         }
 
-        let mut events = HashMap::with_capacity(event_types.len());
+        let mut events: Vec<(u32, EventCollector)> = Vec::with_capacity(event_types.len());
         for &event_type in event_types {
-            events.insert(
-                event_type.message_id(),
-                EventCollector {
-                    table_name: event_type.table_name(),
-                    builder: EventBatchBuilder::try_new(event_type)?,
-                },
-            );
+            let collector = EventCollector {
+                table_name: event_type.table_name(),
+                builder: EventBatchBuilder::try_new(event_type)?,
+            };
+            match events
+                .iter_mut()
+                .find(|(id, _)| *id == event_type.message_id())
+            {
+                Some((_, slot)) => *slot = collector,
+                None => events.push((event_type.message_id(), collector)),
+            }
         }
 
         Ok(Self {
@@ -84,12 +97,12 @@ impl CollectingVisitor {
     /// Finish every builder into its single table batch.
     pub(crate) fn finish(self) -> Result<CollectedBatches, DemoError> {
         let mut entity_out = HashMap::with_capacity(self.entities.len());
-        for mut collector in self.entities.into_values() {
+        for (_, mut collector) in self.entities {
             entity_out.insert(collector.name, collector.builder.finish()?);
         }
 
         let mut event_out = HashMap::with_capacity(self.events.len());
-        for mut collector in self.events.into_values() {
+        for (_, mut collector) in self.events {
             event_out.insert(collector.table_name, collector.builder.finish()?);
         }
 
@@ -104,7 +117,15 @@ impl Visitor for CollectingVisitor {
     type Error = DemoError;
 
     fn should_track_entity(&self, serializer_name_hash: u64) -> bool {
-        self.entities.contains_key(&serializer_name_hash)
+        self.entities
+            .iter()
+            .any(|(hash, _)| *hash == serializer_name_hash)
+    }
+
+    /// event-only queries need no entity state (events only use the tick), so entity packets are
+    /// not decoded at all.
+    fn decode_entities(&self) -> bool {
+        !self.entities.is_empty()
     }
 
     fn set_collecting(&mut self, collecting: bool) {
@@ -121,7 +142,7 @@ impl Visitor for CollectingVisitor {
             return Ok(());
         }
         let hash = entity.serializer().serializer_name.hash;
-        if let Some(collector) = self.entities.get_mut(&hash) {
+        if let Some((_, collector)) = self.entities.iter_mut().find(|(h, _)| *h == hash) {
             collector
                 .builder
                 .append_entity(ctx.tick(), entity.index(), delta_header, entity);
@@ -138,7 +159,7 @@ impl Visitor for CollectingVisitor {
         if !self.collecting {
             return Ok(());
         }
-        if let Some(collector) = self.events.get_mut(&packet_type)
+        if let Some((_, collector)) = self.events.iter_mut().find(|(id, _)| *id == packet_type)
             && let Some(event) = decode_event(packet_type, data)
         {
             collector.builder.append(ctx.tick(), &event)?;

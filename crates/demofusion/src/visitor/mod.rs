@@ -9,7 +9,7 @@ use std::io::Cursor;
 use bytes::Bytes;
 use haste_core::demofile::{DemoFile, DemoHeaderError};
 use haste_core::demostream::SeekableDemoStream;
-use haste_core::parser::{Parser, SharedState, Visitor};
+use haste_core::parser::{FullPacketIndex, Parser, SharedState, Visitor};
 
 /// A `.dem` file as an in-memory, seekable stream. `Cursor<Bytes>` supports `Seek`, which the
 /// parallel collector needs to jump between full-packet segment boundaries.
@@ -51,16 +51,17 @@ impl Visitor for ScanVisitor {
     type Error = core::convert::Infallible;
 }
 
-/// Header-only scan returning the tick of every full packet in the demo.
+/// Header scan recording where every full packet starts, with its string tables decoded once.
 ///
 /// Full packets are complete state snapshots and therefore valid points to begin an independent
-/// parse; their positions are how the demo is split into parallel segments. Broadcasts contain no
-/// full-packet commands, so this returns an empty list for them (one whole-stream segment).
-pub(super) fn scan_full_packet_ticks<D: BuildStream>(
+/// parse; their positions are how the demo is split into parallel segments, and the index lets
+/// each segment seek straight to its full packet (`Parser::run_full_packet_indexed`). Broadcasts
+/// contain no full-packet commands, so their index is empty (one whole-stream segment).
+pub(super) fn index_full_packets<D: BuildStream>(
     bytes: Bytes,
-) -> super::error::Result<Vec<i32>> {
+) -> super::error::Result<FullPacketIndex> {
     let mut parser = sync_parser::<D, _>(bytes, ScanVisitor).map_err(schema_err)?;
-    parser.scan_full_packet_ticks().map_err(schema_err)
+    parser.index_full_packets().map_err(schema_err)
 }
 
 /// Parse the demo's serializers and entity classes once, so that the parallel segment parsers can

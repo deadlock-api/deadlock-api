@@ -37,7 +37,7 @@ use super::session::session_context;
 use super::table_extractor::extract_table_names;
 use super::visitor::{
     BuildStream, CollectedBatches, CollectingVisitor, SyncDemoStream, discover_schemas_from_demo,
-    parse_shared_state, scan_full_packet_ticks, sync_parser,
+    index_full_packets, parse_shared_state, sync_parser,
 };
 
 /// Threads parsing demo segments, shared by every concurrent demo query. The API shares the host
@@ -275,7 +275,30 @@ fn parse_and_collect<D: BuildStream>(
         return Ok(CollectedTables::default());
     }
 
-    let num_full_packets = scan_full_packet_ticks::<D>(demo_bytes.clone())?.len();
+    // Event-only queries decode no entities (see `CollectingVisitor::decode_entities`), which
+    // leaves little work per packet: one sequential pass costs less CPU than segments, which each
+    // also handle the sign-on and their full packet (measured on a 250 MB demo: 0.11 s vs 0.28 s
+    // CPU, at 0.11 s vs 0.05 s wall).
+    if entity_specs.is_empty() {
+        let visitor = CollectingVisitor::new(entity_specs, event_types)?;
+        let mut parser = sync_parser::<D, _>(demo_bytes.clone(), visitor)?;
+        // Mirrors the segmented path: parse errors (e.g. a truncated tail) are tolerated and
+        // whatever was collected so far is kept.
+        if let Err(e) = parser.run_to_end() {
+            debug!("Demo parse ended early: {e}");
+        }
+        let segment = parser.into_visitor().finish()?;
+        let mut tables = CollectedTables::default();
+        for (name, batch) in segment.events {
+            if batch.num_rows() > 0 {
+                tables.events.entry(name).or_default().push(batch);
+            }
+        }
+        return Ok(tables);
+    }
+
+    let full_packets = index_full_packets::<D>(demo_bytes.clone())?;
+    let num_full_packets = full_packets.len();
     // Serializers and entity classes are the same for every segment: parse them once and share
     // them, instead of every segment parser re-parsing the send tables.
     let shared_state = parse_shared_state::<D>(demo_bytes.clone())?;
@@ -300,7 +323,7 @@ fn parse_and_collect<D: BuildStream>(
                 }
                 // Mirrors the single-threaded path: parse errors (e.g. a truncated tail) are
                 // tolerated and whatever was collected so far is kept.
-                if let Err(e) = parser.run_full_packet(ordinal) {
+                if let Err(e) = parser.run_full_packet_indexed(&full_packets, ordinal) {
                     debug!("Demo segment {ordinal} parse ended early: {e}");
                 }
                 parser.into_visitor().finish()
