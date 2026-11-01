@@ -166,9 +166,9 @@ impl<R: Read + Seek> DemoStream for DemoFile<R> {
     }
 
     fn skip_cmd(&mut self, cmd_header: &CmdHeader) -> Result<(), io::Error> {
-        self.rdr
-            .seek(SeekFrom::Current(i64::from(cmd_header.body_size)))
-            .map(|_| ())
+        // `seek_relative` (unlike `seek`) lets a `BufReader` stay within its buffer instead of
+        // discarding it, which saved a seek and a read syscall per skipped command.
+        self.rdr.seek_relative(i64::from(cmd_header.body_size))
     }
 }
 

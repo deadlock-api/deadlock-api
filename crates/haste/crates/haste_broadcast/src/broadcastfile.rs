@@ -78,9 +78,8 @@ impl<R: Read + Seek> DemoStream for BroadcastFile<R> {
     }
 
     fn skip_cmd(&mut self, cmd_header: &CmdHeader) -> Result<(), io::Error> {
-        self.rdr
-            .seek(SeekFrom::Current(i64::from(cmd_header.body_size)))
-            .map(|_| ())
+        // `seek_relative` (unlike `seek`) lets a `BufReader` stay within its buffer.
+        self.rdr.seek_relative(i64::from(cmd_header.body_size))
     }
 }
 
