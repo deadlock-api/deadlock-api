@@ -11,8 +11,8 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, default_min_matches_u32, filter_protected_accounts, is_non_empty, join_filters,
-    not_corrupted_sql, round_timestamps,
+    MatchScope, PlayerFilters, default_min_matches_u32, filter_protected_accounts, is_non_empty,
+    join_filters, not_corrupted_sql, round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -379,7 +379,6 @@ fn brawl_round_expr(buy_time_expr: &str, round_durations_expr: &str) -> String {
     reason = "one linear query builder reads clearer than split helpers"
 )]
 fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
-    let info_filters = query.match_info().build();
     let scalar_filter_vec = PlayerFilters {
         hero_ids: query.hero_ids.as_deref(),
         account_ids: query.account_ids.as_deref(),
@@ -485,12 +484,12 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         };
         format!(" AND hasAll({ids_column}, [{}])", locked_ids.join(", "))
     };
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    let prewhere = format!(
-        "{match_mode_filter} AND {game_mode_filter} {info_filters}{}",
-        join_filters(&scalar_filter_vec)
+    let scope = MatchScope::new(
+        query.match_mode.as_deref(),
+        query.game_mode,
+        query.match_info(),
     );
+    let prewhere = format!("{}{}", scope.sql(), join_filters(&scalar_filter_vec));
 
     let column_expr = column_of("e.buy_time", "e.round_durations");
     let extra_select = if is_brawl {
