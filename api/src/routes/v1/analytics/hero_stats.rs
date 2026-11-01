@@ -10,7 +10,7 @@ use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    BucketQuery, PlayerFilters, filter_protected_accounts, is_non_empty, join_filters,
+    BucketQuery, MatchScope, PlayerFilters, filter_protected_accounts, is_non_empty, join_filters,
     range_filters, rollup_oldest_servable, round_timestamps,
 };
 use super::rollup_window::{Coverage, DaySplit, EdgeRows, Rollup, RollupFilters};
@@ -481,7 +481,6 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     reason = "one linear query builder reads clearer than split helpers"
 )]
 fn build_query(query: &HeroStatsQuery) -> String {
-    let info_filters = query.match_info().build();
     let (min_hero_matches, max_hero_matches) = query.hero_matches_bounds();
     let (min_hero_matches_total, max_hero_matches_total) = query.hero_matches_total_bounds();
     // Only used by the CTEs below, which exist only when a bound is set.
@@ -496,19 +495,24 @@ fn build_query(query: &HeroStatsQuery) -> String {
     .join(" AND ");
     let bucket_by_total = !query.hero_matches_total_bucket_bounds().is_empty();
     let bucket = query.bucket_expr();
-    let game_mode_filter = GameMode::sql_filter(query.game_mode);
-    let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    let match_filters = format!("AND {match_mode_filter} AND {game_mode_filter} {info_filters}");
+    let scope = MatchScope::new(
+        query.match_mode.as_deref(),
+        query.game_mode,
+        query.match_info(),
+    );
+    let game_mode_filter = scope.game_mode_sql();
+    let match_filters = format!("AND {}", scope.sql());
     // The in-window hero match count spans the whole window: a duration filter (one bucket of the
     // by-duration chart) must not narrow it to the player's matches of that duration.
-    let window_info_filters = MatchInfoFilters {
-        min_duration_s: None,
-        max_duration_s: None,
-        ..query.match_info()
-    }
-    .build();
-    let window_match_filters =
-        format!("AND {match_mode_filter} AND {game_mode_filter} {window_info_filters}");
+    let window_scope = MatchScope {
+        info: MatchInfoFilters {
+            min_duration_s: None,
+            max_duration_s: None,
+            ..scope.info
+        },
+        ..scope
+    };
+    let window_match_filters = format!("AND {}", window_scope.sql());
     let has_player_hero_cte = min_hero_matches.is_some() || max_hero_matches.is_some();
     let has_player_hero_total_cte =
         min_hero_matches_total.is_some() || max_hero_matches_total.is_some() || bucket_by_total;
