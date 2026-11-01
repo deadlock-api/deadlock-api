@@ -314,13 +314,15 @@ mod tests {
 
     #[tokio::test]
     async fn heaviest_production_query_fits() {
-        // 1.6 CPU-s for the 1,300 rows it found; worst case 10,000 rows.
+        // 1.6 CPU-s for the 1,300 rows it found; worst case 10,000 rows. The window is relative:
+        // past `DENSE_DAYS` the filter is costed as sparse.
+        let start = chrono::Utc::now().timestamp() - 29 * 86_400;
         let accounts = (1..=1500)
             .map(|i| i.to_string())
             .collect::<Vec<_>>()
             .join(",");
         let (c, rejected) = complexity(&format!(
-            "{{ match_players(where: {{account_id: {{in: [{accounts}]}}, start_time: {{gte: 1790950002}}}}, \
+            "{{ match_players(where: {{account_id: {{in: [{accounts}]}}, start_time: {{gte: {start}}}}}, \
              order_by: START_TIME, limit: 10000) {{ match_id account_id hero_id start_time match_mode \
              game_mode hero_build_id items {{ item_id }} }} }}"
         ))
