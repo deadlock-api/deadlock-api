@@ -313,7 +313,7 @@ impl ClickhouseClients {
             .with_user(&config.clickhouse.username)
             .with_password(&config.clickhouse.password)
             .with_database(&config.clickhouse.dbname)
-            .with_compression(clickhouse::Compression::zstd())
+            .with_compression(clickhouse::Compression::None)
             .with_setting("output_format_json_quote_64bit_integers", "0")
             .with_setting("output_format_json_named_tuples_as_objects", "1")
             .with_setting("enable_json_type", "1")
@@ -382,7 +382,7 @@ fn spawn_data_dump(
         .with_user(&config.data_dump.username)
         .with_password(&config.data_dump.password)
         .with_database("dump")
-        .with_compression(clickhouse::Compression::zstd())
+        .with_compression(clickhouse::Compression::None)
         // Exports run for up to two hours; keep the HTTP connection busy meanwhile.
         .with_setting("send_progress_in_http_headers", "1")
         .with_setting("http_headers_progress_interval_ms", "10000")
