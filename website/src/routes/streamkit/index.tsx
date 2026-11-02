@@ -7,7 +7,6 @@ import { type ReactNode, useEffect } from "react";
 import { SteamIcon } from "~/components/domain/brand/BrandIcons";
 import { CommandBuilder } from "~/components/features/streamkit/command/CommandBuilder";
 import { WidgetBuilder } from "~/components/features/streamkit/widget-builder";
-import { Hero } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Button } from "~/components/ui/button";
@@ -76,13 +75,7 @@ function StreamKit() {
 
   return (
     <PageShell density="content">
-      <Hero size="sm">
-        <PageHeader
-          size="lg"
-          title="Stream Kit"
-          description="Build chat commands and OBS widgets for your Deadlock stream"
-        />
-      </Hero>
+      <PageHeader title="Stream Kit" description="Build chat commands and OBS widgets for your Deadlock stream" />
 
       <Card size="sm">
         <CardContent>

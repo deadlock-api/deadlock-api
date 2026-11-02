@@ -2,20 +2,7 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "~/lib/utils";
 
-const heroGlowVariants = cva(
-  "pointer-events-none absolute inset-s-1/2 -z-10 -translate-x-1/2 rounded-full bg-primary/8 blur-3xl rtl:translate-x-1/2",
-  {
-    variants: {
-      size: {
-        sm: "top-0 size-72",
-        default: "-top-12 size-80",
-      },
-    },
-    defaultVariants: { size: "default" },
-  },
-);
-
-const heroVariants = cva("relative isolate flex min-w-0 flex-col items-center text-center", {
+const heroVariants = cva("flex min-w-0 flex-col items-center text-center", {
   variants: {
     size: {
       sm: "gap-4 py-4",
@@ -26,8 +13,9 @@ const heroVariants = cva("relative isolate flex min-w-0 flex-col items-center te
 });
 
 /**
- * The opening block of a hub or marketing page: a centred column of `PageHeader`, `HeroLead` and `HeroActions`
- * over a soft brand-colored glow. `HeroActions` also holds a row of pills under the title. Every part is optional.
+ * The opening block of a marketing page or a minigame: a centred column of `PageHeader`, `HeroLead` and `HeroActions`
+ * on the plain ground. `HeroActions` also holds a row of pills under the title. Every part is optional. A tool or a data
+ * page opens with a plain `PageHeader` instead.
  */
 export function Hero({
   size = "default",
@@ -37,7 +25,6 @@ export function Hero({
 }: React.ComponentProps<"section"> & VariantProps<typeof heroVariants>) {
   return (
     <section data-slot="hero" data-size={size} className={cn(heroVariants({ size }), className)} {...props}>
-      <div data-slot="hero-glow" aria-hidden="true" className={heroGlowVariants({ size })} />
       {children}
     </section>
   );
