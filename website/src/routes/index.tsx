@@ -1,17 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  Code,
-  Gamepad2,
-  type LucideIcon,
-  Trophy,
-  Wrench,
-  BarChart3,
-  Database,
-  Download,
-  HardDrive,
-  Heart,
-  Package,
-} from "lucide-react";
+import { BookOpen, type LucideIcon, BarChart3, Database, Download, HardDrive, Heart, Package } from "lucide-react";
 
 import { OptimizedImage } from "~/components/domain/assets/OptimizedImage";
 import { useInstallCtaTracking } from "~/components/domain/ingest/analytics";
@@ -32,6 +20,8 @@ import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { useIsWindows } from "~/hooks/useIsWindows";
+import { formatBlogDate } from "~/lib/blog-date";
+import { fetchBlogPosts } from "~/lib/blog-fns";
 import { API_ORIGIN } from "~/lib/constants";
 import { ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { navGroups } from "~/lib/site-nav";
@@ -78,6 +68,8 @@ export const Route = createFileRoute("/")({
         ],
       },
     }),
+  // The newest posts only, as titles and dates: the markdown stays on the server.
+  loader: async () => (await fetchBlogPosts()).slice(0, 3),
   component: IndexRoute,
 });
 
@@ -159,38 +151,33 @@ const sponsors = [
 
 interface DirectoryEntry {
   label: string;
-  icon: LucideIcon;
   links: { to: string; label: string; icon: LucideIcon; external?: boolean }[];
 }
 
 const groupLinks = (label: string) => navGroups.find((group) => group.label === label)?.links ?? [];
 
 /**
- * The directory: the sidebar's sections (without the patron and tracker entries, not this page's subject) and the
- * developer services, in three columns of about one height: Analytics, Community over Games, Tools over services.
+ * The directory, one column per section like a site map: the sidebar's sections (without the patron and tracker
+ * entries, not this page's subject) and the developer services.
  */
-const DIRECTORY_COLUMNS: DirectoryEntry[][] = [
-  [{ label: "Analytics", icon: BarChart3, links: groupLinks("Analytics") }],
-  [
-    { label: "Community", icon: Trophy, links: groupLinks("Community") },
-    { label: "Games", icon: Gamepad2, links: groupLinks("Games") },
-  ],
-  [
-    { label: "Tools", icon: Wrench, links: groupLinks("Tools") },
-    {
-      label: "Developer Services",
-      icon: Code,
-      links: services.map((service) => ({
-        to: service.href,
-        label: service.title,
-        icon: service.icon,
-        external: service.external,
-      })),
-    },
-  ],
+const DIRECTORY: DirectoryEntry[] = [
+  { label: "Analytics", links: groupLinks("Analytics") },
+  { label: "Community", links: groupLinks("Community") },
+  { label: "Games", links: groupLinks("Games") },
+  { label: "Tools", links: groupLinks("Tools") },
+  {
+    label: "Developer Services",
+    links: services.map((service) => ({
+      to: service.href,
+      label: service.title,
+      icon: service.icon,
+      external: service.external,
+    })),
+  },
 ];
 
 function IndexRoute() {
+  const posts = Route.useLoaderData();
   const isWindows = useIsWindows();
   const installTracking = useInstallCtaTracking("home", isWindows ? "download" : "install_steps");
   return (
@@ -274,95 +261,116 @@ function IndexRoute() {
         </Panel>
       </Grid>
 
-      {/* The site's sections as the sidebar groups them, with the developer services. Three columns of one height: the
-          long Analytics list beside two stacks of shorter ones. The patron and tracker entries stay in the sidebar:
-          this page does not target the tracker. */}
+      {/* The site's sections as the sidebar groups them, with the developer services: one panel, a column each. The
+          patron and tracker entries stay in the sidebar: this page does not target the tracker. */}
       <Section title="Deadlock Stats, Hero Win Rates & Leaderboards">
-        <Grid columns={{ base: 1, md: 3 }} gap={4} className="items-stretch">
-          {DIRECTORY_COLUMNS.map((column) => (
-            <Stack key={column.map((entry) => entry.label).join()} gap={4}>
-              {column.map((entry, i) => (
-                <Panel key={entry.label} className={i === column.length - 1 ? "flex-1" : undefined}>
-                  <PanelHeader title={entry.label} icon={entry.icon} size="sm" />
-                  <PanelBody size="sm">
-                    <SideNav aria-label={entry.label}>
-                      <SideNavGroup>
-                        {entry.links.map((link) => (
-                          <SideNavItem key={link.to} asChild>
-                            <SmartLink href={link.to} external={link.external}>
-                              <link.icon />
-                              <span className="truncate">{link.label}</span>
-                            </SmartLink>
-                          </SideNavItem>
-                        ))}
-                      </SideNavGroup>
-                    </SideNav>
-                  </PanelBody>
-                </Panel>
+        <Panel>
+          <PanelBody>
+            <SideNav
+              aria-label="Site directory"
+              className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5"
+            >
+              {DIRECTORY.map((entry) => (
+                <SideNavGroup key={entry.label} label={entry.label}>
+                  {entry.links.map((link) => (
+                    <SideNavItem key={link.to} asChild>
+                      <SmartLink href={link.to} external={link.external}>
+                        <link.icon />
+                        <span className="truncate">{link.label}</span>
+                      </SmartLink>
+                    </SideNavItem>
+                  ))}
+                </SideNavGroup>
               ))}
-            </Stack>
-          ))}
-        </Grid>
+            </SideNav>
+          </PanelBody>
+        </Panel>
       </Section>
 
-      <Panel tone="primary">
-        <PanelHeader title="Track all your matches on all tracker sites" icon={Download} size="sm" as="h2" />
-        <PanelBody>
-          <Grid columns={{ base: 1, lg: 3 }} gap={6} className="items-center">
-            <Stack gap={3}>
-              <Text as="p" tone="muted">
+      <Grid columns={{ base: 1, lg: 3 }} gap={4} className="items-stretch">
+        {/* Every site that shows the tool's matches, as an even grid of their icons under what the tool does. */}
+        <Panel className="lg:col-span-2">
+          <PanelHeader
+            title="Track all your matches on all tracker sites"
+            icon={Download}
+            size="sm"
+            as="h2"
+            description={`${TRACKER_SITES.length} sites`}
+          />
+          <PanelBody className="flex flex-col gap-4">
+            <Inline gap={4} justify="between">
+              <Text as="p" className="type-prose">
                 Install the ingest tool once and every match you play gets sent.
               </Text>
-              <Inline>
-                <Button asChild>
-                  {isWindows ? (
-                    <a href={WINDOWS_SETUP_URL} download {...installTracking}>
-                      <Download aria-hidden="true" />
-                      Download for Windows
-                    </a>
-                  ) : (
-                    <SmartLink href="/ingest-cache" {...installTracking}>
-                      <Download aria-hidden="true" />
-                      Install the tool
-                    </SmartLink>
-                  )}
-                </Button>
-              </Inline>
-            </Stack>
-            {/* The sites as one dense wall of their icons. */}
-            <Inline asChild gap={2} className="lg:col-span-2">
-              <ul aria-label="Sites that show matches from Deadlock API">
-                {TRACKER_SITES.map((site) => {
-                  const icon = (
-                    <img
-                      src={site.icon}
-                      alt={site.name}
-                      title={site.name}
-                      width={28}
-                      height={28}
-                      loading="lazy"
-                      decoding="async"
-                      referrerPolicy="no-referrer"
-                      className="size-7 object-contain"
-                    />
-                  );
-                  return (
-                    <li key={site.name}>
-                      {site.href ? (
-                        <LogoWallItem size="icon" href={site.href} target="_blank" rel="sponsored noreferrer">
-                          {icon}
-                        </LogoWallItem>
-                      ) : (
-                        icon
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+              <Button asChild>
+                {isWindows ? (
+                  <a href={WINDOWS_SETUP_URL} download {...installTracking}>
+                    <Download aria-hidden="true" />
+                    Download for Windows
+                  </a>
+                ) : (
+                  <SmartLink href="/ingest-cache" {...installTracking}>
+                    <Download aria-hidden="true" />
+                    Install the tool
+                  </SmartLink>
+                )}
+              </Button>
             </Inline>
-          </Grid>
-        </PanelBody>
-      </Panel>
+            <ul
+              aria-label="Sites that show matches from Deadlock API"
+              className="grid grid-cols-[repeat(auto-fill,minmax(2.5rem,1fr))] gap-2"
+            >
+              {TRACKER_SITES.map((site) => {
+                const icon = (
+                  <img
+                    src={site.icon}
+                    alt={site.name}
+                    title={site.name}
+                    width={28}
+                    height={28}
+                    loading="lazy"
+                    decoding="async"
+                    referrerPolicy="no-referrer"
+                    className="size-7 object-contain"
+                  />
+                );
+                return (
+                  <li key={site.name} className="flex justify-center">
+                    {site.href ? (
+                      <LogoWallItem size="icon" href={site.href} target="_blank" rel="sponsored noreferrer">
+                        {icon}
+                      </LogoWallItem>
+                    ) : (
+                      icon
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </PanelBody>
+        </Panel>
+
+        {/* The newest posts: what changed in the game and in the data, by title and date. */}
+        <Panel>
+          <PanelHeader title="From the blog" icon={BookOpen} size="sm" as="h2">
+            <TextLink asChild underline="always" className="text-xs font-medium">
+              <SmartLink href="/blog">All posts</SmartLink>
+            </TextLink>
+          </PanelHeader>
+          <PanelBody className="flex flex-col gap-4">
+            {posts.map((post) => (
+              <Stack key={post.slug} gap={1}>
+                <TextLink asChild tone="inherit" underline="hover" className="font-medium">
+                  <SmartLink href={`/blog/${post.slug}`}>{post.title}</SmartLink>
+                </TextLink>
+                <Text variant="caption" tone="muted">
+                  {formatBlogDate(post.date)} · {post.readingMinutes} min read
+                </Text>
+              </Stack>
+            ))}
+          </PanelBody>
+        </Panel>
+      </Grid>
 
       <Grid columns={{ base: 1, lg: 2 }} gap={4} className="items-stretch">
         <Panel>
