@@ -7,6 +7,11 @@ pub(crate) const LOG_COMMENT: &str = "data_dump";
 
 /// R2 requires every multipart part except the last to have the same size, so the part size
 /// is fixed at 64 MiB and `ClickHouse`'s usual doubling after 500 parts is disabled.
+///
+/// Readers fetch every column chunk of every row group with its own ranged GET, each one an R2
+/// Class B operation. `match_player` rows are wide, so the default 512 MiB (uncompressed) row
+/// group held only ~66k rows; 2 GiB cuts those GETs ~4x. Writer memory grows with the row group
+/// (~8 GB per export at 4 threads, ~11 GB at 12), so 4 GiB would not fit `dump_user`'s 16 GiB.
 const EXPORT_SETTINGS: &str = "s3_truncate_on_insert = 1, \
     s3_min_upload_part_size = 67108864, \
     s3_upload_part_size_multiply_parts_count_threshold = 100000, \
@@ -14,7 +19,8 @@ const EXPORT_SETTINGS: &str = "s3_truncate_on_insert = 1, \
     output_format_compression_level = 9, \
     output_format_parquet_write_page_index = 1, \
     output_format_parquet_write_bloom_filter = 1, \
-    output_format_parquet_string_as_string = 1";
+    output_format_parquet_string_as_string = 1, \
+    output_format_parquet_row_group_size_bytes = 2147483648";
 
 fn quote(s: &str) -> String {
     format!("'{}'", s.replace('\\', "\\\\").replace('\'', "\\'"))
