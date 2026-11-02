@@ -1,4 +1,3 @@
-import type { Leaderboard } from "deadlock_api_client";
 import Fuse from "fuse.js";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
@@ -12,18 +11,19 @@ import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, Tabl
 import { Tooltip } from "~/components/ui/tooltip";
 import { useHeroById } from "~/hooks/useAssetById";
 import { usePaginationQueryState } from "~/hooks/usePaginationQueryState";
+import type { SlimLeaderboard } from "~/queries/leaderboard-queries";
 
 import { LeaderboardControls } from "./LeaderboardControls";
 
 export interface LeaderboardTableProps {
-  leaderboard: Leaderboard;
+  leaderboard: SlimLeaderboard;
   /** Names the table for assistive technology: "Europe leaderboard". */
   label: string;
   onHeroClick: (heroId: number) => void;
 }
 
 interface LeaderboardTableRowProps {
-  entry: Leaderboard["entries"][number];
+  entry: SlimLeaderboard["entries"][number];
   isHighlighted: boolean;
   shouldShowTopHeroesColumn: boolean;
   onHeroClick: (heroId: number) => void;
