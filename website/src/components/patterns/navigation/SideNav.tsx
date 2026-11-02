@@ -67,7 +67,7 @@ export function SideNavGroup({
   return (
     <div data-slot="side-nav-group" className={cn("flex flex-col gap-0.5", className)} {...props}>
       {label && (
-        <p data-slot="side-nav-group-label" className="px-3 pb-1 eyebrow text-xs">
+        <p data-slot="side-nav-group-label" className="px-3 pb-1 eyebrow">
           {label}
         </p>
       )}
@@ -78,22 +78,20 @@ export function SideNavGroup({
 
 const sideNavItemVariants = cva(
   [
-    "flex min-w-0 items-center gap-2.5 rounded-md border-s-2 px-3 py-1.5 text-sm font-medium transition-colors duration-fast ease-standard",
+    "flex min-w-0 items-center gap-2.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-fast ease-standard",
     FOCUS_RING,
-    "[&_svg]:size-4 [&_svg]:shrink-0",
+    "focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar [&_svg]:size-4 [&_svg]:shrink-0",
+    // The page you are on is a solid brand-red item: the one mark of "current" the whole site shares.
+    "data-active:bg-primary data-active:font-semibold data-active:text-primary-foreground data-active:[&_svg]:text-primary-foreground",
   ],
   {
     variants: {
       variant: {
         default: [
-          "border-transparent text-muted-foreground hover:bg-sidebar-accent/50 hover:text-sidebar-foreground [&_svg]:text-muted-foreground",
-          "data-active:border-primary data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground data-active:[&_svg]:text-primary",
+          "text-secondary-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground [&_svg]:text-muted-foreground",
         ],
-        /** One entry the navigation wants noticed, such as the paid feature. */
-        highlight: [
-          "border border-primary/30 bg-primary/10 text-primary hover:bg-primary/15",
-          "data-active:border-primary/60 data-active:bg-primary/15",
-        ],
+        /** One entry the navigation wants noticed, such as the paid feature: brand-red text until it is current. */
+        highlight: ["text-primary hover:bg-sidebar-accent [&_svg]:text-primary"],
       },
     },
     defaultVariants: { variant: "default" },

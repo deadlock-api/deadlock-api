@@ -16,7 +16,7 @@ export function SideNavShell({ className, ...props }: React.ComponentProps<"asid
     <aside
       data-slot="side-nav-shell"
       className={cn(
-        "glass z-30 hidden border-e border-sidebar-border text-sidebar-foreground md:fixed md:inset-y-0 md:inset-s-0 md:flex md:w-64 md:flex-col",
+        "z-30 hidden border-e border-sidebar-border bg-sidebar text-sidebar-foreground md:fixed md:inset-y-0 md:inset-s-0 md:flex md:w-64 md:flex-col",
         className,
       )}
       {...props}
@@ -183,7 +183,11 @@ export function SideNavBrand({
   return (
     <Comp
       data-slot="side-nav-brand"
-      className={cn(FOCUS_RING, "flex min-w-0 flex-1 items-center gap-3 rounded-md text-lg font-semibold", className)}
+      className={cn(
+        FOCUS_RING,
+        "flex min-w-0 flex-1 items-center gap-3 rounded-md font-display text-xl font-bold tracking-wide uppercase",
+        className,
+      )}
       {...props}
     />
   );
