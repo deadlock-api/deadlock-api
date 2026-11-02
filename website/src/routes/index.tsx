@@ -1,11 +1,24 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
-import { BookOpen, type LucideIcon, BarChart3, Database, Download, HardDrive, Heart, Package } from "lucide-react";
+import {
+  BarChart3,
+  BookOpen,
+  Database,
+  Download,
+  HardDrive,
+  Heart,
+  type LucideIcon,
+  Package,
+  Swords,
+} from "lucide-react";
 
+import { HeroLinkTile } from "~/components/domain/assets/HeroLinkTile";
 import { OptimizedImage } from "~/components/domain/assets/OptimizedImage";
 import { useInstallCtaTracking } from "~/components/domain/ingest/analytics";
 import { InstallButton } from "~/components/domain/ingest/InstallButton";
 import { INGEST_INSTALL_PATH, WINDOWS_SETUP_URL } from "~/components/domain/ingest/links";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
+import { useHeroRoster } from "~/components/domain/selectors/useHeroPicker";
 import { AiSearch } from "~/components/features/ai-search/AiSearch";
 import { LogoWallItem } from "~/components/patterns/content/LogoWall";
 import { Prose } from "~/components/patterns/content/Prose";
@@ -23,9 +36,11 @@ import { useIsWindows } from "~/hooks/useIsWindows";
 import { formatBlogDate } from "~/lib/blog-date";
 import { fetchBlogPosts } from "~/lib/blog-fns";
 import { API_ORIGIN } from "~/lib/constants";
+import { prefetchCached } from "~/lib/prefetch-safe";
 import { ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { navGroups } from "~/lib/site-nav";
 import { TRACKER_SITES } from "~/lib/tracker-sites";
+import { patchListQueryOptions } from "~/queries/patch-list-query";
 
 export const Route = createFileRoute("/")({
   head: () =>
@@ -69,7 +84,11 @@ export const Route = createFileRoute("/")({
       },
     }),
   // The newest posts only, as titles and dates: the markdown stays on the server.
-  loader: async () => (await fetchBlogPosts()).slice(0, 3),
+  loader: async ({ context: { queryClient } }) => {
+    // The latest patch for the line under the search; the heroes come from the root's prefetch.
+    await prefetchCached(queryClient, patchListQueryOptions);
+    return (await fetchBlogPosts()).slice(0, 3);
+  },
   component: IndexRoute,
 });
 
@@ -178,6 +197,12 @@ const DIRECTORY: DirectoryEntry[] = [
 
 function IndexRoute() {
   const posts = Route.useLoaderData();
+  const { heroes } = useHeroRoster();
+  const { data: patches = [] } = useQuery(patchListQueryOptions);
+  const latestPatch = patches.reduce<(typeof patches)[number] | undefined>(
+    (latest, patch) => (!latest || patch.startUnix > latest.startUnix ? patch : latest),
+    undefined,
+  );
   const isWindows = useIsWindows();
   const installTracking = useInstallCtaTracking("home", isWindows ? "download" : "install_steps");
   return (
@@ -206,6 +231,14 @@ function IndexRoute() {
               </Button>
             ))}
           </Inline>
+          {latestPatch && (
+            <Text as="p" variant="caption" tone="muted">
+              Latest patch:{" "}
+              <TextLink asChild tone="inherit" underline="always" className="font-medium text-foreground">
+                <SmartLink href={`/patches/${latestPatch.id}`}>{latestPatch.name}</SmartLink>
+              </TextLink>
+            </Text>
+          )}
         </Stack>
 
         {/* The sponsors at the top of the page: the main one first and largest, the others under it. */}
@@ -260,6 +293,24 @@ function IndexRoute() {
           </PanelBody>
         </Panel>
       </Grid>
+
+      {/* Every hero, each a way into their page: the game's faces on its front page, and a link to every hero. */}
+      <Panel>
+        <PanelHeader title="Heroes" icon={Swords} size="sm" as="h2">
+          <TextLink asChild underline="always" className="text-xs font-medium">
+            <SmartLink href="/analytics/heroes">All hero stats</SmartLink>
+          </TextLink>
+        </PanelHeader>
+        <PanelBody size="sm">
+          <ul aria-label="Heroes" className="grid grid-cols-[repeat(auto-fill,minmax(4rem,1fr))] gap-1">
+            {heroes.map((hero) => (
+              <li key={hero.id}>
+                <HeroLinkTile hero={hero} />
+              </li>
+            ))}
+          </ul>
+        </PanelBody>
+      </Panel>
 
       {/* The site's sections as the sidebar groups them, with the developer services: one panel, a column each. The
           patron and tracker entries stay in the sidebar: this page does not target the tracker. */}
