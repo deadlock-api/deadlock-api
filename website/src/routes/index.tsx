@@ -12,7 +12,6 @@ import { Prose } from "~/components/patterns/content/Prose";
 import { SideNav, SideNavGroup, SideNavItem } from "~/components/patterns/navigation/SideNav";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
-import { Section } from "~/components/patterns/page/Section";
 import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Button } from "~/components/ui/button";
 import { Grid } from "~/components/ui/grid";
@@ -157,8 +156,8 @@ interface DirectoryEntry {
 const groupLinks = (label: string) => navGroups.find((group) => group.label === label)?.links ?? [];
 
 /**
- * The directory, one column per section like a site map: the sidebar's sections (without the patron and tracker
- * entries, not this page's subject) and the developer services.
+ * The directory, one column per section like a site map: the sidebar's sections, without the patron and tracker
+ * entries (not this page's subject), and the developer services.
  */
 const DIRECTORY: DirectoryEntry[] = [
   { label: "Analytics", links: groupLinks("Analytics") },
@@ -183,194 +182,201 @@ function IndexRoute() {
   const installTracking = useInstallCtaTracking("home", isWindows ? "download" : "install_steps");
   return (
     <PageShell density="content">
-      {/* One grid down the page: every row spans the content width, panels beside each other share their height. */}
-      <Grid columns={{ base: 1, lg: 3 }} gap={4} className="items-stretch">
-        {/* What the site is, then the search, its main action: a phone reaches it without scrolling. */}
-        <Stack gap={4} className="justify-center lg:col-span-2">
-          <Stack gap={2}>
-            <PageHeader size="display" title="Deadlock API" />
-            <Text as="p" tone="muted" className="max-w-4xl type-prose">
-              Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards,
-              updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to
-              Deadlock game data, match history, player statistics, hero analytics, and more.
-            </Text>
+      {/* Two columns: the search and the site map, the page's work, beside a rail of small panels that go with it. */}
+      <Grid columns={{ base: 1, lg: 3 }} gap={6}>
+        <Stack gap={6} className="lg:col-span-2">
+          {/* What the site is, then the search, its main action: a phone reaches it without scrolling. */}
+          <Stack gap={4}>
+            <Stack gap={2}>
+              <PageHeader size="display" title="Deadlock API" />
+              <Text as="p" tone="muted" className="max-w-4xl type-prose">
+                Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards,
+                updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to
+                Deadlock game data, match history, player statistics, hero analytics, and more.
+              </Text>
+            </Stack>
+            <AiSearch className="max-w-4xl" />
+            <Inline gap={2}>
+              <InstallButton size="default" installHref={INGEST_INSTALL_PATH} placement="home_hero" />
+              {valueProps.map((prop) => (
+                <Button key={prop.label} asChild variant="outline">
+                  <SmartLink href={prop.href} external={prop.external} title={prop.title}>
+                    <prop.icon className="size-3.5" />
+                    {prop.label}
+                  </SmartLink>
+                </Button>
+              ))}
+            </Inline>
           </Stack>
-          <AiSearch className="max-w-4xl" />
-          <Inline gap={2}>
-            <InstallButton size="default" installHref={INGEST_INSTALL_PATH} placement="home_hero" />
-            {valueProps.map((prop) => (
-              <Button key={prop.label} asChild variant="outline">
-                <SmartLink href={prop.href} external={prop.external} title={prop.title}>
-                  <prop.icon className="size-3.5" />
-                  {prop.label}
-                </SmartLink>
-              </Button>
-            ))}
-          </Inline>
+
+          {/* The site's sections as the sidebar groups them, a column each. The patron and tracker entries stay in the
+              sidebar: this page does not target the tracker. */}
+          {/* It takes the room down to the rail's last panel, so the two columns end on one line. Its columns follow the
+              panel's own width, never cutting a name short. */}
+          <Panel className="flex-1">
+            <PanelHeader title="Deadlock Stats, Hero Win Rates & Leaderboards" size="sm" as="h2" />
+            <PanelBody className="@container">
+              <SideNav
+                aria-label="Site directory"
+                className="block columns-1 gap-x-6 *:break-inside-avoid *:pb-5 @md:columns-2 @2xl:columns-3 @6xl:columns-5"
+              >
+                {DIRECTORY.map((entry) => (
+                  <SideNavGroup key={entry.label} label={entry.label}>
+                    {entry.links.map((link) => (
+                      <SideNavItem key={link.to} asChild>
+                        <SmartLink href={link.to} external={link.external}>
+                          <link.icon />
+                          <span className="truncate">{link.label}</span>
+                        </SmartLink>
+                      </SideNavItem>
+                    ))}
+                  </SideNavGroup>
+                ))}
+              </SideNav>
+            </PanelBody>
+          </Panel>
         </Stack>
 
-        {/* The sponsors at the top of the page: the main one first and largest, the others under it. */}
-        <Panel>
-          <PanelHeader title="Sponsored by" icon={Heart} size="sm" as="h2">
-            <TextLink
-              href="https://www.patreon.com/c/manuelhexe"
-              target="_blank"
-              rel="noopener noreferrer"
-              underline="always"
-              className="text-xs font-medium"
-              title="Support on Patreon"
-            >
-              Become a sponsor
-            </TextLink>
-          </PanelHeader>
-          <PanelBody className="flex flex-1 flex-col items-center justify-center gap-5">
-            <LogoWallItem href={mainSponsor.href} title={mainSponsor.title} target="_blank" rel="sponsored noreferrer">
-              <OptimizedImage
-                src={mainSponsor.logo}
-                widths={[192, 240, 384, 480, 576, 720]}
-                sizes="(min-width: 1024px) 256px, 208px"
-                alt={mainSponsor.title}
-                width={600}
-                height={127}
-                className="h-auto w-52 object-contain lg:w-64"
-              />
-            </LogoWallItem>
-            <Inline gap={6} justify="center">
-              {sponsors.map((sponsor) => (
-                <LogoWallItem
-                  key={sponsor.href}
-                  href={sponsor.href}
-                  title={sponsor.title}
-                  target="_blank"
-                  rel="sponsored noreferrer"
-                >
-                  <OptimizedImage
-                    src={sponsor.logo}
-                    widths={[140, 280, 420]}
-                    sizes="140px"
-                    alt={sponsor.title}
-                    width={sponsor.width}
-                    height={sponsor.height}
-                    loading="lazy"
-                    fetchPriority="low"
-                    className="max-h-8 max-w-28 object-contain"
-                  />
-                </LogoWallItem>
-              ))}
-            </Inline>
-          </PanelBody>
-        </Panel>
-      </Grid>
+        {/* The rail: who sponsors the site, the ingest tool, what is new, and the services for developers. */}
+        <Stack gap={4}>
+          <Panel>
+            <PanelHeader title="Sponsored by" icon={Heart} size="sm" as="h2">
+              <TextLink
+                href="https://www.patreon.com/c/manuelhexe"
+                target="_blank"
+                rel="noopener noreferrer"
+                underline="always"
+                className="text-xs font-medium"
+                title="Support on Patreon"
+              >
+                Become a sponsor
+              </TextLink>
+            </PanelHeader>
+            <PanelBody className="flex flex-col items-center gap-4">
+              <LogoWallItem
+                href={mainSponsor.href}
+                title={mainSponsor.title}
+                target="_blank"
+                rel="sponsored noreferrer"
+              >
+                <OptimizedImage
+                  src={mainSponsor.logo}
+                  widths={[192, 240, 384, 480, 576, 720]}
+                  sizes="224px"
+                  alt={mainSponsor.title}
+                  width={600}
+                  height={127}
+                  className="h-auto w-56 object-contain"
+                />
+              </LogoWallItem>
+              <Inline gap={5} justify="center">
+                {sponsors.map((sponsor) => (
+                  <LogoWallItem
+                    key={sponsor.href}
+                    href={sponsor.href}
+                    title={sponsor.title}
+                    target="_blank"
+                    rel="sponsored noreferrer"
+                  >
+                    <OptimizedImage
+                      src={sponsor.logo}
+                      widths={[140, 280, 420]}
+                      sizes="112px"
+                      alt={sponsor.title}
+                      width={sponsor.width}
+                      height={sponsor.height}
+                      loading="lazy"
+                      fetchPriority="low"
+                      className="max-h-7 max-w-28 object-contain"
+                    />
+                  </LogoWallItem>
+                ))}
+              </Inline>
+            </PanelBody>
+          </Panel>
 
-      {/* The site's sections as the sidebar groups them, with the developer services: one panel, a column each. The
-          patron and tracker entries stay in the sidebar: this page does not target the tracker. */}
-      <Section title="Deadlock Stats, Hero Win Rates & Leaderboards">
-        <Panel>
-          <PanelBody>
-            <SideNav
-              aria-label="Site directory"
-              className="grid grid-cols-1 gap-x-6 gap-y-5 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5"
-            >
-              {DIRECTORY.map((entry) => (
-                <SideNavGroup key={entry.label} label={entry.label}>
-                  {entry.links.map((link) => (
-                    <SideNavItem key={link.to} asChild>
-                      <SmartLink href={link.to} external={link.external}>
-                        <link.icon />
-                        <span className="truncate">{link.label}</span>
-                      </SmartLink>
-                    </SideNavItem>
-                  ))}
-                </SideNavGroup>
-              ))}
-            </SideNav>
-          </PanelBody>
-        </Panel>
-      </Section>
-
-      <Grid columns={{ base: 1, lg: 3 }} gap={4} className="items-stretch">
-        {/* Every site that shows the tool's matches, as an even grid of their icons under what the tool does. */}
-        <Panel className="lg:col-span-2">
-          <PanelHeader
-            title="Track all your matches on all tracker sites"
-            icon={Download}
-            size="sm"
-            as="h2"
-            description={`${TRACKER_SITES.length} sites`}
-          />
-          <PanelBody className="flex flex-col gap-4">
-            <Inline gap={4} justify="between">
-              <Text as="p" className="type-prose">
-                Install the ingest tool once and every match you play gets sent.
+          <Panel>
+            <PanelHeader
+              title="Track all your matches"
+              icon={Download}
+              size="sm"
+              as="h2"
+              description={`${TRACKER_SITES.length} sites`}
+            />
+            <PanelBody className="flex flex-col gap-3">
+              <Text as="p" tone="muted">
+                Install the ingest tool once and every match you play gets sent to every tracker site.
               </Text>
-              <Button asChild>
-                {isWindows ? (
-                  <a href={WINDOWS_SETUP_URL} download {...installTracking}>
-                    <Download aria-hidden="true" />
-                    Download for Windows
-                  </a>
-                ) : (
-                  <SmartLink href="/ingest-cache" {...installTracking}>
-                    <Download aria-hidden="true" />
-                    Install the tool
-                  </SmartLink>
-                )}
-              </Button>
-            </Inline>
-            <ul
-              aria-label="Sites that show matches from Deadlock API"
-              className="grid grid-cols-[repeat(auto-fill,minmax(2.5rem,1fr))] gap-2"
-            >
-              {TRACKER_SITES.map((site) => {
-                const icon = (
-                  <img
-                    src={site.icon}
-                    alt={site.name}
-                    title={site.name}
-                    width={28}
-                    height={28}
-                    loading="lazy"
-                    decoding="async"
-                    referrerPolicy="no-referrer"
-                    className="size-7 object-contain"
-                  />
-                );
-                return (
-                  <li key={site.name} className="flex justify-center">
-                    {site.href ? (
-                      <LogoWallItem size="icon" href={site.href} target="_blank" rel="sponsored noreferrer">
-                        {icon}
-                      </LogoWallItem>
-                    ) : (
-                      icon
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </PanelBody>
-        </Panel>
+              <Inline>
+                <Button asChild>
+                  {isWindows ? (
+                    <a href={WINDOWS_SETUP_URL} download {...installTracking}>
+                      <Download aria-hidden="true" />
+                      Download for Windows
+                    </a>
+                  ) : (
+                    <SmartLink href="/ingest-cache" {...installTracking}>
+                      <Download aria-hidden="true" />
+                      Install the tool
+                    </SmartLink>
+                  )}
+                </Button>
+              </Inline>
+              <ul
+                aria-label="Sites that show matches from Deadlock API"
+                className="grid grid-cols-[repeat(auto-fill,minmax(2rem,1fr))] gap-1.5"
+              >
+                {TRACKER_SITES.map((site) => {
+                  const icon = (
+                    <img
+                      src={site.icon}
+                      alt={site.name}
+                      title={site.name}
+                      width={24}
+                      height={24}
+                      loading="lazy"
+                      decoding="async"
+                      referrerPolicy="no-referrer"
+                      className="size-6 object-contain"
+                    />
+                  );
+                  return (
+                    <li key={site.name} className="flex justify-center">
+                      {site.href ? (
+                        <LogoWallItem size="icon" href={site.href} target="_blank" rel="sponsored noreferrer">
+                          {icon}
+                        </LogoWallItem>
+                      ) : (
+                        icon
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </PanelBody>
+          </Panel>
 
-        {/* The newest posts: what changed in the game and in the data, by title and date. */}
-        <Panel>
-          <PanelHeader title="From the blog" icon={BookOpen} size="sm" as="h2">
-            <TextLink asChild underline="always" className="text-xs font-medium">
-              <SmartLink href="/blog">All posts</SmartLink>
-            </TextLink>
-          </PanelHeader>
-          <PanelBody className="flex flex-col gap-4">
-            {posts.map((post) => (
-              <Stack key={post.slug} gap={1}>
-                <TextLink asChild tone="inherit" underline="hover" className="font-medium">
-                  <SmartLink href={`/blog/${post.slug}`}>{post.title}</SmartLink>
-                </TextLink>
-                <Text variant="caption" tone="muted">
-                  {formatBlogDate(post.date)} · {post.readingMinutes} min read
-                </Text>
-              </Stack>
-            ))}
-          </PanelBody>
-        </Panel>
+          {/* The last of the rail: it reaches down to the site map's last line, so the two columns end together. */}
+          <Panel className="flex-1">
+            <PanelHeader title="From the blog" icon={BookOpen} size="sm" as="h2">
+              <TextLink asChild underline="always" className="text-xs font-medium">
+                <SmartLink href="/blog">All posts</SmartLink>
+              </TextLink>
+            </PanelHeader>
+            <PanelBody className="flex flex-col gap-3">
+              {posts.map((post) => (
+                <Stack key={post.slug} gap={0.5}>
+                  <TextLink asChild tone="inherit" underline="hover" className="font-medium">
+                    <SmartLink href={`/blog/${post.slug}`}>{post.title}</SmartLink>
+                  </TextLink>
+                  <Text variant="caption" tone="muted">
+                    {formatBlogDate(post.date)} · {post.readingMinutes} min read
+                  </Text>
+                </Stack>
+              ))}
+            </PanelBody>
+          </Panel>
+        </Stack>
       </Grid>
 
       <Grid columns={{ base: 1, lg: 2 }} gap={4} className="items-stretch">
