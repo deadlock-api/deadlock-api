@@ -220,17 +220,19 @@ export function HeroCombStatsTable({
                 return (
                   <TableRow key={row.hero_ids.join("-")}>
                     {!hideIndex && <TableCell className="text-center font-semibold">{index + 1}</TableCell>}
-                    {/* On a narrow screen the heroes fold onto more lines, so the rates stay in view. */}
+                    {/* On a narrow screen the heroes fold onto more lines, so the rates stay in view. Wide, each hero takes
+                        a slot of one fixed width and the plus one of its own, so the heroes of every row stand in
+                        columns down the table, as in the item combos. */}
                     <TableCell className="whitespace-normal">
-                      <Inline gap={1.5}>
+                      <Inline gap={0}>
                         {row.hero_ids.map((heroId, i) => (
-                          <Inline key={heroId} gap={1.5} wrap="nowrap">
+                          <Inline key={heroId} gap={0} wrap="nowrap">
                             {i > 0 && (
-                              <span aria-hidden="true" className="text-lg text-muted-foreground">
+                              <span aria-hidden="true" className="w-6 shrink-0 text-center text-muted-foreground">
                                 +
                               </span>
                             )}
-                            <HeroCell heroId={heroId} />
+                            <HeroCell heroId={heroId} className="w-36 shrink-0" />
                           </Inline>
                         ))}
                       </Inline>

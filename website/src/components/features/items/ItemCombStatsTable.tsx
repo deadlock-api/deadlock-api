@@ -26,16 +26,18 @@ import { useItemCombFilters } from "./useItemCombFilters";
 const ComboItems = memo(function ComboItems({ itemIds }: { itemIds: number[] }) {
   return (
     <TableCell>
-      {/* One item a line in a phone-sized table, so the win rate is the next column on screen; a row where wide. */}
-      <div className="flex flex-col gap-1 @md:flex-row @md:items-center @md:gap-2">
+      {/* One item a line in a phone-sized table, so the win rate is the next column on screen. Wide, each item takes a
+          slot of one fixed width (the longest names fit) and the plus one of its own, so the first, second and third
+          items of every row stand in columns down the table. */}
+      <div className="flex flex-col gap-1 @md:flex-row @md:items-center">
         {itemIds.map((itemId, i) => (
           <Fragment key={itemId}>
             {i > 0 && (
-              <span aria-hidden="true" className="hidden text-2xl @md:inline">
+              <span aria-hidden="true" className="hidden w-6 shrink-0 text-center text-muted-foreground @md:inline">
                 +
               </span>
             )}
-            <ItemCell itemId={itemId} linkToDetail className="max-w-36 @md:max-w-none" />
+            <ItemCell itemId={itemId} linkToDetail className="max-w-36 @md:w-52 @md:max-w-none @md:shrink-0" />
           </Fragment>
         ))}
       </div>
