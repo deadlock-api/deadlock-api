@@ -1,5 +1,4 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import type { HashMapValue } from "deadlock_api_client";
 import { Coins, Flame, HeartPulse, Sparkles, Swords, type LucideIcon, Wheat } from "lucide-react";
 import { useState } from "react";
 
@@ -12,6 +11,7 @@ import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
+import type { MetricDistribution } from "~/lib/metric-distribution";
 import {
   PLAYER_BUFF_METRICS,
   PLAYER_METRIC_CATEGORIES,
@@ -94,7 +94,7 @@ export function PlayerStatsDistributionCharts({
     placeholderData: keepPreviousData,
   });
   /** A metric's distribution; one the filtered matches never recorded (a pickup time before the update) is missing. */
-  const valuesOf = (metric: PlayerMetricDefinition): HashMapValue | undefined => {
+  const valuesOf = (metric: PlayerMetricDefinition): MetricDistribution | undefined => {
     const values = (BUFF_KEYS.has(metric.key) ? buffQuery.data : data)?.[metric.key];
     return values?.avg == null ? undefined : values;
   };

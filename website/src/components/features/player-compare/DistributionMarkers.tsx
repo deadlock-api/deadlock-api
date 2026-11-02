@@ -1,4 +1,3 @@
-import type { HashMapValue } from "deadlock_api_client";
 import { Area, AreaChart, ReferenceLine, XAxis, YAxis } from "recharts";
 
 import { ChartReading, ChartReadingList } from "~/components/patterns/charts/ChartReadings";
@@ -20,6 +19,7 @@ import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import { approxPercentile, buildDistributionCurve } from "~/lib/distribution-percentile";
 import type { GameMode } from "~/lib/game-mode";
+import type { MetricDistribution } from "~/lib/metric-distribution";
 import { LOWER_IS_BETTER_METRICS, rankShareLabel } from "~/lib/player-compare";
 import { formatPlayerMetricValue, PLAYER_METRICS, playerMetricsFor } from "~/lib/player-metrics";
 
@@ -84,9 +84,9 @@ function MetricTile({
   className,
 }: {
   metric: (typeof METRICS)[number];
-  values: HashMapValue | undefined;
+  values: MetricDistribution | undefined;
   players: ComparedPlayer[];
-  averages: (Record<string, HashMapValue> | undefined)[];
+  averages: (Record<string, MetricDistribution> | undefined)[];
   loading: boolean;
   zoom: boolean;
   /** Layout from the parent. */
@@ -127,9 +127,9 @@ export function DistributionMarkers({
   players: ComparedPlayer[];
   /** Street Brawl leaves out the souls curves. */
   gameMode: GameMode;
-  population: Record<string, HashMapValue> | undefined;
+  population: Record<string, MetricDistribution> | undefined;
   /** Each player's own metrics, in the players' order. */
-  averages: (Record<string, HashMapValue> | undefined)[];
+  averages: (Record<string, MetricDistribution> | undefined)[];
   loading: boolean;
   /** On: each curve spans the players, with a margin. Off: the whole field, from its lowest to its highest. */
   zoom?: boolean;
@@ -163,7 +163,7 @@ export function DistributionMarkers({
  * The x range the players occupy, with a margin: at least a quarter of the middle half of the field on each side,
  * so a close race still shows the curve around it. Kept within the known range of the curve.
  */
-function zoomDomain(avgs: number[], values: HashMapValue, min: number, max: number): [number, number] {
+function zoomDomain(avgs: number[], values: MetricDistribution, min: number, max: number): [number, number] {
   if (avgs.length === 0) return [min, max];
   const lo = Math.min(...avgs);
   const hi = Math.max(...avgs);
@@ -183,7 +183,7 @@ function MetricCurve({
   zoom: boolean;
   metricKey: string;
   label: string;
-  values: HashMapValue;
+  values: MetricDistribution;
   marks: { player: ComparedPlayer; avg: number }[];
   fmt: (value: number) => string;
 }) {

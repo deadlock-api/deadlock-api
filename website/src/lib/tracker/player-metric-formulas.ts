@@ -1,4 +1,4 @@
-import type { HashMapValue } from "deadlock_api_client";
+import type { MetricDistribution } from "~/lib/metric-distribution";
 
 /** One player's match as `/v1/analytics/player-stats/metrics` reads it, named like its columns. */
 export interface PlayerMetricRow {
@@ -88,7 +88,7 @@ function percentile(sorted: readonly number[], p: number): number {
  * The metrics the API would return for these matches: over single matches, `std` the population deviation as
  * ClickHouse's `std`. The API's percentiles are DDSketch estimates within 1%; these are exact. No matches, no metrics.
  */
-export function playerMetricsOf(rows: readonly PlayerMetricRow[]): Record<string, HashMapValue> {
+export function playerMetricsOf(rows: readonly PlayerMetricRow[]): Record<string, MetricDistribution> {
   if (rows.length === 0) return {};
   return Object.fromEntries(
     Object.entries(PLAYER_METRIC_FORMULAS).map(([key, formula]) => {
@@ -96,7 +96,7 @@ export function playerMetricsOf(rows: readonly PlayerMetricRow[]): Record<string
       const avg = values.reduce((sum, value) => sum + value, 0) / values.length;
       const std = Math.sqrt(values.reduce((sum, value) => sum + (value - avg) ** 2, 0) / values.length);
       const percentiles = Object.fromEntries(PERCENTILES.map((p) => [`percentile${p}`, percentile(values, p)]));
-      return [key, { avg, std, ...percentiles } as HashMapValue];
+      return [key, { avg, std, ...percentiles } as MetricDistribution];
     }),
   );
 }

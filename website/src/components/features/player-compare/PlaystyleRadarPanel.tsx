@@ -1,5 +1,3 @@
-import type { HashMapValue } from "deadlock_api_client";
-
 import { ChartLegend, ChartLegendItem, ChartLegendToggle } from "~/components/patterns/charts/ChartLegend";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { ChartEmpty, ChartLoading } from "~/components/patterns/charts/ChartStates";
@@ -13,6 +11,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 import type { GameMode } from "~/lib/game-mode";
+import type { MetricDistribution } from "~/lib/metric-distribution";
 import { rankShareLabel } from "~/lib/player-compare";
 import { formatPlayerMetricValue, PLAYER_METRICS } from "~/lib/player-metrics";
 import {
@@ -38,7 +37,7 @@ interface RadarPlayer {
   percentiles: PlaystylePercentiles;
   playstyle: Playstyle | null;
   /** The player's own averages, for the tooltip. */
-  own: Record<string, HashMapValue>;
+  own: Record<string, MetricDistribution>;
 }
 
 interface AxisRow {

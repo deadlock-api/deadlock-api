@@ -1,7 +1,7 @@
-import type { HashMapValue } from "deadlock_api_client";
+import type { MetricDistribution } from "~/lib/metric-distribution";
 
 /** The percentiles a metric's summary carries, in order. */
-export const percentilePoints = (values: HashMapValue): { p: number; v: number }[] => [
+export const percentilePoints = (values: MetricDistribution): { p: number; v: number }[] => [
   { p: 1, v: values.percentile1 },
   { p: 5, v: values.percentile5 },
   { p: 10, v: values.percentile10 },
@@ -18,7 +18,7 @@ export const percentilePoints = (values: HashMapValue): { p: number; v: number }
  * P1-P99 nothing is known beyond the side it falls on, so it clamps to 0 or 100; on a run of equal percentiles
  * (a metric that is mostly zero) the highest one holding that value wins, since that many players sit at or below it.
  */
-export function approxPercentile(values: HashMapValue, x: number): number {
+export function approxPercentile(values: MetricDistribution, x: number): number {
   const points = percentilePoints(values);
   if (x < points[0].v) return 0;
   if (x > points[points.length - 1].v) return 100;
@@ -50,7 +50,7 @@ export interface CurvePoint {
  * mass / bin width, plotted at the bin midpoint; Recharts' monotone curve smooths
  * between those points into a continuous silhouette.
  */
-export function buildDistributionCurve(values: HashMapValue): CurvePoint[] {
+export function buildDistributionCurve(values: MetricDistribution): CurvePoint[] {
   const points = percentilePoints(values);
   const curve: CurvePoint[] = [{ x: Math.min(0, values.percentile1), y: 0 }];
   for (let i = 0; i < points.length - 1; i++) {

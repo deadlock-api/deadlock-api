@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import type { HashMapValue } from "deadlock_api_client";
 import { ChartNoAxesCombined } from "lucide-react";
 import { parseAsStringLiteral, useQueryState } from "nuqs";
 
@@ -18,6 +17,7 @@ import { Skeleton } from "~/components/ui/skeleton";
 import { Text } from "~/components/ui/text";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { MODE_CONFIG } from "~/lib/game-mode";
+import type { MetricDistribution } from "~/lib/metric-distribution";
 import {
   formatPlayerMetricValue,
   PLAYER_METRICS,
@@ -241,8 +241,8 @@ function BenchmarkMetric({
 }: {
   def: PlayerMetricDefinition;
   showDistribution: boolean;
-  player?: HashMapValue;
-  cohort?: HashMapValue;
+  player?: MetricDistribution;
+  cohort?: MetricDistribution;
   /** Placeholder values in the loaded tile's shape. */
   loading?: boolean;
 }) {

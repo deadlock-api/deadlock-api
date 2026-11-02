@@ -1,7 +1,6 @@
-import type { HashMapValue } from "deadlock_api_client";
-
 import { approxPercentile } from "~/lib/distribution-percentile";
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
+import type { MetricDistribution } from "~/lib/metric-distribution";
 import { LOWER_IS_BETTER_METRICS } from "~/lib/player-compare";
 
 /** One side of a player's game, each measured by one stat of the player metrics endpoint. */
@@ -51,8 +50,8 @@ export function playstyleAxesFor(gameMode: GameMode = "normal"): readonly Playst
 export type PlaystylePercentiles = Partial<Record<PlaystyleAxis, number>>;
 
 export function playstylePercentiles(
-  population: Record<string, HashMapValue> | undefined,
-  own: Record<string, HashMapValue> | undefined,
+  population: Record<string, MetricDistribution> | undefined,
+  own: Record<string, MetricDistribution> | undefined,
   gameMode: GameMode = "normal",
 ): PlaystylePercentiles {
   const result: PlaystylePercentiles = {};

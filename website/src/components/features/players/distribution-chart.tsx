@@ -1,4 +1,3 @@
-import type { HashMapValue } from "deadlock_api_client";
 import { Area, AreaChart, ReferenceLine, Tooltip, XAxis, YAxis } from "recharts";
 
 import { ChartDataTable } from "~/components/patterns/charts/ChartDataTable";
@@ -14,6 +13,7 @@ import {
   spacedTicks,
 } from "~/components/patterns/charts/theme";
 import { approxPercentile, type CurvePoint, formatPercentile } from "~/lib/distribution-percentile";
+import type { MetricDistribution } from "~/lib/metric-distribution";
 
 /** The percentiles the API reports, read out in the chart's data table. */
 const PERCENTILES = [1, 5, 10, 25, 50, 75, 90, 95, 99] as const;
@@ -26,7 +26,7 @@ function DistributionTooltip({
 }: {
   point: CurvePoint | undefined;
   label: string;
-  values: HashMapValue;
+  values: MetricDistribution;
   fmt: (v: number) => string;
 }) {
   if (!point) return null;
@@ -40,7 +40,7 @@ function DistributionTooltip({
 }
 
 /** What the plot shows, for a reader who cannot see it: the chart's name and the numbers its lines mark. */
-function distributionSummary(label: string, values: HashMapValue, fmt: (v: number) => string): string {
+function distributionSummary(label: string, values: MetricDistribution, fmt: (v: number) => string): string {
   return (
     `${label} distribution: average ${fmt(values.avg)}, median ${fmt(values.percentile50)}, ` +
     `middle half of players (P25 to P75) ${fmt(values.percentile25)} to ${fmt(values.percentile75)}.`
@@ -57,7 +57,7 @@ export function DistributionChart({
   /** The metric's name, "Kills": it heads the tooltip and the chart's accessible summary. */
   label: string;
   curve: CurvePoint[];
-  values: HashMapValue;
+  values: MetricDistribution;
   fmt: (v: number) => string;
   height: number;
 }) {

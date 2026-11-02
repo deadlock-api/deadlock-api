@@ -1,6 +1,5 @@
 import type {
   EnemyStats,
-  HashMapValue,
   HeroStats,
   MateStats,
   PlayerMatchHistoryEntry,
@@ -9,6 +8,7 @@ import type {
 } from "deadlock_api_client";
 
 import { isPlayableHero } from "~/lib/hero-roster";
+import type { MetricDistribution } from "~/lib/metric-distribution";
 import type { SlimHero, SlimUpgrade } from "~/queries/asset-queries";
 import type {
   TrackerAbility,
@@ -388,7 +388,7 @@ export function demoEnemyStats(history: readonly PlayerMatchHistoryEntry[], filt
 export function demoPlayerMetrics(
   history: readonly PlayerMatchHistoryEntry[],
   filter: HistoryFilter,
-): Record<string, HashMapValue> {
+): Record<string, MetricDistribution> {
   return playerMetricsOf(
     history
       .filter((entry) => matchesFilter(entry, filter))

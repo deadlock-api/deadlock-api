@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { HashMapValue } from "deadlock_api_client";
+import type { MetricDistribution } from "~/lib/metric-distribution";
 
 import { playstyleAxesFor, type PlaystylePercentiles, playstyleLabel, playstylePercentiles } from "./playstyle";
 
@@ -61,7 +61,7 @@ test("playstyleLabel: ignores non-finite values", () => {
   assert.equal(playstyleLabel({ ...flat(50), farming: Number.NaN, kills: 90 })?.id, "slayer");
 });
 
-function summary(p50: number, spread: number): HashMapValue {
+function summary(p50: number, spread: number): MetricDistribution {
   const at = (p: number) => p50 + ((p - 50) / 50) * spread;
   return {
     avg: p50,

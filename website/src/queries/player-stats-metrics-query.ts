@@ -1,8 +1,9 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { AnalyticsApiPlayerStatsMetricsRequest, HashMapValue } from "deadlock_api_client";
+import type { AnalyticsApiPlayerStatsMetricsRequest, MetricValues } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
+import { completeMetrics } from "~/lib/metric-distribution";
 import { ensureCached } from "~/lib/prefetch-safe";
 import { DEMO_ACCOUNT_ID, isDemoAccount } from "~/lib/tracker/demo";
 
@@ -22,7 +23,8 @@ export function playerStatsMetricsQueryOptions(params: AnalyticsApiPlayerStatsMe
         return demoPlayerMetrics(history, params);
       }
       const response = await api.analytics_api.playerStatsMetrics(params);
-      return response.data as Record<string, HashMapValue>;
+      // Without `bucket` the response is one metrics object.
+      return completeMetrics(response.data as Record<string, MetricValues>);
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
   });

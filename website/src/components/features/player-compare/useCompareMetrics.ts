@@ -1,10 +1,10 @@
 import { keepPreviousData, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import type { HashMapValue } from "deadlock_api_client";
 
+import type { MetricDistribution } from "~/lib/metric-distribution";
 import { type CompareFilters, compareMetricsParams, lastAnswerForAccount } from "~/queries/player-compare-queries";
 import { playerStatsMetricsQueryOptions } from "~/queries/player-stats-metrics-query";
 
-export type MetricAverages = Record<string, HashMapValue>;
+export type MetricAverages = Record<string, MetricDistribution>;
 
 export interface CompareMetrics {
   /** Every player's distribution of each metric on the filters: the field the players are ranked against. */

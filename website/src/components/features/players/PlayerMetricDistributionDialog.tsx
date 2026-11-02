@@ -1,4 +1,3 @@
-import type { HashMapValue } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -7,6 +6,7 @@ import { InlineStat } from "~/components/ui/inline-stat";
 import { Inline } from "~/components/ui/stack";
 import { buildDistributionCurve } from "~/lib/distribution-percentile";
 import { formatRange } from "~/lib/format";
+import type { MetricDistribution } from "~/lib/metric-distribution";
 import { formatPlayerMetricValue, type PlayerMetricDefinition } from "~/lib/player-metrics";
 
 import { DistributionChart } from "./distribution-chart";
@@ -24,7 +24,7 @@ export function PlayerMetricDistributionDialog({
   /** The metrics the pager steps to, for its buttons' names. */
   previousMetric: PlayerMetricDefinition | null;
   nextMetric: PlayerMetricDefinition | null;
-  values: HashMapValue | undefined;
+  values: MetricDistribution | undefined;
   onClose: () => void;
   onPrev: () => void;
   onNext: () => void;

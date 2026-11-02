@@ -1,4 +1,3 @@
-import type { HashMapValue } from "deadlock_api_client";
 import { Maximize2 } from "lucide-react";
 import { useMemo } from "react";
 
@@ -8,6 +7,7 @@ import { Card } from "~/components/ui/card";
 import { NoValue } from "~/components/ui/no-value";
 import { Text } from "~/components/ui/text";
 import { buildDistributionCurve } from "~/lib/distribution-percentile";
+import type { MetricDistribution } from "~/lib/metric-distribution";
 import { formatPlayerMetricValue, type PlayerMetricDefinition } from "~/lib/player-metrics";
 
 import { DistributionChart } from "./distribution-chart";
@@ -18,7 +18,7 @@ export function PlayerMetricDistributionCard({
   onExpand,
 }: {
   def: PlayerMetricDefinition;
-  values: HashMapValue | undefined;
+  values: MetricDistribution | undefined;
   onExpand: () => void;
 }) {
   const fmt = (v: number) => formatPlayerMetricValue(v, def.format) ?? "";
