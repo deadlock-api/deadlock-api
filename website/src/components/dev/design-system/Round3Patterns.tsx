@@ -564,7 +564,7 @@ function ContentSpecimens() {
       <Specimen
         name="LogoWallItem"
         source="patterns/content/LogoWall"
-        note="A sponsor logo as a link, dimmed until hovered or focused; a link to a new tab says so to a screen reader. size icon is a square site icon, not dimmed. LogoWall is the list around them: layout icons (equal cells, as many a row as fit) or row (three wordmarks sharing one row, shrinking rather than wrapping)."
+        note="A sponsor logo as a link, dimmed until hovered or focused (emphasis full: its own colors at rest, where sponsors are the subject); a link to a new tab says so to a screen reader. size icon is a square site icon, not dimmed. LogoWall is the list around them: layout icons (equal cells, as many a row as fit) or row (three wordmarks sharing one row, shrinking rather than wrapping)."
       >
         <Inline justify="center" gap={8}>
           {["One", "Two", "Three"].map((name) => (

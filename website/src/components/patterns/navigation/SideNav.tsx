@@ -87,14 +87,29 @@ export function SideNav({
   );
 }
 
+/**
+ * The color a group's item icons take, to tell a section apart at a glance (a site map). A categorical series color
+ * from the chart palette, in its order; the labels stay ink, so the color only repeats what the label says.
+ */
+const GROUP_ACCENT = {
+  none: "",
+  "chart-1": "[&_[data-slot=side-nav-item]:not([data-active])_svg]:text-chart-1",
+  "chart-2": "[&_[data-slot=side-nav-item]:not([data-active])_svg]:text-chart-2",
+  "chart-3": "[&_[data-slot=side-nav-item]:not([data-active])_svg]:text-chart-3",
+  "chart-4": "[&_[data-slot=side-nav-item]:not([data-active])_svg]:text-chart-4",
+  "chart-5": "[&_[data-slot=side-nav-item]:not([data-active])_svg]:text-chart-5",
+  "chart-6": "[&_[data-slot=side-nav-item]:not([data-active])_svg]:text-chart-6",
+} as const;
+
 export function SideNavGroup({
   label,
+  accent = "none",
   className,
   children,
   ...props
-}: Omit<React.ComponentProps<"div">, "title"> & { label?: React.ReactNode }) {
+}: Omit<React.ComponentProps<"div">, "title"> & { label?: React.ReactNode; accent?: keyof typeof GROUP_ACCENT }) {
   return (
-    <div data-slot="side-nav-group" className={cn("flex flex-col gap-0.5", className)} {...props}>
+    <div data-slot="side-nav-group" className={cn("flex flex-col gap-0.5", GROUP_ACCENT[accent], className)} {...props}>
       {label && (
         <p data-slot="side-nav-group-label" className="px-3 pb-1 eyebrow">
           {label}

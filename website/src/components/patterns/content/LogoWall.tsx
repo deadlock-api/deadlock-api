@@ -14,14 +14,17 @@ const logoWallItemVariants = cva([FOCUS_RING, "rounded-sm"], {
       logo: "opacity-70 transition-opacity duration-fast ease-standard hover:opacity-100 focus-visible:opacity-100",
       icon: "flex",
     },
+    /** `full`: a logo shown in its own colors at rest, where the sponsors are a page's subject (the home page). */
+    emphasis: { dim: "", full: "opacity-100" },
   },
-  defaultVariants: { size: "logo" },
+  defaultVariants: { size: "logo", emphasis: "dim" },
 });
 
 /** One logo, as a link. The child is the image; a link to a new tab says so to a screen reader. */
 export function LogoWallItem({
   asChild = false,
   size = "logo",
+  emphasis,
   className,
   children,
   ...props
@@ -31,7 +34,7 @@ export function LogoWallItem({
     <Comp
       data-slot="logo-wall-item"
       data-size={size}
-      className={cn(logoWallItemVariants({ size }), className)}
+      className={cn(logoWallItemVariants({ size, emphasis }), className)}
       {...props}
     >
       {asChild ? (

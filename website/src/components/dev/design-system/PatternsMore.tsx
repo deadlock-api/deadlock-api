@@ -92,12 +92,12 @@ export function SideNavSpecimen() {
       <Specimen
         name="SideNav"
         source="patterns/navigation/SideNav"
-        note="A list of links. layout list (default): the app sidebar or the index of a long page; when it scrolls the active item is kept in view and an edge with more links past it fades out (scroll-fade-y). layout columns: a site map whose groups flow into as many columns as its @container fits. layout inline: one wrapping row of links beside a label. Router links go through asChild; active sets aria-current."
+        note="A list of links. layout list (default): the app sidebar or the index of a long page; when it scrolls the active item is kept in view and an edge with more links past it fades out (scroll-fade-y). layout columns: a site map whose groups flow into as many columns as its @container fits. layout inline: one wrapping row of links beside a label. SideNavGroup accent (a chart series color) tints its items' icons, to tell sections of a site map apart. Router links go through asChild; active sets aria-current."
       >
         <Variants label='layout="columns" (a site map) and layout="inline"' className="block">
           <div className="@container rounded-lg border p-3">
             <SideNav layout="columns" aria-label="Site map example">
-              <SideNavGroup label="Analytics">
+              <SideNavGroup label="Analytics" accent="chart-4">
                 <SideNavItem href="#side-nav">
                   <Swords /> Heroes
                 </SideNavItem>
@@ -105,7 +105,7 @@ export function SideNavSpecimen() {
                   <BarChart3 /> Games
                 </SideNavItem>
               </SideNavGroup>
-              <SideNavGroup label="Community">
+              <SideNavGroup label="Community" accent="chart-3">
                 <SideNavItem href="#side-nav">
                   <Users /> Players
                 </SideNavItem>
