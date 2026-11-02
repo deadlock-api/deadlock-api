@@ -81,7 +81,7 @@ export function ItemsPage() {
             Build Designer
           </ResponsiveTab>
           <ResponsiveTab value="item-combos" href={analyticsTabPath("items", "item-combos")}>
-            Item Combos
+            Combos
           </ResponsiveTab>
         </ResponsiveTabsList>
 
