@@ -659,12 +659,11 @@ export function ItemStatsTable({
                     filter={
                       <ColumnFilter
                         label="Item"
-                        active={!!nameQuery.trim() || itemSlots.length < ITEM_SLOTS.length || itemTiers.length > 0}
+                        active={!!nameQuery.trim() || itemSlots.length < ITEM_SLOTS.length}
                         onReset={() =>
                           startTransition(() => {
                             void setNameQuery(null);
                             void setItemSlots(null, together);
-                            void setItemTiers(null, together);
                           })
                         }
                       >
@@ -679,6 +678,36 @@ export function ItemStatsTable({
                           value={itemSlots}
                           onValueChange={(slots) => startTransition(() => void setItemSlots(slots, together))}
                         />
+                        {/* The Tier column, and its own filter, are hidden on a phone: there the tiers sit here. */}
+                        <div className="md:hidden">
+                          <ItemTierSelector
+                            tiers={offeredTiers}
+                            value={itemTiers}
+                            // Every tier is the default: left out of the URL, so a link from Normal still shows Street
+                            // Brawl's tier 5.
+                            onValueChange={(tiers) =>
+                              startTransition(
+                                () => void setItemTiers(tiers.length === offeredTiers.length ? null : tiers, together),
+                              )
+                            }
+                          />
+                        </div>
+                      </ColumnFilter>
+                    }
+                  />
+                  <SortableHeader
+                    label="Tier"
+                    sortKey="tier"
+                    activeSortKey={sort.sortKey}
+                    sortDir={sort.dir}
+                    onSortChange={toggleSort}
+                    className="hidden text-start @md:table-cell"
+                    filter={
+                      <ColumnFilter
+                        label="Tier"
+                        active={itemTiers.length > 0}
+                        onReset={() => startTransition(() => void setItemTiers(null, together))}
+                      >
                         <ItemTierSelector
                           tiers={offeredTiers}
                           value={itemTiers}
@@ -692,14 +721,6 @@ export function ItemStatsTable({
                         />
                       </ColumnFilter>
                     }
-                  />
-                  <SortableHeader
-                    label="Tier"
-                    sortKey="tier"
-                    activeSortKey={sort.sortKey}
-                    sortDir={sort.dir}
-                    onSortChange={toggleSort}
-                    className="hidden text-start @md:table-cell"
                   />
                   <SortableHeader
                     label={
