@@ -7,7 +7,7 @@ type TableDensity = "default" | "compact" | "dense";
 
 // Each cell resolves the density from this context into plain classes. A `group-data-[density=…]/table:` variant
 // would outrank the one class a caller passes to a cell.
-const TableDensityContext = React.createContext<TableDensity>("default");
+const TableDensityContext = React.createContext<TableDensity>("compact");
 
 const HEAD_DENSITY: Record<TableDensity, string> = { default: "h-10 px-2", compact: "h-9 px-2", dense: "h-7 px-1.5" };
 // A `compact` row is 36px whatever it holds: tall enough for a 24px control (`Button size="icon-xs"`) with its
@@ -28,8 +28,9 @@ const STICKY_SCROLL_PADDING: Record<TableDensity, string> = {
 };
 
 /**
- * `density` sets the row height of every cell at once: `default` for short lists, `compact` (36px rows, which fit a
- * 24px inline control) for data tables, `dense` for tables inside panels and dialogs.
+ * `density` sets the row height of every cell at once: `compact` (36px rows, which fit a 24px inline control) is the
+ * default, so every data table on the site keeps one row height; `default` is roomier for a short list, `dense` for
+ * tables inside panels and dialogs.
  *
  * A table wider than its container scrolls sideways inside it, and the edge with more columns past it fades out
  * (`scroll-fade-x`; with a pinned column only the end edge). A table with a pinned column is also the `table`
@@ -41,7 +42,7 @@ const STICKY_SCROLL_PADDING: Record<TableDensity, string> = {
  */
 function Table({
   className,
-  density = "default",
+  density = "compact",
   width = "fill",
   height = "auto",
   ...props

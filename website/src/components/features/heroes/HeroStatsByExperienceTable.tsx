@@ -211,12 +211,17 @@ export function HeroStatsByExperienceTable({
       row.heroId,
       <>
         <TableCell data-pinned>
-          <HeroCell heroId={row.heroId} />
+          {/* The sample under the name, as in every hero table: one row anatomy and height across them. */}
+          <HeroCell
+            heroId={row.heroId}
+            meta={`${row.bucketEntries.reduce((sum, entry) => sum + (entry?.matches ?? 0), 0).toLocaleString("en-US")} matches`}
+          />
         </TableCell>
         {row.bucketValues.map((val, i) => (
           // eslint-disable-next-line react/no-array-index-key -- key is EXPERIENCE_BUCKETS[i].label, not raw index
           <TableCell key={EXPERIENCE_BUCKETS[i].label} className="text-center tabular-nums">
-            <div className="flex flex-col items-center gap-1">
+            {/* Value and change on one line, as in the overview table: one row height for every hero table. */}
+            <div className="flex items-baseline justify-center gap-1.5">
               <BucketTooltip
                 entry={row.bucketEntries[i]}
                 heroStat={heroStat}
@@ -237,7 +242,7 @@ export function HeroStatsByExperienceTable({
                     format="number"
                     unit={isPercentStat ? "%" : undefined}
                     sign="arrow"
-                    display="badge"
+                    className="text-xs"
                     fraction={isPercentStat ? "fixed" : "trim"}
                   />
                 </DeltaTooltip>
@@ -247,7 +252,7 @@ export function HeroStatsByExperienceTable({
         ))}
         <TableCell className="text-center">
           {/* The sort key, printed: the line alone gave the direction by color only. */}
-          <div className="flex flex-col items-center gap-1">
+          <div className="flex items-center justify-center gap-1.5">
             <Sparkline values={row.bucketValues} trend={row.trend} />
             {row.trend !== null && (
               <Delta
@@ -255,7 +260,7 @@ export function HeroStatsByExperienceTable({
                 format="number"
                 unit={isPercentStat ? "%" : undefined}
                 sign="arrow"
-                display="badge"
+                className="text-xs"
                 fraction={isPercentStat ? "fixed" : "trim"}
               />
             )}
