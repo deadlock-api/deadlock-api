@@ -342,14 +342,14 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
         )}
       </Callout>
       {home && (
-        <Inline justify="center">
+        // Under the field, from its start edge like the page around it.
+        <Inline gap={2}>
           {EXAMPLE_QUESTIONS.map((example) => (
             <Button
               key={example}
               type="button"
               variant="subtle"
               size="sm"
-              shape="pill"
               onClick={() => {
                 setDraft({ text: example, version: last?.version ?? 0 });
                 ask(example, "example");

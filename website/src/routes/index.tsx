@@ -1,20 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  BarChart3,
-  Database,
-  Download,
-  HardDrive,
-  Heart,
-  ListOrdered,
-  Map,
-  Medal,
-  Package,
-  ShoppingBag,
-  Swords,
-  Trophy,
-  Tv,
-  UsersRound,
-} from "lucide-react";
+import { BarChart3, Database, Download, HardDrive, Heart, Package } from "lucide-react";
 
 import { OptimizedImage } from "~/components/domain/assets/OptimizedImage";
 import { useInstallCtaTracking } from "~/components/domain/ingest/analytics";
@@ -25,7 +10,7 @@ import { AiSearch } from "~/components/features/ai-search/AiSearch";
 import { LinkCard } from "~/components/patterns/content/LinkCard";
 import { LogoWallItem } from "~/components/patterns/content/LogoWall";
 import { Prose } from "~/components/patterns/content/Prose";
-import { Hero, HeroActions, HeroLead } from "~/components/patterns/page/Hero";
+import { SideNav, SideNavGroup, SideNavItem } from "~/components/patterns/navigation/SideNav";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Section } from "~/components/patterns/page/Section";
@@ -41,6 +26,7 @@ import { TextLink } from "~/components/ui/text-link";
 import { useIsWindows } from "~/hooks/useIsWindows";
 import { API_ORIGIN } from "~/lib/constants";
 import { ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
+import { navGroups } from "~/lib/site-nav";
 import { TRACKER_SITES } from "~/lib/tracker-sites";
 
 export const Route = createFileRoute("/")({
@@ -131,69 +117,6 @@ const services = [
   },
 ];
 
-const analyticsLinks = [
-  {
-    title: "Hero Analytics",
-    description: "Win rates, matchups, synergies, and performance trends across patches for every hero.",
-    href: "/analytics/heroes",
-    icon: Swords,
-  },
-  {
-    title: "Hero Tier List",
-    description: "Every hero ranked S to D from live matches, by rank, patch and hero type.",
-    href: "/analytics/heroes/tier-list",
-    icon: Medal,
-  },
-  {
-    title: "Item Analytics",
-    description: "Item win rates with confidence intervals, purchase timing analysis, and item combos.",
-    href: "/analytics/items",
-    icon: ShoppingBag,
-  },
-  {
-    title: "Game Analytics",
-    description: "Match duration, game mode stats, and overall gameplay trends over time.",
-    href: "/analytics/games",
-    icon: BarChart3,
-  },
-  {
-    title: "Ability Analytics",
-    description: "Ability upgrade paths, skill build popularity, and win rate by leveling order.",
-    href: "/analytics/abilities",
-    icon: ListOrdered,
-  },
-  {
-    title: "Team Builder",
-    description: "Draft a full 6v6, set the lanes, and read the predicted win rate from live matchup data.",
-    href: "/analytics/team-builder",
-    icon: UsersRound,
-  },
-  {
-    title: "Leaderboard",
-    description: "Top ranked players across all regions with hero filters and rank search.",
-    href: "/community/leaderboard",
-    icon: Trophy,
-  },
-  {
-    title: "Rank Distribution",
-    description: "See how the player base is distributed across ranks over time.",
-    href: "/community/badge-distribution",
-    icon: Medal,
-  },
-  {
-    title: "Kill Heatmap",
-    description: "Visualize where kills happen on the map to understand positioning and hotspots.",
-    href: "/community/heatmap",
-    icon: Map,
-  },
-  {
-    title: "Stream Kit",
-    description: "Enhance your livestreams with real-time game data overlays and widgets.",
-    href: "/streamkit",
-    icon: Tv,
-  },
-];
-
 const mainSponsor = {
   href: "https://www.deadchaps.gg/?ref=deadlock-api.com",
   title: "DeadChaps",
@@ -226,82 +149,83 @@ const sponsors = [
   },
 ];
 
+/** The sidebar's sections for the directory, without the patron and tracker entries (not this page's subject). */
+const DIRECTORY_GROUPS = navGroups.filter((group) => group.label !== "Patron" && group.label !== "Dev");
+
 function IndexRoute() {
   const isWindows = useIsWindows();
   const installTracking = useInstallCtaTracking("home", isWindows ? "download" : "install_steps");
   return (
-    <PageShell density="marketing">
-      {/* The search is the page's main action: right under the title, ahead of the pills and the lead, so a phone
-          reaches it without scrolling. */}
-      <Hero size="sm">
-        <Stack gap={2} align="center">
-          <PageHeader size="display" title="Deadlock API" />
-          <Text variant="caption" tone="muted">
-            Sponsored by
-          </Text>
-          <Card asChild tone="primary" size="sm" interaction="pressable" className="px-4">
-            <a href={mainSponsor.href} title={mainSponsor.title} target="_blank" rel="sponsored noreferrer">
-              <OptimizedImage
-                src={mainSponsor.logo}
-                widths={[192, 240, 384, 480, 576, 720]}
-                sizes="(min-width: 1024px) 227px, 189px"
-                alt={mainSponsor.title}
-                width={600}
-                height={127}
-                className="h-auto w-47 object-contain lg:w-57"
-              />
-            </a>
-          </Card>
-        </Stack>
+    <PageShell density="content">
+      {/* The search is the page's main action: right under the title, so a phone reaches it without scrolling. The
+          sponsor keeps its place at the top, on the title's trailing edge. */}
+      <Stack gap={4} className="max-w-4xl">
+        <PageHeader
+          size="display"
+          title="Deadlock API"
+          actions={
+            <Stack gap={1}>
+              <Text variant="caption" tone="muted">
+                Sponsored by
+              </Text>
+              <Card asChild tone="primary" size="sm" interaction="pressable" className="px-4">
+                <a href={mainSponsor.href} title={mainSponsor.title} target="_blank" rel="sponsored noreferrer">
+                  <OptimizedImage
+                    src={mainSponsor.logo}
+                    widths={[192, 240, 384, 480, 576, 720]}
+                    sizes="(min-width: 1024px) 227px, 189px"
+                    alt={mainSponsor.title}
+                    width={600}
+                    height={127}
+                    className="h-auto w-47 object-contain lg:w-57"
+                  />
+                </a>
+              </Card>
+            </Stack>
+          }
+        />
 
         <AiSearch />
 
-        <HeroActions>
-          <InstallButton shape="pill" size="default" installHref={INGEST_INSTALL_PATH} placement="home_hero" />
+        <Inline gap={2}>
+          <InstallButton size="default" installHref={INGEST_INSTALL_PATH} placement="home_hero" />
           {valueProps.map((prop) => (
-            <Button key={prop.label} asChild variant="outline" shape="pill">
+            <Button key={prop.label} asChild variant="outline">
               <SmartLink href={prop.href} external={prop.external} title={prop.title}>
                 <prop.icon className="size-3.5" />
                 {prop.label}
               </SmartLink>
             </Button>
           ))}
-        </HeroActions>
+        </Inline>
 
-        <HeroLead>
+        <Text as="p" tone="muted" className="max-w-3xl">
           Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards, updated
           live from Valve's servers. A comprehensive set of endpoints also gives developers access to Deadlock game
           data, match history, player statistics, hero analytics, and more.
-        </HeroLead>
-      </Hero>
+        </Text>
+      </Stack>
 
-      <Section size="lg" align="center" title="Deadlock Stats, Hero Win Rates & Leaderboards">
-        <Grid columns={{ base: 2, xl: 5 }}>
-          {analyticsLinks.map((item) => {
-            const Icon = item.icon;
-            return (
-              <LinkCard
-                key={item.title}
-                asChild
-                size="sm"
-                density="compact"
-                title={item.title}
-                description={item.description}
-                cta="View"
-                media={
-                  <IconTile size="sm" hover="card">
-                    <Icon />
-                  </IconTile>
-                }
-              >
-                <SmartLink href={item.href}>{null}</SmartLink>
-              </LinkCard>
-            );
-          })}
-        </Grid>
+      {/* The site's sections as the sidebar groups them, one column each: the same names and order a visitor meets in
+          the navigation. The patron and tracker entries stay in the sidebar: this page does not target the tracker. */}
+      <Section size="lg" title="Deadlock Stats, Hero Win Rates & Leaderboards">
+        <SideNav aria-label="Site directory" className="grid grid-cols-1 gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
+          {DIRECTORY_GROUPS.map((group) => (
+            <SideNavGroup key={group.label} label={group.label}>
+              {group.links.map((link) => (
+                <SideNavItem key={link.to} asChild>
+                  <SmartLink href={link.to}>
+                    <link.icon />
+                    <span className="truncate">{link.label}</span>
+                  </SmartLink>
+                </SideNavItem>
+              ))}
+            </SideNavGroup>
+          ))}
+        </SideNav>
       </Section>
 
-      <Card tone="primary" className="mx-auto w-full max-w-3xl">
+      <Card tone="primary" className="w-full max-w-4xl">
         <CardContent>
           <Grid columns={{ base: 1, md: 2 }} gap={6} className="items-center">
             <Stack gap={3}>
@@ -361,7 +285,7 @@ function IndexRoute() {
         </CardContent>
       </Card>
 
-      <Section size="lg" align="center" title="Developer Services">
+      <Section size="lg" title="Developer Services">
         <Grid columns={{ base: 1, sm: 2, lg: 3 }} gap={4}>
           {services.map((service) => {
             const Icon = service.icon;
@@ -388,8 +312,8 @@ function IndexRoute() {
         </Grid>
       </Section>
 
-      <Section size="lg" align="center" title="Our Sponsors">
-        <Inline justify="center" gap={8}>
+      <Section size="lg" title="Our Sponsors">
+        <Inline gap={8}>
           {[mainSponsor, ...sponsors].map((sponsor) => (
             <LogoWallItem
               key={sponsor.href}
@@ -412,7 +336,7 @@ function IndexRoute() {
             </LogoWallItem>
           ))}
         </Inline>
-        <Inline justify="center">
+        <Inline>
           <TextLink
             href="https://www.patreon.com/c/manuelhexe"
             target="_blank"
@@ -426,8 +350,8 @@ function IndexRoute() {
         </Inline>
       </Section>
 
-      <Section size="lg" align="center" title="What is Deadlock?">
-        <Prose className="mx-auto w-full max-w-3xl">
+      <Section size="lg" title="What is Deadlock?">
+        <Prose className="w-full max-w-3xl">
           <p>
             Deadlock is a team-based multiplayer game developed and published by Valve that combines elements of
             third-person shooters and MOBAs. Players choose from a roster of heroes, each with unique abilities, and
@@ -443,8 +367,8 @@ function IndexRoute() {
         </Prose>
       </Section>
 
-      <Section size="lg" align="center" title="How Our Data Works">
-        <Prose className="mx-auto w-full max-w-3xl">
+      <Section size="lg" title="How Our Data Works">
+        <Prose className="w-full max-w-3xl">
           <p>
             Deadlock API collects publicly available match data through Valve's game client APIs. Every tracked match is
             processed to extract hero performance, item purchases, ability upgrade paths, and average match rankings.
@@ -462,7 +386,7 @@ function IndexRoute() {
 
       <Stack gap={6}>
         <Separator />
-        <Text as="p" variant="caption" tone="muted" align="center">
+        <Text as="p" variant="caption" tone="muted">
           <TextLink href="https://deadlock-api.com" title="Deadlock API" underline="always" className="font-medium">
             deadlock-api.com
           </TextLink>{" "}
