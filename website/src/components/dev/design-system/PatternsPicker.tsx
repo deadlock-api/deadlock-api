@@ -28,7 +28,7 @@ function PickerDemo({
   ...selection
 }: PickerSelectionProps & {
   choices?: typeof FRUIT;
-  size?: "sm" | "default" | "lg";
+  size?: "sm" | "default" | "lg" | "xl";
   layout?: "flat" | "grouped";
   meta?: "none" | "price";
   disabledIds?: ReadonlySet<number>;
@@ -94,6 +94,12 @@ export function PatternsPicker() {
       </Variants>
       <Variants label='multiple, size="lg", a line under each name' className="block max-w-96">
         <PickerDemo selection="multiple" size="lg" meta="price" defaultValue={[1, 11]} />
+      </Variants>
+      <Variants
+        label='size="xl": the picker that is a page&apos;s main content (the Build Designer before a hero)'
+        className="block max-w-xl"
+      >
+        <PickerDemo selection="single" size="xl" />
       </Variants>
       <Variants label='size="sm", disabled choices' className="block max-w-64">
         <PickerDemo selection="multiple" size="sm" disabledIds={new Set([4, 5])} />
