@@ -389,8 +389,8 @@ function FilterCellStates() {
           </FilterCell>
         </FilterBar>
       </Variants>
-      <Variants label="size sm, in a toolbar" className="items-stretch">
-        <FilterBar variant="toolbar" title="Matchups" className="w-full">
+      <Variants label="in a FilterBar row: a chip" className="items-stretch">
+        <FilterBar aria-label="Matchups">
           <FilterCell size="sm" label="Hero" value="Infernus">
             <p className="text-sm">The editor of this filter.</p>
           </FilterCell>

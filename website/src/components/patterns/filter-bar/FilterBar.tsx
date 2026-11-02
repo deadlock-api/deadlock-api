@@ -1,58 +1,15 @@
-import type { LucideIcon } from "lucide-react";
-
 import { FilterRootContext } from "~/components/patterns/filter-bar/FilterCell";
 import { cn } from "~/lib/utils";
 
-interface FilterBarProps extends Omit<React.ComponentProps<"section">, "title"> {
-  /**
-   * - `cells`: the filters of a page as a wrapping row of chips after a "Filters" label that counts the ones set.
-   * - `toolbar`: a wrapping row of compact controls (Field, Segmented, Select size="sm"), for the controls of one
-   *   chart or table.
-   */
-  variant?: "cells" | "toolbar";
-  /**
-   * Names the toolbar. Drawn when the toolbar is wide enough, and the name of the toolbar's region when it has no
-   * `aria-label`. It is not a heading: the Section or Panel around the toolbar is, and a second one repeated it.
-   */
-  title?: string;
-  icon?: LucideIcon;
-}
-
-export function FilterBar({
-  variant = "cells",
-  title,
-  icon: Icon,
-  "aria-label": ariaLabel,
-  className,
-  children,
-  ...props
-}: FilterBarProps) {
-  if (variant === "toolbar") {
-    return (
-      <section
-        data-slot="filter-bar"
-        data-variant="toolbar"
-        aria-label={ariaLabel ?? title ?? "Controls"}
-        className={cn(
-          "@container flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border bg-card px-3 py-2",
-          className,
-        )}
-        {...props}
-      >
-        {title && (
-          <div data-slot="filter-bar-title" className="hidden @lg:me-auto @lg:flex @lg:items-center @lg:gap-2">
-            {Icon && <Icon className="size-4 text-primary" aria-hidden="true" />}
-            <span className="text-sm font-semibold">{title}</span>
-          </div>
-        )}
-        {children}
-      </section>
-    );
-  }
+/**
+ * The one row of controls of a page: its filters as chips, then the open view's own controls (a metric, a search, a
+ * switch), wrapping onto more rows on a narrow screen. A "Filters" label leads it and counts the chips that differ
+ * from their defaults. A tab or panel never draws a second bar of its own: its controls join this row.
+ */
+export function FilterBar({ "aria-label": ariaLabel, className, children, ...props }: React.ComponentProps<"section">) {
   return (
     <section
       data-slot="filter-bar"
-      data-variant="cells"
       aria-label={ariaLabel}
       className={cn("@container w-full min-w-0", className)}
       {...props}

@@ -1,4 +1,3 @@
-import { ChartNoAxesCombined } from "lucide-react";
 import { useState } from "react";
 import { CartesianGrid, Line, LineChart, ReferenceLine, XAxis, YAxis } from "recharts";
 
@@ -139,9 +138,9 @@ export function ChartsMore() {
       <Specimen
         name="Trend fields"
         source="patterns/charts/TrendControls"
-        note="The fields of a historical chart's toolbar: a MetricSelect and the time interval, inside a FilterBar toolbar. They hold no URL state; the route passes values and setters."
+        note="The fields of a historical chart's toolbar: a MetricSelect and the time interval, in the page's FilterBar row. They hold no URL state; the route passes values and setters."
       >
-        <FilterBar variant="toolbar" title="Hero trends" icon={ChartNoAxesCombined} aria-label="Trend controls">
+        <FilterBar aria-label="Trend controls">
           <Field label="Metric" orientation="horizontal" className="w-full @sm:w-auto">
             <MetricSelect value={metric} valueLabel={METRIC_LABELS[metric]} onValueChange={setMetric}>
               {metricOptions}

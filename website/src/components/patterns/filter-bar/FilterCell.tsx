@@ -1,5 +1,5 @@
 import { ChevronDownIcon, RotateCcw } from "lucide-react";
-import { Children, createContext, useContext } from "react";
+import { Children, createContext, isValidElement, useContext, useState } from "react";
 
 import { Button } from "~/components/ui/button";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
@@ -12,9 +12,17 @@ import { cn } from "~/lib/utils";
 export const FilterRootContext = createContext(false);
 
 const cellBase = "flex min-w-0 flex-col justify-center gap-0.5 px-4 py-2 text-start transition-colors";
-// In a page's bar every filter is a one-line chip as wide as its content: a quiet outline at its default, a raised
-// fill with its reset once it differs (the reset, not only the fill, says it is set).
-const chipInRoot = "shrink-0 rounded-md border border-border data-active:border-transparent data-active:bg-accent";
+// In a page's bar every filter is the same one-line chip, as wide as its content: label, value and a chevron, with
+// its editor in a popover. The outline is the control edge (3:1); a set filter adds a raised fill, and its reset takes
+// the chevron's place, so the reset and not only the fill says it is set.
+const chipInRoot = "shrink-0 rounded-md border border-control-border data-active:bg-accent";
+
+/**
+ * The chip's frame and layout, for a control that cannot be a `FilterCell` but sits in a bar with them (a Select
+ * trigger): the same edge, height, padding and hover, so every filter in the row looks one way.
+ */
+export const FILTER_CHIP =
+  "h-8 shrink-0 gap-2 rounded-md border border-control-border bg-transparent ps-3 pe-1 text-sm font-medium shadow-none hover:bg-accent focus-visible:bg-accent data-[state=open]:bg-accent";
 const cellStandalone = "rounded-lg border bg-card";
 const activeUnderline = "shadow-active-underline";
 const CELL_SELECTOR = '[data-slot="filter-cell"], [data-slot="filter-toggle-cell"]';
@@ -79,7 +87,7 @@ function CellLabel({
 interface FilterCellProps extends Omit<React.ComponentProps<"div">, "children"> {
   label: string;
   /** The current choice in words. Without it the cell repeats its label. */
-  value?: string;
+  value?: React.ReactNode;
   /** The filter differs from its default: the label turns primary, the cell is underlined and the reset shows. */
   active?: boolean;
   onReset?: () => void;
@@ -153,10 +161,7 @@ export function FilterCell({
               cellBase,
               FOCUS_RING,
               "col-start-1 row-start-1 hover:bg-accent focus-visible:bg-accent focus-visible:ring-inset data-[state=open]:bg-accent",
-              compact && "flex-row items-center justify-start gap-2 rounded-md px-3 py-0",
-              // The reset's room is kept while there is nothing to reset: setting the filter must not widen the
-              // control and re-wrap the toolbar around it.
-              compact && onReset && "pe-8",
+              compact && "flex-row items-center justify-start gap-2 rounded-md py-0 ps-3 pe-1",
             )}
           >
             {label && compact && (
@@ -168,7 +173,7 @@ export function FilterCell({
               </span>
             )}
             {label && !compact && (
-              <CellLabel active={active} className={onReset ? "max-w-full pe-5" : undefined}>
+              <CellLabel active={active} className={onReset && active ? "max-w-full pe-5" : undefined}>
                 {label}
               </CellLabel>
             )}
@@ -182,7 +187,11 @@ export function FilterCell({
               {icon}
               {/* A chip of the bar keeps its whole value (it wraps to another row instead); the toolbar size truncates. */}
               <span className={inRoot ? "" : compact ? "truncate" : "line-clamp-2 text-start"}>{value ?? label}</span>
-              <ChevronDownIcon className="size-3.5 shrink-0 opacity-50" />
+              {/* One 24px slot at the end: the chevron, or, once the filter is set, the reset drawn over it. The chip
+                  keeps its width either way, and holds no empty room for a reset it does not show. */}
+              <span className="flex size-6 shrink-0 items-center justify-center">
+                <ChevronDownIcon className={cn("size-3.5 opacity-50", onReset && active && "invisible")} />
+              </span>
             </span>
             {inRoot && (
               <PopoverAnchor asChild>
@@ -194,8 +203,8 @@ export function FilterCell({
         {onReset && active && (
           <span
             className={cn(
-              "pointer-events-none col-start-1 row-start-1 justify-self-end p-0.5",
-              compact ? "self-center" : "self-start",
+              "pointer-events-none col-start-1 row-start-1 justify-self-end",
+              compact ? "self-center pe-1" : "self-start p-0.5",
             )}
           >
             <CellReset label={label} active={active} onReset={onReset} className="pointer-events-auto" />
@@ -215,29 +224,27 @@ export function FilterCell({
   );
 }
 
-interface FilterToggleCellProps<T extends string> extends Omit<React.ComponentProps<"div">, "defaultValue"> {
+interface FilterToggleCellProps<T extends string> extends Omit<
+  React.ComponentProps<"div">,
+  "defaultValue" | "onReset"
+> {
   label: string;
   value?: T;
   /** The choice it starts on when uncontrolled, and the one the reset returns to. */
   defaultValue?: T;
   onValueChange?: (value: T) => void;
   disabled?: boolean;
-  /**
-   * `wide` gives a long row of segments a whole row of a narrow bar. The default is `wide` from four segments up.
-   */
-  width?: "default" | "wide";
   /** `SegmentedItem`s. */
   children?: React.ReactNode;
 }
 
-/** A filter with two or three short options, switched in place without a popover. */
+/** A filter with a few short options. In a bar it is a chip that lists them in its popover; alone, a labelled Segmented. */
 export function FilterToggleCell<T extends string>({
   label,
   value,
   defaultValue,
   onValueChange,
   disabled = false,
-  width,
   className,
   children,
   ...props
@@ -250,43 +257,38 @@ export function FilterToggleCell<T extends string>({
   });
   const active = defaultValue !== undefined && current !== defaultValue;
   const onReset = defaultValue !== undefined ? () => setCurrent(defaultValue) : undefined;
-  const isWide = width == null ? Children.count(children) > 3 : width === "wide";
+  const [open, setOpen] = useState(false);
   if (inRoot) {
+    // In a bar it is a chip like every other filter: the chosen option as its value, the options in its popover.
+    const chosen = Children.toArray(children).find(
+      (child): child is React.ReactElement<{ value: string; children?: React.ReactNode }> =>
+        isValidElement<{ value: string }>(child) && child.props.value === current,
+    );
     return (
-      <div
-        data-slot="filter-toggle-cell"
-        data-active={active || undefined}
-        data-disabled={disabled || undefined}
-        className={cn(
-          chipInRoot,
-          "flex min-h-8 items-center gap-2 ps-3 pe-0.5",
-          // A long row of segments takes a row of its own on a narrow bar rather than wrapping its options.
-          isWide && "max-@md:basis-full",
-          className,
-        )}
+      <FilterCell
+        label={label}
+        value={chosen?.props.children ?? current}
+        active={active}
+        onReset={onReset}
+        open={open}
+        onOpenChange={setOpen}
+        contentClassName="w-auto min-w-40 p-1"
+        className={className}
         {...props}
       >
-        <span data-slot="filter-cell-label" className="type-caption text-muted-foreground">
-          {label}
-        </span>
         <Segmented
           value={current}
-          onValueChange={setCurrent}
+          onValueChange={(next) => {
+            setCurrent(next);
+            setOpen(false);
+          }}
           disabled={disabled}
           aria-label={label}
-          size="sm"
-          width="hug"
-          className="min-h-0 border-0 p-0"
+          className="flex-col border-0 p-0"
         >
           {children}
         </Segmented>
-        {/* The reset's room is kept while there is nothing to reset, so changing the choice never widens the chip. */}
-        {onReset && (
-          <span className="flex size-6 shrink-0 items-center justify-center">
-            {active && !disabled && <CellReset label={label} active={active} onReset={onReset} />}
-          </span>
-        )}
-      </div>
+      </FilterCell>
     );
   }
   return (

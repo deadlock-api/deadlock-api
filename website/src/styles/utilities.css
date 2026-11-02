@@ -326,13 +326,12 @@
   }
 }
 
-[data-slot="filter-bar"][data-variant="cells"] {
+[data-slot="filter-bar"] {
   counter-reset: filters-set;
 }
-[data-slot="filter-bar"][data-variant="cells"]
-  :is([data-slot="filter-cell"], [data-slot="filter-toggle-cell"])[data-active] {
+[data-slot="filter-bar"] :is([data-slot="filter-cell"], [data-slot="filter-toggle-cell"])[data-active] {
   counter-increment: filters-set;
 }
-[data-slot="filter-bar"][data-variant="cells"]:has([data-active]) [data-slot="filter-bar-count"]::after {
+[data-slot="filter-bar"]:has([data-active]) [data-slot="filter-bar-count"]::after {
   visibility: visible;
 }

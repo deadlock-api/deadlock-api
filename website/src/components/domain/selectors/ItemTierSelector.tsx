@@ -1,5 +1,7 @@
 import { Layers3Icon } from "lucide-react";
+import { use } from "react";
 
+import { FilterCell, FilterRootContext } from "~/components/patterns/filter-bar/FilterCell";
 import { Field } from "~/components/ui/field";
 import { anyPressed, anyValue } from "~/components/ui/hooks/any-selection";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
@@ -25,26 +27,45 @@ export function ItemTierSelector({
   onValueChange?: (tiers: number[]) => void;
   disabled?: boolean;
 }) {
+  const inRoot = use(FilterRootContext);
   const [value, setValue] = useControllableState({
     value: valueProp,
     defaultValue,
     onValueChange,
   });
+  const group = (
+    <ToggleGroup
+      type="multiple"
+      variant="outline"
+      disabled={disabled}
+      value={anyPressed(tiers, value).map(String)}
+      onValueChange={(pressed) => setValue(anyValue(tiers, pressed.map(Number)))}
+    >
+      {tiers.map((tier) => (
+        <ToggleGroupItem key={tier} value={String(tier)} aria-label={`Tier ${tier}`}>
+          {tier}
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
+  );
+  // In a page's filter row: a chip like every other filter there, the tiers in its popover.
+  if (inRoot) {
+    const pressed = anyPressed(tiers, value);
+    return (
+      <FilterCell
+        label="Tiers"
+        value={pressed.length === 0 ? "All" : pressed.join(", ")}
+        active={pressed.length > 0}
+        onReset={() => setValue(tiers)}
+        contentClassName="w-auto"
+      >
+        {group}
+      </FilterCell>
+    );
+  }
   return (
     <Field label="Tiers" icon={<Layers3Icon aria-hidden="true" className="size-3.5 shrink-0" />} {...props}>
-      <ToggleGroup
-        type="multiple"
-        variant="outline"
-        disabled={disabled}
-        value={anyPressed(tiers, value).map(String)}
-        onValueChange={(pressed) => setValue(anyValue(tiers, pressed.map(Number)))}
-      >
-        {tiers.map((tier) => (
-          <ToggleGroupItem key={tier} value={String(tier)} aria-label={`Tier ${tier}`}>
-            {tier}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
+      {group}
     </Field>
   );
 }

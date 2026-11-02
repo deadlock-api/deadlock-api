@@ -189,8 +189,7 @@ function HeatmapPage() {
             </StringOption>
           ))}
         </StringSelector>
-        {/* Three segments stay under the auto-wide threshold, but these labels do not fit a default cell. */}
-        <FilterToggleCell label="Show" width="wide" value={viewMode} defaultValue="kills" onValueChange={setViewMode}>
+        <FilterToggleCell label="Show" value={viewMode} defaultValue="kills" onValueChange={setViewMode}>
           {VIEW_MODES.map((viewModeOption) => (
             <SegmentedItem key={viewModeOption} value={viewModeOption}>
               {VIEW_MODE_LABELS[viewModeOption]}

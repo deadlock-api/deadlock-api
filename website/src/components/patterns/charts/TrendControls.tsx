@@ -1,3 +1,6 @@
+import { use } from "react";
+
+import { FilterRootContext, FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { Field } from "~/components/ui/field";
 import { Segmented } from "~/components/ui/segmented";
 import { useHydrated } from "~/hooks/useHydrated";
@@ -11,7 +14,7 @@ interface TrendIntervalFieldProps extends Omit<
   label?: string;
 }
 
-/** The bucket picker of a trend toolbar; its segments are disabled until the client has hydrated. */
+/** The bucket picker of a trend chart; its options are disabled until the client has hydrated. */
 export function TrendIntervalField({
   value,
   onValueChange,
@@ -20,6 +23,14 @@ export function TrendIntervalField({
   ...props
 }: TrendIntervalFieldProps) {
   const hydrated = useHydrated();
+  // In a page's filter row: a chip like every other filter there.
+  if (use(FilterRootContext)) {
+    return (
+      <FilterToggleCell label={label} value={value} onValueChange={onValueChange} disabled={!hydrated}>
+        {children}
+      </FilterToggleCell>
+    );
+  }
   return (
     <Field label={label} orientation="horizontal" {...props}>
       <Segmented
