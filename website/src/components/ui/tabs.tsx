@@ -12,6 +12,11 @@ type TabsVariant = NonNullable<VariantProps<typeof tabsListVariants>["variant"]>
 // (`group-data-[orientation=…]/tabs`) would also match the outer Tabs when one Tabs is nested in another.
 const TabsOrientationContext = React.createContext<TabsOrientation>("horizontal");
 const TabsVariantContext = React.createContext<TabsVariant>("default");
+// True while the arrow keys have moved through the list: the selected tab follows focus and its own mark shows where
+// focus is, so it drops the focus ring. Focus arriving with Tab (the mark does not change) still shows the ring.
+const TabsArrowedContext = React.createContext(false);
+
+const ARROW_KEYS = new Set(["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "Home", "End"]);
 
 function Tabs({ className, orientation = "horizontal", ...props }: React.ComponentProps<typeof TabsPrimitive.Root>) {
   return (
@@ -64,25 +69,39 @@ const tabsListVariants = cva("inline-flex w-fit max-w-full items-center justify-
 function TabsList({
   className,
   variant = "default",
+  onKeyDown,
+  onBlur,
   ...props
 }: React.ComponentProps<typeof TabsPrimitive.List> & Pick<VariantProps<typeof tabsListVariants>, "variant">) {
   const resolvedVariant = variant ?? "default";
   const orientation = React.use(TabsOrientationContext);
+  const [arrowed, setArrowed] = React.useState(false);
   return (
     <TabsVariantContext value={resolvedVariant}>
-      <TabsPrimitive.List
-        data-slot="tabs-list"
-        data-variant={resolvedVariant}
-        className={cn(tabsListVariants({ variant: resolvedVariant, orientation }), className)}
-        {...props}
-      />
+      <TabsArrowedContext value={arrowed}>
+        <TabsPrimitive.List
+          data-slot="tabs-list"
+          data-variant={resolvedVariant}
+          className={cn(tabsListVariants({ variant: resolvedVariant, orientation }), className)}
+          onKeyDown={(event) => {
+            onKeyDown?.(event);
+            if (ARROW_KEYS.has(event.key)) setArrowed(true);
+          }}
+          onBlur={(event) => {
+            onBlur?.(event);
+            if (!(event.relatedTarget instanceof Node && event.currentTarget.contains(event.relatedTarget))) {
+              setArrowed(false);
+            }
+          }}
+          {...props}
+        />
+      </TabsArrowedContext>
     </TabsVariantContext>
   );
 }
 
 const tabsTriggerVariants = cva(
   [
-    FOCUS_RING_BORDER,
     DISABLED_STATE,
     SVG_SLOT,
     "relative inline-flex h-full flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap text-muted-foreground transition-all hover:text-foreground data-[state=active]:text-foreground",
@@ -99,6 +118,12 @@ const tabsTriggerVariants = cva(
         horizontal: "after:inset-x-0 after:h-0.5",
         vertical: "w-full justify-start after:inset-y-0 after:-inset-e-1 after:w-0.5",
       },
+      // `inactive`: only a focused tab that is not the selected one is ringed (see TabsArrowedContext).
+      focusRing: {
+        always: FOCUS_RING_BORDER,
+        inactive:
+          "outline-none not-data-[state=active]:focus-visible:border-ring not-data-[state=active]:focus-visible:ring-2 not-data-[state=active]:focus-visible:ring-ring",
+      },
     },
     compoundVariants: [
       { orientation: "horizontal", variant: "line", class: "after:-bottom-1" },
@@ -110,11 +135,15 @@ const tabsTriggerVariants = cva(
 function TabsTrigger({ className, onMouseDown, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   const variant = React.use(TabsVariantContext);
   const orientation = React.use(TabsOrientationContext);
+  const arrowed = React.use(TabsArrowedContext);
   return (
     <TabsPrimitive.Trigger
       data-slot="tabs-trigger"
       data-variant={variant}
-      className={cn(tabsTriggerVariants({ variant, orientation }), className)}
+      className={cn(
+        tabsTriggerVariants({ variant, orientation, focusRing: arrowed ? "inactive" : "always" }),
+        className,
+      )}
       onMouseDown={(event) => {
         onMouseDown?.(event);
         // Radix selects on mouse down and focuses the tab from script, which Chrome counts as `:focus-visible` and
