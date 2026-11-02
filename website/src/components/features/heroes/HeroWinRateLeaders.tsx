@@ -9,8 +9,10 @@ import { Delta } from "~/components/ui/delta";
 import { Grid } from "~/components/ui/grid";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TextLink } from "~/components/ui/text-link";
+import { getPickrateMultiplier } from "~/lib/constants";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
+import { heroPickRate } from "~/lib/hero-pick-rate";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 
 /** How many heroes each half of the panel lists. */
@@ -45,6 +47,8 @@ interface Leader {
   matches: number;
   /** The change in win rate since the previous period, as a fraction. */
   delta?: number;
+  /** The share of matches the hero was picked in, as the hero table computes it (`heroPickRate`). */
+  pickRate: number;
 }
 
 /** Heroes with enough matches for their win rate to mean something, best first. */
@@ -64,6 +68,7 @@ function rankByWinRate(stats: readonly AnalyticsHeroStats[], previous: readonly 
         winRate,
         matches: row.matches,
         delta: prev === undefined ? undefined : winRate - prev,
+        pickRate: heroPickRate(row, getPickrateMultiplier("normal")),
       };
     })
     .sort((a, b) => b.winRate - a.winRate);
@@ -71,33 +76,43 @@ function rankByWinRate(stats: readonly AnalyticsHeroStats[], previous: readonly 
 
 function LeaderTable({ label, leaders }: { label: string; leaders: Leader[] }) {
   return (
-    <Table aria-label={label} className="tabular-nums">
-      <TableHeader tone="muted">
-        <TableRow>
-          <TableHead>{label}</TableHead>
-          <TableHead className="text-end">Win rate</TableHead>
-          <TableHead className="text-end">Change</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {leaders.map((leader) => (
-          <TableRow key={leader.heroId}>
-            <TableCell>
-              <HeroCell
-                heroId={leader.heroId}
-                linkToDetail
-                size="sm"
-                meta={`${leader.matches.toLocaleString("en-US")} matches`}
-              />
-            </TableCell>
-            <TableCell className="text-end font-medium">{formatPercent(leader.winRate)}</TableCell>
-            <TableCell className="text-end">
-              {leader.delta === undefined ? null : <Delta value={leader.delta} className="text-xs" />}
-            </TableCell>
+    // A size container of its own, so the pick rate shows wherever this half has room for it.
+    <div className="@container/leaders min-w-0">
+      <Table aria-label={label} className="tabular-nums">
+        <TableHeader tone="muted">
+          <TableRow>
+            <TableHead>{label}</TableHead>
+            <TableHead className="text-end">Win rate</TableHead>
+            {/* The pick rate gives way first in a narrow table: the win rate is the panel's subject. */}
+            <TableHead className="hidden text-end @3xs/leaders:table-cell">Pick rate</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {leaders.map((leader) => (
+            <TableRow key={leader.heroId}>
+              <TableCell>
+                <HeroCell
+                  heroId={leader.heroId}
+                  linkToDetail
+                  size="sm"
+                  meta={`${leader.matches.toLocaleString("en-US")} matches`}
+                />
+              </TableCell>
+              {/* The change since the previous period under the win rate, as the sample size sits under the name. */}
+              <TableCell className="text-end">
+                <span className="flex flex-col items-end">
+                  <span className="font-medium">{formatPercent(leader.winRate)}</span>
+                  {leader.delta === undefined ? null : <Delta value={leader.delta} className="text-xs" />}
+                </span>
+              </TableCell>
+              <TableCell className="hidden text-end text-muted-foreground @3xs/leaders:table-cell">
+                {formatPercent(leader.pickRate)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -128,7 +143,7 @@ export function HeroWinRateLeaders({
   return (
     <Panel className={className}>
       <PanelHeader title={`Hero win rates in ${period}`} icon={Swords} size="sm">
-        <TextLink asChild underline="always" size="sm">
+        <TextLink asChild tone="muted" underline="always" size="sm">
           <SmartLink href="/analytics/heroes">All heroes</SmartLink>
         </TextLink>
       </PanelHeader>
