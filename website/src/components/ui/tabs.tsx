@@ -107,7 +107,7 @@ const tabsTriggerVariants = cva(
   },
 );
 
-function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+function TabsTrigger({ className, onMouseDown, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   const variant = React.use(TabsVariantContext);
   const orientation = React.use(TabsOrientationContext);
   return (
@@ -115,6 +115,14 @@ function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPr
       data-slot="tabs-trigger"
       data-variant={variant}
       className={cn(tabsTriggerVariants({ variant, orientation }), className)}
+      onMouseDown={(event) => {
+        onMouseDown?.(event);
+        // Radix selects on mouse down and focuses the tab from script, which Chrome counts as `:focus-visible` and
+        // rings a clicked tab. Focusing it first without the ring makes Radix's focus a no-op; keys still ring it.
+        if (!event.defaultPrevented && event.button === 0 && !event.ctrlKey && !props.disabled) {
+          event.currentTarget.focus({ focusVisible: false });
+        }
+      }}
       {...props}
     />
   );
