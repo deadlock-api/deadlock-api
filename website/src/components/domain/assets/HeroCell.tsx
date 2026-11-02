@@ -13,14 +13,16 @@ const heroCellVariants = cva("flex min-w-0 items-center", {
 const IMAGE_SIZE = { sm: "size-6", default: "size-8" } as const;
 
 /**
- * A hero as the identity of a row: portrait and name on one line. The name truncates to the width the parent leaves
- * (cap it with a `max-w-*` on the cell); the text size is the parent's.
+ * A hero as the identity of a row: portrait and name on one line, with an optional `meta` line under the name (a
+ * sample size), the same anatomy as `ItemCell`. The name truncates to the width the parent leaves (cap it with a
+ * `max-w-*` on the cell); the text size is the parent's.
  */
 export function HeroCell({
   heroId,
   size,
   shape,
   linkToDetail = false,
+  meta,
   className,
   ...props
 }: Omit<React.ComponentProps<"span">, "children"> &
@@ -29,6 +31,8 @@ export function HeroCell({
     heroId: number;
     /** Links the name to the hero's analytics page. */
     linkToDetail?: boolean;
+    /** A second line under the name, in caption type: the row's sample size. */
+    meta?: React.ReactNode;
   }) {
   const { hero, isLoading } = useHeroById(heroId);
   return (
@@ -46,7 +50,16 @@ export function HeroCell({
         decorative
         className={cn("shrink-0", IMAGE_SIZE[size ?? "default"])}
       />
-      <HeroName hero={hero} loading={isLoading} linkToDetail={linkToDetail} />
+      {meta === undefined ? (
+        <HeroName hero={hero} loading={isLoading} linkToDetail={linkToDetail} />
+      ) : (
+        <span className="flex min-w-0 flex-col">
+          <HeroName hero={hero} loading={isLoading} linkToDetail={linkToDetail} />
+          <span data-slot="hero-cell-meta" className="truncate type-caption text-muted-foreground tabular-nums">
+            {meta}
+          </span>
+        </span>
+      )}
     </span>
   );
 }

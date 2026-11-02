@@ -18,7 +18,7 @@ import { ProgressBarSegment } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { SortButton, ariaSort } from "~/components/ui/sort-button";
-import { Inline, Stack } from "~/components/ui/stack";
+import { Inline } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
@@ -116,7 +116,7 @@ export function HeroStatsTable({
 
   return (
     <StaleOverlay active={table.isStale} label="hero stats" className="flex flex-col gap-3">
-      <Table aria-label="Hero stats">
+      <Table aria-label="Hero stats" density="compact" className="tabular-nums">
         <HeroStatsHeader table={table} nameFilter={nameFilter} />
         <TableBody>
           {table.rows.map(({ rank, hero }) => (
@@ -187,7 +187,7 @@ function HeroTypeGroup({
           )}
         </div>
       </PanelHeader>
-      <Table aria-label={`${config.label} hero stats`}>
+      <Table aria-label={`${config.label} hero stats`} density="compact" className="tabular-nums">
         <HeroStatsHeader table={table} nameFilter={nameFilter} />
         <TableBody>
           {group.visible.map(({ rank, hero }) => (
@@ -315,18 +315,21 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
     <TableRow data-find={findKey.hero(row.hero_id)}>
       <TableCell className="text-center font-semibold">{rank}</TableCell>
       <TableCell data-pinned>
-        <Stack gap={1}>
-          <HeroCell heroId={row.hero_id} linkToDetail />
-          {/* In a narrow table the sample size stays, shortened ("19K"): without it a phone lost how much a win rate
-              rests on. The short form is generated content with empty alt text, so the page text (crawlers, screen
-              readers, copy) holds the count once. */}
-          <p
-            data-compact={COMPACT_MATCHES.format(row.matches)}
-            className="text-xs text-muted-foreground tabular-nums before:content-[attr(data-compact)_/_''] @md/table:before:content-none"
-          >
-            <span className="@max-md/table:sr-only">{row.matches.toLocaleString("en-US")} matches</span>
-          </p>
-        </Stack>
+        {/* The sample size under the name, as in the item table. In a narrow table it stays, shortened ("19K"):
+            without it a phone lost how much a win rate rests on. The short form is generated content with empty alt
+            text, so the page text (crawlers, screen readers, copy) holds the count once. */}
+        <HeroCell
+          heroId={row.hero_id}
+          linkToDetail
+          meta={
+            <span
+              data-compact={COMPACT_MATCHES.format(row.matches)}
+              className="before:content-[attr(data-compact)_/_''] @md/table:before:content-none"
+            >
+              <span className="@max-md/table:sr-only">{row.matches.toLocaleString("en-US")} matches</span>
+            </span>
+          }
+        />
       </TableCell>
       <TableCell>
         <HeroStatTrend
