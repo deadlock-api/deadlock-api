@@ -93,6 +93,16 @@ fn ts(unix: i64) -> String {
     )
 }
 
+/// One partition rebuild: what [`DataDump::export_base`] writes.
+#[derive(Clone, Copy)]
+struct BaseExport<'a> {
+    name: &'a str,
+    generation: u32,
+    range: sql::BaseRange<'a>,
+    watermark: &'a str,
+    watermark_hi: i64,
+}
+
 /// Takes the `dump` view's current `columns` into `state`, starting a new generation when
 /// they changed incompatibly (or when the table has none yet).
 fn adopt_columns(name: &str, state: &mut TableState, columns: Vec<Column>) {
@@ -444,6 +454,7 @@ impl DataDump {
         let Policy::Incremental {
             watermark,
             partition_expr,
+            chunk_column,
         } = table.policy
         else {
             return Ok(());
@@ -571,34 +582,33 @@ impl DataDump {
         for rebuild in plan {
             shutdown_check()?;
             let p = rebuild.partition;
-            let key = self.key(&format!(
-                "tables/{name}/g{target_gen}/base/part-{p}/{}-{}.parquet",
-                ts(watermark_hi),
-                exporter.run_id
-            ));
-            let sql = sql::base_export(nc, name, &key, partition_expr, p, watermark, watermark_hi);
-            let written = exporter
-                .export(&sql, &key, &format!("{name}-g{target_gen}-base-{p}"))
-                .await?;
+            let base = BaseExport {
+                name,
+                generation: target_gen,
+                range: sql::BaseRange {
+                    partition_expr,
+                    partition: p,
+                    chunk_column,
+                    chunk: compaction::Chunk::default(),
+                },
+                watermark,
+                watermark_hi,
+            };
+            let estimate = compaction::estimate_base_bytes(
+                state,
+                p,
+                actual.get(&p).copied().unwrap_or_default(),
+            );
+            // All files of the new base are written before the old ones are replaced, so a
+            // failure halfway keeps the old base; its uploads are swept as unreferenced.
+            let files = self.export_base(exporter, &base, estimate).await?;
+            let chunks = files.len();
             state.files.retain(|f| {
                 !(f.kind == FileKind::Base && f.generation == target_gen && f.partition == Some(p))
             });
-            if let Some(written) = written {
-                state.files.push(FileEntry {
-                    key,
-                    kind: FileKind::Base,
-                    generation: target_gen,
-                    partition: Some(p),
-                    lo: None,
-                    hi: Some(watermark_hi),
-                    rows: written.rows,
-                    bytes: written.bytes,
-                    rows_by_partition: BTreeMap::new(),
-                    built_at: Utc::now(),
-                });
-            }
+            state.files.extend(files);
             info!(
-                "data dump: {name} g{target_gen} rebuilt partition {p} ({:?})",
+                "data dump: {name} g{target_gen} rebuilt partition {p} in {chunks} files ({:?})",
                 rebuild.reason
             );
             self.checkpoint(manifest, name, state).await;
@@ -625,6 +635,117 @@ impl DataDump {
             f.kind != FileKind::Base || f.partition.is_some_and(|p| actual.contains_key(&p))
         });
         Ok(())
+    }
+
+    /// Exports one partition's base as files of at most `compaction::MAX_FILE_BYTES`: split
+    /// into chunk-column ranges of about equal row counts by the `estimate`, and any file that
+    /// still comes out too big is deleted and exported again in smaller pieces.
+    async fn export_base(
+        &self,
+        exporter: &Exporter,
+        base: &BaseExport<'_>,
+        estimate: u64,
+    ) -> Result<Vec<FileEntry>, DumpError> {
+        let BaseExport {
+            name,
+            generation,
+            range,
+            watermark,
+            watermark_hi,
+        } = *base;
+        let p = range.partition;
+        let step = format!("{name}-g{generation}-base-{p}");
+        let mut todo = self
+            .split_chunk(
+                exporter,
+                name,
+                &range,
+                compaction::chunk_count(estimate),
+                &step,
+            )
+            .await?;
+        // Popped from the back: export in chunk-column order.
+        todo.reverse();
+        let mut files = Vec::new();
+        let mut seq = 0u32;
+        while let Some(chunk) = todo.pop() {
+            shutdown_check()?;
+            let range = sql::BaseRange { chunk, ..range };
+            let key = self.key(&format!(
+                "tables/{name}/g{generation}/base/part-{p}/{}-{}-{seq}.parquet",
+                ts(watermark_hi),
+                exporter.run_id
+            ));
+            let sql = sql::base_export(
+                &self.config.named_collection,
+                name,
+                &key,
+                &range,
+                watermark,
+                watermark_hi,
+            );
+            let chunk_step = format!("{step}-{seq}");
+            seq = seq.saturating_add(1);
+            let Some(written) = exporter.export(&sql, &key, &chunk_step).await? else {
+                continue;
+            };
+            if written.bytes > compaction::MAX_FILE_BYTES {
+                let parts = compaction::chunk_count(written.bytes).max(2);
+                let pieces = self
+                    .split_chunk(exporter, name, &range, parts, &chunk_step)
+                    .await?;
+                if pieces.len() > 1 {
+                    warn!(
+                        key,
+                        bytes = written.bytes,
+                        "data dump: base file over the size limit; exporting it in {} pieces",
+                        pieces.len()
+                    );
+                    exporter.delete(&key).await?;
+                    todo.extend(pieces.into_iter().rev());
+                    continue;
+                }
+                warn!(
+                    key,
+                    bytes = written.bytes,
+                    "data dump: base file over the size limit cannot be split further"
+                );
+            }
+            files.push(FileEntry {
+                key,
+                kind: FileKind::Base,
+                generation,
+                partition: Some(p),
+                lo: None,
+                hi: Some(watermark_hi),
+                rows: written.rows,
+                bytes: written.bytes,
+                rows_by_partition: BTreeMap::new(),
+                built_at: Utc::now(),
+            });
+        }
+        Ok(files)
+    }
+
+    /// `range`'s chunk cut into up to `parts` pieces at row quantiles of the chunk column.
+    async fn split_chunk(
+        &self,
+        exporter: &Exporter,
+        name: &str,
+        range: &sql::BaseRange<'_>,
+        parts: usize,
+        step: &str,
+    ) -> Result<Vec<compaction::Chunk>, DumpError> {
+        if parts < 2 {
+            return Ok(vec![range.chunk]);
+        }
+        let bounds = exporter
+            .fetch_u64s(
+                &sql::chunk_bounds(name, range, parts),
+                &format!("{step}-bounds"),
+            )
+            .await?;
+        Ok(range.chunk.split(&bounds))
     }
 
     /// Builds the catalog and uploads it as the versioned and the current object.

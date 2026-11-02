@@ -9,6 +9,76 @@ use std::collections::BTreeMap;
 
 use super::manifest::{FileKind, TableState};
 
+/// The zone's plan (Pro) edge-caches objects up to 512 MB; bigger ones bypass the cache, so
+/// every ranged read of them is an R2 Class B operation. A base file over this is split again.
+pub(crate) const MAX_FILE_BYTES: u64 = 500_000_000;
+/// What base files aim for, leaving room for estimate error and uneven bytes per row.
+pub(crate) const TARGET_FILE_BYTES: u64 = 400_000_000;
+/// Bytes per row before the table has any base (`match_player` had ~1.6 kB in 2026-11).
+const DEFAULT_BYTES_PER_ROW: u64 = 2_000;
+const MAX_CHUNKS: u64 = 256;
+
+/// Half-open range `[from, to)` of a partition's chunk column (`None` is unbounded) that one
+/// base file holds.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) struct Chunk {
+    pub(crate) from: Option<u64>,
+    pub(crate) to: Option<u64>,
+}
+
+impl Chunk {
+    /// Consecutive chunks covering `self`, cut at the `bounds` strictly inside it.
+    pub(crate) fn split(self, bounds: &[u64]) -> Vec<Self> {
+        let mut inner: Vec<u64> = bounds
+            .iter()
+            .copied()
+            .filter(|&b| self.from.is_none_or(|f| b > f) && self.to.is_none_or(|t| b < t))
+            .collect();
+        inner.sort_unstable();
+        inner.dedup();
+        let mut chunks = Vec::with_capacity(inner.len().saturating_add(1));
+        let mut from = self.from;
+        for b in inner {
+            chunks.push(Self { from, to: Some(b) });
+            from = Some(b);
+        }
+        chunks.push(Self { from, to: self.to });
+        chunks
+    }
+}
+
+/// How many files `bytes` of base should be split into.
+pub(crate) fn chunk_count(bytes: u64) -> usize {
+    let n = bytes.div_ceil(TARGET_FILE_BYTES).clamp(1, MAX_CHUNKS);
+    usize::try_from(n).unwrap_or(1)
+}
+
+/// Expected base size of `partition` with `rows` rows, from the bytes per row of its previous
+/// base (any generation), else of the table's other bases.
+pub(crate) fn estimate_base_bytes(table: &TableState, partition: u64, rows: u64) -> u64 {
+    let sum = |own: bool| {
+        table
+            .files
+            .iter()
+            .filter(|f| f.kind == FileKind::Base && (!own || f.partition == Some(partition)))
+            .fold((0u64, 0u64), |(b, r), f| {
+                (b.saturating_add(f.bytes), r.saturating_add(f.rows))
+            })
+    };
+    let (bytes, base_rows) = match sum(true) {
+        (_, 0) => sum(false),
+        own => own,
+    };
+    if base_rows == 0 {
+        return rows.saturating_mul(DEFAULT_BYTES_PER_ROW);
+    }
+    u128::from(rows)
+        .saturating_mul(u128::from(bytes))
+        .checked_div(u128::from(base_rows))
+        .and_then(|b| u64::try_from(b).ok())
+        .unwrap_or(u64::MAX)
+}
+
 pub(crate) struct Params {
     /// Partitions rebuilt per tick.
     pub(crate) budget: usize,
@@ -213,6 +283,72 @@ mod tests {
         t.generation = 1;
         t.files = files;
         t
+    }
+
+    #[test]
+    fn chunks_split_inside_their_range_only() {
+        let all = Chunk::default();
+        assert_eq!(all.split(&[]), vec![all]);
+        assert_eq!(
+            all.split(&[20, 10, 20]),
+            vec![
+                Chunk {
+                    from: None,
+                    to: Some(10)
+                },
+                Chunk {
+                    from: Some(10),
+                    to: Some(20)
+                },
+                Chunk {
+                    from: Some(20),
+                    to: None
+                },
+            ]
+        );
+        let mid = Chunk {
+            from: Some(10),
+            to: Some(20),
+        };
+        // Bounds on or outside the edges would produce empty or overlapping chunks.
+        assert_eq!(mid.split(&[5, 10, 20, 30]), vec![mid]);
+        assert_eq!(
+            mid.split(&[15]),
+            vec![
+                Chunk {
+                    from: Some(10),
+                    to: Some(15)
+                },
+                Chunk {
+                    from: Some(15),
+                    to: Some(20)
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn chunk_counts_follow_the_estimate() {
+        assert_eq!(chunk_count(0), 1);
+        assert_eq!(chunk_count(TARGET_FILE_BYTES), 1);
+        assert_eq!(chunk_count(TARGET_FILE_BYTES + 1), 2);
+        assert_eq!(chunk_count(5_382_509_236), 14);
+        assert_eq!(chunk_count(u64::MAX), 256);
+
+        let mut t = table(vec![file(FileKind::Base, Some(1), 0, 100, 1_000)]);
+        t.files[0].bytes = 3_000;
+        // Own base first, then the table's, then the default.
+        assert_eq!(estimate_base_bytes(&t, 1, 2_000), 6_000);
+        assert_eq!(estimate_base_bytes(&t, 2, 10), 30);
+        t.files.push(file(FileKind::Base, Some(2), 0, 100, 10));
+        assert_eq!(estimate_base_bytes(&t, 2, 20), 20);
+        assert_eq!(estimate_base_bytes(&table(vec![]), 1, 10), 20_000);
+        // Split bases count together.
+        t.files.push(file(FileKind::Base, Some(1), 0, 100, 1_000));
+        assert_eq!(
+            t.base(1, 1).map(|b| (b.rows, b.bytes)),
+            Some((2_000, 4_000))
+        );
     }
 
     #[test]

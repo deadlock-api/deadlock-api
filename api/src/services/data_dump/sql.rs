@@ -3,6 +3,8 @@
 
 use std::collections::BTreeMap;
 
+use super::compaction::Chunk;
+
 pub(crate) const LOG_COMMENT: &str = "data_dump";
 
 /// R2 requires every multipart part except the last to have the same size, so the part size
@@ -83,21 +85,70 @@ pub(crate) fn delta_export(
     )
 }
 
+/// Which rows of one partition a base file holds.
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct BaseRange<'a> {
+    pub(crate) partition_expr: &'a str,
+    pub(crate) partition: u64,
+    pub(crate) chunk_column: &'a str,
+    pub(crate) chunk: Chunk,
+}
+
+impl BaseRange<'_> {
+    fn condition(&self) -> String {
+        let Self {
+            partition_expr,
+            partition,
+            chunk_column,
+            chunk,
+        } = *self;
+        let mut parts = vec![format!("{partition_expr} = {partition}")];
+        if let Some(from) = chunk.from {
+            parts.push(format!("{chunk_column} >= {from}"));
+        }
+        if let Some(to) = chunk.to {
+            parts.push(format!("{chunk_column} < {to}"));
+        }
+        parts.join(" AND ")
+    }
+}
+
 pub(crate) fn base_export(
     named_collection: &str,
     table: &str,
     key: &str,
-    partition_expr: &str,
-    partition: u64,
+    range: &BaseRange<'_>,
     watermark: &str,
     hi: i64,
 ) -> String {
     format!(
         "INSERT INTO FUNCTION {} SELECT * FROM {} \
-         WHERE {partition_expr} = {partition} AND {watermark} <= toDateTime({hi}) \
+         WHERE {} AND {watermark} <= toDateTime({hi}) \
          SETTINGS final = 1, {EXPORT_SETTINGS}",
         target(named_collection, key),
-        view(table)
+        view(table),
+        range.condition()
+    )
+}
+
+/// Values of the chunk column that cut `range` into `parts` pieces of about equal row counts.
+/// Raw rows (no `FINAL`): one column of one partition, cheap, and duplicates barely shift it.
+pub(crate) fn chunk_bounds(table: &str, range: &BaseRange<'_>, parts: usize) -> String {
+    let levels: Vec<String> = (1..parts)
+        .map(|i| {
+            let millionths = i
+                .saturating_mul(1_000_000)
+                .checked_div(parts)
+                .unwrap_or_default();
+            format!("0.{millionths:06}")
+        })
+        .collect();
+    format!(
+        "SELECT arrayMap(x -> toUInt64(x), quantilesExactLow({})({})) FROM {} WHERE {}",
+        levels.join(", "),
+        range.chunk_column,
+        view(table),
+        range.condition()
     )
 }
 
@@ -198,6 +249,37 @@ mod tests {
         ));
         assert!(sql.contains("created_at > toDateTime(100) AND created_at <= toDateTime(200)"));
         assert!(sql.starts_with("INSERT INTO FUNCTION s3(r2_dump, filename = 'v1/x.parquet')"));
+    }
+
+    #[test]
+    fn base_ranges_bound_the_chunk_column() {
+        let range = BaseRange {
+            partition_expr: "intDiv(match_id, 1000000)",
+            partition: 7,
+            chunk_column: "match_id",
+            chunk: Chunk::default(),
+        };
+        let sql = base_export("r2_dump", "match_player", "k", &range, "created_at", 9);
+        assert!(sql.contains(
+            "WHERE intDiv(match_id, 1000000) = 7 AND created_at <= toDateTime(9) SETTINGS final = 1"
+        ));
+        let range = BaseRange {
+            chunk: Chunk {
+                from: Some(7_250_000),
+                to: Some(7_500_000),
+            },
+            ..range
+        };
+        let sql = base_export("r2_dump", "match_player", "k", &range, "created_at", 9);
+        assert!(sql.contains(
+            "WHERE intDiv(match_id, 1000000) = 7 AND match_id >= 7250000 AND match_id < 7500000 AND"
+        ));
+        let bounds = chunk_bounds("match_player", &range, 3);
+        assert!(bounds.contains("quantilesExactLow(0.333333, 0.666666)(match_id)"));
+        assert!(
+            bounds.contains("FROM dump.`match_player` WHERE intDiv(match_id, 1000000) = 7 AND")
+        );
+        assert!(chunk_bounds("t", &range, 2).contains("quantilesExactLow(0.500000)"));
     }
 
     #[test]

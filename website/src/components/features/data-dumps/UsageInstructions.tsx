@@ -16,7 +16,7 @@ ATTACH 'ducklake:${CATALOG_URL}' AS lake (READ_ONLY);
 SHOW TABLES;
 SELECT count(*) FROM lake.leaderboard;
 
--- match_player is exported incrementally: hourly delta files plus one base file per partition.
+-- match_player is exported incrementally: hourly delta files plus base files per partition (each under 500 MB).
 -- The catalog keeps per-file statistics, so filtering on match_id / account_id / start_time
 -- reads only the files that matter.
 SELECT hero_id, count(*) AS games, avg(kills) AS kills

@@ -57,6 +57,15 @@ impl Exporter {
         Ok(self.query(sql, step).fetch_one::<i64>().await?)
     }
 
+    pub(crate) async fn fetch_u64s(&self, sql: &str, step: &str) -> Result<Vec<u64>, DumpError> {
+        Ok(self.query(sql, step).fetch_one::<Vec<u64>>().await?)
+    }
+
+    pub(crate) async fn delete(&self, key: &str) -> Result<(), DumpError> {
+        self.store.delete(&Path::from(key)).await?;
+        Ok(())
+    }
+
     pub(crate) async fn partition_counts(
         &self,
         sql: &str,

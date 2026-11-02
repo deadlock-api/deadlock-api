@@ -6,6 +6,10 @@ pub(crate) enum Policy {
     Incremental {
         watermark: &'static str,
         partition_expr: &'static str,
+        /// Leading sort-key column a partition's base is split on into files small enough
+        /// for the edge cache (`compaction::MAX_FILE_BYTES`). Every version of a row shares
+        /// it, so `FINAL` deduplicates within one file.
+        chunk_column: &'static str,
     },
     /// One full file per hourly tick, exported with `FINAL`.
     Snapshot,
@@ -26,6 +30,7 @@ pub(crate) const TABLES: &[TablePolicy] = &[
         policy: Policy::Incremental {
             watermark: "created_at",
             partition_expr: "intDiv(match_id, 1000000)",
+            chunk_column: "match_id",
         },
     },
     TablePolicy {

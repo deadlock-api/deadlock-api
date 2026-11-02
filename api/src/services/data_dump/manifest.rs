@@ -134,10 +134,33 @@ impl TableState {
         }
     }
 
-    pub(crate) fn base(&self, generation: u32, partition: u64) -> Option<&FileEntry> {
-        self.files.iter().find(|f| {
+    /// The files a partition's base is split into; one rebuild writes and replaces them
+    /// together, so they share `hi`.
+    pub(crate) fn base_files(
+        &self,
+        generation: u32,
+        partition: u64,
+    ) -> impl Iterator<Item = &FileEntry> {
+        self.files.iter().filter(move |f| {
             f.kind == FileKind::Base && f.generation == generation && f.partition == Some(partition)
         })
+    }
+
+    /// A partition's base over all its files, `None` when it has none.
+    pub(crate) fn base(&self, generation: u32, partition: u64) -> Option<Base> {
+        let mut files = self.base_files(generation, partition);
+        let first = files.next()?;
+        let init = Base {
+            hi: first.hi,
+            rows: first.rows,
+            bytes: first.bytes,
+        };
+        Some(files.fold(init, |b, f| Base {
+            // The oldest file bounds what the base covers (they are all equal).
+            hi: b.hi.zip(f.hi).map(|(a, c)| a.min(c)),
+            rows: b.rows.saturating_add(f.rows),
+            bytes: b.bytes.saturating_add(f.bytes),
+        }))
     }
 
     pub(crate) fn files_of(
@@ -170,10 +193,19 @@ impl TableState {
     }
 }
 
+/// Summary of a partition's base files (see [`TableState::base`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Base {
+    pub(crate) hi: Option<i64>,
+    pub(crate) rows: u64,
+    pub(crate) bytes: u64,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub(crate) enum FileKind {
-    /// One partition, exported with `FINAL`, rows with `watermark <= hi`.
+    /// One partition (or a sort-key range of it), exported with `FINAL`, rows with
+    /// `watermark <= hi`. Large partitions are split into several base files.
     Base,
     /// Rows with `watermark` in `(lo, hi]`, one hourly window, any partition.
     Delta,
