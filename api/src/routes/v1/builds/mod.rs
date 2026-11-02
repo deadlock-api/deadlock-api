@@ -10,7 +10,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
-use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::cache::CacheControlLayer;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Builds", description = "
@@ -22,13 +22,13 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(route::search_builds))
         .layer(
-            CacheControlMiddleware::new(Duration::from_hours(1))
+            CacheControlLayer::new(Duration::from_hours(1))
                 .with_stale_while_revalidate(Duration::from_hours(1)),
         )
         .merge(
             OpenApiRouter::new()
                 .routes(routes!(live::fetch_build_live))
                 .routes(routes!(live::fetch_builds_by_author_live))
-                .layer(CacheControlMiddleware::new(Duration::from_mins(1))),
+                .layer(CacheControlLayer::new(Duration::from_mins(1))),
         )
 }

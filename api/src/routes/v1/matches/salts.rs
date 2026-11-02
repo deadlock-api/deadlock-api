@@ -26,6 +26,7 @@ use crate::services::pending_matches::{queue_requested_match, resolve_invalid_ma
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::utils::types::MatchIdQuery;
+use crate::utils::valve_replay::replay_file_url;
 
 /// Fetching salts from Steam.
 pub(crate) const RATE_LIMIT: RateLimit = RateLimit::new(
@@ -205,16 +206,6 @@ impl From<(u64, CMsgClientToGcGetMatchMetaDataResponse)> for MatchSaltsResponse 
                 .map(|(cluster_id, salt)| replay_file_url(cluster_id, match_id, salt, "dem")),
         }
     }
-}
-
-/// URL of a match's `.{extension}.bz2` file (`meta` or `dem`) on Valve's replay servers.
-pub(crate) fn replay_file_url(
-    cluster_id: u32,
-    match_id: u64,
-    salt: u32,
-    extension: &str,
-) -> String {
-    format!("http://replay{cluster_id}.valve.net/1422450/{match_id}_{salt}.{extension}.bz2")
 }
 
 /// Whether the Steam proxy turned the request away for want of a bot: all bots of the group

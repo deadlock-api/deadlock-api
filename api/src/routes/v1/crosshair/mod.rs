@@ -9,7 +9,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
-use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::cache::CacheControlLayer;
 
 #[derive(OpenApi)]
 #[openapi(tags((
@@ -25,7 +25,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(route::settings_code))
         .routes(routes!(route::settings_image))
         .layer(
-            CacheControlMiddleware::new(Duration::from_hours(24))
+            CacheControlLayer::new(Duration::from_hours(24))
                 .with_stale_while_revalidate(Duration::from_hours(24)),
         )
 }

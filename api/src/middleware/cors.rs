@@ -6,7 +6,8 @@ use reqwest::StatusCode;
 use tower_http::cors::{AllowCredentials, AllowHeaders, Any, CorsLayer};
 
 use crate::error::APIError;
-use crate::utils::request::header_str;
+use crate::services::patreon::SESSION_COOKIE;
+use crate::utils::request::cookie;
 
 /// Wildcard-origin CORS with no `Vary` header, so public responses stay
 /// CDN-cacheable. Request headers are mirrored so header-based auth keeps
@@ -59,11 +60,7 @@ pub(crate) async fn reject_foreign_cookies(req: Request, next: Next) -> Response
 }
 
 fn has_session_cookie(headers: &HeaderMap) -> bool {
-    header_str(headers, header::COOKIE).is_some_and(|cookies| {
-        cookies
-            .split(';')
-            .any(|cookie| cookie.trim().starts_with("patron_session="))
-    })
+    cookie(headers, SESSION_COOKIE).is_some()
 }
 
 /// `https://deadlock-api.com` and its subdomains.

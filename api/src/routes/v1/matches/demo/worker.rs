@@ -22,7 +22,7 @@ use super::format::ArtifactStream;
 use super::job::{JobRecord, JobStatus, store as store_job};
 use super::{OutputFormat, download, format};
 use crate::error::{APIError, APIResult};
-use crate::utils::compression::is_zstd;
+use crate::utils::valve_replay::is_zstd;
 
 /// Max jobs waiting in the channel before submits get a 429.
 const MAX_QUEUE_DEPTH: usize = 128;

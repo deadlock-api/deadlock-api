@@ -6,7 +6,7 @@ use utoipa_axum::routes;
 
 use crate::context::AppState;
 use crate::error::{APIError, LogInternal as _};
-use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::cache::CacheControlLayer;
 use crate::services::patreon::repository::PatronRepository;
 use crate::services::patreon::steam_accounts_repository::SteamAccountsRepository;
 use crate::services::patreon::types::Patron;
@@ -28,7 +28,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         ))
         .routes(routes!(steam_accounts::reactivate_steam_account))
         .routes(routes!(steam_accounts::bot_friend_status))
-        .layer(CacheControlMiddleware::new(Duration::from_secs(0)).private())
+        .layer(CacheControlLayer::new(Duration::from_secs(0)).private())
 }
 
 /// The session's patron record, read fresh for its current slot limit (the session may be stale).

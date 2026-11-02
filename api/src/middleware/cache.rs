@@ -17,7 +17,7 @@ use tower::Service;
 /// Non-2xx responses are marked `no-store` by the global `no_store_on_error` middleware (the
 /// outermost layer in `lib.rs`), which overrides whatever this layer set.
 #[derive(Debug, Clone, Copy)]
-pub(crate) struct CacheControlMiddleware {
+pub(crate) struct CacheControlLayer {
     max_age: Duration,
     stale_while_revalidate: Option<Duration>,
     stale_if_error: Option<Duration>,
@@ -25,7 +25,7 @@ pub(crate) struct CacheControlMiddleware {
     until_cached_results_expire: bool,
 }
 
-impl CacheControlMiddleware {
+impl CacheControlLayer {
     pub(crate) const fn new(max_age: Duration) -> Self {
         Self {
             max_age,
@@ -92,19 +92,19 @@ impl CacheControlMiddleware {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct CacheControlLayer<S> {
+pub(crate) struct CacheControlService<S> {
     inner: S,
-    config: CacheControlMiddleware,
+    config: CacheControlLayer,
     /// The header for `config.max_age`, rendered once when the layer is applied instead of on
     /// every response.
     header: Option<HeaderValue>,
 }
 
-impl<S> tower::Layer<S> for CacheControlMiddleware {
-    type Service = CacheControlLayer<S>;
+impl<S> tower::Layer<S> for CacheControlLayer {
+    type Service = CacheControlService<S>;
 
     fn layer(&self, inner: S) -> Self::Service {
-        CacheControlLayer {
+        CacheControlService {
             inner,
             config: *self,
             header: self.header_value(self.max_age).ok(),
@@ -112,7 +112,7 @@ impl<S> tower::Layer<S> for CacheControlMiddleware {
     }
 }
 
-impl<S> Service<Request> for CacheControlLayer<S>
+impl<S> Service<Request> for CacheControlService<S>
 where
     S: Service<Request, Response = Response> + Send + 'static,
     S::Future: Send + 'static,
@@ -199,7 +199,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_until_cached_results_expire() {
-        let layer = CacheControlMiddleware::new(Duration::from_mins(10))
+        let layer = CacheControlLayer::new(Duration::from_mins(10))
             .with_stale_while_revalidate(Duration::from_mins(20))
             .until_cached_results_expire();
         let header = cache_control(expiring_in(3_000).layer(layer)).await;
@@ -214,8 +214,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_until_cached_results_expire_keeps_the_floor() {
-        let layer =
-            CacheControlMiddleware::new(Duration::from_mins(10)).until_cached_results_expire();
+        let layer = CacheControlLayer::new(Duration::from_mins(10)).until_cached_results_expire();
         assert_eq!(
             cache_control(expiring_in(30).layer(layer)).await,
             "public, max-age=600"
@@ -228,7 +227,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cached_results_ignored_unless_enabled() {
-        let layer = CacheControlMiddleware::new(Duration::from_mins(10));
+        let layer = CacheControlLayer::new(Duration::from_mins(10));
         assert_eq!(
             cache_control(expiring_in(3_000).layer(layer)).await,
             "public, max-age=600"
@@ -237,7 +236,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_max_age() {
-        let layer = CacheControlMiddleware::new(Duration::from_mins(1));
+        let layer = CacheControlLayer::new(Duration::from_mins(1));
         let app = Router::new().route("/", get(test_handler)).layer(layer);
 
         let response = app
@@ -254,7 +253,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_private() {
-        let layer = CacheControlMiddleware::new(Duration::from_mins(1)).private();
+        let layer = CacheControlLayer::new(Duration::from_mins(1)).private();
         let app = Router::new().route("/", get(test_handler)).layer(layer);
 
         let response = app
@@ -271,7 +270,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_stale_while_revalidate() {
-        let layer = CacheControlMiddleware::new(Duration::from_mins(1))
+        let layer = CacheControlLayer::new(Duration::from_mins(1))
             .with_stale_while_revalidate(Duration::from_mins(1));
         let app = Router::new().route("/", get(test_handler)).layer(layer);
 
@@ -289,7 +288,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_stale_if_error() {
-        let layer = CacheControlMiddleware::new(Duration::from_mins(1))
+        let layer = CacheControlLayer::new(Duration::from_mins(1))
             .with_stale_if_error(Duration::from_mins(1));
         let app = Router::new().route("/", get(test_handler)).layer(layer);
 

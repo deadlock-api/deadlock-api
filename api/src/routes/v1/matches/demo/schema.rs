@@ -15,9 +15,10 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::demo::download::http_client;
-use crate::routes::v1::matches::salts::{fetch_match_salts, replay_file_url};
+use crate::routes::v1::matches::salts::fetch_match_salts;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::utils::compression::ZSTD_MAGIC;
+use crate::utils::valve_replay::ZSTD_MAGIC;
+use crate::utils::valve_replay::replay_file_url;
 
 /// Decompressed bytes to pull per growth step while hunting for the send-tables.
 /// One pull is normally enough — the send-tables sit near the start of the demo.

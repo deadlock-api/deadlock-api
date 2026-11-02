@@ -22,6 +22,7 @@ use crate::services::steam::types::{
     FeedItem, ForumRssV2, GetPlayerSummariesResponse, Patch, Rss, SteamAccountNameError,
     SteamAccountVerifyError, SteamProxyResult, SteamRss,
 };
+use crate::utils::valve_replay::replay_file_url;
 
 const ACCOUNT_NAME_RATE_LIMIT: RateLimit = RateLimit::new(
     "steam_account_name",
@@ -184,10 +185,11 @@ impl SteamClient {
         salts: CMsgClientToGcGetMatchMetaDataResponse,
     ) -> reqwest::Result<Vec<u8>> {
         self.http_client
-            .get(format!(
-                "http://replay{}.valve.net/1422450/{match_id}_{}.meta.bz2",
+            .get(replay_file_url(
                 salts.replay_group_id.unwrap_or_default(),
-                salts.metadata_salt.unwrap_or_default()
+                match_id,
+                salts.metadata_salt.unwrap_or_default(),
+                "meta",
             ))
             .send()
             .await

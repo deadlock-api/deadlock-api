@@ -15,9 +15,10 @@ use super::worker::QueryJob;
 use super::{OutputFormat, job_id};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::salts::{fetch_match_salts, replay_file_url};
+use crate::routes::v1::matches::salts::fetch_match_salts;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
+use crate::utils::valve_replay::replay_file_url;
 
 const RATE_LIMIT: RateLimit = RateLimit::new(
     "demo_query",

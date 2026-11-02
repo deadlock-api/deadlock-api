@@ -1,6 +1,6 @@
 use axum::body::Body;
 use axum::extract::{Query, State};
-use axum::http::header::{COOKIE, LOCATION, SET_COOKIE};
+use axum::http::header::{LOCATION, SET_COOKIE};
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use chrono::{Duration, Utc};
@@ -13,6 +13,7 @@ use crate::services::patreon::client::PatreonClient;
 use crate::services::patreon::jwt::create_session_token;
 use crate::services::patreon::repository::{PatronRepository, UpsertPatronParams};
 use crate::services::patreon::types::Patron;
+use crate::utils::request::cookie;
 
 /// Patreon OAuth scopes required for this application
 const PATREON_SCOPES: &str = "identity identity[email] campaigns.members";
@@ -86,10 +87,7 @@ pub(crate) struct CallbackParams {
 
 /// Extracts the OAuth state from the `patreon_oauth_state` cookie
 fn extract_state_from_cookie(headers: &HeaderMap) -> Option<&str> {
-    let cookies = headers.get(COOKIE).and_then(|v| v.to_str().ok())?;
-    cookies
-        .split(';')
-        .find_map(|cookie| cookie.trim().strip_prefix("patreon_oauth_state="))
+    cookie(headers, "patreon_oauth_state")
 }
 
 /// POST /v1/auth/patreon/logout

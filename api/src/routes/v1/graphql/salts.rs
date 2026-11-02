@@ -12,6 +12,7 @@ use crate::context::AppState;
 use crate::routes::v1::graphql::assets::found;
 use crate::routes::v1::graphql::filters::{U32Filter, U64Filter};
 use crate::routes::v1::graphql::schema::{OrderDirection, run_built_query};
+use crate::utils::valve_replay::replay_file_url;
 
 const COLUMNS: &str =
     "match_id, cluster_id, metadata_salt, replay_salt, toUnixTimestamp(created_at) AS created_at";
@@ -45,10 +46,7 @@ pub(crate) struct MatchSalts {
 impl MatchSalts {
     fn replay_url(&self, salt: Option<u32>, extension: &str) -> Option<String> {
         let (cluster_id, salt) = (self.cluster_id?, salt.filter(|s| *s > 0)?);
-        Some(format!(
-            "http://replay{cluster_id}.valve.net/1422450/{}_{salt}.{extension}.bz2",
-            self.match_id
-        ))
+        Some(replay_file_url(cluster_id, self.match_id, salt, extension))
     }
 }
 

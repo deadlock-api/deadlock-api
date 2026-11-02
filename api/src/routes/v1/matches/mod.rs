@@ -17,7 +17,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
-use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::cache::CacheControlLayer;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Matches", description = "
@@ -45,7 +45,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
             OpenApiRouter::new()
                 .routes(routes!(metadata::metadata))
                 .routes(routes!(metadata::metadata_raw))
-                .layer(CacheControlMiddleware::new(Duration::from_hours(168))),
+                .layer(CacheControlLayer::new(Duration::from_hours(168))),
         )
         .nest("/custom", custom::router())
         .nest("/demo", demo::router())

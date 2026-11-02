@@ -60,7 +60,7 @@ use utoipa_scalar::{Scalar, Servable as _};
 use crate::api_doc::ApiDoc;
 use crate::context::AppState;
 use crate::middleware::api_key::write_api_key_to_header;
-use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::cache::CacheControlLayer;
 use crate::middleware::cache_bust::reject_cache_busts;
 use crate::middleware::ch_caller::scope_ch_caller;
 use crate::middleware::cors;
@@ -109,7 +109,7 @@ pub async fn shutdown_background_tasks(timeout: Duration) {
 const ROBOTS_TXT: &str = include_str!("../public/robots.txt");
 
 /// Marks every non-2xx response `no-store`, overriding any `Cache-Control` set further in
-/// (including by [`CacheControlMiddleware`]). Applied outside of every other layer that can
+/// (including by [`CacheControlLayer`]). Applied outside of every other layer that can
 /// produce an error response.
 async fn no_store_on_error(req: Request, next: Next) -> Response {
     let mut response = next.run(req).await;
@@ -173,7 +173,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .layer(from_fn_with_state(state.clone(), scope_ch_caller))
         .layer(from_fn_with_state(state.clone(), track_requests))
         .layer(
-            CacheControlMiddleware::new(Duration::from_secs(DEFAULT_CACHE_TIME))
+            CacheControlLayer::new(Duration::from_secs(DEFAULT_CACHE_TIME))
                 .with_stale_while_revalidate(Duration::from_secs(DEFAULT_CACHE_TIME)),
         )
         // Level 1: Cloudflare always asks for brotli, and tower-http's default brotli quality 4

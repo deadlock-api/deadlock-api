@@ -13,7 +13,7 @@ use tokio::task::JoinHandle;
 
 use super::OutputFormat;
 use crate::error::{APIError, APIResult};
-use crate::utils::compression::ZSTD_MAGIC;
+use crate::utils::valve_replay::is_zstd;
 
 /// Result batches queued between the query and the serializer, and serialized chunks queued
 /// between the serializer and the uploader. Both are deliberately tiny: the point of streaming
@@ -37,7 +37,7 @@ const MAX_ARTIFACT_BYTES: u64 = 8 << 30;
 pub(super) async fn decompress(compressed: Bytes) -> APIResult<Bytes> {
     tokio::task::spawn_blocking(move || {
         let mut out = Vec::with_capacity(compressed.len().saturating_mul(5));
-        if compressed.starts_with(&ZSTD_MAGIC) {
+        if is_zstd(&compressed) {
             zstd::stream::read::Decoder::new(&*compressed)?.read_to_end(&mut out)?;
         } else {
             bzip2::read::BzDecoder::new(&*compressed).read_to_end(&mut out)?;

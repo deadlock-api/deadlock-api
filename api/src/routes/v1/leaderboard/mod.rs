@@ -7,7 +7,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
-use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::cache::CacheControlLayer;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Leaderboard", description = "
@@ -23,7 +23,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(route::leaderboard))
         .routes(routes!(route::leaderboard_hero))
         .layer(
-            CacheControlMiddleware::new(Duration::from_mins(10))
+            CacheControlLayer::new(Duration::from_mins(10))
                 .with_stale_while_revalidate(Duration::from_mins(10)),
         )
 }

@@ -8,15 +8,14 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
-use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::cache::CacheControlLayer;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Steam", description = "Steam related endpoints")))]
 struct ApiDoc;
 
-pub(crate) const CACHE_CONTROL: CacheControlMiddleware =
-    CacheControlMiddleware::new(Duration::from_hours(1))
-        .with_stale_while_revalidate(Duration::from_hours(1));
+pub(crate) const CACHE_CONTROL: CacheControlLayer = CacheControlLayer::new(Duration::from_hours(1))
+    .with_stale_while_revalidate(Duration::from_hours(1));
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())

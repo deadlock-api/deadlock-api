@@ -7,8 +7,9 @@ use uuid::Uuid;
 
 use crate::context::AppState;
 use crate::error::APIError;
+use crate::services::patreon::SESSION_COOKIE;
 use crate::services::patreon::jwt::validate_session_token;
-use crate::utils::request::{header_str, parse_api_key};
+use crate::utils::request::{cookie, header_str, parse_api_key};
 
 /// Authenticated patron session extracted from request
 ///
@@ -62,11 +63,9 @@ impl FromRequestParts<AppState> for PatronSession {
     }
 }
 
-/// Extracts the JWT token from the `patron_session` cookie
+/// Extracts the JWT token from the [`SESSION_COOKIE`]
 fn extract_token_from_cookie(headers: &axum::http::HeaderMap) -> Option<&str> {
-    header_str(headers, axum::http::header::COOKIE)?
-        .split(';')
-        .find_map(|cookie| cookie.trim().strip_prefix("patron_session="))
+    cookie(headers, SESSION_COOKIE)
 }
 
 /// Extracts the JWT token from the `Authorization: Bearer <token>` header

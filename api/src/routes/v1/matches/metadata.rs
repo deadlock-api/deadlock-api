@@ -34,8 +34,8 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::{self, fetch_match_salts};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
-use crate::utils::compression::is_zstd;
 use crate::utils::types::MatchIdQuery;
+use crate::utils::valve_replay::is_zstd;
 
 const S3_RATE_LIMIT: RateLimit = RateLimit::new(
     "match_metadata_s3",

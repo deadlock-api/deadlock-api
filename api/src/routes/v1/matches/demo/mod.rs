@@ -19,7 +19,7 @@ use utoipa_axum::routes;
 pub(crate) use worker::DemoQueryQueue;
 
 use crate::context::AppState;
-use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::cache::CacheControlLayer;
 
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, ToSchema, IntoStaticStr,
@@ -73,7 +73,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .merge(
             OpenApiRouter::new()
                 .routes(routes!(schema::schema))
-                .layer(CacheControlMiddleware::new(Duration::from_hours(24))),
+                .layer(CacheControlLayer::new(Duration::from_hours(24))),
         )
         .routes(routes!(submit::submit))
         .routes(routes!(status::status))

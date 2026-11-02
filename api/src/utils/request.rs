@@ -10,6 +10,13 @@ pub(crate) fn header_str(headers: &HeaderMap, name: impl AsHeaderName) -> Option
     v.to_str().ok()
 }
 
+/// The value of the `name` cookie in the request's `Cookie` header.
+pub(crate) fn cookie<'a>(headers: &'a HeaderMap, name: &str) -> Option<&'a str> {
+    header_str(headers, axum::http::header::COOKIE)?
+        .split(';')
+        .find_map(|cookie| cookie.trim().strip_prefix(name)?.strip_prefix('='))
+}
+
 /// Parses an API key, with or without the `HEXE-` prefix, into its UUID.
 pub(crate) fn parse_api_key_str(key: &str) -> Option<Uuid> {
     Uuid::parse_str(key.strip_prefix("HEXE-").unwrap_or(key)).ok()
@@ -60,6 +67,21 @@ mod tests {
             parse_api_key_str(key),
             valid.then(|| Uuid::parse_str("d887508b-036e-42b5-89f3-0754617036bb").unwrap())
         );
+    }
+
+    #[rstest]
+    #[case("patron_session=abc", Some("abc"))]
+    #[case("a=1; patron_session=abc; b=2", Some("abc"))]
+    #[case("patron_session_old=abc", None)]
+    #[case("patron_session=", Some(""))]
+    #[case("other=patron_session", None)]
+    fn test_cookie(#[case] header: &'static str, #[case] expected: Option<&str>) {
+        let mut map = HeaderMap::new();
+        map.insert(
+            axum::http::header::COOKIE,
+            axum::http::HeaderValue::from_static(header),
+        );
+        assert_eq!(cookie(&map, "patron_session"), expected);
     }
 
     #[rstest]

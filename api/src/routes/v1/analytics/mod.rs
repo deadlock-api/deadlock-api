@@ -36,7 +36,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
-use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::cache::CacheControlLayer;
 use crate::middleware::rate_limit::{RateLimitState, rate_limit};
 use crate::services::rate_limiter::{self, Limits, Quota, RateLimit, Scope};
 
@@ -69,10 +69,9 @@ fn describe(description: &str) -> String {
 
 /// Responses are cached for at least 10 minutes, and until the query results behind them expire:
 /// the endpoints cache those for an hour and answer from them until then.
-pub(crate) const CACHE_CONTROL: CacheControlMiddleware =
-    CacheControlMiddleware::new(Duration::from_mins(10))
-        .with_stale_while_revalidate(Duration::from_mins(20))
-        .until_cached_results_expire();
+pub(crate) const CACHE_CONTROL: CacheControlLayer = CacheControlLayer::new(Duration::from_mins(10))
+    .with_stale_while_revalidate(Duration::from_mins(20))
+    .until_cached_results_expire();
 
 pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
     let rate_limit_state = RateLimitState {

@@ -7,7 +7,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
-use crate::middleware::cache::CacheControlMiddleware;
+use crate::middleware::cache::CacheControlLayer;
 use crate::services::rank_image;
 
 #[derive(OpenApi)]
@@ -24,6 +24,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .merge(
             OpenApiRouter::new()
                 .routes(routes!(route::subrank_image))
-                .layer(CacheControlMiddleware::new(rank_image::CACHE_TTL)),
+                .layer(CacheControlLayer::new(rank_image::CACHE_TTL)),
         )
 }
