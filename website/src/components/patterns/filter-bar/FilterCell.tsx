@@ -3,6 +3,7 @@ import { Children, createContext, isValidElement, useContext, useState } from "r
 
 import { Button } from "~/components/ui/button";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
+import { OptionRow } from "~/components/ui/option-row";
 import { Popover, PopoverAnchor, PopoverContent, PopoverTrigger } from "~/components/ui/popover";
 import { FOCUS_RING } from "~/components/ui/recipes";
 import { Segmented } from "~/components/ui/segmented";
@@ -272,22 +273,31 @@ export function FilterToggleCell<T extends string>({
         onReset={onReset}
         open={open}
         onOpenChange={setOpen}
-        contentClassName="w-auto min-w-40 p-1"
+        contentClassName="w-auto min-w-44 p-1"
         className={className}
         {...props}
       >
-        <Segmented
-          value={current}
-          onValueChange={(next) => {
-            setCurrent(next);
-            setOpen(false);
-          }}
-          disabled={disabled}
-          aria-label={label}
-          className="flex-col border-0 p-0"
-        >
-          {children}
-        </Segmented>
+        {/* The options as a menu, like every other filter's popover: one row each, a check on the chosen one. */}
+        <fieldset aria-label={label} className="flex min-w-0 flex-col">
+          {Children.toArray(children).map((child) => {
+            if (!isValidElement<{ value: string; disabled?: boolean; children?: React.ReactNode }>(child)) return null;
+            const option = child.props.value as T;
+            return (
+              <OptionRow
+                key={option}
+                selected={option === current}
+                aria-pressed={option === current}
+                disabled={disabled || child.props.disabled}
+                onClick={() => {
+                  setCurrent(option);
+                  setOpen(false);
+                }}
+              >
+                {child.props.children}
+              </OptionRow>
+            );
+          })}
+        </fieldset>
       </FilterCell>
     );
   }
@@ -316,43 +326,5 @@ export function FilterToggleCell<T extends string>({
         {children}
       </Segmented>
     </div>
-  );
-}
-
-interface FilterAdvancedProps extends FilterCellPassthroughProps {
-  /** Names the cell and its popover. */
-  label?: string;
-  /** How many of the filters inside differ from their defaults: the cell says so and is underlined like a changed one. */
-  activeCount?: number;
-  /** Puts every filter inside back to its default; the reset shows while one differs. */
-  onReset?: () => void;
-  /** The filters, each a `FilterCell` or a selector built on one. */
-  children?: React.ReactNode;
-}
-
-/**
- * The rarely used filters of a bar, in the popover of one cell. A filter inside still applies while the popover is
- * closed: the cell counts the ones that are set.
- */
-export function FilterAdvanced({
-  label = "Advanced",
-  activeCount = 0,
-  onReset,
-  contentClassName,
-  children,
-  ...props
-}: FilterAdvancedProps) {
-  return (
-    <FilterCell
-      label={label}
-      value={activeCount > 0 ? `${activeCount} set` : "None"}
-      active={activeCount > 0}
-      onReset={onReset}
-      contentClassName={cn("flex w-64 flex-col gap-2", contentClassName)}
-      {...props}
-    >
-      {/* Its filters stand alone in the popover, each a bordered cell of its own, not a share of the bar's row. */}
-      <FilterRootContext.Provider value={false}>{children}</FilterRootContext.Provider>
-    </FilterCell>
   );
 }

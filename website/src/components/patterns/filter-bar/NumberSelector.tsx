@@ -2,8 +2,7 @@ import { MinusIcon, PlusIcon } from "lucide-react";
 
 import { FilterCell, type FilterCellPassthroughProps } from "~/components/patterns/filter-bar/FilterCell";
 import { Button } from "~/components/ui/button";
-import { FOCUS_WITHIN_RING } from "~/components/ui/recipes";
-import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { OptionRow } from "~/components/ui/option-row";
 import { cn } from "~/lib/utils";
 
 interface NumberSelectorBareProps extends Omit<React.ComponentProps<"div">, "onChange" | "children"> {
@@ -29,8 +28,8 @@ function NumberSelectorBare({
       data-slot="number-selector"
       data-disabled={disabled || undefined}
       className={cn(
-        FOCUS_WITHIN_RING,
-        "flex h-9 w-full min-w-0 items-center rounded-md border bg-transparent p-1 text-sm",
+        // The ring for keyboard focus only: opening the popover focuses a button, which drew the frame red at once.
+        "flex h-8 w-full min-w-0 items-center rounded-md border border-control-border bg-transparent p-0.5 text-sm has-focus-visible:border-ring has-focus-visible:ring-2 has-focus-visible:ring-ring",
         className,
       )}
       {...props}
@@ -45,7 +44,7 @@ function NumberSelectorBare({
       >
         <MinusIcon />
       </Button>
-      <output className="min-w-8 flex-1 text-center text-muted-foreground tabular-nums select-none">{value}</output>
+      <output className="min-w-8 flex-1 text-center font-medium tabular-nums select-none">{value}</output>
       <Button
         variant="ghost"
         size="icon-xs"
@@ -70,7 +69,7 @@ interface NumberSelectorProps extends Omit<FilterCellPassthroughProps, "onChange
   defaultValue?: number;
 }
 
-/** A "at least n" filter: a stepper and a row of round presets. */
+/** An "at least n" filter: round presets as a menu, and a stepper for any other number. */
 export function NumberSelector({
   value,
   onValueChange,
@@ -90,23 +89,27 @@ export function NumberSelector({
       value={value > min ? `≥ ${value}` : "Any"}
       active={value !== resetValue}
       onReset={() => onValueChange?.(resetValue)}
-      contentClassName={cn("w-auto min-w-56 p-3", contentClassName)}
+      contentClassName={cn("w-auto min-w-56 p-1 pb-2", contentClassName)}
       {...props}
     >
-      <div className="flex flex-col gap-2">
-        <NumberSelectorBare value={value} onValueChange={onValueChange} step={step} min={min} />
-        <Segmented
-          value={String(value)}
-          onValueChange={(v) => onValueChange?.(Number(v))}
-          aria-label={`${label} presets`}
-          className="flex-nowrap"
-        >
+      {/* The presets as a menu, like every filter's popover, then a stepper for any other number. */}
+      <div className="flex flex-col gap-1">
+        <fieldset aria-label={`${label} presets`} className="flex min-w-0 flex-col">
           {presets.map((preset) => (
-            <SegmentedItem key={preset} value={String(preset)}>
-              {preset === 0 ? "Any" : preset}
-            </SegmentedItem>
+            <OptionRow
+              key={preset}
+              selected={value === preset}
+              aria-pressed={value === preset}
+              onClick={() => onValueChange?.(preset)}
+            >
+              {preset === min ? "Any" : `≥ ${preset}`}
+            </OptionRow>
           ))}
-        </Segmented>
+        </fieldset>
+        <div className="flex items-center gap-3 border-t ps-2 pt-2">
+          <span className="shrink-0 type-caption text-muted-foreground">Custom</span>
+          <NumberSelectorBare value={value} onValueChange={onValueChange} step={step} min={min} />
+        </div>
       </div>
     </FilterCell>
   );

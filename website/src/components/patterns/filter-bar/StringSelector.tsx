@@ -3,17 +3,9 @@ import { Children, createContext, isValidElement, type ReactNode, use } from "re
 import { FilterCell, type FilterCellPassthroughProps } from "~/components/patterns/filter-bar/FilterCell";
 import { useControllableState } from "~/components/ui/hooks/use-controllable-state";
 import { OptionRow } from "~/components/ui/option-row";
-import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { cn } from "~/lib/utils";
 
-/** Up to this many choices switch in one tap; longer lists keep the scrollable menu. */
-const SEGMENTED_MAX_OPTIONS = 5;
-
-/** Radix ToggleGroup treats "" as "nothing selected", so the null choice needs its own value. */
-const NULL_VALUE = " ";
-
 const StringSelectorContext = createContext<{
-  display: "segmented" | "list";
   value: string;
   select: (value: string) => void;
 } | null>(null);
@@ -26,23 +18,10 @@ interface StringOptionProps extends Omit<React.ComponentProps<"button">, "value"
   children: ReactNode;
 }
 
-/** One choice of a `StringSelector`, which draws it as a segment or as a row depending on how many there are. */
+/** One choice of a `StringSelector`: a row of its menu. */
 export function StringOption({ value, disabled = false, className, onClick, children, ...props }: StringOptionProps) {
   const context = use(StringSelectorContext);
   if (!context) throw new Error("StringOption must be used inside a StringSelector");
-  if (context.display === "segmented") {
-    return (
-      <SegmentedItem
-        value={value === "" ? NULL_VALUE : value}
-        disabled={disabled}
-        className={className}
-        onClick={onClick}
-        {...props}
-      >
-        {children}
-      </SegmentedItem>
-    );
-  }
   return (
     <OptionRow
       selected={context.value === value}
@@ -67,7 +46,7 @@ interface StringOptionGroupProps extends Omit<React.ComponentProps<"fieldset">, 
   children?: ReactNode;
 }
 
-/** Options of a long `StringSelector` under a heading ("Combat", "Economy"). Groups always show the list. */
+/** Options of a long `StringSelector` under a heading ("Combat", "Economy"). */
 export function StringOptionGroup({ label, className, children, ...props }: StringOptionGroupProps) {
   return (
     <fieldset data-slot="string-option-group" className={cn("flex min-w-0 flex-col", className)} {...props}>
@@ -112,9 +91,7 @@ export function StringSelector({
   });
 
   const optionElements = optionsOf(children);
-  const grouped = Children.toArray(children).some((child) => isValidElement(child) && child.type === StringOptionGroup);
   const hasEmptyOption = optionElements.some((child) => child.props.value === "");
-  const display = !grouped && optionElements.length <= SEGMENTED_MAX_OPTIONS ? "segmented" : "list";
 
   // The empty option names itself ("Any") when it is the choice.
   const displayValue = optionElements.find((child) => child.props.value === current)?.props.children;
@@ -122,7 +99,7 @@ export function StringSelector({
   const active = resetValue != null ? current !== resetValue : current !== "";
 
   const items = (
-    <StringSelectorContext value={{ display, value: current, select: setCurrent }}>{children}</StringSelectorContext>
+    <StringSelectorContext value={{ value: current, select: setCurrent }}>{children}</StringSelectorContext>
   );
 
   return (
@@ -131,21 +108,11 @@ export function StringSelector({
       value={typeof displayValue === "string" ? displayValue : undefined}
       active={active}
       onReset={resetValue == null ? undefined : () => setCurrent(resetValue)}
-      contentClassName={cn(display === "segmented" ? "w-auto" : "w-48", contentClassName)}
+      contentClassName={cn("w-auto min-w-44 p-1", contentClassName)}
       {...props}
     >
-      {display === "segmented" ? (
-        <Segmented
-          aria-label={label}
-          value={current === "" ? (hasEmptyOption ? NULL_VALUE : "") : current}
-          onValueChange={(next) => setCurrent(next === NULL_VALUE ? "" : next)}
-        >
-          {items}
-        </Segmented>
-      ) : (
-        // A long list scrolls inside the popover instead of running off the screen.
-        <div className="flex max-h-80 flex-col overflow-y-auto">{items}</div>
-      )}
+      {/* A menu, like every filter's popover: one row per option, a check on the chosen one. */}
+      <div className="flex max-h-80 flex-col overflow-y-auto">{items}</div>
     </FilterCell>
   );
 }
