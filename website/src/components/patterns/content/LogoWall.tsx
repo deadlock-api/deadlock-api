@@ -18,11 +18,12 @@ const logoWallItemVariants = cva([FOCUS_RING, "rounded-sm"], {
   defaultVariants: { size: "logo" },
 });
 
-/** One logo, as a link. The child is the image. */
+/** One logo, as a link. The child is the image; a link to a new tab says so to a screen reader. */
 export function LogoWallItem({
   asChild = false,
   size = "logo",
   className,
+  children,
   ...props
 }: React.ComponentProps<"a"> & VariantProps<typeof logoWallItemVariants> & { asChild?: boolean }) {
   const Comp = asChild ? Slot.Root : "a";
@@ -31,6 +32,45 @@ export function LogoWallItem({
       data-slot="logo-wall-item"
       data-size={size}
       className={cn(logoWallItemVariants({ size }), className)}
+      {...props}
+    >
+      {asChild ? (
+        children
+      ) : (
+        <>
+          {children}
+          {props.target === "_blank" && <span className="sr-only"> (opens in a new tab)</span>}
+        </>
+      )}
+    </Comp>
+  );
+}
+
+const logoWallVariants = cva("grid", {
+  variants: {
+    /**
+     * `icons`: square site icons in equal cells as many a row as fit, so a long wall lines up. `row`: up to three
+     * wordmarks on one row that share it equally, shrinking in a narrow container rather than wrapping 2 + 1.
+     */
+    layout: {
+      icons: "grid-cols-[repeat(auto-fill,minmax(2rem,1fr))] justify-items-center gap-1.5",
+      row: "grid-cols-3 items-center justify-items-center gap-4",
+    },
+  },
+  defaultVariants: { layout: "icons" },
+});
+
+/** A list of logos: its children are `<li>`s, each holding a `LogoWallItem` (or an unlinked image). */
+export function LogoWall({
+  layout,
+  className,
+  ...props
+}: React.ComponentProps<"ul"> & VariantProps<typeof logoWallVariants>) {
+  return (
+    <ul
+      data-slot="logo-wall"
+      data-layout={layout ?? "icons"}
+      className={cn(logoWallVariants({ layout }), className)}
       {...props}
     />
   );

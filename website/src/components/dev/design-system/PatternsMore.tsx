@@ -92,8 +92,35 @@ export function SideNavSpecimen() {
       <Specimen
         name="SideNav"
         source="patterns/navigation/SideNav"
-        note="A vertical list of links: the app sidebar, or the index of a long page such as this one. Router links go through asChild; active sets aria-current. When it scrolls, the active item is kept in view and an edge with more links past it fades out (scroll-fade-y)."
+        note="A list of links. layout list (default): the app sidebar or the index of a long page; when it scrolls the active item is kept in view and an edge with more links past it fades out (scroll-fade-y). layout columns: a site map whose groups flow into as many columns as its @container fits. layout inline: one wrapping row of links beside a label. Router links go through asChild; active sets aria-current."
       >
+        <Variants label='layout="columns" (a site map) and layout="inline"' className="block">
+          <div className="@container rounded-lg border p-3">
+            <SideNav layout="columns" aria-label="Site map example">
+              <SideNavGroup label="Analytics">
+                <SideNavItem href="#side-nav">
+                  <Swords /> Heroes
+                </SideNavItem>
+                <SideNavItem href="#side-nav">
+                  <BarChart3 /> Games
+                </SideNavItem>
+              </SideNavGroup>
+              <SideNavGroup label="Community">
+                <SideNavItem href="#side-nav">
+                  <Users /> Players
+                </SideNavItem>
+              </SideNavGroup>
+            </SideNav>
+            <SideNav layout="inline" aria-label="Inline example">
+              <SideNavItem href="#side-nav">
+                <Home /> Home
+              </SideNavItem>
+              <SideNavItem href="#side-nav">
+                <Crown /> Patron
+              </SideNavItem>
+            </SideNav>
+          </div>
+        </Variants>
         <Variants className="items-start gap-6">
           <div className="flex w-60 flex-col gap-1.5">
             <span className="eyebrow">default, groups, highlight, footer</span>

@@ -268,6 +268,14 @@ export function Round3Primitives() {
         source="ui/text-link"
         note='A link inside running text. A link that looks like a button is Button asChild. asChild makes a router Link or a SmartLink the anchor. underline="dotted" is the "there is more behind this word" mark: a muted dotted rule that goes solid and takes the link colour on hover and on focus.'
       >
+        <Variants label='size="sm": a link in a panel header'>
+          <TextLink href="#text-link" underline="always" size="sm">
+            All posts
+          </TextLink>
+          <TextLink href="#text-link" external underline="always" size="sm">
+            Become a sponsor
+          </TextLink>
+        </Variants>
         <Variants label="tone">
           <TextLink href="#text-link">primary</TextLink>
           <span className="text-sm text-muted-foreground">

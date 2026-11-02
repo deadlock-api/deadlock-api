@@ -12,6 +12,8 @@ export function SmartLink({ href, external, children, ...rest }: SmartLinkProps)
     return (
       <a data-slot="smart-link" href={href} target="_blank" rel="noopener noreferrer" {...rest}>
         {children}
+        {/* The new tab is announced, not only implied by an icon some links do not draw. */}
+        <span className="sr-only"> (opens in a new tab)</span>
       </a>
     );
   }

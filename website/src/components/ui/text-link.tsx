@@ -24,8 +24,10 @@ const textLinkVariants = cva([FOCUS_RING, "rounded-sm underline-offset-4 transit
       dotted:
         "underline decoration-muted-foreground decoration-dotted underline-offset-4 hover:decoration-current hover:decoration-solid focus-visible:decoration-current focus-visible:decoration-solid",
     },
+    /** `sm`: a 12px link that sits in a panel header or a caption line ("All posts", "Become a sponsor"). */
+    size: { default: "", sm: "text-xs font-medium" },
   },
-  defaultVariants: { tone: "primary", underline: "hover" },
+  defaultVariants: { tone: "primary", underline: "hover", size: "default" },
 });
 
 /**
@@ -35,6 +37,7 @@ const textLinkVariants = cva([FOCUS_RING, "rounded-sm underline-offset-4 transit
 function TextLink({
   tone,
   underline,
+  size,
   external = false,
   asChild = false,
   className,
@@ -50,7 +53,7 @@ function TextLink({
   return (
     <Comp
       data-slot="text-link"
-      className={cn(textLinkVariants({ tone, underline }), className)}
+      className={cn(textLinkVariants({ tone, underline, size }), className)}
       {...(external && { target: "_blank", rel: "noopener noreferrer" })}
       {...props}
     >

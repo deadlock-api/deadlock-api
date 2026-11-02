@@ -35,24 +35,53 @@ function keepActiveItemInView(list: HTMLElement): () => void {
  * is kept in view, and an edge with more links past it fades out (`scroll-fade-y`), so a list cut off at a group
  * boundary does not look finished.
  */
-export function SideNav({ className, ref, ...props }: React.ComponentProps<"nav">) {
+const sideNavLayouts = cva("", {
+  variants: {
+    /**
+     * - `list`: one column that scrolls, keeps its active item in view and fades an edge with more links past it
+     *   (the app navigation, the index of a long page).
+     * - `columns`: a site map. Its groups flow into as many columns as its container fits (one, two from `@md`, three
+     *   from `@2xl`), whole groups only; it never scrolls. Needs an `@container` around it.
+     * - `inline`: one wrapping row of links, for a short set beside a label.
+     */
+    layout: {
+      list: "flex scroll-fade-y flex-col gap-4",
+      columns: "block columns-1 gap-x-6 *:break-inside-avoid *:pb-3 @md:columns-2 @2xl:columns-3",
+      inline: "flex flex-row flex-wrap items-center gap-x-2 gap-y-1",
+    },
+  },
+  defaultVariants: { layout: "list" },
+});
+
+/**
+ * A list of links: the app's main navigation, the index of a long page (`layout="list"`), a site map
+ * (`columns`) or a short row of links (`inline`). A list keeps its active item in view while it scrolls.
+ */
+export function SideNav({
+  layout = "list",
+  className,
+  ref,
+  ...props
+}: React.ComponentProps<"nav"> & VariantProps<typeof sideNavLayouts>) {
+  const scrolls = layout === "list";
   const composedRef = useCallback(
     (node: HTMLElement | null) => {
       assignRef(ref, node);
-      if (!node) return;
+      if (!node || !scrolls) return;
       const stop = keepActiveItemInView(node);
       return () => {
         stop();
         assignRef(ref, null);
       };
     },
-    [ref],
+    [ref, scrolls],
   );
   return (
     <nav
       ref={composedRef}
       data-slot="side-nav"
-      className={cn("flex scroll-fade-y flex-col gap-4", className)}
+      data-layout={layout}
+      className={cn(sideNavLayouts({ layout }), className)}
       {...props}
     />
   );

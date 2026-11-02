@@ -20,7 +20,7 @@ import { CalloutCard } from "~/components/patterns/content/CalloutCard";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
 import { FitFrame } from "~/components/patterns/content/FitFrame";
 import { LinkCard } from "~/components/patterns/content/LinkCard";
-import { LogoWallItem } from "~/components/patterns/content/LogoWall";
+import { LogoWall, LogoWallItem } from "~/components/patterns/content/LogoWall";
 import { MetaItem, MetaList } from "~/components/patterns/content/MetaList";
 import { Prose } from "~/components/patterns/content/Prose";
 import { Step, Steps } from "~/components/patterns/content/Steps";
@@ -564,7 +564,7 @@ function ContentSpecimens() {
       <Specimen
         name="LogoWallItem"
         source="patterns/content/LogoWall"
-        note="A sponsor logo as a link, dimmed until hovered or focused. The wall is an Inline with justify center and gap 8. size icon is a square site icon in a grid of icons where some are unlinked: not dimmed, with the focus ring."
+        note="A sponsor logo as a link, dimmed until hovered or focused; a link to a new tab says so to a screen reader. size icon is a square site icon, not dimmed. LogoWall is the list around them: layout icons (equal cells, as many a row as fit) or row (three wordmarks sharing one row, shrinking rather than wrapping)."
       >
         <Inline justify="center" gap={8}>
           {["One", "Two", "Three"].map((name) => (
@@ -573,13 +573,30 @@ function ContentSpecimens() {
             </LogoWallItem>
           ))}
         </Inline>
-        <Inline justify="center" gap={1.5}>
-          {["One", "Two", "Three"].map((name) => (
-            <LogoWallItem key={name} size="icon" href="#logowall" title={`Site ${name}`}>
-              <img src="/logo/hexe.svg" alt={`Site ${name}`} width={28} height={28} className="size-7 object-contain" />
-            </LogoWallItem>
+        <LogoWall layout="icons" aria-label="Sites" className="max-w-xs">
+          {["One", "Two", "Three", "Four", "Five", "Six", "Seven"].map((name) => (
+            <li key={name}>
+              <LogoWallItem size="icon" href="#logowall" title={`Site ${name}`}>
+                <img
+                  src="/logo/hexe.svg"
+                  alt={`Site ${name}`}
+                  width={24}
+                  height={24}
+                  className="size-6 object-contain"
+                />
+              </LogoWallItem>
+            </li>
           ))}
-        </Inline>
+        </LogoWall>
+        <LogoWall layout="row" aria-label="Sponsors" className="max-w-xs">
+          {["One", "Two", "Three"].map((name) => (
+            <li key={name}>
+              <LogoWallItem href="#logowall" title={`Sponsor ${name}`}>
+                <img src="/logo/hexe.svg" alt={`Sponsor ${name} logo`} className="max-h-9 w-full object-contain" />
+              </LogoWallItem>
+            </li>
+          ))}
+        </LogoWall>
       </Specimen>
 
       <Specimen

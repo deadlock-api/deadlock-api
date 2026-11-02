@@ -5,7 +5,7 @@ import { Grid } from "~/components/ui/grid";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
 
-const TYPE_STEPS = ["label", "body", "caption", "meta", "eyebrow"] as const;
+const TYPE_STEPS = ["label", "body", "prose", "caption", "meta", "eyebrow"] as const;
 const TONES = ["default", "muted", "primary", "positive", "negative", "warning", "destructive"] as const;
 
 function Tile({ children }: { children: React.ReactNode }) {
@@ -89,7 +89,7 @@ export function Layout() {
       <Specimen
         name="Text"
         source="ui/text"
-        note="Text in a step of the named type scale: one name sets size, line height, weight and tracking. tone, align, wrap and numeric are enums."
+        note="Text in a step of the named type scale: one name sets size, line height, weight and tracking; prose is running text one step up (a page's lead). tone, align, wrap and numeric are enums; wrap pretty keeps a lone word off the last line."
       >
         <Stack gap={2}>
           {TYPE_STEPS.map((variant) => (

@@ -8,6 +8,8 @@ const textVariants = cva("min-w-0", {
     variant: {
       label: "type-label",
       body: "type-body",
+      /** Running text one step up (16px): a page's lead paragraph, prose. */
+      prose: "type-prose",
       caption: "type-caption",
       meta: "type-meta",
       eyebrow: "eyebrow",
@@ -23,8 +25,11 @@ const textVariants = cva("min-w-0", {
       inherit: "",
     },
     align: { start: "text-start", center: "text-center", end: "text-end" },
-    /** `clamp-2`: up to two lines, then an ellipsis, for a name that should rarely be cut but must not grow a row. */
-    wrap: { wrap: "", truncate: "truncate", "clamp-2": "line-clamp-2 break-words" },
+    /**
+     * `clamp-2`: up to two lines, then an ellipsis, for a name that should rarely be cut but must not grow a row.
+     * `pretty`: wraps without leaving one word alone on the last line.
+     */
+    wrap: { wrap: "", truncate: "truncate", "clamp-2": "line-clamp-2 break-words", pretty: "text-pretty" },
     numeric: { proportional: "", tabular: "tabular-nums" },
   },
   defaultVariants: { variant: "body", tone: "inherit", align: "start", wrap: "wrap", numeric: "proportional" },
