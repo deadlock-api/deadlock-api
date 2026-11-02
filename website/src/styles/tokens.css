@@ -49,6 +49,9 @@
   --type-xs: 0.75rem;
   /* Condensed capitals (`eyebrow`): 13px, which reads like 12px lowercase. */
   --type-caps: 0.8125rem;
+  /* The current sidebar item's label: 15px. Dark ink on the brand red reads smaller than light text on graphite at
+     the same size (irradiation), so it takes one pixel more to look the size of its neighbours. */
+  --type-nav-current: 0.9375rem;
 }
 
 /* Tier 2: semantic tokens. What a color is for. */
@@ -326,6 +329,9 @@
   /* Condensed capitals: `text-caps` with `font-display uppercase` (table heads, the `eyebrow` label). */
   --text-caps: var(--type-caps);
   --text-caps--line-height: 1rem;
+  /* `text-nav-current`: the current sidebar item; the line box stays text-sm's 20px, so the list never moves. */
+  --text-nav-current: var(--type-nav-current);
+  --text-nav-current--line-height: 1.25rem;
   --font-game: "New Rocker", system-ui;
 
   --blur-hairline: 1px;

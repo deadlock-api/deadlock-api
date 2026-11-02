@@ -81,8 +81,9 @@ const sideNavItemVariants = cva(
     "flex min-w-0 items-center gap-2.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-fast ease-standard",
     FOCUS_RING,
     "focus-visible:ring-offset-2 focus-visible:ring-offset-sidebar [&_svg]:size-4 [&_svg]:shrink-0",
-    // The page you are on is a solid brand-red item: the one mark of "current" the whole site shares.
-    "data-active:bg-primary data-active:font-semibold data-active:text-primary-foreground data-active:[&_svg]:text-primary-foreground",
+    // The page you are on is a solid brand-red item: the one mark of "current" the whole site shares. Its label is one
+    // pixel larger (`text-nav-current`), since dark ink on the red reads smaller than its neighbours' light text.
+    "data-active:bg-primary data-active:text-nav-current data-active:font-semibold data-active:text-primary-foreground data-active:[&_svg]:text-primary-foreground",
   ],
   {
     variants: {

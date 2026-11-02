@@ -1,6 +1,10 @@
 import { type ClassValue, clsx } from "clsx";
 import { useEffect, useState } from "react";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+// The type sizes tokens.css adds to Tailwind's scale. Unknown to tailwind-merge, `text-caps` read as a color and was
+// dropped next to `text-muted-foreground`; named here, they merge as font sizes.
+const twMerge = extendTailwindMerge({ extend: { theme: { text: ["caps", "nav-current"] } } });
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
