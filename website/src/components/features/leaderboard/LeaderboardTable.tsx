@@ -3,9 +3,11 @@ import Fuse from "fuse.js";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
+import { ColumnFilter } from "~/components/patterns/data-table/ColumnFilter";
 import { PaginationStatus } from "~/components/patterns/data-table/PaginationControls";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { Button } from "~/components/ui/button";
+import { SearchInput } from "~/components/ui/search-input";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip } from "~/components/ui/tooltip";
 import { useHeroById } from "~/hooks/useAssetById";
@@ -102,8 +104,6 @@ export function LeaderboardTable({ leaderboard, label, onHeroClick }: Leaderboar
 
   const controlProps = {
     onJumpToRank: jumpToRank,
-    searchQuery,
-    setSearchQuery,
     itemsPerPage,
     setItemsPerPage,
     currentPage,
@@ -139,7 +139,27 @@ export function LeaderboardTable({ leaderboard, label, onHeroClick }: Leaderboar
                     <span aria-hidden="true">#</span>
                     <span className="sr-only">Rank</span>
                   </TableHead>
-                  <TableHead>Account Name</TableHead>
+                  <TableHead>
+                    <span className="inline-flex items-center gap-1">
+                      Account Name
+                      <ColumnFilter
+                        label="Account Name"
+                        active={searchQuery.trim() !== ""}
+                        onReset={() => void setSearchQuery("")}
+                      >
+                        <SearchInput
+                          size="sm"
+                          placeholder="Search player…"
+                          aria-label="Search player"
+                          value={searchQuery}
+                          onValueChange={(query) => {
+                            void setSearchQuery(query);
+                            if (query.length > 0) void setCurrentPage(0);
+                          }}
+                        />
+                      </ColumnFilter>
+                    </span>
+                  </TableHead>
                   {shouldShowTopHeroesColumn && <TableHead className="min-w-28 text-end">Top Heroes</TableHead>}
                 </TableRow>
               </TableHeader>
