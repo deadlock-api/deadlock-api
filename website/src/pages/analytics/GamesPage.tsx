@@ -96,39 +96,8 @@ export function Games() {
         </p>
       </PageHeader>
 
-      <Filter.Root>
-        <Filter.ModeWithRank
-          // Street Brawl has no soul economy (fixed soul grants per round), so the Economy tab cannot select it.
-          disabledModes={tab === "economy" ? STREET_BRAWL_ONLY : undefined}
-          value={{ mode, rank: [minRankId, maxRankId] }}
-          onValueChange={(next) => {
-            if (next.mode !== mode) setMode(next.mode);
-            if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
-              void setMinRankId(next.rank[0]);
-              void setMaxRankId(next.rank[1]);
-            }
-          }}
-        />
-        <Filter.MatchDuration
-          value={[minDurationS ?? undefined, maxDurationS ?? undefined]}
-          onValueChange={([min, max]) => {
-            void setMinDurationS(min ?? null);
-            void setMaxDurationS(max ?? null);
-          }}
-        />
-        <Filter.SeasonPatchDate
-          value={{ startDate, endDate }}
-          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-        />
-      </Filter.Root>
-
-      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
-        <ResponsiveTabsList
-          aria-label="Game stats sections"
-          value={tab ?? undefined}
-          onValueChange={(value) => setTab(value as typeof tab)}
-        >
+      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full gap-3">
+        <ResponsiveTabsList aria-label="Game stats sections">
           <ResponsiveTab value="overview" href={analyticsTabPath("games", "overview")}>
             Overview
           </ResponsiveTab>
@@ -152,6 +121,33 @@ export function Games() {
             Buffs
           </ResponsiveTab>
         </ResponsiveTabsList>
+
+        <Filter.Root>
+          <Filter.ModeWithRank
+            // Street Brawl has no soul economy (fixed soul grants per round), so the Economy tab cannot select it.
+            disabledModes={tab === "economy" ? STREET_BRAWL_ONLY : undefined}
+            value={{ mode, rank: [minRankId, maxRankId] }}
+            onValueChange={(next) => {
+              if (next.mode !== mode) setMode(next.mode);
+              if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
+                void setMinRankId(next.rank[0]);
+                void setMaxRankId(next.rank[1]);
+              }
+            }}
+          />
+          <Filter.MatchDuration
+            value={[minDurationS ?? undefined, maxDurationS ?? undefined]}
+            onValueChange={([min, max]) => {
+              void setMinDurationS(min ?? null);
+              void setMaxDurationS(max ?? null);
+            }}
+          />
+          <Filter.SeasonPatchDate
+            value={{ startDate, endDate }}
+            onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
+            defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
+          />
+        </Filter.Root>
 
         <TabsContent value="overview">
           <ChunkErrorBoundary>

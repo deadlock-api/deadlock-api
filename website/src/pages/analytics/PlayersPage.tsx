@@ -113,63 +113,8 @@ export function PlayersPage({
     <PageShell>
       <PageHeader title={ANALYTICS_VIEWS.players[tab].heading} description={ANALYTICS_VIEWS.players[tab].summary} />
 
-      <Filter.Root>
-        <Filter.ModeWithRank
-          // A comparison is of the players' own matches, whatever lobby they were in: no rank filter there.
-          hideRankRange={tab === "compare"}
-          value={{ mode, rank: [minRankId, maxRankId] }}
-          onValueChange={(next) => {
-            if (next.mode !== mode) setMode(next.mode);
-            if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
-              void setMinRankId(next.rank[0]);
-              void setMaxRankId(next.rank[1]);
-            }
-            firstPage();
-          }}
-        />
-        <Filter.Hero
-          value={heroId}
-          onValueChange={(id) => {
-            void setHeroId(id, together);
-            firstPage();
-          }}
-          allowNull
-        />
-        <Filter.SeasonPatchDate
-          value={{ startDate, endDate }}
-          onValueChange={(next) => {
-            handleDateChange(next.startDate, next.endDate, next.action);
-            firstPage();
-          }}
-          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-        />
-        {tab === "scoreboard" && (
-          <Filter.Advanced
-            activeCount={Number(minMatches !== DEFAULT_MIN_MATCHES)}
-            onReset={() => {
-              void setMinMatches(null, together);
-              firstPage();
-            }}
-          >
-            <Filter.MinMatches
-              value={minMatches}
-              onValueChange={(n) => {
-                void setMinMatches(n, together);
-                firstPage();
-              }}
-              min={0}
-              defaultValue={DEFAULT_MIN_MATCHES}
-            />
-          </Filter.Advanced>
-        )}
-      </Filter.Root>
-
-      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
-        <ResponsiveTabsList
-          aria-label="Player analytics sections"
-          value={tab ?? undefined}
-          onValueChange={(value) => setTab(value as typeof tab)}
-        >
+      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full gap-3">
+        <ResponsiveTabsList aria-label="Player analytics sections">
           <ResponsiveTab value="scoreboard" href={analyticsTabPath("players", "scoreboard")}>
             Scoreboard
           </ResponsiveTab>
@@ -180,6 +125,57 @@ export function PlayersPage({
             Compare
           </ResponsiveTab>
         </ResponsiveTabsList>
+
+        <Filter.Root>
+          <Filter.ModeWithRank
+            // A comparison is of the players' own matches, whatever lobby they were in: no rank filter there.
+            hideRankRange={tab === "compare"}
+            value={{ mode, rank: [minRankId, maxRankId] }}
+            onValueChange={(next) => {
+              if (next.mode !== mode) setMode(next.mode);
+              if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
+                void setMinRankId(next.rank[0]);
+                void setMaxRankId(next.rank[1]);
+              }
+              firstPage();
+            }}
+          />
+          <Filter.Hero
+            value={heroId}
+            onValueChange={(id) => {
+              void setHeroId(id, together);
+              firstPage();
+            }}
+            allowNull
+          />
+          <Filter.SeasonPatchDate
+            value={{ startDate, endDate }}
+            onValueChange={(next) => {
+              handleDateChange(next.startDate, next.endDate, next.action);
+              firstPage();
+            }}
+            defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
+          />
+          {tab === "scoreboard" && (
+            <Filter.Advanced
+              activeCount={Number(minMatches !== DEFAULT_MIN_MATCHES)}
+              onReset={() => {
+                void setMinMatches(null, together);
+                firstPage();
+              }}
+            >
+              <Filter.MinMatches
+                value={minMatches}
+                onValueChange={(n) => {
+                  void setMinMatches(n, together);
+                  firstPage();
+                }}
+                min={0}
+                defaultValue={DEFAULT_MIN_MATCHES}
+              />
+            </Filter.Advanced>
+          )}
+        </Filter.Root>
 
         <TabsContent value="scoreboard">
           <Section titleDisplay="hidden" title="Player Scoreboard">

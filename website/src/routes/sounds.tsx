@@ -93,7 +93,7 @@ function SoundsPage() {
         }
       />
       <Tabs value={tab} onValueChange={selectTab} className="gap-4">
-        <ResponsiveTabsList variant="nav" value={tab} onValueChange={selectTab} aria-label="Kind of sound">
+        <ResponsiveTabsList variant="nav" aria-label="Kind of sound">
           {TABS.map((id) => (
             <ResponsiveTab key={id} value={id} href={`/sounds?tab=${id}`}>
               {TAB_LABELS[id]}

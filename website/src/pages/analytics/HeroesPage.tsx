@@ -35,18 +35,12 @@ export function HeroesPage() {
     <PageShell>
       <PageHeader title={view.heading} description={view.summary} />
 
-      <HeroFiltersSection {...filters} />
-
       <Tabs
         value={filters.tab ?? undefined}
         onValueChange={(value) => filters.setTab(value as HeroTab)}
-        className="w-full"
+        className="w-full gap-3"
       >
-        <ResponsiveTabsList
-          aria-label="Hero stats sections"
-          value={filters.tab ?? undefined}
-          onValueChange={(value) => filters.setTab(value as HeroTab)}
-        >
+        <ResponsiveTabsList aria-label="Hero stats sections">
           <ResponsiveTab value="stats" href={analyticsTabPath("heroes", "stats")}>
             Overall Stats
           </ResponsiveTab>
@@ -110,6 +104,8 @@ export function HeroesPage() {
             Scoreboard
           </ResponsiveTab>
         </ResponsiveTabsList>
+
+        <HeroFiltersSection {...filters} />
 
         <TabsContent value="stats">
           <HeroOverallStatsTab filters={filters} />

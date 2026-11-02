@@ -30,7 +30,8 @@ function Tabs({ className, orientation = "horizontal", ...props }: React.Compone
 /**
  * - `default`: a filled track, for switching views inside a panel or dialog.
  * - `line`: an underline, for sections of one piece of content. Its tabs are as wide as their labels, from the start.
- * - `nav`: a full-width underline with a bottom rule, for the top-level sections of a page.
+ * - `nav`: the sibling pages of a section under the page title: labels from the start edge over a rule, the current
+ *   one underlined in the brand red.
  */
 // `justify-center-safe`: a list wider than its container scrolls from its first tab instead of cutting it off.
 const tabsListVariants = cva("inline-flex w-fit max-w-full items-center justify-center-safe text-muted-foreground", {
@@ -39,7 +40,7 @@ const tabsListVariants = cva("inline-flex w-fit max-w-full items-center justify-
       default: "rounded-lg bg-muted p-1",
       // Content-sized tabs from the start edge: stretched tabs of mixed lengths read as unevenly spaced.
       line: "justify-start gap-1 rounded-none bg-transparent p-1",
-      nav: "w-full gap-0 rounded-none border-b border-hairline bg-transparent p-0",
+      nav: "w-full justify-start gap-6 rounded-none border-b border-border bg-transparent p-0",
     },
     orientation: {
       horizontal: "",
@@ -50,7 +51,7 @@ const tabsListVariants = cva("inline-flex w-fit max-w-full items-center justify-
     // Tabs that do not fit scroll inside the list (the padding keeps focus rings and the underline inside it) rather
     // than running out of their card, where a parent's clipping made the last ones unreachable.
     { orientation: "horizontal", variant: ["default", "line"], class: `h-9 ${SCROLLBAR_THIN} overflow-x-auto` },
-    { orientation: "horizontal", variant: "nav", class: "h-11" },
+    { orientation: "horizontal", variant: "nav", class: "h-10" },
     // Content-sized line tabs side by side keep a clear gap between labels.
     { orientation: "horizontal", variant: "line", class: "gap-4" },
   ],
@@ -92,7 +93,7 @@ const tabsTriggerVariants = cva(
       variant: {
         default: "data-[state=active]:border-input data-[state=active]:bg-input/30 data-[state=active]:shadow-sm",
         line: "flex-none data-[state=active]:after:opacity-100",
-        nav: "rounded-none px-4 hover:bg-subtle-hover data-[state=active]:after:opacity-100 data-[state=active]:after:shadow-glow-primary",
+        nav: "flex-none rounded-none px-0 data-[state=active]:after:rounded-none data-[state=active]:after:opacity-100",
       },
       orientation: {
         horizontal: "after:inset-x-0 after:h-0.5",

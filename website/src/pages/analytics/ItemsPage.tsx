@@ -76,69 +76,9 @@ export function ItemsPage() {
           use Wilson score intervals for reliable estimates even on less popular items.
         </p>
       </PageHeader>
-      <Filter.Root>
-        <Filter.Hero
-          value={hero}
-          onValueChange={(next) => startTransition(() => void setHero(next, together))}
-          allowNull
-        />
-        {/* Only these two views read the item win rates the enemy filter narrows; elsewhere it would do nothing. */}
-        {(tab === "item-stats" || tab === "item-purchase-analysis") && (
-          <Filter.Hero
-            selection="multiple"
-            label="Against"
-            emptyLabel="Any"
-            value={enemies}
-            onValueChange={(next) => startTransition(() => void setEnemies(next.length > 0 ? next : null, together))}
-          />
-        )}
-        <Filter.ModeWithRank
-          value={{ mode, rank: [minRankId, maxRankId] }}
-          defaultValue={{ mode: DEFAULT_MODE, rank: [DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max] }}
-          onValueChange={(next) => {
-            if (next.mode !== mode) setMode(next.mode);
-            if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
-              startTransition(() => {
-                void setMinRankId(next.rank[0], together);
-                void setMaxRankId(next.rank[1], together);
-              });
-            }
-          }}
-        />
-        <Filter.SeasonPatchDate
-          value={{ startDate, endDate }}
-          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-        />
-        {tab === "item-combos" && <ItemCombFilters />}
-        <Filter.Advanced activeCount={advancedCount} onReset={resetAdvanced}>
-          <Filter.MinMatches
-            value={minMatches}
-            onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
-            defaultValue={DEFAULT_MIN_MATCHES}
-          />
-          {purchaseWindowTab && (
-            <Filter.TimeRange
-              value={[minBoughtAtS ?? undefined, maxBoughtAtS ?? undefined]}
-              onValueChange={([min, max]) =>
-                startTransition(() => {
-                  void setMinBoughtAtS(min ?? null, together);
-                  void setMaxBoughtAtS(max ?? null, together);
-                })
-              }
-              label="Time"
-              title="Purchase Time Window"
-            />
-          )}
-        </Filter.Advanced>
-      </Filter.Root>
 
-      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full">
-        <ResponsiveTabsList
-          aria-label="Item stats sections"
-          value={tab ?? undefined}
-          onValueChange={(value) => setTab(value as typeof tab)}
-        >
+      <Tabs value={tab ?? undefined} onValueChange={(value) => setTab(value as typeof tab)} className="w-full gap-3">
+        <ResponsiveTabsList aria-label="Item stats sections">
           <ResponsiveTab value="item-stats" href={analyticsTabPath("items", "item-stats")}>
             Overall Stats
           </ResponsiveTab>
@@ -152,6 +92,63 @@ export function ItemsPage() {
             Item Combos
           </ResponsiveTab>
         </ResponsiveTabsList>
+
+        <Filter.Root>
+          <Filter.Hero
+            value={hero}
+            onValueChange={(next) => startTransition(() => void setHero(next, together))}
+            allowNull
+          />
+          {/* Only these two views read the item win rates the enemy filter narrows; elsewhere it would do nothing. */}
+          {(tab === "item-stats" || tab === "item-purchase-analysis") && (
+            <Filter.Hero
+              selection="multiple"
+              label="Against"
+              emptyLabel="Any"
+              value={enemies}
+              onValueChange={(next) => startTransition(() => void setEnemies(next.length > 0 ? next : null, together))}
+            />
+          )}
+          <Filter.ModeWithRank
+            value={{ mode, rank: [minRankId, maxRankId] }}
+            defaultValue={{ mode: DEFAULT_MODE, rank: [DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max] }}
+            onValueChange={(next) => {
+              if (next.mode !== mode) setMode(next.mode);
+              if (next.rank[0] !== minRankId || next.rank[1] !== maxRankId) {
+                startTransition(() => {
+                  void setMinRankId(next.rank[0], together);
+                  void setMaxRankId(next.rank[1], together);
+                });
+              }
+            }}
+          />
+          <Filter.SeasonPatchDate
+            value={{ startDate, endDate }}
+            onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
+            defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
+          />
+          {tab === "item-combos" && <ItemCombFilters />}
+          <Filter.Advanced activeCount={advancedCount} onReset={resetAdvanced}>
+            <Filter.MinMatches
+              value={minMatches}
+              onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
+              defaultValue={DEFAULT_MIN_MATCHES}
+            />
+            {purchaseWindowTab && (
+              <Filter.TimeRange
+                value={[minBoughtAtS ?? undefined, maxBoughtAtS ?? undefined]}
+                onValueChange={([min, max]) =>
+                  startTransition(() => {
+                    void setMinBoughtAtS(min ?? null, together);
+                    void setMaxBoughtAtS(max ?? null, together);
+                  })
+                }
+                label="Time"
+                title="Purchase Time Window"
+              />
+            )}
+          </Filter.Advanced>
+        </Filter.Root>
         <TabsContent value="item-stats">
           <Section titleDisplay="hidden" title="Overall Item Stats">
             <ChunkErrorBoundary>

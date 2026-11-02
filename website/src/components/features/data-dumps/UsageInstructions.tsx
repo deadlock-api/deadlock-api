@@ -117,7 +117,7 @@ export function UsageInstructions() {
     <Card tone="glass" size="sm" radius="lg">
       <CardContent>
         <Tabs value={tab} onValueChange={setTab} className="gap-4">
-          <ResponsiveTabsList variant="line" value={tab} onValueChange={setTab} aria-label="Usage guides">
+          <ResponsiveTabsList variant="line" aria-label="Usage guides">
             {STATIC_TABS.map((t) => (
               <ResponsiveTab key={t.id} value={t.id}>
                 {t.label}
