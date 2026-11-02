@@ -235,7 +235,7 @@ function TableRow({
 }
 
 /** `muted`: a quiet column or row name, beside the values it names. */
-const HEAD_TONE = { default: "text-foreground", muted: "text-muted-foreground" } as const;
+const HEAD_TONE = { default: "text-secondary-foreground", muted: "text-muted-foreground" } as const;
 
 /**
  * A column's width, set on its head so it holds whatever the body shows (an empty or filtered body re-spread columns
@@ -261,7 +261,8 @@ function TableHead({
       data-tone={tone}
       data-width={width}
       className={cn(
-        "text-start align-middle font-medium whitespace-nowrap data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-muted [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5",
+        // Column names are condensed capitals, the label voice of the whole site.
+        "text-start align-middle font-display text-caps font-semibold tracking-wider whitespace-nowrap uppercase data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-muted *:data-[slot=sort-button]:uppercase [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5",
         HEAD_TONE[tone],
         HEAD_WIDTH[width],
         HEAD_DENSITY[density],

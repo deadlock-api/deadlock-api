@@ -80,17 +80,13 @@ export function ProfileHeader({
     <header
       data-slot="profile-header"
       className={cn(
-        "@container relative isolate flex min-w-0 flex-col overflow-hidden rounded-xl border bg-card shadow-sm",
+        "@container relative isolate flex min-w-0 flex-col overflow-hidden rounded-lg border bg-card",
         className,
       )}
       style={{ "--profile-accent": accent, ...style } as React.CSSProperties}
       {...props}
     >
       <div aria-hidden="true" className="absolute inset-x-0 top-0 h-0.5 bg-(--profile-accent)/70" />
-      <div
-        aria-hidden="true"
-        className="absolute -inset-s-24 -top-32 -z-10 size-96 rounded-full bg-(--profile-accent)/12 blur-3xl"
-      />
       {/* Narrow: the art beside the eyebrow and title, the description across the whole width under them. Wide: the
           art spans both rows and the description sits under the title. */}
       <div
@@ -107,7 +103,9 @@ export function ProfileHeader({
               {eyebrow}
             </div>
           )}
-          <Title className="type-heading text-balance @lg:type-title-lg">{title}</Title>
+          <Title className="font-display text-3xl leading-none font-bold tracking-wide text-balance uppercase @lg:text-4xl">
+            {title}
+          </Title>
         </div>
         {actions && <div className="flex shrink-0 flex-wrap items-center gap-2 @lg:row-span-2">{actions}</div>}
         {description && (

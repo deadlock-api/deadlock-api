@@ -12,7 +12,7 @@ import { cn } from "~/lib/utils";
 const cardVariants = cva("group/card flex min-w-0 flex-col text-card-foreground", {
   variants: {
     tone: {
-      card: "border bg-card shadow-sm",
+      card: "border bg-card",
       glass: "border border-hairline bg-subtle",
       inset: "border bg-background",
       /** A border and nothing else, for a tile nested inside a Card or Panel. */
@@ -28,10 +28,10 @@ const cardVariants = cva("group/card flex min-w-0 flex-col text-card-foreground"
       negative: "border border-negative/30 bg-negative/5",
     },
     size: {
-      default: "gap-6 rounded-xl py-6",
-      sm: "gap-3 rounded-xl py-3",
-      xs: "gap-2 rounded-lg py-2",
-      flush: "gap-0 overflow-hidden rounded-xl py-0",
+      default: "gap-6 rounded-lg py-6",
+      sm: "gap-3 rounded-lg py-3",
+      xs: "gap-2 rounded-md py-2",
+      flush: "gap-0 overflow-hidden rounded-lg py-0",
     },
     /** A surface nested in another steps its corners down: `lg` inside a card, `md` inside that. */
     radius: {

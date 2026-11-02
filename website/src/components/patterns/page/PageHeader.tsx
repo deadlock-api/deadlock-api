@@ -4,16 +4,16 @@ import type { ReactNode } from "react";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
 import { cn } from "~/lib/utils";
 
-const titleVariants = cva("font-bold tracking-tight text-balance", {
+// Page titles are condensed capitals: the broadcast voice of the site, one size per kind of page.
+const titleVariants = cva("font-display font-bold tracking-wide text-balance uppercase", {
   variants: {
     size: {
       /** Data pages: the heading stays out of the way of filters and tables. */
-      default: "text-2xl",
+      default: "text-3xl leading-none",
       /** Content pages: docs, tools, landing sections. */
-      lg: "text-3xl",
+      lg: "text-4xl leading-none",
       /** Hubs and marketing. */
-      display:
-        "bg-linear-to-b from-foreground to-foreground/60 bg-clip-text text-5xl text-transparent sm:text-6xl lg:text-7xl",
+      display: "text-5xl leading-none sm:text-6xl lg:text-7xl",
     },
   },
   defaultVariants: { size: "default" },
@@ -30,6 +30,7 @@ interface PageHeaderProps extends Omit<React.ComponentProps<"header">, "title">,
   media?: ReactNode;
   /** Buttons and menus, on the trailing edge. */
   actions?: ReactNode;
+  /** `start` on every page; `center` only for a short message page (not found, an error) that sits mid-screen. */
   align?: "center" | "start";
   /**
    * `h2` for a header under the page's own `<h1>` (a sample profile below the page that names it); `div` only for
@@ -49,7 +50,7 @@ export function PageHeader({
   media,
   actions,
   size,
-  align = media || actions ? "start" : "center",
+  align = "start",
   as: Title = "h1",
   className,
   children,
