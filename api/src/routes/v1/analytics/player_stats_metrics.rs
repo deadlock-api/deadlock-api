@@ -9,7 +9,9 @@ use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use strum::{Display, VariantArray};
 use tracing::debug;
-use utoipa::{IntoParams, ToSchema};
+use utoipa::openapi::schema::{KnownFormat, ObjectBuilder, Schema, SchemaFormat, Type};
+use utoipa::openapi::{Ref, RefOr};
+use utoipa::{IntoParams, PartialSchema as _, ToSchema};
 
 use super::common_filters::{
     PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
@@ -159,18 +161,31 @@ pub(crate) struct PlayerStatsMetricsQuery {
 
 impl_match_info!(PlayerStatsMetricsQuery);
 
+/// One metric's distribution over single matches. Every value is `null` (NaN) when no matching
+/// match has the metric, e.g. `first_permanent_buff_time_s` for matches before build 6712.
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema)]
 pub(super) struct MetricValues {
+    #[schema(value_type = Option<f64>, required = true)]
     avg: f64,
+    #[schema(value_type = Option<f64>, required = true)]
     std: f64,
+    #[schema(value_type = Option<f64>, required = true)]
     percentile1: f64,
+    #[schema(value_type = Option<f64>, required = true)]
     percentile5: f64,
+    #[schema(value_type = Option<f64>, required = true)]
     percentile10: f64,
+    #[schema(value_type = Option<f64>, required = true)]
     percentile25: f64,
+    #[schema(value_type = Option<f64>, required = true)]
     percentile50: f64,
+    #[schema(value_type = Option<f64>, required = true)]
     percentile75: f64,
+    #[schema(value_type = Option<f64>, required = true)]
     percentile90: f64,
+    #[schema(value_type = Option<f64>, required = true)]
     percentile95: f64,
+    #[schema(value_type = Option<f64>, required = true)]
     percentile99: f64,
 }
 
@@ -300,7 +315,12 @@ impl Metric {
     }
 }
 
-pub(super) type AnalyticsPlayerStatsMetrics = HashMap<Metric, MetricValues>;
+/// The metrics object: per metric, its distribution over single matches. The buff metrics
+/// (`permanent_buffs`, `permanent_buffs_per_min`, `first_permanent_buff_time_s`) are only present
+/// with `include_buff_metrics=true`.
+#[derive(Debug, Clone, Serialize, ToSchema)]
+#[serde(transparent)]
+pub(super) struct PlayerStatsMetrics(HashMap<Metric, MetricValues>);
 
 /// One bucket's metrics: the metrics object of an unbucketed response, plus the bucket.
 #[derive(Debug, Clone, Serialize)]
@@ -308,16 +328,42 @@ pub(super) struct PlayerStatsMetricsBucket {
     /// The bucket's value: the hero id for `bucket=hero`.
     bucket: u32,
     #[serde(flatten)]
-    metrics: AnalyticsPlayerStatsMetrics,
+    metrics: PlayerStatsMetrics,
 }
 
-/// One metrics object without `bucket`, one per bucket with it. The `OpenAPI` response stays the
-/// metrics object, so generated clients keep their types: the endpoint description documents the
-/// bucketed list.
-#[derive(Debug, Clone, Serialize)]
+/// Written by hand: the derived schema is `allOf` the metrics map and `{bucket}`, which no
+/// object satisfies, because the map's key enum and value schema both reject `bucket`.
+impl utoipa::PartialSchema for PlayerStatsMetricsBucket {
+    fn schema() -> RefOr<Schema> {
+        let bucket = ObjectBuilder::new()
+            .schema_type(Type::Integer)
+            .format(Some(SchemaFormat::KnownFormat(KnownFormat::Int32)))
+            .minimum(Some(0))
+            .description(Some("The bucket's value: the hero id for `bucket=hero`."));
+        ObjectBuilder::new()
+            .description(Some(
+                "One bucket's metrics: `bucket`, and per metric the same values as an unbucketed \
+                 response.",
+            ))
+            .property("bucket", bucket)
+            .required("bucket")
+            .additional_properties(Some(Ref::from_schema_name(MetricValues::name())))
+            .into()
+    }
+}
+
+impl ToSchema for PlayerStatsMetricsBucket {
+    fn schemas(schemas: &mut Vec<(String, RefOr<Schema>)>) {
+        schemas.push((MetricValues::name().into(), MetricValues::schema()));
+        <MetricValues as ToSchema>::schemas(schemas);
+    }
+}
+
+/// One metrics object without `bucket`, one per bucket with it.
+#[derive(Debug, Clone, Serialize, ToSchema)]
 #[serde(untagged)]
 pub(super) enum PlayerStatsMetricsResponse {
-    Metrics(AnalyticsPlayerStatsMetrics),
+    Metrics(PlayerStatsMetrics),
     Buckets(Vec<PlayerStatsMetricsBucket>),
 }
 
@@ -555,11 +601,13 @@ async fn get_player_stats_metrics(
     let query_str = build_query(&query);
     debug!(?query_str);
     let metrics = |row: &AnalyticsPlayerStatsMetricsRow| {
-        Metric::VARIANTS
-            .iter()
-            .filter(|m| query.include_buff_metrics || !m.is_buff())
-            .map(|m| (*m, m.extract_values(row)))
-            .collect::<AnalyticsPlayerStatsMetrics>()
+        PlayerStatsMetrics(
+            Metric::VARIANTS
+                .iter()
+                .filter(|m| query.include_buff_metrics || !m.is_buff())
+                .map(|m| (*m, m.extract_values(row)))
+                .collect(),
+        )
     };
     if query.bucket == BucketQuery::NoBucket {
         let row = run_query(ch_client, &query_str).await?;
@@ -584,7 +632,7 @@ async fn get_player_stats_metrics(
     path = "/player-stats/metrics",
     params(PlayerStatsMetricsQuery),
     responses(
-        (status = OK, description = "Player Stats Metrics", body = AnalyticsPlayerStatsMetrics),
+        (status = OK, description = "Player Stats Metrics", body = PlayerStatsMetricsResponse),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch player stats metrics")
     ),
@@ -731,8 +779,10 @@ mod tests {
 
     #[test]
     fn hero_buckets_are_metrics_objects_with_a_bucket() {
-        let metrics =
-            HashMap::from([(Metric::Kills, MetricValues::from_stats(5.0, 1.0, &[1.0; 9]))]);
+        let metrics = PlayerStatsMetrics(HashMap::from([(
+            Metric::Kills,
+            MetricValues::from_stats(5.0, 1.0, &[1.0; 9]),
+        )]));
         let single =
             serde_json::to_value(PlayerStatsMetricsResponse::Metrics(metrics.clone())).unwrap();
         assert!(single["kills"]["avg"].is_number());
