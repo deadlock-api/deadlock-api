@@ -1,12 +1,23 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BarChart3, BookOpen, Download, HardDrive, Heart, type LucideIcon, Package } from "lucide-react";
+import {
+  BarChart3,
+  BookOpen,
+  Database,
+  Download,
+  Gamepad2,
+  HardDrive,
+  Heart,
+  Map as MapIcon,
+  Package,
+} from "lucide-react";
+import { useId } from "react";
 
 import { OptimizedImage } from "~/components/domain/assets/OptimizedImage";
 import { useInstallCtaTracking } from "~/components/domain/ingest/analytics";
 import { WINDOWS_SETUP_URL } from "~/components/domain/ingest/links";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { AiSearch } from "~/components/features/ai-search/AiSearch";
-import { LogoWallItem } from "~/components/patterns/content/LogoWall";
+import { LogoWall, LogoWallItem } from "~/components/patterns/content/LogoWall";
 import { Prose } from "~/components/patterns/content/Prose";
 import { SideNav, SideNavGroup, SideNavItem } from "~/components/patterns/navigation/SideNav";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
@@ -66,36 +77,15 @@ export const Route = createFileRoute("/")({
         ],
       },
     }),
-  // The newest posts only, as titles and dates: the markdown stays on the server.
+  // The newest posts as metadata (title, summary, date, reading time): the markdown stays on the server.
   loader: async () => (await fetchBlogPosts()).slice(0, 4),
   component: IndexRoute,
 });
 
 const services = [
-  {
-    title: "Game Data API",
-    description: "Offers game data including matches, players, and statistics.",
-    href: API_ORIGIN,
-    icon: BarChart3,
-    external: true,
-    cta: "Visit Game Data API",
-  },
-  {
-    title: "UI Components",
-    description: "Drop-in Web Components (React/Vue/HTML) to visualize items, tooltips, and the full in-game shop.",
-    href: "https://ui.deadlock-api.com/",
-    icon: Package,
-    external: true,
-    cta: "Explore UI Components",
-  },
-  {
-    title: "Data Lake",
-    description: "Query or download the hourly-updated public data lake for offline analysis or research.",
-    href: "/data-dumps",
-    icon: HardDrive,
-    external: false,
-    cta: "Access Database Dumps",
-  },
+  { title: "Game Data API", href: API_ORIGIN, icon: BarChart3, external: true },
+  { title: "UI Components", href: "https://ui.deadlock-api.com/", icon: Package, external: true },
+  { title: "Data Lake", href: "/data-dumps", icon: HardDrive, external: false },
 ];
 
 const mainSponsor = {
@@ -130,40 +120,26 @@ const sponsors = [
   },
 ];
 
-interface DirectoryEntry {
-  label: string;
-  links: { to: string; label: string; icon: LucideIcon }[];
-}
-
-const groupLinks = (label: string) => navGroups.find((group) => group.label === label)?.links ?? [];
-
-/**
- * The directory, one column per section like a site map: the sidebar's sections, without the patron and tracker
- * entries (not this page's subject). The developer services follow under a rule of their own.
- */
-const DIRECTORY: DirectoryEntry[] = [
-  { label: "Analytics", links: groupLinks("Analytics") },
-  { label: "Community", links: groupLinks("Community") },
-  { label: "Games", links: groupLinks("Games") },
-  { label: "Tools", links: groupLinks("Tools") },
-];
+/** The site map: the sidebar's sections in its order, without the patron and tracker entries (not this page's subject). */
+const DIRECTORY = navGroups.filter((group) => group.label !== "Patron" && group.label !== "Dev");
 
 function IndexRoute() {
   const posts = Route.useLoaderData();
-
+  const developerServicesId = useId();
   const isWindows = useIsWindows();
   const installTracking = useInstallCtaTracking("home", isWindows ? "download" : "install_steps");
   return (
     <PageShell density="content">
-      {/* Two columns: the search and the site map, the page's work, beside a rail of small panels that go with it. */}
-      <Grid columns={{ base: 1, lg: 3 }} gap={6}>
-        <Stack gap={6} className="lg:col-span-2">
-          {/* What the site is, then the search, its main action: a phone reaches it without scrolling. Centred in the
-              column, the site's front door. */}
-          <Stack gap={4} align="center" className="text-center">
+      {/* Two columns once the page is wide enough: the search and the site map, the page's work, beside a rail of small
+          panels. Narrower, both columns dissolve into one sequence (`contents`) ordered so the sponsor stays near the
+          top. The breakpoints are the Grid's own container query, so the order and the columns switch together. */}
+      <Grid columns={{ base: 1, lg: 3 }} gap={4}>
+        <Stack gap={4} className="@max-2xl:contents @2xl:col-span-2">
+          {/* What the site is, then the search, its main action: a phone reaches it without scrolling. */}
+          <Stack gap={4} align="center" className="@max-2xl:order-1">
             <Stack gap={2} align="center">
               <PageHeader size="display" title="Deadlock API" align="center" />
-              <Text as="p" tone="muted" align="center" className="max-w-3xl type-prose">
+              <Text as="p" variant="prose" tone="muted" align="center" className="max-w-3xl">
                 Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards,
                 updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to
                 Deadlock game data, match history, player statistics, hero analytics, and more.
@@ -172,38 +148,41 @@ function IndexRoute() {
             <AiSearch align="center" className="max-w-3xl" />
           </Stack>
 
-          {/* The site's sections as the sidebar groups them, a column each. The patron and tracker entries stay in the
-              sidebar: this page does not target the tracker. */}
-          {/* Its columns follow the panel's own width, never cutting a name short: flowing groups while narrow, a column
-              per section once there is room for all five. */}
-          <Panel>
-            <PanelHeader title="Deadlock Stats, Hero Win Rates & Leaderboards" size="sm" as="h2" />
+          {/* The site map. Wide, a column per section, Analytics' eight pages in two of their own so its column is
+              no taller than the others. */}
+          <Panel className="@max-2xl:order-3">
+            <PanelHeader title="Deadlock Stats, Hero Win Rates & Leaderboards" icon={MapIcon} size="sm" />
             <PanelBody size="sm" className="@container">
               <SideNav
+                layout="columns"
                 aria-label="Site directory"
-                className="block columns-1 gap-x-6 *:break-inside-avoid *:pb-3 @md:columns-2 @2xl:columns-3 @5xl:grid @5xl:columns-auto @5xl:grid-cols-4"
+                className="@5xl:grid @5xl:columns-auto @5xl:grid-cols-[2fr_1fr_1fr_1fr]"
               >
-                {DIRECTORY.map((entry) => (
-                  <SideNavGroup key={entry.label} label={entry.label}>
-                    {entry.links.map((link) => (
-                      <SideNavItem key={link.to} asChild className="py-1">
-                        <SmartLink href={link.to}>
-                          <link.icon />
-                          <span className="truncate">{link.label}</span>
-                        </SmartLink>
-                      </SideNavItem>
-                    ))}
+                {DIRECTORY.map((group) => (
+                  <SideNavGroup key={group.label} label={group.label}>
+                    <div className={group.links.length > 5 ? "@5xl:columns-2 @5xl:gap-x-6" : undefined}>
+                      {group.links.map((link) => (
+                        <SideNavItem key={link.to} asChild className="py-1">
+                          <SmartLink href={link.to}>
+                            <link.icon />
+                            <span className="truncate">{link.label}</span>
+                          </SmartLink>
+                        </SideNavItem>
+                      ))}
+                    </div>
                   </SideNavGroup>
                 ))}
               </SideNav>
             </PanelBody>
             {/* The services for developers: another audience, so apart from the player pages, under a rule. */}
-            <PanelFooter className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
-              <Text variant="eyebrow">Developer Services</Text>
-              <SideNav aria-label="Developer Services" className="flex-row flex-wrap gap-x-2 gap-y-1">
+            <PanelFooter className="flex flex-wrap items-center gap-x-6 gap-y-2 px-6 py-3">
+              <Text id={developerServicesId} variant="eyebrow">
+                Developer Services
+              </Text>
+              <SideNav layout="inline" aria-labelledby={developerServicesId}>
                 {services.map((service) => (
                   <SideNavItem key={service.title} asChild>
-                    <SmartLink href={service.href} external={service.external} title={service.description}>
+                    <SmartLink href={service.href} external={service.external}>
                       <service.icon />
                       <span>{service.title}</span>
                     </SmartLink>
@@ -212,62 +191,59 @@ function IndexRoute() {
               </SideNav>
             </PanelFooter>
           </Panel>
+
           {/* What Deadlock is and where the numbers come from, under the site map: the main column runs as long as the
               rail, and whichever is shorter lets its last block take the rest. */}
-          <Grid columns={{ base: 1, xl: 2 }} gap={4} className="flex-1 items-stretch">
-            <Panel>
-              <PanelHeader title="What is Deadlock?" size="sm" as="h2" />
-              <PanelBody>
-                <Prose>
-                  <p>
-                    Deadlock is a team-based multiplayer game developed and published by Valve that combines elements of
-                    third-person shooters and MOBAs. Players choose from a roster of heroes, each with unique abilities,
-                    and compete in objective-based matches. The game features a deep item system, competitive ranked
-                    play, and a rapidly evolving meta shaped by frequent balance patches.
-                  </p>
-                  <p>
-                    Deadlock API tracks match data for millions of players, providing the community with detailed hero
-                    win rates, item statistics with confidence intervals, ability upgrade path analysis, and competitive
-                    leaderboards across all regions. New matches are added continuously, the statistics update daily,
-                    and all data can be filtered by rank, patch, game mode, and date range.
-                  </p>
-                </Prose>
-              </PanelBody>
-            </Panel>
-            <Panel>
-              <PanelHeader title="How Our Data Works" size="sm" as="h2" />
-              <PanelBody>
-                <Prose>
-                  <p>
-                    Deadlock API collects publicly available match data through Valve's game client APIs. Every tracked
-                    match is processed to extract hero performance, item purchases, ability upgrade paths, and average
-                    match rankings. Statistics like win rates and pick rates are computed with statistical confidence
-                    intervals to ensure reliability.
-                  </p>
-                  <p>
-                    The platform is fully open source and provides free access to all data, including hourly database
-                    dumps for researchers and developers. Players can help fill in the gaps with the open source ingest
-                    tool, which sends the matches in their Steam cache. A $1.50/month patron tier offers prioritized
-                    data fetching for personal Steam accounts, ensuring your matches and stats are always up to date.
-                  </p>
-                </Prose>
-              </PanelBody>
-            </Panel>
-          </Grid>
+          <Stack className="flex-1 @max-2xl:order-5">
+            <Grid columns={{ base: 1, xl: 2 }} gap={4} className="flex-1 items-stretch">
+              <Panel>
+                <PanelHeader title="What is Deadlock?" icon={Gamepad2} size="sm" />
+                <PanelBody>
+                  <Prose>
+                    <p>
+                      Deadlock is a team-based multiplayer game developed and published by Valve that combines elements
+                      of third-person shooters and MOBAs. Players choose from a roster of heroes, each with unique
+                      abilities, and compete in objective-based matches. The game features a deep item system,
+                      competitive ranked play, and a rapidly evolving meta shaped by frequent balance patches.
+                    </p>
+                    <p>
+                      Deadlock API tracks match data for millions of players, providing the community with detailed hero
+                      win rates, item statistics with confidence intervals, ability upgrade path analysis, and
+                      competitive leaderboards across all regions. New matches are added continuously, the statistics
+                      update daily, and all data can be filtered by rank, patch, game mode, and date range.
+                    </p>
+                  </Prose>
+                </PanelBody>
+              </Panel>
+              <Panel>
+                <PanelHeader title="How Our Data Works" icon={Database} size="sm" />
+                <PanelBody>
+                  <Prose>
+                    <p>
+                      Deadlock API collects publicly available match data through Valve's game client APIs. Every
+                      tracked match is processed to extract hero performance, item purchases, ability upgrade paths, and
+                      average match rankings. Statistics like win rates and pick rates are computed with statistical
+                      confidence intervals to ensure reliability.
+                    </p>
+                    <p>
+                      The platform is fully open source and provides free access to all data, including hourly database
+                      dumps for researchers and developers. Players can help fill in the gaps with the open source
+                      ingest tool, which sends the matches in their Steam cache. A $1.50/month patron tier offers
+                      prioritized data fetching for personal Steam accounts, ensuring your matches and stats are always
+                      up to date.
+                    </p>
+                  </Prose>
+                </PanelBody>
+              </Panel>
+            </Grid>
+          </Stack>
         </Stack>
 
-        {/* The rail: who sponsors the site, the ingest tool, what is new, and the services for developers. */}
-        <Stack gap={4}>
-          <Panel>
-            <PanelHeader title="Sponsored by" icon={Heart} size="sm" as="h2">
-              <TextLink
-                href="https://www.patreon.com/c/manuelhexe"
-                target="_blank"
-                rel="noopener noreferrer"
-                underline="always"
-                className="text-xs font-medium"
-                title="Support on Patreon"
-              >
+        {/* The rail: who sponsors the site, the ingest tool, and what is new. */}
+        <Stack gap={4} className="@max-2xl:contents">
+          <Panel className="@max-2xl:order-2">
+            <PanelHeader title="Sponsored by" icon={Heart} size="sm">
+              <TextLink href="https://www.patreon.com/c/manuelhexe" external underline="always" size="sm">
                 Become a sponsor
               </TextLink>
             </PanelHeader>
@@ -280,50 +256,45 @@ function IndexRoute() {
               >
                 <OptimizedImage
                   src={mainSponsor.logo}
-                  widths={[192, 240, 384, 480, 576, 720]}
+                  widths={[288, 384, 576]}
                   sizes="288px"
                   alt={mainSponsor.title}
-                  width={600}
-                  height={127}
+                  width={mainSponsor.width}
+                  height={mainSponsor.height}
                   className="h-auto w-72 object-contain"
                 />
               </LogoWallItem>
-              <Inline gap={5} justify="center">
+              <LogoWall layout="row" aria-label="Other sponsors" className="w-full">
                 {sponsors.map((sponsor) => (
-                  <LogoWallItem
-                    key={sponsor.href}
-                    href={sponsor.href}
-                    title={sponsor.title}
-                    target="_blank"
-                    rel="sponsored noreferrer"
-                  >
-                    <OptimizedImage
-                      src={sponsor.logo}
-                      widths={[140, 280, 420]}
-                      sizes="144px"
-                      alt={sponsor.title}
-                      width={sponsor.width}
-                      height={sponsor.height}
-                      loading="lazy"
-                      fetchPriority="low"
-                      className="max-h-9 max-w-36 object-contain"
-                    />
-                  </LogoWallItem>
+                  <li key={sponsor.href}>
+                    <LogoWallItem href={sponsor.href} title={sponsor.title} target="_blank" rel="sponsored noreferrer">
+                      <OptimizedImage
+                        src={sponsor.logo}
+                        widths={[140, 280, 420]}
+                        sizes="144px"
+                        alt={sponsor.title}
+                        width={sponsor.width}
+                        height={sponsor.height}
+                        loading="lazy"
+                        fetchPriority="low"
+                        className="max-h-9 w-full max-w-36 object-contain"
+                      />
+                    </LogoWallItem>
+                  </li>
                 ))}
-              </Inline>
+              </LogoWall>
             </PanelBody>
           </Panel>
 
-          <Panel>
+          <Panel className="@max-2xl:order-4">
             <PanelHeader
               title="Track all your matches"
               icon={Download}
               size="sm"
-              as="h2"
               description={`${TRACKER_SITES.length} sites`}
             />
             <PanelBody className="flex flex-col gap-3">
-              <Text as="p" tone="muted">
+              <Text as="p" tone="muted" wrap="pretty">
                 Install the ingest tool once and every match you play gets sent to every tracker site.
               </Text>
               <Inline>
@@ -341,10 +312,7 @@ function IndexRoute() {
                   )}
                 </Button>
               </Inline>
-              <ul
-                aria-label="Sites that show matches from Deadlock API"
-                className="grid grid-cols-[repeat(auto-fill,minmax(2rem,1fr))] gap-1.5"
-              >
+              <LogoWall layout="icons" aria-label="Sites that show matches from Deadlock API">
                 {TRACKER_SITES.map((site) => {
                   const icon = (
                     <img
@@ -360,7 +328,7 @@ function IndexRoute() {
                     />
                   );
                   return (
-                    <li key={site.name} className="flex justify-center">
+                    <li key={site.name} className="flex">
                       {site.href ? (
                         <LogoWallItem size="icon" href={site.href} target="_blank" rel="sponsored noreferrer">
                           {icon}
@@ -371,14 +339,14 @@ function IndexRoute() {
                     </li>
                   );
                 })}
-              </ul>
+              </LogoWall>
             </PanelBody>
           </Panel>
 
-          {/* The last of the rail: it reaches down to the site map's last line, so the two columns end together. */}
-          <Panel className="flex-1">
-            <PanelHeader title="From the blog" icon={BookOpen} size="sm" as="h2">
-              <TextLink asChild underline="always" className="text-xs font-medium">
+          {/* The last of the rail: it reaches down to the main column's last line, so the two columns end together. */}
+          <Panel className="flex-1 @max-2xl:order-6">
+            <PanelHeader title="From the blog" icon={BookOpen} size="sm">
+              <TextLink asChild underline="always" size="sm">
                 <SmartLink href="/blog">All posts</SmartLink>
               </TextLink>
             </PanelHeader>
@@ -402,11 +370,8 @@ function IndexRoute() {
       </Grid>
 
       <Text as="p" variant="caption" tone="muted">
-        <TextLink href="https://deadlock-api.com" title="Deadlock API" underline="always" className="font-medium">
-          deadlock-api.com
-        </TextLink>{" "}
-        is not endorsed by Valve and does not reflect the views or opinions of Valve or anyone officially involved in
-        producing or managing Valve properties.
+        deadlock-api.com is not endorsed by Valve and does not reflect the views or opinions of Valve or anyone
+        officially involved in producing or managing Valve properties.
       </Text>
     </PageShell>
   );
