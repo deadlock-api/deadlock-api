@@ -17,6 +17,7 @@ import { useInstallCtaTracking } from "~/components/domain/ingest/analytics";
 import { WINDOWS_SETUP_URL } from "~/components/domain/ingest/links";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { AiSearch } from "~/components/features/ai-search/AiSearch";
+import { HeroWinRateLeaders, heroWinRateLeadersQueries } from "~/components/features/heroes/HeroWinRateLeaders";
 import { LogoWall, LogoWallItem } from "~/components/patterns/content/LogoWall";
 import { Prose } from "~/components/patterns/content/Prose";
 import { SideNav, SideNavGroup, SideNavItem } from "~/components/patterns/navigation/SideNav";
@@ -32,9 +33,12 @@ import { useIsWindows } from "~/hooks/useIsWindows";
 import { formatBlogDate } from "~/lib/blog-date";
 import { fetchBlogPosts } from "~/lib/blog-fns";
 import { API_ORIGIN } from "~/lib/constants";
+import { prefetchCached } from "~/lib/prefetch-safe";
+import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange } from "~/lib/seasons";
 import { ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { navGroups } from "~/lib/site-nav";
 import { TRACKER_SITES } from "~/lib/tracker-sites";
+import { loadSeasons } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/")({
   head: () =>
@@ -77,8 +81,25 @@ export const Route = createFileRoute("/")({
         ],
       },
     }),
-  // The newest posts as metadata (title, summary, date, reading time): the markdown stays on the server.
-  loader: async () => (await fetchBlogPosts()).slice(0, 4),
+  loader: async ({ context: { queryClient, preferences } }) => {
+    // The hero win rates in the hero table's default period, current and previous, so the panel renders with the page.
+    const seasons = await loadSeasons(queryClient);
+    const range = defaultUnixRange(seasons, preferences.dateFilter);
+    const prevRange = defaultPrevUnixRange(seasons, preferences.dateFilter);
+    const leaders = heroWinRateLeadersQueries(range, prevRange);
+    // The newest posts as metadata (title, summary, date, reading time): the markdown stays on the server.
+    const [posts] = await Promise.all([
+      fetchBlogPosts(),
+      prefetchCached(queryClient, leaders.current),
+      prefetchCached(queryClient, leaders.previous),
+    ]);
+    return {
+      posts: posts.slice(0, 4),
+      range,
+      prevRange,
+      period: defaultPeriodLabel(seasons, preferences.dateFilter),
+    };
+  },
   component: IndexRoute,
 });
 
@@ -124,7 +145,7 @@ const sponsors = [
 const DIRECTORY = navGroups.filter((group) => group.label !== "Patron" && group.label !== "Dev");
 
 function IndexRoute() {
-  const posts = Route.useLoaderData();
+  const { posts, range, prevRange, period } = Route.useLoaderData();
   const developerServicesId = useId();
   const isWindows = useIsWindows();
   const installTracking = useInstallCtaTracking("home", isWindows ? "download" : "install_steps");
@@ -148,9 +169,11 @@ function IndexRoute() {
             <AiSearch align="center" className="max-w-3xl" />
           </Stack>
 
+          <HeroWinRateLeaders range={range} prevRange={prevRange} period={period} className="@max-2xl:order-3" />
+
           {/* The site map. Wide, a column per section, Analytics' eight pages in two of their own so its column is
               no taller than the others. */}
-          <Panel className="@max-2xl:order-3">
+          <Panel className="@max-2xl:order-4">
             <PanelHeader title="Deadlock Stats, Hero Win Rates & Leaderboards" icon={MapIcon} size="sm" />
             <PanelBody size="sm" className="@container">
               <SideNav
@@ -191,52 +214,6 @@ function IndexRoute() {
               </SideNav>
             </PanelFooter>
           </Panel>
-
-          {/* What Deadlock is and where the numbers come from, under the site map: the main column runs as long as the
-              rail, and whichever is shorter lets its last block take the rest. */}
-          <Stack className="flex-1 @max-2xl:order-5">
-            <Grid columns={{ base: 1, xl: 2 }} gap={4} className="flex-1 items-stretch">
-              <Panel>
-                <PanelHeader title="What is Deadlock?" icon={Gamepad2} size="sm" />
-                <PanelBody>
-                  <Prose>
-                    <p>
-                      Deadlock is a team-based multiplayer game developed and published by Valve that combines elements
-                      of third-person shooters and MOBAs. Players choose from a roster of heroes, each with unique
-                      abilities, and compete in objective-based matches. The game features a deep item system,
-                      competitive ranked play, and a rapidly evolving meta shaped by frequent balance patches.
-                    </p>
-                    <p>
-                      Deadlock API tracks match data for millions of players, providing the community with detailed hero
-                      win rates, item statistics with confidence intervals, ability upgrade path analysis, and
-                      competitive leaderboards across all regions. New matches are added continuously, the statistics
-                      update daily, and all data can be filtered by rank, patch, game mode, and date range.
-                    </p>
-                  </Prose>
-                </PanelBody>
-              </Panel>
-              <Panel>
-                <PanelHeader title="How Our Data Works" icon={Database} size="sm" />
-                <PanelBody>
-                  <Prose>
-                    <p>
-                      Deadlock API collects publicly available match data through Valve's game client APIs. Every
-                      tracked match is processed to extract hero performance, item purchases, ability upgrade paths, and
-                      average match rankings. Statistics like win rates and pick rates are computed with statistical
-                      confidence intervals to ensure reliability.
-                    </p>
-                    <p>
-                      The platform is fully open source and provides free access to all data, including hourly database
-                      dumps for researchers and developers. Players can help fill in the gaps with the open source
-                      ingest tool, which sends the matches in their Steam cache. A $1.50/month patron tier offers
-                      prioritized data fetching for personal Steam accounts, ensuring your matches and stats are always
-                      up to date.
-                    </p>
-                  </Prose>
-                </PanelBody>
-              </Panel>
-            </Grid>
-          </Stack>
         </Stack>
 
         {/* The rail: who sponsors the site, the ingest tool, and what is new. */}
@@ -286,13 +263,8 @@ function IndexRoute() {
             </PanelBody>
           </Panel>
 
-          <Panel className="@max-2xl:order-4">
-            <PanelHeader
-              title="Track all your matches"
-              icon={Download}
-              size="sm"
-              description={`${TRACKER_SITES.length} sites`}
-            />
+          <Panel className="@max-2xl:order-5">
+            <PanelHeader title="Track all your matches" icon={Download} size="sm" />
             <PanelBody className="flex flex-col gap-3">
               <Text as="p" tone="muted" wrap="pretty">
                 Install the ingest tool once and every match you play gets sent to every tracker site.
@@ -367,6 +339,48 @@ function IndexRoute() {
             </PanelBody>
           </Panel>
         </Stack>
+      </Grid>
+
+      {/* What Deadlock is and where the numbers come from, a row of their own under both columns. */}
+      <Grid columns={{ base: 1, lg: 2 }} gap={4} className="items-stretch">
+        <Panel>
+          <PanelHeader title="What is Deadlock?" icon={Gamepad2} size="sm" />
+          <PanelBody>
+            <Prose>
+              <p>
+                Deadlock is a team-based multiplayer game developed and published by Valve that combines elements of
+                third-person shooters and MOBAs. Players choose from a roster of heroes, each with unique abilities, and
+                compete in objective-based matches. The game features a deep item system, competitive ranked play, and a
+                rapidly evolving meta shaped by frequent balance patches.
+              </p>
+              <p>
+                Deadlock API tracks match data for millions of players, providing the community with detailed hero win
+                rates, item statistics with confidence intervals, ability upgrade path analysis, and competitive
+                leaderboards across all regions. New matches are added continuously, the statistics update daily, and
+                all data can be filtered by rank, patch, game mode, and date range.
+              </p>
+            </Prose>
+          </PanelBody>
+        </Panel>
+        <Panel>
+          <PanelHeader title="How Our Data Works" icon={Database} size="sm" />
+          <PanelBody>
+            <Prose>
+              <p>
+                Deadlock API collects publicly available match data through Valve's game client APIs. Every tracked
+                match is processed to extract hero performance, item purchases, ability upgrade paths, and average match
+                rankings. Statistics like win rates and pick rates are computed with statistical confidence intervals to
+                ensure reliability.
+              </p>
+              <p>
+                The platform is fully open source and provides free access to all data, including hourly database dumps
+                for researchers and developers. Players can help fill in the gaps with the open source ingest tool,
+                which sends the matches in their Steam cache. A $1.50/month patron tier offers prioritized data fetching
+                for personal Steam accounts, ensuring your matches and stats are always up to date.
+              </p>
+            </Prose>
+          </PanelBody>
+        </Panel>
       </Grid>
 
       <Text as="p" variant="caption" tone="muted">
