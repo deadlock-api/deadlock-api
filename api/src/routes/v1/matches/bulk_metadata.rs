@@ -34,6 +34,7 @@ const RATE_LIMIT: RateLimit = RateLimit::new(
     &[
         Quota::new(Scope::Ip, 30, Duration::from_mins(1)),
         Quota::new(Scope::Key, 30, Duration::from_secs(10)),
+        Quota::new(Scope::Key, 2000, Duration::from_hours(1)),
         Quota::new(Scope::Global, 600, Duration::from_mins(1)),
     ],
 );
