@@ -34,7 +34,15 @@ export function HeroesPage() {
 
   return (
     <PageShell>
-      <PageHeader title={view.heading} description={view.summary} />
+      <PageHeader title={view.heading} description={view.summary}>
+        <p>
+          Analyze Deadlock hero win rates, pick rates and ban rates from live match data, with a tier list, trends over
+          time, results by match length, rank and experience, matchups and hero combinations. Filter by rank, game mode
+          and patch to see which heroes are strong where you play. The Z-score weighs win rate, pick rate and ban rate
+          into one number; Over/Under shows how much a hero wins above or below what their presence in the draft
+          predicts.
+        </p>
+      </PageHeader>
 
       <Tabs
         value={filters.tab ?? undefined}
