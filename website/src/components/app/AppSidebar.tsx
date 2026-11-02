@@ -11,7 +11,6 @@ import {
   SideNavHeader,
   SideNavShell,
 } from "~/components/patterns/navigation/SideNavShell";
-import { Button } from "~/components/ui/button";
 import { TRACKER_DEMO_PATH, useTrackerHome } from "~/hooks/useTrackerHome";
 import { API_ORIGIN } from "~/lib/constants";
 import { bottomNavLinks, type NavLink, navGroups, topLinks } from "~/lib/site-nav";
@@ -79,30 +78,19 @@ function SidebarContent() {
             ))}
           </SideNavGroup>
         ))}
+        {/* The API, the ingest tool and the privacy page: entries like every other, not a stack of footer buttons. */}
+        <SideNavGroup label="Resources">
+          <SideNavItem asChild>
+            <a href={`${API_ORIGIN}/docs`} target="_blank" rel="noopener noreferrer">
+              <Code />
+              <span className="truncate">API Documentation</span>
+            </a>
+          </SideNavItem>
+          {bottomNavLinks.map((link) => (
+            <NavItem key={link.to} link={link} />
+          ))}
+        </SideNavGroup>
       </SideNav>
-
-      <SideNavFooter>
-        <Button asChild variant="soft" size="sm" className="w-full">
-          <a href={`${API_ORIGIN}/docs`} target="_blank" rel="noopener noreferrer">
-            <Code />
-            API Documentation
-          </a>
-        </Button>
-      </SideNavFooter>
-
-      <SideNavFooter className="grid grid-cols-2 gap-1">
-        {bottomNavLinks.map((link) => {
-          const Icon = link.icon;
-          return (
-            <Button key={link.to} asChild variant="outline" size="sm" className="text-xs text-muted-foreground">
-              <SmartLink href={link.to}>
-                <Icon className="size-3" />
-                {link.label}
-              </SmartLink>
-            </Button>
-          );
-        })}
-      </SideNavFooter>
 
       <SideNavFooter>
         <SocialLinks />
