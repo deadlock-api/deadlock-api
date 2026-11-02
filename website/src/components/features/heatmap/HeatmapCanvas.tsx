@@ -56,6 +56,8 @@ interface HeatmapCanvasProps {
    * the map keeps its place and size.
    */
   prompt?: string;
+  /** The 2D / 3D switch, drawn first in the corner overlay with the sliders. */
+  viewToggle?: React.ReactNode;
 }
 
 export default function HeatmapCanvas({
@@ -69,6 +71,7 @@ export default function HeatmapCanvas({
   onSensitivityChange,
   scope,
   prompt,
+  viewToggle,
 }: HeatmapCanvasProps) {
   const summaryId = useId();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -298,6 +301,7 @@ export default function HeatmapCanvas({
         </ChartProbeCard>
       </div>
       <ChartOverlay position="bottom-start" narrow="outside" layout="rows">
+        {viewToggle}
         {/* The share view's scale is fixed, so there is nothing to clip. */}
         <SensitivitySlider value={sensitivity} onChange={onSensitivityChange} disabled={viewMode === "share"} />
       </ChartOverlay>

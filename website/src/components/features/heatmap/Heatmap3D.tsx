@@ -51,6 +51,8 @@ interface Heatmap3DProps {
    * the map keeps its place and size.
    */
   prompt?: string;
+  /** The 2D / 3D switch, drawn first in the corner overlay with the sliders. */
+  viewToggle?: React.ReactNode;
 }
 
 const HEAT_THRESHOLD = 0.005;
@@ -231,6 +233,7 @@ export default function Heatmap3D({
   onSensitivityChange,
   scope,
   prompt,
+  viewToggle,
 }: Heatmap3DProps) {
   const summaryId = useId();
   const radius = mapData.radius ?? 10752;
@@ -317,6 +320,7 @@ export default function Heatmap3D({
       </ChartStage>
 
       <ChartOverlay position="bottom-start" narrow="outside" layout="rows">
+        {viewToggle}
         <ChartOverlaySlider
           label="Opacity"
           min={10}

@@ -8,6 +8,7 @@ import { lazy, Suspense, useMemo } from "react";
 import { Filter } from "~/components/domain/filters";
 import type { ModeWithRank } from "~/components/domain/filters/ModeWithRankFilter";
 import HeatmapCanvas from "~/components/features/heatmap/HeatmapCanvas";
+import { HeatmapViewToggle } from "~/components/features/heatmap/HeatmapViewToggle";
 import {
   MAP_ART,
   MAP_CLIENT_VERSION,
@@ -160,6 +161,7 @@ function HeatmapPage() {
           onSensitivityChange: (v: number) => setOutlierSensitivity(Math.round(v * 10000)),
           scope,
           prompt: viewMode === "share" && heroId == null ? "Pick a hero to see their share of the kills" : undefined,
+          viewToggle: <HeatmapViewToggle is3D={is3D} onChange={(next) => void setIs3D(next || null)} />,
         }
       : null;
 
@@ -195,15 +197,6 @@ function HeatmapPage() {
               {VIEW_MODE_LABELS[viewModeOption]}
             </SegmentedItem>
           ))}
-        </FilterToggleCell>
-        <FilterToggleCell
-          label="View"
-          value={is3D ? "3d" : "2d"}
-          defaultValue="2d"
-          onValueChange={(next) => setIs3D(next === "3d")}
-        >
-          <SegmentedItem value="2d">2D</SegmentedItem>
-          <SegmentedItem value="3d">3D</SegmentedItem>
         </FilterToggleCell>
         <Filter.Hero value={heroId} onValueChange={setHeroId} allowNull />
         <Filter.ModeWithRank value={{ mode, rank: [minRankId, maxRankId] }} onValueChange={handleModeWithRankChange} />
