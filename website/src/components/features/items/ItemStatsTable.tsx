@@ -647,14 +647,15 @@ export function ItemStatsTable({
                       <span className="sr-only">Details</span>
                     </TableHead>
                   )}
-                  <TableHead className="hidden text-center @md:table-cell">#</TableHead>
+                  <TableHead className="hidden w-1/100 text-center @md:table-cell">#</TableHead>
                   <SortableHeader
                     label="Item"
                     sortKey="name"
                     activeSortKey={sort.sortKey}
                     sortDir={sort.dir}
                     onSortChange={toggleSort}
-                    className="text-start"
+                    // As narrow as its longest name, like the hero table's Hero column: the room goes to the rates.
+                    className="w-1/100 text-start"
                     data-pinned
                     filter={
                       <ColumnFilter
@@ -701,7 +702,7 @@ export function ItemStatsTable({
                     activeSortKey={sort.sortKey}
                     sortDir={sort.dir}
                     onSortChange={toggleSort}
-                    className="hidden text-start @md:table-cell"
+                    className="hidden w-1/100 text-start @md:table-cell"
                     filter={
                       <ColumnFilter
                         label="Tier"
@@ -734,7 +735,7 @@ export function ItemStatsTable({
                     activeSortKey={sort.sortKey}
                     sortDir={sort.dir}
                     onSortChange={toggleSort}
-                    className="text-start"
+                    className="w-1/2 text-start"
                   />
                   <SortableHeader
                     // Relative to the most bought item, like the hero tables' normalized pick rate; the item page's
@@ -750,9 +751,9 @@ export function ItemStatsTable({
                     activeSortKey={sort.sortKey}
                     sortDir={sort.dir}
                     onSortChange={toggleSort}
-                    className="text-start"
+                    className="w-1/2 text-start"
                   />
-                  <TableHead className="hidden text-center @md:table-cell">Confidence</TableHead>
+                  <TableHead className="hidden w-1/100 text-center @md:table-cell">Confidence</TableHead>
                   <TableHead className="text-center">
                     <ListFilterIcon
                       aria-hidden="true"
