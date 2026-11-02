@@ -307,7 +307,6 @@ export const NAV: readonly NavChapter[] = [
           "AssetImage emphasis",
           "AssetImage palette",
           "HeroCell and ItemCell",
-          "HeroLinkTile",
           "HeroImage art",
           "RankedEntityList",
           "AbilityOrderGrid",

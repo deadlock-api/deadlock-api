@@ -7,7 +7,6 @@ import { AbilityLevelMark, AbilityOrderGrid } from "~/components/domain/assets/A
 import { BadgeImage } from "~/components/domain/assets/BadgeImage";
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
-import { HeroLinkTile } from "~/components/domain/assets/HeroLinkTile";
 import { ItemCell } from "~/components/domain/assets/ItemCell";
 import {
   RankedEntityList,
@@ -51,28 +50,6 @@ export function Round3DomainAssets() {
 
   return (
     <>
-      <Specimen
-        name="HeroLinkTile"
-        source="domain/assets/HeroLinkTile"
-        note="A hero as a way into their page: portrait over the whole name, lit on hover and focus. The parent lays tiles in equal cells, so a wall of heroes lines up and no name truncates (the home page's hero strip)."
-      >
-        <Variants label="in a grid of equal cells" className="block max-w-md">
-          <ul className="grid grid-cols-[repeat(auto-fill,minmax(4.5rem,1fr))] gap-1">
-            {[
-              { id: 6, name: "Abrams" },
-              { id: 15, name: "Bebop" },
-              { id: 2, name: "Dynamo" },
-              { id: 13, name: "Haze" },
-              { id: 52, name: "Mirage" },
-            ].map((hero) => (
-              <li key={hero.id}>
-                <HeroLinkTile hero={hero} />
-              </li>
-            ))}
-          </ul>
-        </Variants>
-      </Specimen>
-
       <Specimen
         name="HeroCell and ItemCell"
         source="domain/assets/HeroCell · domain/assets/ItemCell"
