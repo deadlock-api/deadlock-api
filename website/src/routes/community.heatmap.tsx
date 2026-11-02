@@ -73,9 +73,9 @@ export const Route = createFileRoute("/community/heatmap")({
   },
   head: () =>
     seo({
-      title: pageTitle("Deadlock Map Heatmaps: Kills & Positions"),
+      title: pageTitle("Deadlock Interactive Map: Kill & Death Heatmap"),
       description:
-        "Interactive Deadlock map heatmaps showing player positions, kill density, and zone control across ranked matches.",
+        "Interactive Deadlock map of where kills and deaths happen: heatmaps by hero, rank and match time, K/D and kill share, in 2D or 3D.",
       path: "/community/heatmap",
     }),
 });
@@ -171,7 +171,10 @@ function HeatmapPage() {
 
   return (
     <PageShell height="viewport">
-      <PageHeader title="Kill/Death Heatmap" description="Visualize kill and death hotspots across the map" />
+      <PageHeader
+        title="Deadlock Map: Kill & Death Heatmap"
+        description="Visualize kill and death hotspots across the map"
+      />
 
       <Filter.Root>
         <StringSelector
