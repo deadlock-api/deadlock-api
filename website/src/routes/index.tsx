@@ -213,13 +213,13 @@ function IndexRoute() {
         <Stack gap={4} className="justify-center lg:col-span-2">
           <Stack gap={2}>
             <PageHeader size="display" title="Deadlock API" />
-            <Text as="p" tone="muted" className="max-w-3xl type-prose">
+            <Text as="p" tone="muted" className="max-w-4xl type-prose">
               Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards,
               updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to
               Deadlock game data, match history, player statistics, hero analytics, and more.
             </Text>
           </Stack>
-          <AiSearch className="max-w-3xl" />
+          <AiSearch className="max-w-4xl" />
           <Inline gap={2}>
             <InstallButton size="default" installHref={INGEST_INSTALL_PATH} placement="home_hero" />
             {valueProps.map((prop) => (
