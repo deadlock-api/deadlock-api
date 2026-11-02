@@ -141,6 +141,14 @@ const sponsors = [
   },
 ];
 
+/** Each section of the site map in a series color of its own, so the sections tell apart at a glance. */
+const SECTION_ACCENT: Record<string, "chart-2" | "chart-3" | "chart-4" | "chart-6"> = {
+  Analytics: "chart-4",
+  Community: "chart-3",
+  Tools: "chart-2",
+  Games: "chart-6",
+};
+
 /** The site map: the sidebar's sections in its order, without the patron and tracker entries (not this page's subject). */
 const DIRECTORY = navGroups.filter((group) => group.label !== "Patron" && group.label !== "Dev");
 
@@ -161,7 +169,15 @@ function IndexRoute() {
             {/* What the site is, then the search, its main action: a phone reaches it without scrolling. */}
             <Stack gap={4} align="center" className="@max-4xl:order-1">
               <Stack gap={2} align="center">
-                <PageHeader size="display" title="Deadlock API" align="center" />
+                <PageHeader
+                  size="display"
+                  align="center"
+                  title={
+                    <>
+                      Deadlock <span className="text-primary">API</span>
+                    </>
+                  }
+                />
                 <Text as="p" variant="prose" tone="muted" align="center" className="max-w-3xl">
                   Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards,
                   updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to
@@ -184,7 +200,7 @@ function IndexRoute() {
                   className="@5xl:grid @5xl:columns-auto @5xl:grid-cols-[2fr_1fr_1fr_1fr]"
                 >
                   {DIRECTORY.map((group) => (
-                    <SideNavGroup key={group.label} label={group.label}>
+                    <SideNavGroup key={group.label} label={group.label} accent={SECTION_ACCENT[group.label] ?? "none"}>
                       <div className={group.links.length > 5 ? "@5xl:columns-2 @5xl:gap-x-6" : undefined}>
                         {group.links.map((link) => (
                           <SideNavItem key={link.to} asChild className="py-1">
@@ -234,6 +250,7 @@ function IndexRoute() {
               </PanelHeader>
               <PanelBody className="flex flex-col items-center gap-4">
                 <LogoWallItem
+                  emphasis="full"
                   href={mainSponsor.href}
                   title={mainSponsor.title}
                   target="_blank"
@@ -253,6 +270,7 @@ function IndexRoute() {
                   {sponsors.map((sponsor) => (
                     <li key={sponsor.href}>
                       <LogoWallItem
+                        emphasis="full"
                         href={sponsor.href}
                         title={sponsor.title}
                         target="_blank"
