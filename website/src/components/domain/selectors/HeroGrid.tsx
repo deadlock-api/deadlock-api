@@ -15,8 +15,8 @@ export function HeroGrid({
   ...props
 }: Omit<React.ComponentProps<typeof PickerGrid>, "picker" | "size" | "emptyLabel"> & {
   picker: HeroPicker;
-  /** `sm` packs the portraits for a chart sidebar. */
-  size?: "sm" | "default";
+  /** `sm` packs the portraits for a chart sidebar; `xl` is a picker that is the page's main content. */
+  size?: "sm" | "default" | "xl";
 }) {
   const term = picker.search.trim();
   return (

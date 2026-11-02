@@ -9,7 +9,7 @@ import { FOCUS_RING } from "~/components/ui/recipes";
 import { SearchInput } from "~/components/ui/search-input";
 import { cn } from "~/lib/utils";
 
-type GridSize = "sm" | "default" | "lg";
+type GridSize = "sm" | "default" | "lg" | "xl";
 
 const PickerGridContext = createContext<{ picker: Picker; size: GridSize } | null>(null);
 
@@ -65,7 +65,10 @@ export function PickerGrid({
   ...props
 }: React.ComponentProps<"div"> & {
   picker: Picker;
-  /** `sm` packs the tiles for a chart sidebar; `lg` gives larger art and names on two lines (the item shop). */
+  /**
+   * `sm` packs the tiles for a chart sidebar; `lg` gives larger art and names on two lines (the item shop); `xl` is a
+   * picker that is the page's main content, with 64px art and whole names.
+   */
   size?: GridSize;
   /** What the grid says without a tile: that nothing matches the search. */
   emptyLabel?: string;
@@ -183,7 +186,7 @@ const tileVariants = cva(
         included: "bg-positive/15 ring-1 ring-positive/60 ring-inset hover:bg-positive/20",
         excluded: "bg-negative/15 ring-1 ring-negative/60 ring-inset hover:bg-negative/20",
       },
-      size: { default: "gap-1 px-0.5 py-1.5", sm: "gap-0.5 px-0.5 py-1", lg: "gap-1 p-1.5" },
+      size: { default: "gap-1 px-0.5 py-1.5", sm: "gap-0.5 px-0.5 py-1", lg: "gap-1 p-1.5", xl: "gap-1.5 p-2" },
     },
     defaultVariants: { state: "none", size: "default" },
   },
@@ -192,19 +195,26 @@ const tileVariants = cva(
 // The art fills this box (pass it `size-full`); an excluded choice's art is dimmed like `AssetImage emphasis="dim"`.
 const mediaVariants = cva("flex shrink-0 items-center justify-center transition-[filter,opacity]", {
   variants: {
-    size: { default: "size-7 @3xs:size-9", sm: "size-6 @3xs:size-8", lg: "size-8 @3xs:size-11" },
+    size: {
+      default: "size-7 @3xs:size-9",
+      sm: "size-6 @3xs:size-8",
+      lg: "size-8 @3xs:size-11",
+      // The picker that is the page's main content (the Build Designer before a hero is chosen).
+      xl: "size-11 @lg:size-16",
+    },
     state: { none: "", selected: "", included: "", excluded: "opacity-40 saturate-50" },
   },
   defaultVariants: { size: "default", state: "none" },
 });
 
-const nameVariants = cva("w-full text-center text-xs leading-tight text-muted-foreground", {
+const nameVariants = cva("w-full text-center leading-tight text-muted-foreground", {
   variants: {
     size: {
-      default: "text-balance break-words hyphens-auto",
+      default: "text-xs text-balance break-words hyphens-auto",
       // Hyphenated at a syllable before a long word is cut mid-letter ("Extende d").
-      sm: "line-clamp-2 break-words hyphens-auto",
-      lg: "line-clamp-2 break-words hyphens-auto",
+      sm: "line-clamp-2 text-xs break-words hyphens-auto",
+      lg: "line-clamp-2 text-xs break-words hyphens-auto",
+      xl: "text-sm text-balance break-words",
     },
   },
   defaultVariants: { size: "default" },
