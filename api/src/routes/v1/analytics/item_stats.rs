@@ -53,6 +53,11 @@ pub enum BucketQuery {
     Hero,
     /// Bucket Item Stats By Team
     Team,
+    /// Bucket Item Stats By Enemy Hero: one row per item and hero on the buyer's opposing team, so
+    /// each purchase counts once for every enemy hero. Needs `hero_id`/`hero_ids` or
+    /// `account_ids`, unless the only filters are `game_mode`, `match_mode`, the badge range and
+    /// the time range.
+    EnemyHero,
     /// Bucket Item Stats By Start Time (Hour)
     StartTimeHour,
     /// Bucket Item Stats By Start Time (Day)
@@ -115,6 +120,7 @@ impl BucketQuery {
             Self::NoBucket => "toUInt32(0)".to_owned(),
             Self::Hero => "toUInt32(hero_id)".to_owned(),
             Self::Team => "toUInt32(if(team = 'Team0', 0, 1))".to_owned(),
+            Self::EnemyHero => "toUInt32(enemy_hero_id)".to_owned(),
             Self::StartTimeHour => "toStartOfHour(start_time)".to_owned(),
             Self::StartTimeDay => "toStartOfDay(start_time)".to_owned(),
             Self::StartTimeWeek => "toDateTime(toStartOfWeek(start_time))".to_owned(),
@@ -156,7 +162,8 @@ impl BucketQuery {
             Self::StartTimeDay => Some("toStartOfDay(toDateTime(day))"),
             Self::StartTimeWeek => Some("toDateTime(toStartOfWeek(day))"),
             Self::StartTimeMonth => Some("toDateTime(toStartOfMonth(day))"),
-            Self::StartTimeHour
+            Self::EnemyHero
+            | Self::StartTimeHour
             | Self::GameTimeMin
             | Self::GameTimeNormalizedPercentage
             | Self::NetWorthBy1000
@@ -740,6 +747,7 @@ fn cohort_mv_bucket(bucket: BucketQuery) -> Option<(&'static Rollup<'static>, St
         // sub-day resolution.
         BucketQuery::Hero
         | BucketQuery::Team
+        | BucketQuery::EnemyHero
         | BucketQuery::StartTimeHour
         | BucketQuery::GameTimeNormalizedPercentage => None,
     }
@@ -827,16 +835,26 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
 /// beats hero X" shape (exactly one enemy hero, no granular filters), else `None`.
 /// On the base table this shape decompresses the item arrays of the whole window:
 /// the enemy hero is in ~20% of matches, spread evenly, so no granule is skipped.
+///
+/// It also serves `bucket=enemy_hero` without an enemy filter: every enemy hero's rows, grouped
+/// by enemy hero. With an enemy filter, that bucket needs the filtered matches' whole enemy
+/// team, which the rollup does not keep.
 fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
-    let enemy_hero_id = match query.enemy_hero_ids.as_deref() {
-        Some([first, rest @ ..]) if rest.iter().all(|id| id == first) => *first,
-        _ => return None,
-    };
+    let enemy_hero_ids = query
+        .enemy_hero_ids
+        .as_deref()
+        .filter(|ids| !ids.is_empty());
     // Hero/team are not in the rollup grain; hero-filtered enemy queries are
     // served fast by the base-table projection.
-    let bucket_expr = match query.bucket {
-        BucketQuery::Hero | BucketQuery::Team => return None,
-        bucket => bucket.mv_bucket_expr()?,
+    let (enemy_hero_id, bucket_expr) = match (enemy_hero_ids, query.bucket) {
+        (None, BucketQuery::EnemyHero) => (None, "toUInt32(enemy_hero_id)"),
+        (_, BucketQuery::Hero | BucketQuery::Team | BucketQuery::EnemyHero) | (None, _) => {
+            return None;
+        }
+        (Some([first, rest @ ..]), bucket) if rest.iter().all(|id| id == first) => {
+            (Some(*first), bucket.mv_bucket_expr()?)
+        }
+        (Some(_), _) => return None,
     };
 
     #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
@@ -879,16 +897,18 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
         query.min_average_badge,
         query.max_average_badge,
     );
-    filters
-        .rollup
-        .push(format!("enemy_hero_id = {enemy_hero_id}"));
+    if let Some(enemy_hero_id) = enemy_hero_id {
+        filters
+            .rollup
+            .push(format!("enemy_hero_id = {enemy_hero_id}"));
+    }
     // The refresh job's rows keep the full grain, which the enemy hero filter already keeps
     // small. Only the buyers facing the enemy hero's team are aggregated.
     let source = ENEMY_AGG.source(
         &split,
         &filters,
         &format!("item_id, {bucket_expr}"),
-        |edge| enemy_hero_select_body(&edge.where_clause, Some(enemy_hero_id)),
+        |edge| enemy_hero_select_body(&edge.where_clause, enemy_hero_id),
     );
 
     Some(rollup_query(
@@ -1206,6 +1226,50 @@ fn build_query(query: &ItemStatsQuery) -> String {
         (String::new(), String::new())
     };
 
+    /* ---------- enemy hero bucket (optional) ----------
+     *
+     * `bucket=enemy_hero` joins each buyer row to its opposing team's heroes and fans out over
+     * them. A (match, team) key packs into one integer: the buyer's `match_id * 2 + (team =
+     * 'Team0')` equals its enemy team's `match_id * 2 + (team = 'Team1')`. The rosters only cover
+     * the buyer hero's or account's matches. Measured on prod, one buyer hero over 30 days: 72
+     * CPU-s for every enemy at once, against ~340 CPU-s for the 43 single-enemy requests it
+     * replaces, with the same rows (`players` included). A multi-row join on a String team key
+     * cost 100 CPU-s and twice the memory.
+     */
+    let enemy_bucket = query.bucket == BucketQuery::EnemyHero;
+    let roster_cte = enemy_bucket.then(|| {
+        #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
+        let account_ids = with_legacy_id(query.account_ids.as_deref(), query.account_id);
+        let buyer_matches = [
+            (!hero_ids.is_empty()).then(|| format!("hero_id IN ({})", id_list(&hero_ids))),
+            (!account_ids.is_empty())
+                .then(|| format!("account_id IN ({})", id_list(&account_ids))),
+        ]
+        .into_iter()
+        .flatten()
+        .join(" AND ");
+        let prefilter = if buyer_matches.is_empty() {
+            String::new()
+        } else {
+            format!(
+                "
+            AND match_id IN (
+                SELECT match_id FROM match_player
+                WHERE {scope_filters} AND {buyer_matches}
+            )"
+            )
+        };
+        format!(
+            "t_enemy_rosters AS (
+        SELECT match_id * 2 + (team = 'Team1') AS team_key, groupUniqArray(hero_id) AS enemy_hero_ids
+        FROM match_player
+        WHERE {scope_filters}
+            AND team IN ('Team0', 'Team1'){prefilter}
+        GROUP BY team_key
+    )"
+        )
+    });
+
     /* ---------- final query ----------
      *
      * Flat parallel ARRAY JOIN avoids the per-row temporary tuple array that
@@ -1255,7 +1319,9 @@ fn build_query(query: &ItemStatsQuery) -> String {
     // prunes: those matches are spread over every granule. Not building that index keeps the
     // same rows and bytes. Measured on hero vs enemy hero weekly buckets: -36% wall, -17% CPU,
     // -10% memory; on the base-table no-hero shape no significant change.
-    if enemy_hero_ids.is_some() {
+    // The enemy hero bucket's roster prefilter is the same kind of IN set (every match of the
+    // buyer hero in the window).
+    if enemy_hero_ids.is_some() || enemy_bucket {
         settings.push("use_index_for_in_with_subqueries = 0");
     }
     let settings_clause = settings.join(", ");
@@ -1348,10 +1414,32 @@ fn build_query(query: &ItemStatsQuery) -> String {
     if !enemy_cte.is_empty() {
         ctes.push(enemy_cte);
     }
+    ctes.extend(roster_cte);
     let with_clause = if ctes.is_empty() {
         String::new()
     } else {
         format!("WITH {}", ctes.join(",\n    "))
+    };
+    let scan = format!(
+        "match_player
+ARRAY JOIN
+    {items_array_join}{nw_array_join}
+{prewhere_clause}WHERE {where_match_filters}{upgrade_filter}
+    {player_filters}"
+    );
+    // The enemy hero bucket aggregates the buyer rows joined to their enemy rosters. Its bucket
+    // only reads `enemy_hero_id`, so the scan keeps just the measures' columns.
+    let from_clause = if enemy_bucket {
+        format!(
+            "(
+    SELECT match_id * 2 + (team = 'Team0') AS team_key, won, account_id, duration_s, item_id, buy_time, sold_time
+    FROM {scan}
+) AS buys
+INNER JOIN t_enemy_rosters USING team_key
+ARRAY JOIN enemy_hero_ids AS enemy_hero_id"
+        )
+    } else {
+        scan
     };
     // `avgIf` over zero rows is NaN, not NULL, so `coalesce` did not catch it. Groups with no
     // sale (common for `corrupted_items=only`) then came out as JSON `null`. `ifNotFinite`
@@ -1374,11 +1462,7 @@ SELECT
     avg((buy_time / duration_s) * 100) AS avg_buy_time_relative,
     ifNotFinite(avgIf((sold_time / duration_s) * 100, sold_time > 0), 0) AS avg_sell_time_relative,
     countIf(sold_time > 0) AS sold
-FROM match_player
-ARRAY JOIN
-    {items_array_join}{nw_array_join}
-{prewhere_clause}WHERE {where_match_filters}{upgrade_filter}
-    {player_filters}
+FROM {from_clause}
 GROUP BY item_id, bucket
 {having_clause}
 ORDER BY item_id, bucket
@@ -1456,15 +1540,27 @@ async fn get_item_stats(
             "single-item item_stats cohort query not routed to rollup, using base table"
         );
     }
+    // Without a buyer hero or account, the enemy hero bucket fans every row of the window out
+    // six ways: only the enemy rollup can serve it, so it never falls back to the base table.
+    let enemy_bucket_needs_rollup = query.bucket == BucketQuery::EnemyHero
+        && query.all_hero_ids().is_empty()
+        && !query.filters_accounts();
     if let Some(enemy_mv_query) = build_enemy_mv_query(&query) {
         debug!(?enemy_mv_query);
         match run_rollup_query(ch_client, &enemy_mv_query).await {
             Ok(rows) => return Ok(rows),
-            Err(e) if retry_on_base_table(&e) => {
+            Err(e) if retry_on_base_table(&e) && !enemy_bucket_needs_rollup => {
                 warn!("item_stats enemy MV query failed, falling back to base table: {e}");
             }
             Err(e) => return Err(e.into()),
         }
+    }
+    if enemy_bucket_needs_rollup {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            "bucket=enemy_hero needs hero_id/hero_ids or account_ids, unless the only other \
+             filters are game_mode, match_mode, the badge range and the time range",
+        ));
     }
     let base_query = build_query(&query);
     debug!(?base_query);
@@ -1867,6 +1963,79 @@ mod tests {
         assert!(
             build_query(&unlock)
                 .contains("arraySlice(arrayDistinct(abilities), 1, 1) = [1999680326]")
+        );
+    }
+
+    #[test]
+    fn enemy_hero_bucket_joins_buyers_to_their_enemy_rosters() {
+        let query = ItemStatsQuery {
+            hero_ids: Some(vec![6]),
+            bucket: BucketQuery::EnemyHero,
+            min_unix_timestamp: Some(1_790_899_200),
+            ..Default::default()
+        };
+        assert!(build_enemy_mv_query(&query).is_none());
+        let sql = build_query(&query);
+        assert_valid_sql(&sql);
+        assert!(sql.contains("t_enemy_rosters AS"));
+        assert!(sql.contains("SELECT match_id * 2 + (team = 'Team1') AS team_key"));
+        assert!(sql.contains("SELECT match_id * 2 + (team = 'Team0') AS team_key"));
+        assert!(sql.contains("AND hero_id IN (6)\n            )"));
+        assert!(sql.contains("INNER JOIN t_enemy_rosters USING team_key"));
+        assert!(sql.contains("ARRAY JOIN enemy_hero_ids AS enemy_hero_id"));
+        assert!(sql.contains("toUInt32(enemy_hero_id)    AS bucket"));
+        assert!(sql.contains("use_index_for_in_with_subqueries = 0"));
+        // The hero-led projection serves the buyer scan.
+        assert!(!sql.contains("optimize_use_projections = 0"));
+
+        // An enemy filter keeps its semi-join; the rosters still list the whole enemy team.
+        let filtered = build_query(&ItemStatsQuery {
+            enemy_hero_ids: Some(vec![50]),
+            ..query.clone()
+        });
+        assert_valid_sql(&filtered);
+        assert!(filtered.contains("t_enemy_teams AS"));
+        assert!(filtered.contains("INNER JOIN t_enemy_rosters USING team_key"));
+
+        let by_account = build_query(&ItemStatsQuery {
+            hero_ids: None,
+            account_ids: Some(vec![12]),
+            ..query
+        });
+        assert_valid_sql(&by_account);
+        assert!(by_account.contains("AND account_id IN (12)\n            )"));
+    }
+
+    #[test]
+    fn enemy_hero_bucket_without_buyer_filter_reads_the_enemy_rollup() {
+        let recent = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .cast_signed()
+            - 30 * 86_400;
+        let query = ItemStatsQuery {
+            bucket: BucketQuery::EnemyHero,
+            min_unix_timestamp: Some(recent),
+            min_average_badge: Some(91),
+            ..Default::default()
+        };
+        let sql = build_enemy_mv_query(&query).unwrap();
+        assert_valid_sql(&sql);
+        assert!(sql.contains("FROM item_enemy_stats_agg"));
+        assert!(sql.contains("toUInt32(enemy_hero_id)"));
+        assert!(!sql.contains("enemy_hero_id = "));
+        assert!(!sql.contains("HAVING has(enemy_hero_ids"));
+        assert!(build_mv_query(&query).is_none());
+        assert!(build_cohort_mv_query(&query).is_none());
+
+        // With an enemy filter the bucket needs the filtered matches' whole enemy team.
+        assert!(
+            build_enemy_mv_query(&ItemStatsQuery {
+                enemy_hero_ids: Some(vec![6]),
+                ..query
+            })
+            .is_none()
         );
     }
 
