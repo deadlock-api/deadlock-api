@@ -378,11 +378,11 @@ export function Patterns() {
                 <StringOption value="deaths">Deaths</StringOption>
               </StringOptionGroup>
             </StringSelector>
-            <TriStateSelector label="Tags" width="compact">
+            <TriStateSelector label="Tags">
               <TriStateItem value={1} label="Spirit" />
               <TriStateItem value={2} label="Gun" />
             </TriStateSelector>
-            <StringSelector label="Language" defaultValue="" width="compact">
+            <StringSelector label="Language" defaultValue="">
               <StringOption value="">Any</StringOption>
               <StringOption value="en">English</StringOption>
               <StringOption value="de">German</StringOption>
@@ -811,7 +811,7 @@ export function Patterns() {
         note="Page-level tabs that turn into a select when they no longer fit. Narrow the window to see it. With `href` each tab is a link to its page."
       >
         <Tabs value={tab} onValueChange={setTab}>
-          <ResponsiveTabsList aria-label="Sections" value={tab} onValueChange={setTab}>
+          <ResponsiveTabsList aria-label="Sections">
             {TAB_OPTIONS.map((option) => (
               <ResponsiveTab key={option.value} value={option.value} href={`#${option.value}`}>
                 {option.label}

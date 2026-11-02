@@ -47,14 +47,7 @@ export function BuildTagFilter({
   });
 
   return (
-    <TriStateSelector
-      label={label}
-      value={value}
-      defaultValue={defaultValue}
-      popoverWidth="wide"
-      width="compact"
-      {...props}
-    >
+    <TriStateSelector label={label} value={value} defaultValue={defaultValue} popoverWidth="wide" {...props}>
       <TriStateSection label="Tagged with">
         <TriStateGroup label="Style">
           {styleTags.map((tag) => (

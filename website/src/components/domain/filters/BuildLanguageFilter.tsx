@@ -25,7 +25,6 @@ export function BuildLanguageFilter({
       value={value === undefined ? undefined : value === null ? "" : String(value)}
       defaultValue={defaultValue === null ? "" : String(defaultValue)}
       onValueChange={(next) => onValueChange?.(next === "" ? null : Number(next))}
-      width="compact"
       {...props}
     >
       <StringOption value="">Any</StringOption>

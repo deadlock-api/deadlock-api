@@ -8,16 +8,13 @@ import { FOCUS_RING } from "~/components/ui/recipes";
 import { Segmented } from "~/components/ui/segmented";
 import { cn } from "~/lib/utils";
 
-/** True inside `Filter.Root`, where cells share one border and divide it with hairlines. */
+/** True inside a `cells` FilterBar, where every filter is a one-line chip. */
 export const FilterRootContext = createContext(false);
 
 const cellBase = "flex min-w-0 flex-col justify-center gap-0.5 px-4 py-2 text-start transition-colors";
-// The bar draws the hairlines as 1px gaps, so the bases leave room for them: two cells across a narrow bar, three
-// from `@md`, and as many as fit from `@2xl`. The queries read the width of the `FilterBar`.
-const cellInRoot = "grow basis-2/5 bg-card @md:basis-1/4 @2xl:min-w-28 @2xl:shrink-0 @2xl:basis-auto";
-// A compact cell holds a short value ("Any", "English"): three share a phone's row with a regular cell, and a wide bar
-// gives it its content's width instead of the regular minimum.
-const cellInRootCompact = "grow basis-1/5 bg-card @md:basis-1/6 @2xl:shrink-0 @2xl:basis-auto";
+// In a page's bar every filter is a one-line chip as wide as its content: a quiet outline at its default, a raised
+// fill with its reset once it differs (the reset, not only the fill, says it is set).
+const chipInRoot = "shrink-0 rounded-md border border-border data-active:border-transparent data-active:bg-accent";
 const cellStandalone = "rounded-lg border bg-card";
 const activeUnderline = "shadow-active-underline";
 const CELL_SELECTOR = '[data-slot="filter-cell"], [data-slot="filter-toggle-cell"]';
@@ -94,14 +91,9 @@ interface FilterCellProps extends Omit<React.ComponentProps<"div">, "children"> 
   align?: "start" | "center";
   /**
    * `sm` is one line at the height of `Select size="sm"`, with the label beside the value: for a selector inside a
-   * `FilterBar variant="toolbar"`. Cells of a `cells` bar are laid out by the bar and stay `default`.
+   * `FilterBar variant="toolbar"`. In a `cells` bar every cell is that one-line chip already.
    */
   size?: "default" | "sm";
-  /**
-   * `compact` is a narrow cell of a `cells` bar, for a filter whose value is a word or two (tags, a language): a third
-   * of a phone's row and its content's width on a wide bar. Outside a bar it changes nothing.
-   */
-  width?: "default" | "compact";
   /** Whether the editor is showing; a single-choice selector closes it once a choice is made. */
   open?: boolean;
   defaultOpen?: boolean;
@@ -130,31 +122,25 @@ export function FilterCell({
   className,
   align = "start",
   size = "default",
-  width = "default",
   open,
   defaultOpen = false,
   onOpenChange,
   ...props
 }: FilterCellProps) {
   const inRoot = useContext(FilterRootContext);
-  const compact = size === "sm" && !inRoot;
-  const narrow = width === "compact" && inRoot;
+  // A chip of a page's bar is one line, like the toolbar size.
+  const compact = size === "sm" || inRoot;
   return (
     <Popover open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       <div
         data-slot="filter-cell"
         data-active={active || undefined}
         data-size={compact ? "sm" : "default"}
-        data-width={narrow ? "compact" : undefined}
         className={cn(
           "grid",
-          // In a bar a cell is never narrower than its longest word: the value wraps between words, and a share of a
-          // phone-wide bar cut "Ascendant 1+" to "Ascendan".
-          inRoot
-            ? cn(narrow ? cellInRootCompact : cellInRoot, "static min-w-min @2xl:relative")
-            : cn(cellStandalone, "relative min-w-0"),
+          inRoot ? cn(chipInRoot, "static @2xl:relative") : cn(cellStandalone, "relative min-w-0"),
           compact && "h-8 rounded-md",
-          active && activeUnderline,
+          active && !inRoot && activeUnderline,
           className,
         )}
         {...props}
@@ -167,9 +153,6 @@ export function FilterCell({
               cellBase,
               FOCUS_RING,
               "col-start-1 row-start-1 hover:bg-accent focus-visible:bg-accent focus-visible:ring-inset data-[state=open]:bg-accent",
-              // The cell's grid takes the button's minimum: its longest word, not 0.
-              inRoot && "min-w-min",
-              narrow && "px-3",
               compact && "flex-row items-center justify-start gap-2 rounded-md px-3 py-0",
               // The reset's room is kept while there is nothing to reset: setting the filter must not widen the
               // control and re-wrap the toolbar around it.
@@ -179,7 +162,7 @@ export function FilterCell({
             {label && compact && (
               <span
                 data-slot="filter-cell-label"
-                className={cn("type-caption text-muted-foreground", active && "text-primary")}
+                className={cn("type-caption text-muted-foreground", active && !inRoot && "text-primary")}
               >
                 {label}
               </span>
@@ -193,13 +176,12 @@ export function FilterCell({
               className={cn(
                 "flex min-w-0 items-center gap-1.5 text-sm font-medium",
                 compact && "whitespace-nowrap",
-                active ? "text-foreground" : "text-muted-foreground",
+                active || inRoot ? "text-foreground" : "text-muted-foreground",
               )}
             >
               {icon}
-              {/* A cell of the bar may wrap onto a second line: on a phone "Phantom…" or "Beta Seas…" hid which rank
-                  or patch is filtered. The one-line toolbar size keeps truncating. */}
-              <span className={compact ? "truncate" : "line-clamp-2 text-start"}>{value ?? label}</span>
+              {/* A chip of the bar keeps its whole value (it wraps to another row instead); the toolbar size truncates. */}
+              <span className={inRoot ? "" : compact ? "truncate" : "line-clamp-2 text-start"}>{value ?? label}</span>
               <ChevronDownIcon className="size-3.5 shrink-0 opacity-50" />
             </span>
             {inRoot && (
@@ -241,7 +223,7 @@ interface FilterToggleCellProps<T extends string> extends Omit<React.ComponentPr
   onValueChange?: (value: T) => void;
   disabled?: boolean;
   /**
-   * `wide` gives a long row of segments a whole line of a narrow bar. The default is `wide` from four segments up.
+   * `wide` gives a long row of segments a whole row of a narrow bar. The default is `wide` from four segments up.
    */
   width?: "default" | "wide";
   /** `SegmentedItem`s. */
@@ -269,22 +251,50 @@ export function FilterToggleCell<T extends string>({
   const active = defaultValue !== undefined && current !== defaultValue;
   const onReset = defaultValue !== undefined ? () => setCurrent(defaultValue) : undefined;
   const isWide = width == null ? Children.count(children) > 3 : width === "wide";
+  if (inRoot) {
+    return (
+      <div
+        data-slot="filter-toggle-cell"
+        data-active={active || undefined}
+        data-disabled={disabled || undefined}
+        className={cn(
+          chipInRoot,
+          "flex min-h-8 items-center gap-2 ps-3 pe-0.5",
+          // A long row of segments takes a row of its own on a narrow bar rather than wrapping its options.
+          isWide && "max-@md:basis-full",
+          className,
+        )}
+        {...props}
+      >
+        <span data-slot="filter-cell-label" className="type-caption text-muted-foreground">
+          {label}
+        </span>
+        <Segmented
+          value={current}
+          onValueChange={setCurrent}
+          disabled={disabled}
+          aria-label={label}
+          size="sm"
+          width="hug"
+          className="min-h-0 border-0 p-0"
+        >
+          {children}
+        </Segmented>
+        {/* The reset's room is kept while there is nothing to reset, so changing the choice never widens the chip. */}
+        {onReset && (
+          <span className="flex size-6 shrink-0 items-center justify-center">
+            {active && !disabled && <CellReset label={label} active={active} onReset={onReset} />}
+          </span>
+        )}
+      </div>
+    );
+  }
   return (
     <div
       data-slot="filter-toggle-cell"
       data-active={active || undefined}
       data-disabled={disabled || undefined}
-      className={cn(
-        cellBase,
-        "relative",
-        inRoot ? cellInRoot : cellStandalone,
-        // A cell as wide as its segments, never a share narrower than them: where they do not fit beside the other
-        // cells, the cell takes a row of its own instead of wrapping its options. Long segment rows take a full row
-        // on a narrow bar.
-        inRoot && (isWide ? "basis-full @md:basis-3/5" : "basis-auto @md:basis-auto"),
-        active && activeUnderline,
-        className,
-      )}
+      className={cn(cellBase, "relative", cellStandalone, active && activeUnderline, className)}
       {...props}
     >
       <span className={cn("flex", onReset && "pe-5")}>
@@ -336,7 +346,6 @@ export function FilterAdvanced({
       value={activeCount > 0 ? `${activeCount} set` : "None"}
       active={activeCount > 0}
       onReset={onReset}
-      width="compact"
       contentClassName={cn("flex w-64 flex-col gap-2", contentClassName)}
       {...props}
     >

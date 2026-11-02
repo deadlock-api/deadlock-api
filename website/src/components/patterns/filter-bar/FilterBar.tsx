@@ -5,8 +5,7 @@ import { cn } from "~/lib/utils";
 
 interface FilterBarProps extends Omit<React.ComponentProps<"section">, "title"> {
   /**
-   * - `cells`: a grid of FilterCells divided by hairlines, for the filters of a page. Two across a narrow bar, three
-   *   across a medium one, one row when there is room.
+   * - `cells`: the filters of a page as a wrapping row of chips after a "Filters" label that counts the ones set.
    * - `toolbar`: a wrapping row of compact controls (Field, Segmented, Select size="sm"), for the controls of one
    *   chart or table.
    */
@@ -58,11 +57,13 @@ export function FilterBar({
       className={cn("@container w-full min-w-0", className)}
       {...props}
     >
-      <div className="relative mx-auto w-full overflow-hidden rounded-xl border bg-card shadow-md @2xl:w-fit">
-        {/* The hairlines between the cells are the 1px gaps, through which this background shows. */}
-        <div className="flex flex-wrap items-stretch gap-px bg-border">
-          <FilterRootContext.Provider value={true}>{children}</FilterRootContext.Provider>
-        </div>
+      <div className="relative flex flex-wrap items-center gap-2">
+        <FilterRootContext.Provider value={true}>{children}</FilterRootContext.Provider>
+        {/* Last in the document so its CSS counter has seen every chip; drawn first. It counts the chips that differ
+            from their defaults (`filter-bar-count` in utilities.css) and shows the number only while one does. */}
+        <span data-slot="filter-bar-count" aria-hidden="true" className="filter-bar-count order-first">
+          Filters
+        </span>
       </div>
     </section>
   );

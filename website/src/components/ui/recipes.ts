@@ -22,8 +22,10 @@ export const DISABLED_STATE = "disabled:pointer-events-none disabled:opacity-50"
  * other choice that marks itself either way.
  */
 export const SELECTED_STATE = [
-  "data-[state=on]:bg-primary/15 data-[state=on]:text-foreground data-[state=on]:ring-1 data-[state=on]:ring-primary/40 data-[state=on]:ring-inset",
-  "data-[state=checked]:bg-primary/15 data-[state=checked]:text-foreground data-[state=checked]:ring-1 data-[state=checked]:ring-primary/40 data-[state=checked]:ring-inset",
+  // A raised fill, bright text and the brand-red bar along the bottom: the tab underline's mark of "current", so the
+  // choice reads by shape as well as color. No weight change: a bolder label would widen the item and move the row.
+  "data-[state=on]:bg-accent data-[state=on]:text-foreground data-[state=on]:shadow-active-underline",
+  "data-[state=checked]:bg-accent data-[state=checked]:text-foreground data-[state=checked]:shadow-active-underline",
 ].join(" ");
 
 /** The box of a text control: Input, Textarea and the Select trigger. Its edge is --control-border, 3:1 on every surface. */

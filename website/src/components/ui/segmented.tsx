@@ -11,7 +11,7 @@ const segmentedItemVariants = cva(
   [
     // Equal shares of the row while the labels fit; never narrower than its label, so a row that runs out of room
     // wraps (the group is `flex-wrap`) instead of drawing "North America" over "South America".
-    "inline-flex min-w-fit grow cursor-pointer items-center justify-center gap-1.5 rounded-md font-medium whitespace-nowrap text-muted-foreground transition-colors",
+    "inline-flex min-w-fit grow cursor-pointer items-center justify-center gap-1.5 rounded-sm font-medium whitespace-nowrap text-muted-foreground transition-colors",
     FOCUS_RING,
     DISABLED_STATE,
     "hover:bg-accent hover:text-foreground",
@@ -93,7 +93,7 @@ function Segmented<T extends string>({
         value={current}
         onValueChange={(next) => setCurrent(next as T)}
         className={cn(
-          "flex-wrap gap-0.5 rounded-lg border bg-secondary p-0.5",
+          "flex-wrap gap-0.5 rounded-md border border-border bg-transparent p-0.5",
           // Small, it stands as high as the other small controls (Input, Select, a toolbar FilterCell: 32px) so a
           // toolbar of them lines up; its items stay 24px, centred.
           size === "sm" && "min-h-8 items-center",
