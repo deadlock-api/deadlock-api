@@ -1,10 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BarChart3, BookOpen, Database, Download, HardDrive, Heart, type LucideIcon, Package } from "lucide-react";
+import { BarChart3, BookOpen, Download, HardDrive, Heart, type LucideIcon, Package } from "lucide-react";
 
 import { OptimizedImage } from "~/components/domain/assets/OptimizedImage";
 import { useInstallCtaTracking } from "~/components/domain/ingest/analytics";
-import { InstallButton } from "~/components/domain/ingest/InstallButton";
-import { INGEST_INSTALL_PATH, WINDOWS_SETUP_URL } from "~/components/domain/ingest/links";
+import { WINDOWS_SETUP_URL } from "~/components/domain/ingest/links";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { AiSearch } from "~/components/features/ai-search/AiSearch";
 import { LogoWallItem } from "~/components/patterns/content/LogoWall";
@@ -68,26 +67,9 @@ export const Route = createFileRoute("/")({
       },
     }),
   // The newest posts only, as titles and dates: the markdown stays on the server.
-  loader: async () => (await fetchBlogPosts()).slice(0, 3),
+  loader: async () => (await fetchBlogPosts()).slice(0, 4),
   component: IndexRoute,
 });
-
-const valueProps = [
-  {
-    label: "Open Data",
-    href: "/data-dumps",
-    icon: Database,
-    title: "Hourly-updated public data lake",
-    external: false,
-  },
-  {
-    label: "Free to Use",
-    href: "https://www.patreon.com/c/manuelhexe",
-    icon: Heart,
-    title: "Based on Sponsoring",
-    external: true,
-  },
-];
 
 const services = [
   {
@@ -188,34 +170,23 @@ function IndexRoute() {
               </Text>
             </Stack>
             <AiSearch align="center" className="max-w-3xl" />
-            <Inline gap={2} justify="center">
-              <InstallButton size="default" installHref={INGEST_INSTALL_PATH} placement="home_hero" />
-              {valueProps.map((prop) => (
-                <Button key={prop.label} asChild variant="outline">
-                  <SmartLink href={prop.href} external={prop.external} title={prop.title}>
-                    <prop.icon className="size-3.5" />
-                    {prop.label}
-                  </SmartLink>
-                </Button>
-              ))}
-            </Inline>
           </Stack>
 
           {/* The site's sections as the sidebar groups them, a column each. The patron and tracker entries stay in the
               sidebar: this page does not target the tracker. */}
-          {/* It takes the room down to the rail's last panel, so the two columns end on one line. Its columns follow the
-              panel's own width, never cutting a name short. */}
-          <Panel className="flex-1">
+          {/* Its columns follow the panel's own width, never cutting a name short: flowing groups while narrow, a column
+              per section once there is room for all five. */}
+          <Panel>
             <PanelHeader title="Deadlock Stats, Hero Win Rates & Leaderboards" size="sm" as="h2" />
-            <PanelBody className="@container flex-1">
+            <PanelBody size="sm" className="@container">
               <SideNav
                 aria-label="Site directory"
-                className="block columns-1 gap-x-6 *:break-inside-avoid *:pb-5 @md:columns-2 @2xl:columns-3 @6xl:columns-5"
+                className="block columns-1 gap-x-6 *:break-inside-avoid *:pb-3 @md:columns-2 @2xl:columns-3 @5xl:grid @5xl:columns-auto @5xl:grid-cols-4"
               >
                 {DIRECTORY.map((entry) => (
                   <SideNavGroup key={entry.label} label={entry.label}>
                     {entry.links.map((link) => (
-                      <SideNavItem key={link.to} asChild>
+                      <SideNavItem key={link.to} asChild className="py-1">
                         <SmartLink href={link.to}>
                           <link.icon />
                           <span className="truncate">{link.label}</span>
@@ -241,6 +212,48 @@ function IndexRoute() {
               </SideNav>
             </PanelFooter>
           </Panel>
+          {/* What Deadlock is and where the numbers come from, under the site map: the main column runs as long as the
+              rail, and whichever is shorter lets its last block take the rest. */}
+          <Grid columns={{ base: 1, xl: 2 }} gap={4} className="flex-1 items-stretch">
+            <Panel>
+              <PanelHeader title="What is Deadlock?" size="sm" as="h2" />
+              <PanelBody>
+                <Prose>
+                  <p>
+                    Deadlock is a team-based multiplayer game developed and published by Valve that combines elements of
+                    third-person shooters and MOBAs. Players choose from a roster of heroes, each with unique abilities,
+                    and compete in objective-based matches. The game features a deep item system, competitive ranked
+                    play, and a rapidly evolving meta shaped by frequent balance patches.
+                  </p>
+                  <p>
+                    Deadlock API tracks match data for millions of players, providing the community with detailed hero
+                    win rates, item statistics with confidence intervals, ability upgrade path analysis, and competitive
+                    leaderboards across all regions. New matches are added continuously, the statistics update daily,
+                    and all data can be filtered by rank, patch, game mode, and date range.
+                  </p>
+                </Prose>
+              </PanelBody>
+            </Panel>
+            <Panel>
+              <PanelHeader title="How Our Data Works" size="sm" as="h2" />
+              <PanelBody>
+                <Prose>
+                  <p>
+                    Deadlock API collects publicly available match data through Valve's game client APIs. Every tracked
+                    match is processed to extract hero performance, item purchases, ability upgrade paths, and average
+                    match rankings. Statistics like win rates and pick rates are computed with statistical confidence
+                    intervals to ensure reliability.
+                  </p>
+                  <p>
+                    The platform is fully open source and provides free access to all data, including hourly database
+                    dumps for researchers and developers. Players can help fill in the gaps with the open source ingest
+                    tool, which sends the matches in their Steam cache. A $1.50/month patron tier offers prioritized
+                    data fetching for personal Steam accounts, ensuring your matches and stats are always up to date.
+                  </p>
+                </Prose>
+              </PanelBody>
+            </Panel>
+          </Grid>
         </Stack>
 
         {/* The rail: who sponsors the site, the ingest tool, what is new, and the services for developers. */}
@@ -268,11 +281,11 @@ function IndexRoute() {
                 <OptimizedImage
                   src={mainSponsor.logo}
                   widths={[192, 240, 384, 480, 576, 720]}
-                  sizes="224px"
+                  sizes="288px"
                   alt={mainSponsor.title}
                   width={600}
                   height={127}
-                  className="h-auto w-56 object-contain"
+                  className="h-auto w-72 object-contain"
                 />
               </LogoWallItem>
               <Inline gap={5} justify="center">
@@ -287,13 +300,13 @@ function IndexRoute() {
                     <OptimizedImage
                       src={sponsor.logo}
                       widths={[140, 280, 420]}
-                      sizes="112px"
+                      sizes="144px"
                       alt={sponsor.title}
                       width={sponsor.width}
                       height={sponsor.height}
                       loading="lazy"
                       fetchPriority="low"
-                      className="max-h-7 max-w-28 object-contain"
+                      className="max-h-9 max-w-36 object-contain"
                     />
                   </LogoWallItem>
                 ))}
@@ -369,12 +382,15 @@ function IndexRoute() {
                 <SmartLink href="/blog">All posts</SmartLink>
               </TextLink>
             </PanelHeader>
-            <PanelBody className="flex flex-col gap-3">
+            <PanelBody className="flex flex-col gap-4">
               {posts.map((post) => (
                 <Stack key={post.slug} gap={0.5}>
                   <TextLink asChild tone="inherit" underline="hover" className="font-medium">
                     <SmartLink href={`/blog/${post.slug}`}>{post.title}</SmartLink>
                   </TextLink>
+                  <Text as="p" tone="muted" wrap="clamp-2">
+                    {post.description}
+                  </Text>
                   <Text variant="caption" tone="muted">
                     {formatBlogDate(post.date)} · {post.readingMinutes} min read
                   </Text>
@@ -383,47 +399,6 @@ function IndexRoute() {
             </PanelBody>
           </Panel>
         </Stack>
-      </Grid>
-
-      <Grid columns={{ base: 1, lg: 2 }} gap={4} className="items-stretch">
-        <Panel>
-          <PanelHeader title="What is Deadlock?" size="sm" as="h2" />
-          <PanelBody>
-            <Prose>
-              <p>
-                Deadlock is a team-based multiplayer game developed and published by Valve that combines elements of
-                third-person shooters and MOBAs. Players choose from a roster of heroes, each with unique abilities, and
-                compete in objective-based matches. The game features a deep item system, competitive ranked play, and a
-                rapidly evolving meta shaped by frequent balance patches.
-              </p>
-              <p>
-                Deadlock API tracks match data for millions of players, providing the community with detailed hero win
-                rates, item statistics with confidence intervals, ability upgrade path analysis, and competitive
-                leaderboards across all regions. New matches are added continuously, the statistics update daily, and
-                all data can be filtered by rank, patch, game mode, and date range.
-              </p>
-            </Prose>
-          </PanelBody>
-        </Panel>
-        <Panel>
-          <PanelHeader title="How Our Data Works" size="sm" as="h2" />
-          <PanelBody>
-            <Prose>
-              <p>
-                Deadlock API collects publicly available match data through Valve's game client APIs. Every tracked
-                match is processed to extract hero performance, item purchases, ability upgrade paths, and average match
-                rankings. Statistics like win rates and pick rates are computed with statistical confidence intervals to
-                ensure reliability.
-              </p>
-              <p>
-                The platform is fully open source and provides free access to all data, including hourly database dumps
-                for researchers and developers. Players can help fill in the gaps with the open source ingest tool,
-                which sends the matches in their Steam cache. A $1.50/month patron tier offers prioritized data fetching
-                for personal Steam accounts, ensuring your matches and stats are always up to date.
-              </p>
-            </Prose>
-          </PanelBody>
-        </Panel>
       </Grid>
 
       <Text as="p" variant="caption" tone="muted">
