@@ -5,6 +5,10 @@ const token =
   (import.meta.env.VITE_PUBLIC_POSTHOG_TOKEN as string | undefined) ||
   "phc_HdWYYwTIliAFysphiOtKQ8dSRjgte2jVfS4ADg2bJD1";
 
+const WEB_VITALS_SAMPLE_RATE = 0.1;
+// Share of page loads whose clicks ($autocapture) are sent, outside the home page.
+const CLICK_SAMPLE_RATE = 1 / 3;
+
 let client: Promise<PostHog | null> | undefined;
 
 export function getAnalytics(): Promise<PostHog | null> {
@@ -17,6 +21,10 @@ export function getAnalytics(): Promise<PostHog | null> {
       () => null,
     );
     if (!posthog) return null;
+    // The free plan takes 1M events a month and the site sent about 1.8M. Sampling is per page load: cookieless
+    // mode has no session id on the client, and one page load of this SPA is usually the whole visit.
+    const keepVitals = Math.random() < WEB_VITALS_SAMPLE_RATE;
+    const keepClicks = Math.random() < CLICK_SAMPLE_RATE;
     posthog.init(token, {
       api_host: "https://e.deadlock-api.com",
       ui_host: "https://eu.posthog.com",
@@ -26,8 +34,17 @@ export function getAnalytics(): Promise<PostHog | null> {
         // Radix tabs switch on mousedown; the detector only counts DOM changes after the click, so every tab
         // switch reads as dead. A custom list replaces the defaults, hence the two `ph-no-*` entries.
         css_selector_ignorelist: [".ph-no-deadclick", ".ph-no-capture", '[role="tab"]'],
+        capture_dead_swipes: false,
       },
+      capture_performance: { web_vitals: keepVitals },
+      // The sound board and the games click dozens of times per visit; the games send their own events.
+      autocapture: { url_ignorelist: [/\/\/[^/]+\/sounds(?:[/?#]|$)/, /\/\/[^/]+\/games\//] },
+      // The home page keeps every click, it is where first-time visitors decide where to go.
+      before_send: (event) =>
+        event?.event === "$autocapture" && !keepClicks && event.properties.$pathname !== "/" ? null : event,
     });
+    // Lets queries tell sessions with sampled clicks apart and scale counts back up.
+    posthog.register({ clicks_captured: keepClicks, web_vitals_sample_rate: WEB_VITALS_SAMPLE_RATE });
     // How the Worker answered this page load (src/lib/html-cache.ts), so web vitals can be split by cache status.
     const navigation = performance.getEntriesByType("navigation")[0] as PerformanceNavigationTiming | undefined;
     const htmlCache = navigation?.serverTiming.find((entry) => entry.name === "html-cache")?.description;
