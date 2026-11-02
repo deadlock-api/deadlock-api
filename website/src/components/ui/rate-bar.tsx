@@ -31,6 +31,9 @@ export function DivergingBar({
   label?: string;
 }) {
   const at = (n: number) => (scale > 0 ? 50 + Math.max(-1, Math.min(1, n / scale)) * 50 : 50);
+  // Three decimals: the browser keeps six significant digits of a style it parses, so a longer server value came back
+  // different on hydration ("9.05812%" against "9.058122038632296%") and React reported a mismatch.
+  const pct = (n: number) => `${Math.round(n * 1000) / 1000}%`;
   const t = value == null || !Number.isFinite(value) || scale <= 0 ? 0 : Math.max(-1, Math.min(1, value / scale));
   const fill = TONE_BG[tone ?? deltaTone(t, polarity)];
   return (
@@ -45,17 +48,17 @@ export function DivergingBar({
         <>
           <div
             className="absolute inset-y-0 rounded-full bg-chart-interval"
-            style={{ insetInlineStart: `${at(interval[0])}%`, width: `${at(interval[1]) - at(interval[0])}%` }}
+            style={{ insetInlineStart: pct(at(interval[0])), width: pct(at(interval[1]) - at(interval[0])) }}
           />
           <span
             className={cn("absolute top-1/2 size-2.5 -translate-1/2 rounded-full border-2 border-background", fill)}
-            style={{ insetInlineStart: `${50 + t * 50}%` }}
+            style={{ insetInlineStart: pct(50 + t * 50) }}
           />
         </>
       ) : (
         <div
           className={cn("absolute inset-y-0 rounded-full", fill)}
-          style={{ insetInlineStart: t >= 0 ? "50%" : `${50 + t * 50}%`, width: `${Math.abs(t) * 50}%` }}
+          style={{ insetInlineStart: t >= 0 ? "50%" : pct(50 + t * 50), width: pct(Math.abs(t) * 50) }}
         />
       )}
       <span className="absolute inset-s-1/2 -top-0.5 h-2.5 w-px bg-foreground/40" />

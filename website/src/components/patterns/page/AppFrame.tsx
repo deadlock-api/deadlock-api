@@ -31,11 +31,13 @@ export function AppFrame({ className, children, ...props }: React.ComponentProps
   return (
     <div
       data-slot="app-frame"
+      // Positioned, so an absolute descendant (an `sr-only` label deep in a sideways scroller) is placed in the frame
+      // and clipped by it, not against the document, where it widened the page.
       // `--page-height` is what a `PageShell height="viewport"` may take: the screen minus this padding and the
       // breadcrumb row (1.25rem) with its gap above the page; below md, also the app bar and the room kept for the
       // floating feedback button.
       className={cn(
-        "flex min-h-dvh w-full min-w-0 flex-col px-4 py-4 [--page-height:calc(100dvh-4.25rem)] sm:px-8 sm:py-5 sm:[--page-height:calc(100dvh-4.75rem)]",
+        "relative flex min-h-dvh w-full min-w-0 flex-col px-4 py-4 [--page-height:calc(100dvh-4.25rem)] sm:px-8 sm:py-5 sm:[--page-height:calc(100dvh-4.75rem)]",
         "max-md:pt-[calc(var(--app-bar-height)+var(--spacing)*4)] max-md:pb-floating-clearance",
         "max-sm:[--page-height:calc(100dvh-4.25rem-var(--app-bar-height)-var(--floating-control-clearance))]",
         "sm:max-md:[--page-height:calc(100dvh-4.75rem-var(--app-bar-height)-var(--floating-control-clearance))]",
