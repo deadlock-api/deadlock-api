@@ -8,7 +8,7 @@
 //! day instead.
 
 use super::rollup_window::{Coverage, DaySplit, EdgeRows, Rollup, RollupFilters};
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::utils::match_modes::{GameMode, MatchMode};
 
 /// The rollup, rebuilt per day by `services/cohort_agg_refresh.rs` from [`agg_select_body`].
 /// Its columns are [`AGG_GRAIN`], then [`AGG_MEASURES`], then `built_through`.

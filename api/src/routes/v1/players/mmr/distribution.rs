@@ -10,8 +10,9 @@ use utoipa::{IntoParams, ToSchema};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::players::mmr::batch::HeroMMRPath;
-use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
+use crate::routes::v1::players::rank_distribution::DISTRIBUTION_RATE_LIMIT;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::utils::badge::badge_from_flat_progress_sql;
 use crate::utils::parse::default_last_month_timestamp;
 
 use crate::utils::sql::{DURATION_COLUMN, MatchPoolFilters, impl_match_info};
@@ -112,7 +113,7 @@ async fn get_mmr_distribution(
 ) -> APIResult<Vec<DistributionEntry>> {
     state
         .rate_limit_client
-        .check(rate_limit_key, super::DISTRIBUTION_RATE_LIMIT)
+        .check(rate_limit_key, DISTRIBUTION_RATE_LIMIT)
         .await?;
     let query = build_mmr_distribution_query(hero_id, query);
     debug!(?query);

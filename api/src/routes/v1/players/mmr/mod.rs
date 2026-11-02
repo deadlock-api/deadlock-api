@@ -9,6 +9,7 @@ use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
+use crate::routes::v1::players::rank_distribution::DISTRIBUTION_RATE_LIMIT;
 use crate::services::rate_limiter::{Limits, Quota, RateLimit, Scope};
 
 pub(super) const RATE_LIMIT: RateLimit = RateLimit::new(
@@ -18,17 +19,6 @@ pub(super) const RATE_LIMIT: RateLimit = RateLimit::new(
         Quota::new(Scope::Key, 100, Duration::from_mins(1)),
         Quota::new(Scope::Key, 2_000, Duration::from_hours(1)),
         Quota::new(Scope::Global, 200, Duration::from_mins(1)),
-    ],
-);
-
-/// The distribution queries scan every ranked match instead of a primary-key range, costing roughly
-/// two orders of magnitude more than the account-scoped MMR endpoints, so they get their own bucket.
-pub(super) const DISTRIBUTION_RATE_LIMIT: RateLimit = RateLimit::new(
-    "mmr_distribution",
-    &[
-        Quota::new(Scope::Ip, 5, Duration::from_mins(1)),
-        Quota::new(Scope::Key, 25, Duration::from_mins(1)),
-        Quota::new(Scope::Global, 50, Duration::from_mins(1)),
     ],
 );
 

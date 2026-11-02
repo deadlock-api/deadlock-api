@@ -18,8 +18,8 @@ use crate::routes::v1::analytics::common_filters::is_non_empty;
 use crate::routes::v1::analytics::rollup_window::{
     Coverage, DaySplit, EdgeRows, Rollup, RollupFilters,
 };
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::services::cohort_agg_refresh::HORIZON_DAYS;
+use crate::utils::match_modes::{GameMode, MatchMode};
 
 /// Which of the three rollups.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

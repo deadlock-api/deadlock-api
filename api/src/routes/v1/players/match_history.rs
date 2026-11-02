@@ -30,6 +30,7 @@ use crate::services::protected_accounts::ensure_not_protected;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::services::steam::client::SteamClient;
+use crate::utils::badge::ETERNUS_MIN_BADGE;
 use crate::utils::types::AccountIdQuery;
 
 /// Fetching a bot friend's history from Steam.
@@ -55,15 +56,6 @@ const REFETCH_RATE_LIMIT: RateLimit = RateLimit::new(
 const MAX_REFETCH_ITERATIONS: i32 = 100;
 
 pub(crate) type PlayerMatchHistory = Vec<PlayerMatchHistoryEntry>;
-
-/// Eternus badge bounds (tier 11, subranks 1-6). Eternus subranks are percentile cuts Valve
-/// recomputes daily, but the GC's after-match `ranked_display_badge` keeps extending the
-/// flat-progress ladder formula instead, yielding subranks Valve never displays (even badges
-/// past 116). Within Eternus the badge the player *entered* the match with, from
-/// `match_player.player_rank_initial_display_rank`, is the percentile-correct one, so reads
-/// substitute it; entries whose rank metadata has not landed yet fall back to capping at
-/// Eternus 6.
-const ETERNUS_MIN_BADGE: u32 = 111;
 
 /// Columns the table coalesces to the latest non-NULL value; every other column
 /// takes the latest row's value.
@@ -97,8 +89,13 @@ impl BatchQueryMulti for MatchHistoryReadQuery {
                 c => format!("argMax({c}, created_at) AS {c}"),
             })
             .join(", ");
-        // Within Eternus, replace the GC's extrapolated after-match badge with the badge the
-        // player entered the match with (see ETERNUS_MIN_BADGE). The join reads
+        // Eternus subranks are percentile cuts Valve recomputes daily, but the GC's after-match
+        // `ranked_display_badge` keeps extending the flat-progress ladder formula instead,
+        // yielding subranks Valve never displays (even badges past 116). Within Eternus the
+        // badge the player *entered* the match with, from
+        // `match_player.player_rank_initial_display_rank`, is the percentile-correct one, so
+        // it replaces the after-match badge; entries whose rank metadata has not landed yet
+        // fall back to capping at Eternus 6 (ETERNUS_MAX_BADGE). The join reads
         // player_match_stats, whose (account_id, match_id) key makes the account filter a
         // primary-key range (measured -31% wall, -40% read_rows vs. the match_player
         // bloom-filter read on a 7-account Eternus batch). It is not pruned to the Eternus

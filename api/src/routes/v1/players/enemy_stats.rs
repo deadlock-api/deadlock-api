@@ -11,10 +11,10 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::matches::types::GameMode;
 use crate::routes::v1::players::roster_stats::{RosterSide, RosterStatsQuery};
 use crate::services::protected_accounts::{ensure_not_protected, protected_accounts};
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
+use crate::utils::match_modes::GameMode;
 use crate::utils::sql::{cached_ch_query, impl_match_info};
 use crate::utils::types::AccountIdQuery;
 

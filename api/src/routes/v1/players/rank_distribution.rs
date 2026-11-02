@@ -1,3 +1,5 @@
+use core::time::Duration;
+
 use axum::Json;
 use axum::extract::State;
 use axum::response::IntoResponse;
@@ -9,13 +11,24 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::players::mmr;
-use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
-use crate::services::rate_limiter::describe;
 use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
+use crate::utils::badge::badge_from_flat_progress_sql;
 use crate::utils::parse::default_last_month_timestamp;
 
 use crate::utils::sql::{DURATION_COLUMN, MatchPoolFilters, cached_ch_query, impl_match_info};
+
+/// The distribution queries scan every ranked match instead of a primary-key range, costing roughly
+/// two orders of magnitude more than the account-scoped rank endpoints, so they get their own bucket.
+/// The deprecated MMR distribution endpoints run the same queries and share it.
+pub(super) const DISTRIBUTION_RATE_LIMIT: RateLimit = RateLimit::new(
+    "mmr_distribution",
+    &[
+        Quota::new(Scope::Ip, 5, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 25, Duration::from_mins(1)),
+        Quota::new(Scope::Global, 50, Duration::from_mins(1)),
+    ],
+);
 
 #[derive(Copy, Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -127,7 +140,7 @@ placement games are not counted.
 match counts by average badge; use this endpoint when you only need the players.
 
     ",
-        super::mmr::DISTRIBUTION_RATE_LIMIT,
+        DISTRIBUTION_RATE_LIMIT,
     )
 )]
 pub(super) async fn rank_distribution(
@@ -137,7 +150,7 @@ pub(super) async fn rank_distribution(
 ) -> APIResult<impl IntoResponse> {
     state
         .rate_limit_client
-        .check(&rate_limit_key, mmr::DISTRIBUTION_RATE_LIMIT)
+        .check(&rate_limit_key, DISTRIBUTION_RATE_LIMIT)
         .await?;
     let query_str = build_query(&query);
     debug!(?query_str);

@@ -1,7 +1,7 @@
 use core::fmt::Display;
 
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
 use crate::services::protected_accounts::protected_accounts;
+use crate::utils::match_modes::{GameMode, MatchMode};
 use crate::utils::parse::MIN_DEMO_PLAYER_TIMESTAMP;
 use crate::utils::sql::{
     DURATION_COLUMN, MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE, MatchPoolFilters,

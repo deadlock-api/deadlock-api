@@ -3,8 +3,8 @@ use axum::response::IntoResponse;
 
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::matches::custom::ready::LobbyIdQuery;
 use crate::routes::v1::matches::custom::utils;
+use crate::routes::v1::matches::custom::utils::LobbyIdQuery;
 use crate::services::rate_limiter::describe;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 

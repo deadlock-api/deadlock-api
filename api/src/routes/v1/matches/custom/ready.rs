@@ -1,18 +1,12 @@
 use axum::extract::{Path, State};
 use axum::response::IntoResponse;
-use serde::Deserialize;
-use utoipa::IntoParams;
 
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::routes::v1::matches::custom::utils;
+use crate::routes::v1::matches::custom::utils::LobbyIdQuery;
 use crate::services::rate_limiter::describe;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-
-#[derive(Deserialize, IntoParams, Clone)]
-pub(crate) struct LobbyIdQuery {
-    pub(crate) lobby_id: String,
-}
 
 #[utoipa::path(
     post,

@@ -1,7 +1,7 @@
 //! Shared query of the enemy and mate stats endpoints: per other player, how often and with
 //! which result the account played against or with them, from `player_match_roster`.
 
-use crate::routes::v1::matches::types::GameMode;
+use crate::utils::match_modes::GameMode;
 use crate::utils::sql::{MatchInfoFilters, ROSTER_DURATION_COLUMN, having_clause, id_list};
 
 /// Which of the roster's player arrays to count.

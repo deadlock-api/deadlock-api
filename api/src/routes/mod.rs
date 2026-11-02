@@ -12,13 +12,8 @@ pub mod v1;
 pub mod v2;
 
 pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
-    // Aliases outside their families' routers, so each takes its family's cache policy instead
-    // of the global 2-minute default.
     OpenApiRouter::new()
-        .route(
-            "/v1/players/{account_id}/hero-stats",
-            get(players::hero_stats::hero_stats_single).layer(players::CACHE_CONTROL),
-        )
+        // The website's data-privacy forms; not part of the OpenAPI spec.
         .route(
             "/v1/data-privacy/request-deletion",
             post(data_privacy::request_deletion),
@@ -26,6 +21,12 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
         .route(
             "/v1/data-privacy/request-tracking",
             post(data_privacy::request_tracking),
+        )
+        // Aliases outside their families' routers, so each takes its family's cache policy
+        // instead of the global 2-minute default.
+        .route(
+            "/v1/players/{account_id}/hero-stats",
+            get(players::hero_stats::hero_stats_single).layer(players::CACHE_CONTROL),
         )
         .route(
             "/v1/players/{account_id}/steam",

@@ -11,8 +11,8 @@ use utoipa::{IntoParams, ToSchema};
 use super::common_filters::{ceil_to_hour, floor_to_hour};
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
-use crate::routes::v1::players::rank::badge_from_flat_progress_sql;
+use crate::utils::badge::badge_from_flat_progress_sql;
+use crate::utils::match_modes::{GameMode, MatchMode};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
 use crate::utils::sql::{
@@ -35,7 +35,7 @@ pub(crate) struct BadgeDistributionQuery {
     #[cfg_attr(
         test,
         proptest(
-            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::utils::match_modes::MatchMode>(), 0..=4))"
         )
     )]
     match_mode: Option<Vec<MatchMode>>,

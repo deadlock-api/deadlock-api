@@ -29,10 +29,11 @@ use valveprotos::gcsdk::EgcPlatform;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::custom::utils;
-use crate::routes::v1::matches::types::{GameMode, ServerRegion};
+use crate::routes::v1::matches::types::ServerRegion;
 use crate::services::rate_limiter::describe;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::steam::client::SteamClient;
+use crate::utils::match_modes::GameMode;
 
 #[derive(Clone, Deserialize, ToSchema)]
 pub(super) struct CreateCustomRequest {

@@ -22,11 +22,11 @@ use super::common_filters::{
 use super::rollup_window::{Coverage, DaySplit, EdgeRows, Reach, Rollup, RollupFilters};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::services::ch_admission::ChQueryError;
 use crate::services::cohort_agg_refresh::{
     HORIZON_DAYS, ITEM_ROLLUP_MEASURES, cohort_rollup_rows, enemy_hero_select_body,
 };
+use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{
     comma_separated_chains_deserialize_option, comma_separated_deserialize_option,
     default_last_month_timestamp,
@@ -227,7 +227,7 @@ pub(crate) struct ItemStatsQuery {
     #[cfg_attr(
         test,
         proptest(
-            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::utils::match_modes::MatchMode>(), 0..=4))"
         )
     )]
     match_mode: Option<Vec<MatchMode>>,

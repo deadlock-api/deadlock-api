@@ -19,7 +19,7 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
+use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{cached_ch_query, having_clause, id_list, impl_match_info};
 
@@ -55,7 +55,7 @@ pub(crate) struct HeroCombStatsQuery {
     #[cfg_attr(
         test,
         proptest(
-            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::utils::match_modes::MatchMode>(), 0..=4))"
         )
     )]
     match_mode: Option<Vec<MatchMode>>,

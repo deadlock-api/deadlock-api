@@ -19,6 +19,12 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope};
 use crate::services::steam::client::SteamClient;
 
+/// The lobby a custom-match route acts on.
+#[derive(serde::Deserialize, utoipa::IntoParams, Clone)]
+pub(super) struct LobbyIdQuery {
+    pub(super) lobby_id: String,
+}
+
 /// Options for a job on the bot that hosts the party.
 pub(super) const fn party_options(username: &str) -> SteamProxyOptions<'_> {
     SteamProxyOptions {

@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 
 use super::common_filters::{LaneDuoFilters, MatchInfoFilters, id_list, range_filters};
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::utils::match_modes::{GameMode, MatchMode};
 use crate::utils::sql::having_clause;
 
 /// Every 180s up to 900, every 300s after. A match's final tick lands off that grid and is dropped:

@@ -15,7 +15,7 @@ use super::common_filters::{MatchInfoFilters, is_non_empty, join_filters, rollup
 use super::player_performance_curve::{PlayerPerformanceCurveQuery, curve_metrics};
 use super::power_up_buffs::PERMANENT_BUFF_TIMES;
 use super::rollup_window::{DAY_S, DaySplit};
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::utils::match_modes::{GameMode, MatchMode};
 
 pub(crate) const AGG_TABLE: &str = "default.player_performance_curve_agg_v2";
 pub(crate) const AGG_STAGING: &str = "default.player_performance_curve_agg_v2_staging";

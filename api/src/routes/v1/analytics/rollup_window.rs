@@ -11,7 +11,7 @@
 //! holds (see [`Rollup::source`]).
 
 use super::common_filters::{range_filters, rollup_badge_base_filters, rollup_badge_filters};
-use crate::routes::v1::matches::types::{GameMode, MatchMode};
+use crate::utils::match_modes::{GameMode, MatchMode};
 
 pub(super) const DAY_S: i64 = 86_400;
 

@@ -2,7 +2,7 @@ use serde::Deserialize;
 use strum::Display;
 use utoipa::ToSchema;
 
-use crate::routes::v1::players::rank::{badge_from_flat_progress_sql, subrank_progress_sql};
+use crate::utils::badge::{badge_from_flat_progress_sql, subrank_progress_sql};
 
 #[derive(Copy, Clone, Debug, Deserialize, ToSchema, Display, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]

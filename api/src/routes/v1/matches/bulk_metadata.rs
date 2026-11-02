@@ -20,12 +20,12 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::types::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::services::pending_matches::queue_unknown_matches;
 use crate::services::protected_accounts::without_protected;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
 use crate::utils::json_stream::{ResponseFormat, stream_rows};
+use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_true};
 use crate::utils::types::SortDirectionAsc;
 
@@ -142,7 +142,7 @@ pub(super) struct BulkMatchMetadataQuery {
     #[cfg_attr(
         test,
         proptest(
-            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::routes::v1::matches::types::MatchMode>(), 0..=4))"
+            strategy = "proptest::option::of(proptest::collection::vec(proptest::prelude::any::<crate::utils::match_modes::MatchMode>(), 0..=4))"
         )
     )]
     match_mode: Option<Vec<MatchMode>>,

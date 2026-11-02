@@ -325,7 +325,7 @@ pub(super) struct MatchHistoryBuildArgs<'a> {
 /// [`build_match_history_query`]).
 ///
 /// `ranked_display_badge` also caps extrapolated Eternus badges (see
-/// `ETERNUS_MIN_BADGE` in `players::match_history`). The REST reader's
+/// the Eternus comment in `players::match_history`). The REST reader's
 /// initial-rank substitution needs a `match_player` join pruned by
 /// `account_id`, which an arbitrarily filtered query can't guarantee, so
 /// GraphQL returns the capped fallback instead.
