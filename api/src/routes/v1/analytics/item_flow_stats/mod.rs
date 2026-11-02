@@ -345,9 +345,10 @@ struct QueryParts {
     locked_predicate: String,
     /// `WITH` entries `, <clause> AS locked_<i>`, one per lock, for the totals query.
     locks_with: String,
+    /// The normal-mode column of a purchase at `e.buy_time` in the nodes query.
     column_expr: String,
-    /// Extra columns to carry into the per-purchase subquery (e.g. street brawl round durations).
-    extra_select: String,
+    /// Street brawl only, see [`BrawlParts`].
+    brawl: Option<BrawlParts>,
     /// `ARRAY JOIN` entry flagging each purchase that is the player's first of that item in its
     /// column (`first = 1`), among those the nodes query keeps; counts the distinct buyers.
     first_purchase: String,
@@ -368,10 +369,22 @@ struct QueryParts {
     extra_settings: &'static str,
 }
 
-/// SQL fragment computing the 0-based street brawl round a purchase at `buy_time_expr` falls into.
-/// Uses a strict `<` so a purchase made exactly at a round boundary stays in the ending round.
-fn brawl_round_expr(buy_time_expr: &str, round_durations_expr: &str) -> String {
-    format!("arrayCount(s -> s < {buy_time_expr}, arrayCumSum({round_durations_expr}))")
+/// Street brawl columns are rounds, which end at the running sums of
+/// `street_brawl_rounds.round_duration_s`. A purchase's round was
+/// `least(arrayCount(s -> s < gt, arrayCumSum(<durations>)), n)`: a lambda in the per-purchase
+/// lambda, which copied the match's rounds array once per purchase (four times over in edges).
+/// Instead, an inner `SELECT` reads the first `n` round ends as scalars (`round_end_<k>`, no
+/// round → never passed), and a purchase's round is the number of them below its buy time. They
+/// must be columns of a subquery to stay out of the lambdas: as aliases of the same `SELECT`,
+/// `ClickHouse` inlines them into the lambda again. Measured on 30 days of street brawl: edges
+/// -31%, nodes -42% and totals -44% CPU, identical results.
+struct BrawlParts {
+    /// `..., round_end_1, ...`: the round ends, for the `SELECT` that reads `match_player`.
+    round_ends_select: String,
+    /// Round transitions (`phase_count - 1`), the edges query's columns.
+    transitions: u8,
+    /// `Array(UInt8)`, per purchase its 0-based round (255 without a buy time), over the round ends.
+    purchase_columns: String,
 }
 
 #[allow(
@@ -403,13 +416,19 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     } else {
         TIME_PHASE_COLUMNS
     };
-    // The 0-based column (clamped) a purchase at `buy_time_expr` falls into, matching node placement.
-    let column_of = |buy_time_expr: &str, round_durations_expr: &str| -> String {
+    // Street brawl: the round ends a purchase can be past, see [`BrawlParts`].
+    let round_ends = (1..count).map(|k| format!("round_end_{k}")).collect_vec();
+    // The 0-based column a purchase at `buy_time_expr` falls into, matching node placement. In
+    // street brawl, the number of ended rounds (strict `<`: a purchase made exactly at a round
+    // boundary stays in the ending round), at most `count - 1`.
+    let column_of = |buy_time_expr: &str| -> String {
         if is_brawl {
             format!(
-                "toUInt8(least({}, {}))",
-                brawl_round_expr(buy_time_expr, round_durations_expr),
-                count.saturating_sub(1)
+                "toUInt8({})",
+                round_ends
+                    .iter()
+                    .map(|end| format!("({end} < {buy_time_expr})"))
+                    .join(" + ")
             )
         } else {
             time_phase_expr(buy_time_expr)
@@ -418,7 +437,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
 
     // Locked build path: each item must have been bought *in* its locked stage column (not merely
     // by that point), so the population matches exactly where the item is shown in the graph.
-    let purchase_col = column_of("gt", "`street_brawl_rounds.round_duration_s`");
+    let purchase_col = column_of("gt");
     let locked_clauses = query
         .locked_item_ids
         .iter()
@@ -491,25 +510,45 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     );
     let prewhere = format!("{}{}", scope.sql(), join_filters(&scalar_filter_vec));
 
-    let column_expr = column_of("e.buy_time", "e.round_durations");
-    let extra_select = if is_brawl {
-        ",\n            `street_brawl_rounds.round_duration_s` AS round_durations".to_owned()
-    } else {
-        String::new()
-    };
+    let column_expr = column_of("e.buy_time");
+    let brawl = is_brawl.then(|| BrawlParts {
+        round_ends_select: format!(
+            "arrayResize(arrayCumSum(`street_brawl_rounds.round_duration_s`), {}, 18446744073709551615) AS round_ends, {}",
+            round_ends.len(),
+            round_ends
+                .iter()
+                .enumerate()
+                .map(|(i, end)| format!("round_ends[{}] AS {end}", i.saturating_add(1)))
+                .join(", ")
+        ),
+        transitions: count.saturating_sub(1),
+        purchase_columns: format!(
+            "arrayMap(gt -> if(gt > 0, {purchase_col}, 255), upgrade_buy_times)"
+        ),
+    });
 
     // Purchases the nodes query drops (`buy_time > 0 AND nw > 0`) go to a column of their own, so
     // they never take the first slot of a kept purchase.
-    let first_purchase = format!(
-        "arrayEnumerateUniq(arrayMap((gt, bnw) -> if(gt > 0 AND bnw > 0, {purchase_col}, 255), upgrade_buy_times, upgrade_net_worths), upgrade_item_ids)"
-    );
+    let first_purchase = if is_brawl {
+        "arrayEnumerateUniq(arrayMap((gt, bnw, c) -> if(gt > 0 AND bnw > 0, c, 255), upgrade_buy_times, upgrade_net_worths, purchase_columns), upgrade_item_ids)".to_owned()
+    } else {
+        format!(
+            "arrayEnumerateUniq(arrayMap((gt, bnw) -> if(gt > 0 AND bnw > 0, {purchase_col}, 255), upgrade_buy_times, upgrade_net_worths), upgrade_item_ids)"
+        )
+    };
     let by_column_select = format!(
         "arrayMap(c -> arrayMap(x -> transform(x, u_ids, arrayMap(i -> toUInt8(i), arrayEnumerate(u_ids)), toUInt8(0)), c), [{}]) AS by_column",
         (0..count)
             .map(|c| {
-                format!(
-                    "arrayDistinct(arrayFilter((iid, gt) -> gt > 0 AND {purchase_col} = {c}, upgrade_item_ids, upgrade_buy_times))"
-                )
+                if is_brawl {
+                    format!(
+                        "arrayDistinct(arrayFilter((iid, k) -> k = {c}, upgrade_item_ids, purchase_columns))"
+                    )
+                } else {
+                    format!(
+                        "arrayDistinct(arrayFilter((iid, gt) -> gt > 0 AND {purchase_col} = {c}, upgrade_item_ids, upgrade_buy_times))"
+                    )
+                }
             })
             .join(", ")
     );
@@ -550,7 +589,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
         locked_predicate,
         locks_with,
         column_expr,
-        extra_select,
+        brawl,
         first_purchase,
         by_column_select,
         bought_columns,
@@ -575,12 +614,32 @@ fn build_totals_query(parts: &QueryParts) -> String {
         leave_one_out_select,
         upgrades_with,
         extra_settings,
+        brawl,
         ..
     } = parts;
+    let (with, from) = match brawl {
+        None => (
+            format!("{upgrades_with},\n        {bought_columns} AS bought_columns{locks_with}"),
+            format!("match_player\n    PREWHERE {prewhere}\n    WHERE TRUE {base_player_filters}"),
+        ),
+        Some(BrawlParts {
+            round_ends_select, ..
+        }) => (
+            format!("WITH {bought_columns} AS bought_columns{locks_with}"),
+            format!(
+                "(
+        {upgrades_with}
+        SELECT won, account_id, kills, deaths, assists, net_worth, duration_s, upgrade_item_ids, upgrade_buy_times, {round_ends_select}
+        FROM match_player
+        PREWHERE {prewhere}
+        WHERE TRUE {base_player_filters}
+    )"
+            ),
+        ),
+    };
     format!(
         "
-    {upgrades_with},
-        {bought_columns} AS bought_columns{locks_with}
+    {with}
     SELECT
         countIf(won AND ({lp}))      AS s_wins,
         countIf((not won) AND ({lp})) AS s_losses,
@@ -602,9 +661,7 @@ fn build_totals_query(parts: &QueryParts) -> String {
         avg(duration_s)               AS b_avg_duration_s,
         {reached_select},
         {leave_one_out_select}
-    FROM match_player
-    PREWHERE {prewhere}
-    WHERE TRUE {base_player_filters}
+    FROM {from}
     SETTINGS log_comment = 'item_flow_stats_totals', apply_patch_parts = 0{extra_settings}
     "
     )
@@ -616,12 +673,53 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
         locked_prewhere,
         player_filters,
         column_expr,
-        extra_select,
+        brawl,
         first_purchase,
         upgrades_with,
         extra_settings,
         ..
     } = parts;
+    if let Some(BrawlParts {
+        round_ends_select,
+        purchase_columns,
+        ..
+    }) = brawl
+    {
+        // Street brawl has no net-worth standardization (see `nodes_from_cells`), so the cells
+        // skip the net-worth bucket and group by the item's UInt8 position (`pos`, as in edges).
+        let cells = format!(
+            "SELECT
+            column,
+            transform(item_id, u_ids, arrayMap(i -> toUInt8(i), arrayEnumerate(u_ids)), toUInt8(0)) AS pos,
+            countIf(won) AS cwins,
+            count()      AS cm,
+            countIf(first) AS cpl,
+            sum(kills)   AS ck,
+            sum(deaths)  AS cd,
+            sum(assists) AS ca,
+            sum(nw)      AS cnw
+        FROM (
+            WITH {purchase_columns} AS purchase_columns
+            SELECT won, kills, deaths, assists, item_id, nw, first = 1 AS first, column
+            FROM (
+                {upgrades_with}
+                SELECT won, kills, deaths, assists, upgrade_item_ids, upgrade_buy_times, upgrade_net_worths, {round_ends_select}
+                FROM match_player
+                PREWHERE {prewhere}{locked_prewhere}
+                WHERE TRUE {player_filters}
+            )
+            ARRAY JOIN
+                upgrade_item_ids AS item_id,
+                upgrade_buy_times AS buy_time,
+                upgrade_net_worths AS nw,
+                purchase_columns AS column,
+                {first_purchase} AS first
+            WHERE buy_time > 0 AND nw > 0
+        )
+        GROUP BY column, pos"
+        );
+        return nodes_from_cells(query, &cells, "item_flow_stats_nodes", extra_settings);
+    }
     let cells = format!(
         "SELECT
             column,
@@ -648,7 +746,7 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
                 toUInt8(assumeNotNull({column_expr})) AS column
             FROM (
                 {upgrades_with}
-                SELECT match_id, account_id, won, kills, deaths, assists, item_id, buy_time, nw, first = 1 AS first{extra_select}
+                SELECT match_id, account_id, won, kills, deaths, assists, item_id, buy_time, nw, first = 1 AS first
                 FROM match_player
                 ARRAY JOIN
                     upgrade_item_ids AS item_id,
@@ -686,7 +784,8 @@ fn build_nodes_agg_query(query: &ItemFlowStatsQuery, source: &str) -> String {
 }
 
 /// The nodes query over `cells`, a `SELECT` of per (column, item, net-worth-at-buy bucket `nb`)
-/// sums: `cwins`, `cm` (purchases), `cpl` (first purchases), `ck`, `cd`, `ca` and `cnw`.
+/// sums: `cwins`, `cm` (purchases), `cpl` (first purchases), `ck`, `cd`, `ca` and `cnw`. Street
+/// brawl cells are per (column, `pos`), the item's 1-based position in `u_ids`, without `nb`.
 fn nodes_from_cells(
     query: &ItemFlowStatsQuery,
     cells: &str,
@@ -696,11 +795,20 @@ fn nodes_from_cells(
     let min_matches = query.min_matches.unwrap_or(20);
     // Net worth resets each round in street brawl, so net-worth-at-buy is not a meaningful
     // "ahead-ness" measure there — fall back to the raw win rate for the adjusted field.
-    let adjusted_win_rate_expr = if query.game_mode == Some(GameMode::StreetBrawl) {
-        "sum(cwins) / sum(cm)"
-    } else {
-        "sum(w * (cwins / cm)) / sum(w)"
-    };
+    let (adjusted_win_rate_expr, with_head, source) =
+        if query.game_mode == Some(GameMode::StreetBrawl) {
+            (
+                "sum(cwins) / sum(cm)",
+                format!("{UPGRADE_IDS_WITH}, "),
+                "(SELECT * EXCEPT pos, toUInt32(u_ids[pos]) AS item_id FROM cells)",
+            )
+        } else {
+            (
+                "sum(w * (cwins / cm)) / sum(w)",
+                String::new(),
+                "(SELECT *, sum(cm) OVER (PARTITION BY column, nb) AS w FROM cells)",
+            )
+        };
     // Per (column, item) stats plus a net-worth-standardized win rate: each item's win rate is
     // re-weighted across net-worth-at-buy buckets to the stage-wide net-worth distribution (`ref`),
     // so the "richer buyers win more" confound is removed. Raw wins/matches are kept for pick rate
@@ -708,7 +816,7 @@ fn nodes_from_cells(
     // `match_player` twice.
     format!(
         "
-    WITH cells AS (
+    WITH {with_head}cells AS (
         {cells}
     )
     SELECT
@@ -723,7 +831,7 @@ fn nodes_from_cells(
         sum(ca)               AS total_assists,
         {adjusted_win_rate_expr}       AS adjusted_win_rate,
         sum(cnw) / sum(cm)             AS avg_net_worth_at_buy
-    FROM (SELECT *, sum(cm) OVER (PARTITION BY column, nb) AS w FROM cells)
+    FROM {source}
     GROUP BY column, item_id
     HAVING matches >= {min_matches}
     ORDER BY column ASC, matches DESC
@@ -740,9 +848,60 @@ fn build_edges_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
         by_column_select,
         upgrades_with,
         extra_settings,
+        brawl,
         ..
     } = parts;
     let min_matches = query.min_matches.unwrap_or(20);
+    if let Some(BrawlParts {
+        round_ends_select,
+        transitions,
+        purchase_columns,
+    }) = brawl
+    {
+        // As below, but grouped by the 2-byte (from, to) position key, which ClickHouse aggregates
+        // in a direct-indexed table, with one count per round transition (`-Resample`): -57%
+        // memory, same CPU. A pair has a zero count for the transitions it never had, which the
+        // `matches` floor of 1 drops.
+        let min_matches = min_matches.max(1);
+        return format!(
+            "
+    WITH {UPGRADE_IDS_WITH}
+    SELECT
+        toUInt8(j - 1)            AS from_column,
+        toUInt32(u_ids[from_pos]) AS from_item_id,
+        toUInt32(u_ids[to_pos])   AS to_item_id,
+        wins,
+        toUInt64(matches - wins)  AS losses,
+        matches
+    FROM (
+        SELECT
+            from_pos,
+            to_pos,
+            countIfResample(0, {transitions}, 1)(won, toUInt8(i - 1)) AS wins_per_column,
+            countResample(0, {transitions}, 1)(toUInt8(i - 1))        AS matches_per_column
+        FROM (
+            WITH {purchase_columns} AS purchase_columns
+            SELECT won, {by_column_select}
+            FROM (
+                {upgrades_with}
+                SELECT won, upgrade_item_ids, upgrade_buy_times, {round_ends_select}
+                FROM match_player
+                PREWHERE {prewhere}{locked_prewhere}
+                WHERE TRUE {player_filters}
+            )
+        )
+        ARRAY JOIN arrayPopBack(arrayEnumerate(by_column)) AS i
+        ARRAY JOIN by_column[i] AS from_pos
+        ARRAY JOIN by_column[i + 1] AS to_pos
+        GROUP BY from_pos, to_pos
+    )
+    ARRAY JOIN arrayEnumerate(matches_per_column) AS j, wins_per_column AS wins, matches_per_column AS matches
+    WHERE matches >= {min_matches}
+    ORDER BY matches DESC
+    SETTINGS log_comment = 'item_flow_stats_edges', apply_patch_parts = 0{extra_settings}
+    "
+        );
+    }
     // Per player, the distinct items of each column; one transition per item in column c and item
     // in column c+1, so each counts at most once per match. Read straight off the player's row: an
     // ARRAY JOIN regrouped by player held every purchase in one hash table (~20 GiB for a season).
@@ -1091,6 +1250,29 @@ mod tests {
         let sql = build_nodes_query(&no_hero, &query_parts(&no_hero));
         assert_valid_sql(&sql);
         assert!(sql.contains("AND hasAll(upgrades.item_id, [7, 9])\n"));
+    }
+
+    #[test]
+    fn brawl_rounds_come_from_scalar_round_ends() {
+        let query = ItemFlowStatsQuery {
+            game_mode: Some(GameMode::StreetBrawl),
+            phase_count: Some(6),
+            locked_item_ids: Some(vec![7]),
+            locked_columns: Some(vec![2]),
+            ..Default::default()
+        };
+        let parts = query_parts(&query);
+        for sql in [
+            build_nodes_query(&query, &parts),
+            build_edges_query(&query, &parts),
+            build_totals_query(&parts),
+        ] {
+            assert_valid_sql(&sql);
+            assert!(!sql.contains("arrayCount("), "{sql}");
+            assert!(sql.contains("round_ends[5] AS round_end_5"), "{sql}");
+            assert!(!sql.contains("round_end_6"), "{sql}");
+        }
+        assert!(build_edges_query(&query, &parts).contains("countResample(0, 5, 1)"));
     }
 
     #[test]
