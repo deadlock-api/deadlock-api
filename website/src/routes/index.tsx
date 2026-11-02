@@ -12,7 +12,7 @@ import { Prose } from "~/components/patterns/content/Prose";
 import { SideNav, SideNavGroup, SideNavItem } from "~/components/patterns/navigation/SideNav";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
-import { Panel, PanelBody, PanelHeader } from "~/components/patterns/panel/Panel";
+import { Panel, PanelBody, PanelFooter, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Button } from "~/components/ui/button";
 import { Grid } from "~/components/ui/grid";
 import { Inline, Stack } from "~/components/ui/stack";
@@ -150,29 +150,20 @@ const sponsors = [
 
 interface DirectoryEntry {
   label: string;
-  links: { to: string; label: string; icon: LucideIcon; external?: boolean }[];
+  links: { to: string; label: string; icon: LucideIcon }[];
 }
 
 const groupLinks = (label: string) => navGroups.find((group) => group.label === label)?.links ?? [];
 
 /**
  * The directory, one column per section like a site map: the sidebar's sections, without the patron and tracker
- * entries (not this page's subject), and the developer services.
+ * entries (not this page's subject). The developer services follow under a rule of their own.
  */
 const DIRECTORY: DirectoryEntry[] = [
   { label: "Analytics", links: groupLinks("Analytics") },
   { label: "Community", links: groupLinks("Community") },
   { label: "Games", links: groupLinks("Games") },
   { label: "Tools", links: groupLinks("Tools") },
-  {
-    label: "Developer Services",
-    links: services.map((service) => ({
-      to: service.href,
-      label: service.title,
-      icon: service.icon,
-      external: service.external,
-    })),
-  },
 ];
 
 function IndexRoute() {
@@ -215,7 +206,7 @@ function IndexRoute() {
               panel's own width, never cutting a name short. */}
           <Panel className="flex-1">
             <PanelHeader title="Deadlock Stats, Hero Win Rates & Leaderboards" size="sm" as="h2" />
-            <PanelBody className="@container">
+            <PanelBody className="@container flex-1">
               <SideNav
                 aria-label="Site directory"
                 className="block columns-1 gap-x-6 *:break-inside-avoid *:pb-5 @md:columns-2 @2xl:columns-3 @6xl:columns-5"
@@ -224,7 +215,7 @@ function IndexRoute() {
                   <SideNavGroup key={entry.label} label={entry.label}>
                     {entry.links.map((link) => (
                       <SideNavItem key={link.to} asChild>
-                        <SmartLink href={link.to} external={link.external}>
+                        <SmartLink href={link.to}>
                           <link.icon />
                           <span className="truncate">{link.label}</span>
                         </SmartLink>
@@ -234,6 +225,20 @@ function IndexRoute() {
                 ))}
               </SideNav>
             </PanelBody>
+            {/* The services for developers: another audience, so apart from the player pages, under a rule. */}
+            <PanelFooter className="flex flex-wrap items-center gap-x-6 gap-y-2 px-4 py-3">
+              <Text variant="eyebrow">Developer Services</Text>
+              <SideNav aria-label="Developer Services" className="flex-row flex-wrap gap-x-2 gap-y-1">
+                {services.map((service) => (
+                  <SideNavItem key={service.title} asChild>
+                    <SmartLink href={service.href} external={service.external} title={service.description}>
+                      <service.icon />
+                      <span>{service.title}</span>
+                    </SmartLink>
+                  </SideNavItem>
+                ))}
+              </SideNav>
+            </PanelFooter>
           </Panel>
         </Stack>
 
