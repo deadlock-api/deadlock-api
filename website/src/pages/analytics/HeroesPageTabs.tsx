@@ -1,17 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
-import { ChartNoAxesCombined, GraduationCap, ListOrdered, Swords, Table2, Trophy, UsersRound } from "lucide-react";
 import { parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { Suspense, useId } from "react";
+import { Suspense } from "react";
 
 import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
+import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
 import { HeroCombFilters } from "~/components/features/heroes/HeroCombFilters";
 import { HeroLaneFilter } from "~/components/features/heroes/HeroLaneFilter";
 import { HeroScoreboardTable } from "~/components/features/heroes/HeroScoreboardTable";
 import { HeroStatSelector } from "~/components/features/heroes/HeroStatSelectors";
 import { HeroStatsTable } from "~/components/features/heroes/HeroStatsTable";
 import { HeroTrendControls } from "~/components/features/heroes/HeroTrendControls";
-import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
+import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { StringOption, StringOptionGroup, StringSelector } from "~/components/patterns/filter-bar/StringSelector";
 import { Section } from "~/components/patterns/page/Section";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
@@ -20,9 +20,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { QueryRenderer } from "~/components/patterns/states/QueryRenderer";
 import { Button } from "~/components/ui/button";
-import { Field } from "~/components/ui/field";
-import { SearchInput } from "~/components/ui/search-input";
-import { Switch } from "~/components/ui/switch";
+import { SegmentedItem } from "~/components/ui/segmented";
 import type { useHeroFilters } from "~/hooks/useHeroFilters";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { useExperiment } from "~/lib/experiments";
@@ -51,6 +49,177 @@ function useGroupByType() {
   return useQueryState("group_by_type", parseAsBoolean.withDefault(false));
 }
 
+/** The overall table's name search; replace, so each keystroke is not a history entry. */
+function useHeroNameQuery() {
+  return useQueryState("hero_q", parseAsString.withDefault("").withOptions({ history: "replace" }));
+}
+
+/**
+ * The tier list's ranking metric. Street Brawl has neither bans nor a soul economy: those metrics leave the list, and
+ * one chosen in another mode falls back to the tier score while the URL keeps it.
+ */
+function useTierMetric(filters: HeroFilters) {
+  const [tierMetric, setTierMetric] = useQueryState(
+    "tier_metric",
+    parseAsStringLiteral(TIER_METRICS).withDefault("score"),
+  );
+  const tierMetrics = TIER_METRICS.filter((metric) => {
+    const definition: TierMetricDefinition = TIER_METRIC_DEFINITIONS[metric];
+    return hasSoulEconomy(filters.gameMode) || (!definition.bans && !definition.economy);
+  });
+  const shownTierMetric = tierMetrics.includes(tierMetric) ? tierMetric : "score";
+  return { tierMetrics, shownTierMetric, setTierMetric };
+}
+
+/**
+ * The scoreboard's sort. Heroes only: a link or a stale URL with a player-only sort (rank) falls back to the default
+ * instead of a 400, and in Street Brawl, which has no soul economy, a net worth sort falls back while the URL keeps it.
+ */
+function useScoreboardSortBy(filters: HeroFilters) {
+  const [chosenSortBy, setSortBy] = useQueryState(
+    "scoreboard_sort_by",
+    parseAsStringLiteral(HERO_SORT_BY_VALUES as [string, ...string[]]).withDefault("winrate"),
+  );
+  return { sortBy: sortByIn(chosenSortBy, filters.gameMode, "winrate"), setSortBy };
+}
+
+function GroupByTypeSwitch() {
+  const [groupByType, setGroupByType] = useGroupByType();
+  return (
+    <FilterToggleCell
+      label="Group by"
+      value={groupByType ? "type" : "none"}
+      defaultValue="none"
+      onValueChange={(next) => void setGroupByType(next === "type" || null)}
+    >
+      <SegmentedItem value="none">None</SegmentedItem>
+      <SegmentedItem value="type">Hero type</SegmentedItem>
+    </FilterToggleCell>
+  );
+}
+
+function TierListControls({ filters }: { filters: HeroFilters }) {
+  const { tierMetrics, shownTierMetric, setTierMetric } = useTierMetric(filters);
+  return (
+    <>
+      <StringSelector
+        label="Rank by"
+        size="sm"
+        value={shownTierMetric}
+        defaultValue="score"
+        onValueChange={(value) => void setTierMetric(value as TierMetric)}
+      >
+        {(["Draft", "Combat", "Economy"] as const).map((group) => (
+          <StringOptionGroup key={group} label={group}>
+            {tierMetrics
+              .filter((metric) => TIER_METRIC_DEFINITIONS[metric].group === group)
+              .map((metric) => (
+                <StringOption key={metric} value={metric}>
+                  {TIER_METRIC_DEFINITIONS[metric].label}
+                </StringOption>
+              ))}
+          </StringOptionGroup>
+        ))}
+      </StringSelector>
+      <GroupByTypeSwitch />
+    </>
+  );
+}
+
+function ScoreboardControls({ filters }: { filters: HeroFilters }) {
+  const { sortBy, setSortBy } = useScoreboardSortBy(filters);
+  return (
+    <SortBySelector
+      scope="heroes"
+      gameMode={filters.gameMode}
+      size="sm"
+      value={sortBy}
+      defaultValue="winrate"
+      onValueChange={(value) => void setSortBy(value)}
+    />
+  );
+}
+
+/**
+ * The open tab's own controls, drawn at the end of the page's filter row: one row of controls per page, never a
+ * second bar inside the tab. Every one of them keeps its state in the URL, which the tab's body reads.
+ */
+export function HeroTabControls({ filters }: { filters: HeroFilters }) {
+  switch (filters.tab) {
+    case "stats":
+      return <GroupByTypeSwitch />;
+    case "tier-list":
+      return <TierListControls filters={filters} />;
+    case "stats-over-time":
+      return (
+        <HeroTrendControls
+          stat={filters.heroStat}
+          interval={filters.heroTimeInterval}
+          gameMode={filters.gameMode}
+          onStatChange={(value) => filters.setHeroStat(value)}
+          onIntervalChange={(value) => filters.setHeroTimeInterval(value as typeof filters.heroTimeInterval)}
+        />
+      );
+    case "stats-by-duration":
+      return (
+        <HeroStatSelector
+          label="Metric"
+          value={statWithoutRates(filters)}
+          onChange={(val) => filters.setHeroStat(val)}
+          options={heroStatsFor(HERO_STATS, filters.gameMode)}
+        />
+      );
+    case "stats-by-rank":
+      return MODE_CONFIG[filters.mode].hasRankedMatches ? (
+        <>
+          <HeroStatSelector
+            label="X Axis"
+            value={filters.byRankX}
+            onChange={(val) => filters.setByRankX(val)}
+            options={heroStatsFor(BY_RANK_STATS, filters.gameMode)}
+          />
+          <HeroStatSelector
+            label="Y Axis"
+            value={filters.byRankY}
+            onChange={(val) => filters.setByRankY(val)}
+            options={heroStatsFor(BY_RANK_STATS, filters.gameMode)}
+          />
+        </>
+      ) : null;
+    case "stats-by-experience":
+      return (
+        <HeroStatSelector
+          label="Stat"
+          value={statWithoutRates(filters)}
+          onChange={(val) => filters.setHeroStat(val)}
+          options={heroStatsFor(HERO_STATS, filters.gameMode)}
+        />
+      );
+    case "matchups":
+      return <HeroLaneFilter value={filters.sameLaneFilter} onValueChange={(v) => void filters.setSameLaneFilter(v)} />;
+    case "hero-combs":
+      return <HeroCombFilters gameMode={filters.gameMode} />;
+    case "hero-matchup-details":
+      return (
+        <>
+          <HeroSelector
+            size="sm"
+            value={filters.heroId}
+            defaultValue={filters.heroId}
+            onValueChange={(id) => {
+              if (id != null) void filters.setHeroId(id);
+            }}
+          />
+          <HeroLaneFilter value={filters.sameLaneFilter} onValueChange={(v) => void filters.setSameLaneFilter(v)} />
+        </>
+      );
+    case "hero-scoreboard":
+      return <ScoreboardControls filters={filters} />;
+    default:
+      return null;
+  }
+}
+
 /**
  * A lazily loaded tab body: a chunk that fails to load offers a retry. The route loader preloads the requested view
  * (`preloadHeroView`) on the server and before a tab click lands, so a rendered tab never falls back to the spinner.
@@ -64,34 +233,17 @@ function LazyTab({ children }: { children: React.ReactNode }) {
 }
 
 export function HeroOverallStatsTab({ filters }: { filters: HeroFilters }) {
-  const [groupByType, setGroupByType] = useGroupByType();
-  const groupByTypeId = useId();
-  // In the URL like the table's other controls; replace, so each keystroke is not a history entry.
-  const [heroNameQuery, setHeroNameQuery] = useQueryState(
-    "hero_q",
-    parseAsString.withDefault("").withOptions({ history: "replace" }),
-  );
+  const [groupByType] = useGroupByType();
+  const [heroNameQuery, setHeroNameQuery] = useHeroNameQuery();
   // Half the page's search clicks ask for pick rates: the test variant opens the table on pick rate.
   const sortExperiment = useExperiment("exp-heroes-pickrate-default");
   return (
     <Section titleDisplay="hidden" title="Overall Hero Stats">
-      <FilterBar variant="toolbar" title="Overall stats" icon={Table2} aria-label="Hero table controls">
-        <SearchInput
-          value={heroNameQuery}
-          onValueChange={setHeroNameQuery}
-          placeholder="Find a hero…"
-          aria-label="Filter heroes by name"
-          size="sm"
-          className="w-full sm:w-60"
-        />
-        <Field label="Group by Type" orientation="horizontal" htmlFor={groupByTypeId}>
-          <Switch id={groupByTypeId} checked={groupByType} onCheckedChange={(checked) => setGroupByType(checked)} />
-        </Field>
-      </FilterBar>
       <HeroStatsTable
         groupByType={groupByType}
         nameQuery={heroNameQuery}
         onClearNameQuery={() => void setHeroNameQuery(null)}
+        onNameQueryChange={(query) => void setHeroNameQuery(query || null)}
         minRankId={filters.effectiveMinRankId}
         maxRankId={filters.effectiveMaxRankId}
         minHeroMatches={filters.minHeroMatches}
@@ -109,46 +261,10 @@ export function HeroOverallStatsTab({ filters }: { filters: HeroFilters }) {
 }
 
 export function HeroTierListTab({ filters }: { filters: HeroFilters }) {
-  const [groupByType, setGroupByType] = useGroupByType();
-  // The overall table has its own switch for the same setting; an id is unique to one element.
-  const groupByTypeId = useId();
-  const [tierMetric, setTierMetric] = useQueryState(
-    "tier_metric",
-    parseAsStringLiteral(TIER_METRICS).withDefault("score"),
-  );
-  // Street Brawl has neither bans nor a soul economy: those metrics leave the list, and one chosen in another mode
-  // falls back to the tier score while the URL keeps it.
-  const tierMetrics = TIER_METRICS.filter((metric) => {
-    const definition: TierMetricDefinition = TIER_METRIC_DEFINITIONS[metric];
-    return hasSoulEconomy(filters.gameMode) || (!definition.bans && !definition.economy);
-  });
-  const shownTierMetric = tierMetrics.includes(tierMetric) ? tierMetric : "score";
+  const [groupByType] = useGroupByType();
+  const { shownTierMetric } = useTierMetric(filters);
   return (
     <Section titleDisplay="hidden" title="Hero Tier List">
-      <FilterBar variant="toolbar" title="Tier list" icon={ListOrdered} aria-label="Tier list controls">
-        <StringSelector
-          label="Rank by"
-          size="sm"
-          value={shownTierMetric}
-          defaultValue="score"
-          onValueChange={(value) => void setTierMetric(value as TierMetric)}
-        >
-          {(["Draft", "Combat", "Economy"] as const).map((group) => (
-            <StringOptionGroup key={group} label={group}>
-              {tierMetrics
-                .filter((metric) => TIER_METRIC_DEFINITIONS[metric].group === group)
-                .map((metric) => (
-                  <StringOption key={metric} value={metric}>
-                    {TIER_METRIC_DEFINITIONS[metric].label}
-                  </StringOption>
-                ))}
-            </StringOptionGroup>
-          ))}
-        </StringSelector>
-        <Field label="Group by Type" orientation="horizontal" htmlFor={groupByTypeId}>
-          <Switch id={groupByTypeId} checked={groupByType} onCheckedChange={(checked) => setGroupByType(checked)} />
-        </Field>
-      </FilterBar>
       <LazyTab>
         <HeroTierList
           groupByType={groupByType}
@@ -169,14 +285,7 @@ export function HeroTierListTab({ filters }: { filters: HeroFilters }) {
 
 export function HeroOverTimeTab({ filters }: { filters: HeroFilters }) {
   return (
-    <Section titleDisplay="hidden" title="Hero Stats Over Time" className="gap-3">
-      <HeroTrendControls
-        stat={filters.heroStat}
-        interval={filters.heroTimeInterval}
-        gameMode={filters.gameMode}
-        onStatChange={(value) => filters.setHeroStat(value)}
-        onIntervalChange={(value) => filters.setHeroTimeInterval(value as typeof filters.heroTimeInterval)}
-      />
+    <Section titleDisplay="hidden" title="Hero Stats Over Time">
       <LazyTab>
         <HeroStatsOverTimeChart
           heroStat={filters.heroStat}
@@ -204,15 +313,6 @@ export function HeroByDurationTab({ filters }: { filters: HeroFilters }) {
   const stat = statWithoutRates(filters);
   return (
     <Section titleDisplay="hidden" title="Hero Stats by Game Duration">
-      <FilterBar variant="toolbar" title="Duration comparison" icon={ChartNoAxesCombined} aria-label="Chart controls">
-        <Field label="Metric" orientation="horizontal" className="w-full sm:w-auto">
-          <HeroStatSelector
-            value={stat}
-            onChange={(val) => filters.setHeroStat(val)}
-            options={heroStatsFor(HERO_STATS, filters.gameMode)}
-          />
-        </Field>
-      </FilterBar>
       <LazyTab>
         <HeroStatsByDurationChart
           heroStat={stat}
@@ -236,22 +336,6 @@ export function HeroByRankTab({ filters }: { filters: HeroFilters }) {
     <Section titleDisplay="hidden" title="Hero Stats by Rank">
       {mode.hasRankedMatches ? (
         <>
-          <FilterBar variant="toolbar" title="Rank comparison" icon={ChartNoAxesCombined} aria-label="Chart controls">
-            <Field label="X Axis" orientation="horizontal" className="w-full sm:w-auto">
-              <HeroStatSelector
-                value={filters.byRankX}
-                onChange={(val) => filters.setByRankX(val)}
-                options={heroStatsFor(BY_RANK_STATS, filters.gameMode)}
-              />
-            </Field>
-            <Field label="Y Axis" orientation="horizontal" className="w-full sm:w-auto">
-              <HeroStatSelector
-                value={filters.byRankY}
-                onChange={(val) => filters.setByRankY(val)}
-                options={heroStatsFor(BY_RANK_STATS, filters.gameMode)}
-              />
-            </Field>
-          </FilterBar>
           <LazyTab>
             <HeroStatsByRankChart
               minHeroMatches={filters.minHeroMatches}
@@ -287,20 +371,6 @@ export function HeroByExperienceTab({ filters }: { filters: HeroFilters }) {
   const stat = statWithoutRates(filters);
   return (
     <Section titleDisplay="hidden" title="Hero Stats by Experience">
-      <FilterBar
-        variant="toolbar"
-        title="Experience comparison"
-        icon={GraduationCap}
-        aria-label="Experience table controls"
-      >
-        <Field label="Stat" orientation="horizontal" className="w-full sm:w-auto">
-          <HeroStatSelector
-            value={stat}
-            onChange={(val) => filters.setHeroStat(val)}
-            options={heroStatsFor(HERO_STATS, filters.gameMode)}
-          />
-        </Field>
-      </FilterBar>
       <LazyTab>
         <HeroStatsByExperienceTable
           heroStat={stat}
@@ -320,9 +390,6 @@ export function HeroByExperienceTab({ filters }: { filters: HeroFilters }) {
 export function HeroMatchupsTab({ filters }: { filters: HeroFilters }) {
   return (
     <Section titleDisplay="hidden" title="Hero Matchups">
-      <FilterBar variant="toolbar" title="Matchups" icon={Swords} aria-label="Matchup table controls">
-        <HeroLaneFilter value={filters.sameLaneFilter} onValueChange={(v) => void filters.setSameLaneFilter(v)} />
-      </FilterBar>
       <LazyTab>
         <HeroMatchupStatsTable
           minRankId={filters.effectiveMinRankId}
@@ -344,9 +411,6 @@ export function HeroMatchupsTab({ filters }: { filters: HeroFilters }) {
 export function HeroCombosTab({ filters }: { filters: HeroFilters }) {
   return (
     <Section titleDisplay="hidden" title="Hero Combos">
-      <FilterBar variant="toolbar" title="Combinations" icon={UsersRound} aria-label="Combination table controls">
-        <HeroCombFilters gameMode={filters.gameMode} />
-      </FilterBar>
       <LazyTab>
         <HeroCombStatsTable
           columns={["winRate", "pickRate", "totalMatches"]}
@@ -381,7 +445,6 @@ export function HeroMatchupDetailsTab({ filters }: { filters: HeroFilters }) {
             void filters.setHeroId(heroId);
           }}
           sameLaneFilter={filters.sameLaneFilter}
-          onSameLaneFilterChange={(v) => void filters.setSameLaneFilter(v)}
           minHeroMatches={filters.minMatches}
           gameMode={filters.gameMode}
           matchMode={filters.matchMode}
@@ -392,13 +455,7 @@ export function HeroMatchupDetailsTab({ filters }: { filters: HeroFilters }) {
 }
 
 export function HeroScoreboardTab({ filters }: { filters: HeroFilters }) {
-  const [chosenSortBy, setSortBy] = useQueryState(
-    "scoreboard_sort_by",
-    // Heroes only: a link or a stale URL with a player-only sort (rank) falls back to the default instead of a 400.
-    parseAsStringLiteral(HERO_SORT_BY_VALUES as [string, ...string[]]).withDefault("winrate"),
-  );
-  // Street Brawl has no soul economy: a net worth sort chosen in another mode falls back, the URL keeps it.
-  const sortBy = sortByIn(chosenSortBy, filters.gameMode, "winrate");
+  const { sortBy, setSortBy } = useScoreboardSortBy(filters);
   const [sortDirection, setSortDirection] = useQueryState(
     "scoreboard_sort_dir",
     parseAsStringLiteral(["desc", "asc"] as const).withDefault("desc"),
@@ -419,16 +476,6 @@ export function HeroScoreboardTab({ filters }: { filters: HeroFilters }) {
   );
   return (
     <Section titleDisplay="hidden" title="Hero Scoreboard">
-      <FilterBar variant="toolbar" title="Scoreboard" icon={Trophy} aria-label="Scoreboard controls">
-        <SortBySelector
-          scope="heroes"
-          gameMode={filters.gameMode}
-          size="sm"
-          value={sortBy}
-          defaultValue="winrate"
-          onValueChange={(value) => void setSortBy(value)}
-        />
-      </FilterBar>
       <QueryRenderer
         query={scoreboardQuery}
         loadingFallback={<LoadingState label="hero scoreboard" align="center" />}

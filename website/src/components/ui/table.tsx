@@ -262,7 +262,7 @@ function TableHead({
       data-width={width}
       className={cn(
         // Column names are condensed capitals, the label voice of the whole site.
-        "text-start align-middle font-display text-caps font-semibold tracking-wider whitespace-nowrap uppercase data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-muted *:data-[slot=sort-button]:uppercase [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5",
+        "text-start align-middle font-display text-caps font-semibold tracking-wider whitespace-nowrap uppercase data-pinned:sticky data-pinned:inset-s-0 data-pinned:z-10 data-pinned:bg-muted **:data-[slot=sort-button]:uppercase [&:has([role=checkbox])]:pe-0 [&>[role=checkbox]]:translate-y-0.5",
         HEAD_TONE[tone],
         HEAD_WIDTH[width],
         HEAD_DENSITY[density],

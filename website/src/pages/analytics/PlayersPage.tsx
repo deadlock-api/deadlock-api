@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import type { PlayerScoreboardSortByEnum } from "deadlock_api_client";
-import { Trophy } from "lucide-react";
 import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
 import { type ComponentProps, type ComponentType, lazy, Suspense } from "react";
 
@@ -8,7 +7,6 @@ import { Filter } from "~/components/domain/filters";
 import { ScoreboardTable } from "~/components/domain/player-scoreboard/ScoreboardTable";
 import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
 import { ScoreboardCompareButton } from "~/components/features/player-compare/ScoreboardCompareButton";
-import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -175,22 +173,22 @@ export function PlayersPage({
               />
             </Filter.Advanced>
           )}
+          {tab === "scoreboard" && (
+            <SortBySelector
+              size="sm"
+              gameMode={gameMode}
+              value={sortBy}
+              defaultValue="kills"
+              onValueChange={(next) => {
+                void setSortBy(next, together);
+                firstPage();
+              }}
+            />
+          )}
         </Filter.Root>
 
         <TabsContent value="scoreboard">
           <Section titleDisplay="hidden" title="Player Scoreboard">
-            <FilterBar variant="toolbar" title="Player scoreboard" icon={Trophy} aria-label="Scoreboard controls">
-              <SortBySelector
-                size="sm"
-                gameMode={gameMode}
-                value={sortBy}
-                defaultValue="kills"
-                onValueChange={(next) => {
-                  void setSortBy(next, together);
-                  firstPage();
-                }}
-              />
-            </FilterBar>
             <QueryRenderer
               query={scoreboardQuery}
               loadingFallback={<LoadingState label="player scoreboard" align="center" />}

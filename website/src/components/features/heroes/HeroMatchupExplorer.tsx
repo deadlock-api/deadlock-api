@@ -1,15 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { Swords } from "lucide-react";
 import { useRef } from "react";
 
 import { HeroImage } from "~/components/domain/assets/HeroImage";
-import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
 import {
   type HeroMatchupParams,
   type MatchupRow,
   useHeroMatchupRows,
 } from "~/components/features/heroes/HeroMatchupDetailsStatsTable";
-import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -24,8 +21,6 @@ import { formatPercent, formatSignedPercent } from "~/lib/format";
 import { TONE_TEXT, toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions, type SlimHero } from "~/queries/asset-queries";
-
-import { HeroLaneFilter } from "./HeroLaneFilter";
 
 const SMALL_SAMPLE_THRESHOLD = 100;
 const number = (value: number) => value.toLocaleString("en-US");
@@ -125,11 +120,9 @@ function MatchupRanking({
 
 export function HeroMatchupExplorer({
   onHeroSelected,
-  onSameLaneFilterChange,
   ...params
 }: HeroMatchupParams & {
   onHeroSelected: (heroId: number) => void;
-  onSameLaneFilterChange: (sameLane: boolean) => void;
 }) {
   const { data: heroAssets = [] } = useQuery(heroesQueryOptions);
   const { synergyRows, counterRows, heroStats, isLoading, isStale, isError, retry } = useHeroMatchupRows(params);
@@ -139,7 +132,7 @@ export function HeroMatchupExplorer({
   const unknownHero = heroAssets.length > 0 && !heroes.has(params.heroId);
   // Picking a hero from a ranking replaces the tables (and the pressed button) while the new hero loads: focus moves to
   // the overview, which names the new hero, instead of falling back to the page body.
-  const overviewRef = useRef<HTMLElement>(null);
+  const overviewRef = useRef<HTMLParagraphElement>(null);
   const selectFromRanking = (heroId: number) => {
     onHeroSelected(heroId);
     overviewRef.current?.focus();
@@ -152,32 +145,24 @@ export function HeroMatchupExplorer({
 
   return (
     <div className="flex flex-col gap-3">
-      <FilterBar
+      {/* The hero and lane are chosen in the page's filter row; this line sums up the hero's own record. Focus lands
+          here after a pick from a ranking, so a screen reader hears the new hero. */}
+      <p
         ref={overviewRef}
         tabIndex={-1}
-        variant="toolbar"
-        title={`${heroName}’s matchups`}
-        icon={Swords}
-        aria-label={`${heroName} matchup overview`}
+        aria-live="polite"
+        className="flex min-h-6 flex-wrap items-baseline gap-x-2 text-sm text-muted-foreground"
       >
-        <HeroSelector
-          size="sm"
-          value={params.heroId}
-          defaultValue={params.heroId}
-          onValueChange={(id) => {
-            if (id != null) onHeroSelected(id);
-          }}
-        />
-        <HeroLaneFilter value={params.sameLaneFilter ?? true} onValueChange={onSameLaneFilterChange} />
+        <span className="font-semibold text-foreground">{heroName}</span>
         {!isLoading && !isError && heroStats?.matches ? (
-          <p className="flex flex-wrap items-baseline gap-x-2 text-xs text-muted-foreground">
+          <>
             <strong className="text-base font-semibold text-foreground tabular-nums">
               {formatPercent(heroStats.wins / heroStats.matches)}
             </strong>
             win rate <span aria-hidden="true">·</span> {number(heroStats.matches)} matches
-          </p>
+          </>
         ) : null}
-      </FilterBar>
+      </p>
 
       {unknownHero ? (
         <EmptyState

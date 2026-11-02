@@ -23,13 +23,9 @@ import { extractBadgeMap } from "~/lib/leaderboard";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
-import { StatSelector } from "./StatSelector";
-
 interface GamesByRankChartProps {
   params: AnalyticsApiGameStatsRequest;
   stat: string;
-  onStatChange: (stat: string) => void;
-  isStreetBrawl?: boolean;
 }
 
 interface ChartEntry {
@@ -43,7 +39,7 @@ interface ChartEntry {
   isSpacer?: boolean;
 }
 
-export default function GamesByRankChart({ params, stat, onStatChange, isStreetBrawl = false }: GamesByRankChartProps) {
+export default function GamesByRankChart({ params, stat }: GamesByRankChartProps) {
   const { data, isPending, isError, isFetching, refetch } = useQuery(
     gameStatsQueryOptions({ ...params, bucket: "avg_badge" }),
   );
@@ -156,8 +152,6 @@ export default function GamesByRankChart({ params, stat, onStatChange, isStreetB
 
   return (
     <div className="@container flex flex-col gap-4">
-      <StatSelector value={stat} onChange={onStatChange} isStreetBrawl={isStreetBrawl} />
-
       <div>
         {isPending ? (
           <ChartLoading label="game rank data" />

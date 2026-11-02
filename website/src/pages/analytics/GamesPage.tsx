@@ -4,6 +4,7 @@ import { Suspense } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import GamesOverview from "~/components/features/games/GamesOverview";
+import { GameTimeBucketField, StatSelector } from "~/components/features/games/StatSelector";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -147,6 +148,12 @@ export function Games() {
             onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
             defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
           />
+          {(tab === "over-time" || tab === "by-rank") && (
+            <StatSelector value={stat} onChange={chooseStat} isStreetBrawl={isStreetBrawl} />
+          )}
+          {tab === "over-time" && (
+            <GameTimeBucketField value={timeBucket} onValueChange={(b) => setTimeBucket(b as typeof timeBucket)} />
+          )}
         </Filter.Root>
 
         <TabsContent value="overview">
@@ -161,14 +168,7 @@ export function Games() {
           <Section titleDisplay="hidden" title="Match Trends Over Time">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <GamesOverTimeChart
-                  params={baseParams}
-                  stat={stat}
-                  onStatChange={chooseStat}
-                  timeBucket={timeBucket}
-                  onTimeBucketChange={(b) => setTimeBucket(b as typeof timeBucket)}
-                  isStreetBrawl={isStreetBrawl}
-                />
+                <GamesOverTimeChart params={baseParams} stat={stat} timeBucket={timeBucket} />
               </Suspense>
             </ChunkErrorBoundary>
           </Section>
@@ -178,12 +178,7 @@ export function Games() {
           <Section titleDisplay="hidden" title="Match Stats by Rank">
             <ChunkErrorBoundary>
               <Suspense fallback={<LoadingState />}>
-                <GamesByRankChart
-                  params={baseParams}
-                  stat={stat}
-                  onStatChange={chooseStat}
-                  isStreetBrawl={isStreetBrawl}
-                />
+                <GamesByRankChart params={baseParams} stat={stat} />
               </Suspense>
             </ChunkErrorBoundary>
           </Section>

@@ -1,10 +1,10 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiItemStatsRequest, ItemStats, MatchesApiBulkMetadataRequest } from "deadlock_api_client";
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { parseAsInteger, useQueryState } from "nuqs";
 import { lazy, Suspense, useDeferredValue, useMemo, useState } from "react";
 
 import MatchHistoryCard from "~/components/domain/match/MatchHistoryCard";
+import { useTopBuildsOpen } from "~/components/features/items/ItemStatsControls";
 import { getDisplayItemStats, ItemStatsTable, useItemStatsRow } from "~/components/features/items/ItemStatsTable";
 import { PlayerHeroBuildsDialog } from "~/components/features/items/PlayerHeroBuildsDialog";
 import { corruptedItemsParam, useCorruptedItemMode } from "~/components/features/items/useCorruptedItemMode";
@@ -186,7 +186,7 @@ export function ItemStatsExplorer({
   const [selectedPlayer, setSelectedPlayer] = useState<{ accountId: number; name?: string } | null>(null);
 
   const [topBuildsLimit, setTopBuildsLimit] = useState(TOP_BUILDS_PAGE_SIZE);
-  const [topBuildsOpen, setTopBuildsOpen] = useState(false);
+  const [topBuildsOpen] = useTopBuildsOpen();
 
   const topBuildsEnabled = !!hero && includeItems.size > 0;
   const topBuildsQuery: MatchesApiBulkMetadataRequest = {
@@ -295,24 +295,6 @@ export function ItemStatsExplorer({
             prevStatsMap={prevStatsMap}
             corruptedStatsMap={corruptedStatsMap}
             details={rowDetails}
-            actions={
-              topBuildsEnabled && (
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  aria-expanded={topBuildsOpen}
-                  onClick={() => setTopBuildsOpen((open) => !open)}
-                  className="text-muted-foreground"
-                >
-                  Top Builds
-                  {topBuildsOpen ? (
-                    <PanelRightClose aria-hidden="true" className="size-4" />
-                  ) : (
-                    <PanelRightOpen aria-hidden="true" className="size-4" />
-                  )}
-                </Button>
-              )
-            }
           />
         </div>
 

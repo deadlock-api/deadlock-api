@@ -5,6 +5,7 @@ import { HeroDetailsTooltip } from "~/components/features/heroes/HeroDetailsTool
 import { HeroStatTrend } from "~/components/features/heroes/HeroStatTrend";
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
+import { ColumnFilter } from "~/components/patterns/data-table/ColumnFilter";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -14,6 +15,7 @@ import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
 import { ProgressBarSegment } from "~/components/ui/progress-bar";
+import { SearchInput } from "~/components/ui/search-input";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { SortButton, ariaSort } from "~/components/ui/sort-button";
 import { Inline, Stack } from "~/components/ui/stack";
@@ -43,9 +45,25 @@ const HERO_TYPE_CONFIG: Record<HeroType, { label: string; color: string; icon: L
 /** The overall hero stats: one table, or one panel per hero type. Logic lives in `useHeroStatsTable`. */
 export function HeroStatsTable({
   onClearNameQuery,
+  onNameQueryChange,
   ...filters
-}: HeroStatsTableFilters & { onClearNameQuery?: () => void }) {
+}: HeroStatsTableFilters & {
+  onClearNameQuery?: () => void;
+  /** Puts a name search in the Hero column's head (a `ColumnFilter`). */
+  onNameQueryChange?: (query: string) => void;
+}) {
   const table = useHeroStatsTable(filters);
+  const nameFilter = onNameQueryChange && (
+    <ColumnFilter label="Hero" active={!!filters.nameQuery?.trim()} onReset={() => onNameQueryChange("")}>
+      <SearchInput
+        value={filters.nameQuery ?? ""}
+        onValueChange={onNameQueryChange}
+        placeholder="Find a hero…"
+        aria-label="Filter heroes by name"
+        size="sm"
+      />
+    </ColumnFilter>
+  );
 
   if (table.isLoading) {
     return <LoadingState label="hero stats" align="center" />;
@@ -87,7 +105,10 @@ export function HeroStatsTable({
     return (
       <StaleOverlay active={table.isStale} label="hero stats" className="flex flex-col gap-4">
         {table.groups.map(
-          (group) => group.visible.length > 0 && <HeroTypeGroup key={group.type} group={group} table={table} />,
+          (group) =>
+            group.visible.length > 0 && (
+              <HeroTypeGroup key={group.type} group={group} table={table} nameFilter={nameFilter} />
+            ),
         )}
       </StaleOverlay>
     );
@@ -96,7 +117,7 @@ export function HeroStatsTable({
   return (
     <StaleOverlay active={table.isStale} label="hero stats" className="flex flex-col gap-3">
       <Table aria-label="Hero stats">
-        <HeroStatsHeader table={table} />
+        <HeroStatsHeader table={table} nameFilter={nameFilter} />
         <TableBody>
           {table.rows.map(({ rank, hero }) => (
             <HeroStatsRow key={hero.row.hero_id} rank={rank} hero={hero} table={table} />
@@ -131,7 +152,15 @@ function GroupStat({
 const PREVIOUS_PERIOD = "change versus the previous period";
 
 /** The panel of one hero type: its share of picks (or bans, or presence) and win rate, over its heroes' table. */
-function HeroTypeGroup({ group, table }: { group: HeroTypeGroupData; table: HeroStatsTableState }) {
+function HeroTypeGroup({
+  group,
+  table,
+  nameFilter,
+}: {
+  group: HeroTypeGroupData;
+  table: HeroStatsTableState;
+  nameFilter?: React.ReactNode;
+}) {
   const config = HERO_TYPE_CONFIG[group.type];
   return (
     <Panel>
@@ -159,7 +188,7 @@ function HeroTypeGroup({ group, table }: { group: HeroTypeGroupData; table: Hero
         </div>
       </PanelHeader>
       <Table aria-label={`${config.label} hero stats`}>
-        <HeroStatsHeader table={table} />
+        <HeroStatsHeader table={table} nameFilter={nameFilter} />
         <TableBody>
           {group.visible.map(({ rank, hero }) => (
             <HeroStatsRow key={hero.row.hero_id} rank={rank} hero={hero} table={table} />
@@ -170,7 +199,7 @@ function HeroTypeGroup({ group, table }: { group: HeroTypeGroupData; table: Hero
   );
 }
 
-function HeroStatsHeader({ table }: { table: HeroStatsTableState }) {
+function HeroStatsHeader({ table, nameFilter }: { table: HeroStatsTableState; nameFilter?: React.ReactNode }) {
   const { sortKey, sortDir, onSort, pickRateMode, normalized } = table;
   // "desc" is the default direction of every column; for names it means A to Z, so the arrow and aria-sort both say
   // ascending.
@@ -185,9 +214,12 @@ function HeroStatsHeader({ table }: { table: HeroStatsTableState }) {
           className="w-1/100 @md/table:min-w-40"
           data-pinned
         >
-          <SortButton active={sortKey === "hero"} sortDir={heroSortDir} align="start" onClick={() => onSort("hero")}>
-            <span>Hero</span>
-          </SortButton>
+          <span className="inline-flex items-center gap-1">
+            <SortButton active={sortKey === "hero"} sortDir={heroSortDir} align="start" onClick={() => onSort("hero")}>
+              <span>Hero</span>
+            </SortButton>
+            {nameFilter}
+          </span>
         </TableHead>
         <SortableHeader
           label="Win Rate"

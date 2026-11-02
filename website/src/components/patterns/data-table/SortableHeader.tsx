@@ -21,6 +21,7 @@ export function SortableHeader<Key extends string>({
   size = "default",
   description,
   children,
+  filter,
   className,
   ...props
 }: Omit<React.ComponentProps<typeof TableHead>, "children" | "align"> & {
@@ -38,6 +39,8 @@ export function SortableHeader<Key extends string>({
   description?: React.ReactNode;
   /** Extra content inside the button, after the label: a unit. */
   children?: React.ReactNode;
+  /** A `ColumnFilter` for this column, after the sort button. */
+  filter?: React.ReactNode;
 }) {
   const isActive = activeSortKey === sortKey;
   const sortButton = (
@@ -53,12 +56,15 @@ export function SortableHeader<Key extends string>({
       aria-sort={ariaSort(isActive, sortDir)}
       {...props}
     >
-      {description == null ? (
+      {description == null && filter == null ? (
         sortButton
       ) : (
         <span data-slot="sortable-header-described" className="inline-flex items-center gap-1">
           {sortButton}
-          <InfoTip label={typeof label === "string" ? `About ${label}` : "About this column"} content={description} />
+          {description != null && (
+            <InfoTip label={typeof label === "string" ? `About ${label}` : "About this column"} content={description} />
+          )}
+          {filter}
         </span>
       )}
     </TableHead>

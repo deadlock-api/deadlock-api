@@ -7,11 +7,10 @@ import {
   MinusIcon,
   PlusIcon,
   StarIcon,
-  Table2,
   TriangleAlertIcon,
   XIcon,
 } from "lucide-react";
-import { parseAsArrayOf, parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
+import { parseAsStringLiteral, throttle, useQueryState } from "nuqs";
 import {
   createContext,
   memo,
@@ -23,43 +22,43 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState,
 } from "react";
 
 import { ItemCell } from "~/components/domain/assets/ItemCell";
-import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { ITEM_SLOTS, ItemSlotSelector } from "~/components/domain/selectors/ItemSlotSelector";
 import {
   ItemTierSelector,
   NORMAL_ITEM_TIERS,
   STREET_BRAWL_ITEM_TIERS,
 } from "~/components/domain/selectors/ItemTierSelector";
+import {
+  useItemLists,
+  useItemNameQuery,
+  useItemSlots,
+  useItemTiers,
+} from "~/components/features/items/ItemStatsControls";
 import { ItemStatTrend } from "~/components/features/items/ItemStatTrend";
 import { useCorruptedItemMode } from "~/components/features/items/useCorruptedItemMode";
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
+import { ColumnFilter } from "~/components/patterns/data-table/ColumnFilter";
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
-import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
-import type { TriState } from "~/components/patterns/filter-bar/TriStateSelector";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Field } from "~/components/ui/field";
 import { anyValue } from "~/components/ui/hooks/any-selection";
 import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import { ProgressBarMarker, ProgressBarSegment } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
-import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from "~/components/ui/tooltip";
 import { useHydrated } from "~/hooks/useHydrated";
 import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
-import { parseAsSetOf } from "~/lib/nuqs-parsers";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import type { SlimUpgrade } from "~/queries/asset-queries";
 
@@ -138,8 +137,6 @@ interface ItemStatsTableProps {
   maxWinRate: number;
   minUsage: number;
   maxUsage: number;
-  /** Controls that sit at the end of the toolbar. */
-  actions?: ReactNode;
   /** The request behind `data`: hovering a win rate charts that item's win rate over time from it. */
   trendParams: AnalyticsApiItemStatsRequest;
   prevStatsMap?: Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>;
@@ -517,7 +514,6 @@ export function ItemStatsTable({
   maxWinRate,
   minUsage,
   maxUsage,
-  actions,
   trendParams,
   prevStatsMap,
   corruptedStatsMap,
@@ -536,48 +532,17 @@ export function ItemStatsTable({
   });
   const toggleSort = (field: SortField) => startTransition(() => sort.toggle(field));
 
-  const [itemTiers, setItemTiers] = useQueryState("item_tiers", parseAsArrayOf(parseAsInteger).withDefault([]));
+  const [itemTiers, setItemTiers] = useItemTiers();
   // Only Street Brawl sells tier 5 items, so the tier filter offers 5 when the answer has one.
   const offeredTiers = data?.some((row) => row.itemTier === 5) ? STREET_BRAWL_ITEM_TIERS : NORMAL_ITEM_TIERS;
-
-  const [itemSlots, setItemSlots] = useQueryState(
-    "item_slots",
-    parseAsArrayOf(parseAsStringLiteral(ITEM_SLOTS)).withDefault([...ITEM_SLOTS]),
-  );
-
-  const [includeItems, setIncludeItems] = useQueryState(
-    "include_items",
-    parseAsSetOf(parseAsInteger).withDefault(new Set()),
-  );
-  const [excludeItems, setExcludeItems] = useQueryState(
-    "exclude_items",
-    parseAsSetOf(parseAsInteger).withDefault(new Set()),
-  );
-  const [nameQuery, setNameQuery] = useState("");
-  const [corruptedMode, setCorruptedMode] = useCorruptedItemMode();
-
-  // The toolbar's item filter holds both lists as one include / exclude map; the rows' toggles below edit the same
-  // two URL lists.
-  const itemStates = useMemo(
-    () =>
-      new Map<number, TriState>([
-        ...[...includeItems].map((id): [number, TriState] => [id, "included"]),
-        ...[...excludeItems].map((id): [number, TriState] => [id, "excluded"]),
-      ]),
-    [includeItems, excludeItems],
-  );
-  const setItemStates = (next: Map<number, TriState>) => {
-    const ids = (state: TriState) => new Set([...next].filter(([, s]) => s === state).map(([id]) => id));
-    startTransition(() => {
-      void setIncludeItems(ids("included"), together);
-      void setExcludeItems(ids("excluded"), together);
-    });
-  };
+  const [itemSlots, setItemSlots] = useItemSlots();
+  const { includeItems, setIncludeItems, excludeItems, setExcludeItems } = useItemLists();
+  const [nameQuery, setNameQuery] = useItemNameQuery();
+  const [corruptedMode] = useCorruptedItemMode();
 
   // Functional updates keep both callbacks stable, so a click re-renders one memoized row instead of the whole table.
   // An exclusion (or an inclusion the item fails) can take the row, and with it the focused toggle, off the table once
-  // the new stats arrive. Focus then moves to the item filter in the toolbar instead of falling to the page.
-  const itemFilterRef = useRef<HTMLDivElement>(null);
+  // the new stats arrive. Focus then moves to the item filter in the page's filter row instead of falling to the page.
   const lastToggled = useRef<number | null>(null);
 
   // Pressing an item's include (or exclude) toggle again takes it back out of that list.
@@ -661,57 +626,12 @@ export function ItemStatsTable({
     if (id === null || visibleData.some((row) => row.item_id === id)) return;
     lastToggled.current = null;
     if (document.activeElement !== document.body) return;
-    itemFilterRef.current?.querySelector<HTMLElement>('[data-slot="popover-trigger"]')?.focus();
+    document.querySelector<HTMLElement>('[data-item-filter] [data-slot="popover-trigger"]')?.focus();
   });
 
   return (
     // Not a live region: it holds the whole table, which a screen reader would then read out on every sort.
     <Stack gap={4} aria-busy={isLoading}>
-      <FilterBar variant="toolbar" title="Overall stats" icon={Table2} aria-label="Item table controls">
-        <ItemSelector
-          ref={itemFilterRef}
-          selection="tri-state"
-          size="sm"
-          value={itemStates}
-          onValueChange={setItemStates}
-        />
-        <SearchInput
-          value={nameQuery}
-          onValueChange={setNameQuery}
-          placeholder="Filter by name…"
-          aria-label="Filter items by name"
-          size="sm"
-          className="w-full sm:w-60"
-        />
-        <ItemSlotSelector
-          orientation="horizontal"
-          value={itemSlots}
-          onValueChange={(slots) => startTransition(() => void setItemSlots(slots, together))}
-        />
-        <ItemTierSelector
-          orientation="horizontal"
-          tiers={offeredTiers}
-          value={itemTiers}
-          // Every tier is the default: left out of the URL, so a link from Normal still shows Street Brawl's tier 5.
-          onValueChange={(tiers) =>
-            startTransition(() => void setItemTiers(tiers.length === offeredTiers.length ? null : tiers, together))
-          }
-        />
-        <Field label="Purchases" orientation="horizontal">
-          <Segmented
-            width="hug"
-            value={corruptedMode}
-            onValueChange={(mode) =>
-              startTransition(() => void setCorruptedMode(mode === "exclude" ? null : mode, together))
-            }
-          >
-            <SegmentedItem value="exclude">Normal</SegmentedItem>
-            <SegmentedItem value="only">Corrupted</SegmentedItem>
-            <SegmentedItem value="include">Both</SegmentedItem>
-          </Segmented>
-        </Field>
-        {actions}
-      </FilterBar>
       {isLoading ? (
         <LoadingState label="item statistics" align="center" />
       ) : (
@@ -736,6 +656,42 @@ export function ItemStatsTable({
                     onSortChange={toggleSort}
                     className="text-start"
                     data-pinned
+                    filter={
+                      <ColumnFilter
+                        label="Item"
+                        active={!!nameQuery.trim() || itemSlots.length < ITEM_SLOTS.length || itemTiers.length > 0}
+                        onReset={() =>
+                          startTransition(() => {
+                            void setNameQuery(null);
+                            void setItemSlots(null, together);
+                            void setItemTiers(null, together);
+                          })
+                        }
+                      >
+                        <SearchInput
+                          value={nameQuery}
+                          onValueChange={(next) => void setNameQuery(next || null)}
+                          placeholder="Filter by name…"
+                          aria-label="Filter items by name"
+                          size="sm"
+                        />
+                        <ItemSlotSelector
+                          value={itemSlots}
+                          onValueChange={(slots) => startTransition(() => void setItemSlots(slots, together))}
+                        />
+                        <ItemTierSelector
+                          tiers={offeredTiers}
+                          value={itemTiers}
+                          // Every tier is the default: left out of the URL, so a link from Normal still shows Street
+                          // Brawl's tier 5.
+                          onValueChange={(tiers) =>
+                            startTransition(
+                              () => void setItemTiers(tiers.length === offeredTiers.length ? null : tiers, together),
+                            )
+                          }
+                        />
+                      </ColumnFilter>
+                    }
                   />
                   <SortableHeader
                     label="Tier"
@@ -816,7 +772,7 @@ export function ItemStatsTable({
               title={nameTerm ? `No items match "${nameQuery.trim()}"` : "No items match these filters"}
               action={
                 nameTerm ? (
-                  <Button variant="outline" size="sm" onClick={() => setNameQuery("")}>
+                  <Button variant="outline" size="sm" onClick={() => void setNameQuery(null)}>
                     Clear search
                   </Button>
                 ) : undefined

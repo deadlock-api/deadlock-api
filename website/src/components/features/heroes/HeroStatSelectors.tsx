@@ -1,4 +1,7 @@
+import { use } from "react";
+
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
+import { FilterRootContext, FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { HERO_TREND_LABELS } from "~/lib/hero-trends";
@@ -20,13 +23,25 @@ export function HeroStatSelector<T extends readonly string[]>({
   value: T[number];
   onChange: (val: T[number]) => void;
   options?: T;
-  /** The control's name when no `Field` labels it. */
+  /** The control's name: shown in its chip in a filter row, the accessible name elsewhere. */
   label?: string;
 }) {
   const items = options ?? HERO_STATS;
-  if (items.length > 7) {
+  const inRoot = use(FilterRootContext);
+  if (inRoot && items.length <= 7) {
     return (
-      <MetricSelect value={value} valueLabel={metricLabel(value)} onValueChange={onChange} label={label}>
+      <FilterToggleCell label={label ?? "Metric"} value={value} onValueChange={onChange}>
+        {items.map((key: T[number]) => (
+          <SegmentedItem key={key} value={key}>
+            {metricLabel(key)}
+          </SegmentedItem>
+        ))}
+      </FilterToggleCell>
+    );
+  }
+  if (items.length > 7 || inRoot) {
+    return (
+      <MetricSelect value={value} valueLabel={metricLabel(value)} onValueChange={onChange} label={label ?? "Metric"}>
         <SelectGroup>
           <SelectLabel>Hero metrics</SelectLabel>
           {items.map((key) => (

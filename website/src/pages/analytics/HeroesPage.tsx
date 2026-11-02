@@ -17,6 +17,7 @@ import {
   HeroOverallStatsTab,
   HeroOverTimeTab,
   HeroScoreboardTab,
+  HeroTabControls,
   HeroTierListTab,
 } from "./HeroesPageTabs";
 
@@ -105,7 +106,9 @@ export function HeroesPage() {
           </ResponsiveTab>
         </ResponsiveTabsList>
 
-        <HeroFiltersSection {...filters} />
+        <HeroFiltersSection {...filters}>
+          <HeroTabControls filters={filters} />
+        </HeroFiltersSection>
 
         <TabsContent value="stats">
           <HeroOverallStatsTab filters={filters} />

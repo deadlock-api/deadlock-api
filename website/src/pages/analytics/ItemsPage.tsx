@@ -3,6 +3,7 @@ import { lazy, startTransition, Suspense } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import { ItemCombFilters } from "~/components/features/items/ItemCombFilters";
+import { ItemStatsControls, ItemTopBuildsToggle } from "~/components/features/items/ItemStatsControls";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -148,6 +149,12 @@ export function ItemsPage() {
               />
             )}
           </Filter.Advanced>
+          {tab === "item-stats" && (
+            <>
+              <ItemStatsControls />
+              <ItemTopBuildsToggle hero={hero} />
+            </>
+          )}
         </Filter.Root>
         <TabsContent value="item-stats">
           <Section titleDisplay="hidden" title="Overall Item Stats">

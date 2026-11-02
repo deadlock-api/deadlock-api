@@ -1,7 +1,7 @@
-import { Field } from "~/components/ui/field";
-import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
+import { SegmentedItem } from "~/components/ui/segmented";
 
-/** Whether matchups count only heroes who shared a lane, or any two heroes in the same match. For a table toolbar. */
+/** Whether matchups count only heroes who shared a lane, or any two heroes in the same match. For a filter row. */
 export function HeroLaneFilter({
   value,
   onValueChange,
@@ -11,11 +11,14 @@ export function HeroLaneFilter({
   onValueChange: (sameLane: boolean) => void;
 }) {
   return (
-    <Field label="Lane" orientation="horizontal">
-      <Segmented value={value ? "same" : "any"} onValueChange={(v) => onValueChange(v === "same")} width="hug">
-        <SegmentedItem value="same">Same lane</SegmentedItem>
-        <SegmentedItem value="any">Any lane</SegmentedItem>
-      </Segmented>
-    </Field>
+    <FilterToggleCell
+      label="Lane"
+      value={value ? "same" : "any"}
+      defaultValue="same"
+      onValueChange={(v) => onValueChange(v === "same")}
+    >
+      <SegmentedItem value="same">Same lane</SegmentedItem>
+      <SegmentedItem value="any">Any lane</SegmentedItem>
+    </FilterToggleCell>
   );
 }

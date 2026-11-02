@@ -1,12 +1,11 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { HashMapValue } from "deadlock_api_client";
-import { ChartArea, Coins, Flame, HeartPulse, Sparkles, Swords, type LucideIcon, Wheat } from "lucide-react";
+import { Coins, Flame, HeartPulse, Sparkles, Swords, type LucideIcon, Wheat } from "lucide-react";
 import { useState } from "react";
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { Disclosure } from "~/components/patterns/content/Disclosure";
-import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
@@ -119,22 +118,21 @@ export function PlayerStatsDistributionCharts({
 
   return (
     <div className="flex flex-col gap-6">
-      <FilterBar variant="toolbar" title="Stat distributions" icon={ChartArea} aria-label="Stat distribution legend">
-        <ChartLegend>
-          <ChartLegendItem color={CHART_COLOR.primary} shape="band">
-            Approximate distribution shape
-          </ChartLegendItem>
-          <ChartLegendItem color={CHART_COLOR.primary} shape="dashed">
-            Average
-          </ChartLegendItem>
-          <ChartLegendItem color={CHART_COLOR.reference} shape="dashed">
-            Median
-          </ChartLegendItem>
-          <ChartLegendItem color={CHART_COLOR.reference} shape="dotted">
-            P25 / P75
-          </ChartLegendItem>
-        </ChartLegend>
-      </FilterBar>
+      {/* The key to every chart below, once, as plain text: no bar around it. */}
+      <ChartLegend>
+        <ChartLegendItem color={CHART_COLOR.primary} shape="band">
+          Approximate distribution shape
+        </ChartLegendItem>
+        <ChartLegendItem color={CHART_COLOR.primary} shape="dashed">
+          Average
+        </ChartLegendItem>
+        <ChartLegendItem color={CHART_COLOR.reference} shape="dashed">
+          Median
+        </ChartLegendItem>
+        <ChartLegendItem color={CHART_COLOR.reference} shape="dotted">
+          P25 / P75
+        </ChartLegendItem>
+      </ChartLegend>
 
       <StaleOverlay
         active={isPlaceholderData || (buffsShown && buffQuery.isPlaceholderData)}

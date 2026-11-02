@@ -1,9 +1,5 @@
-import { ChartNoAxesCombined } from "lucide-react";
-
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
 import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
-import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
-import { Field } from "~/components/ui/field";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import type { GameMode } from "~/lib/game-mode";
@@ -29,6 +25,7 @@ const METRIC_GROUPS = [
 
 const intervals = TIME_INTERVALS.map((interval) => ({ value: interval.query, label: interval.label }));
 
+/** The trend chart's metric and interval, for the page's filter row. */
 export function HeroTrendControls({
   stat,
   interval,
@@ -44,25 +41,24 @@ export function HeroTrendControls({
   onIntervalChange: (interval: string) => void;
 }) {
   return (
-    <FilterBar variant="toolbar" title="Hero trends" icon={ChartNoAxesCombined} aria-label="Trend controls">
-      <Field label="Metric" orientation="horizontal" className="w-full @sm:w-auto">
-        <MetricSelect
-          value={stat}
-          valueLabel={HERO_TREND_LABELS[stat]}
-          onValueChange={(value) => onStatChange(value as HeroTrendStat)}
-        >
-          {METRIC_GROUPS.map((group) => (
-            <SelectGroup key={group.label}>
-              <SelectLabel>{group.label}</SelectLabel>
-              {heroStatsFor(group.stats, gameMode).map((value) => (
-                <SelectItem key={value} value={value}>
-                  {HERO_TREND_LABELS[value]}
-                </SelectItem>
-              ))}
-            </SelectGroup>
-          ))}
-        </MetricSelect>
-      </Field>
+    <>
+      <MetricSelect
+        label="Metric"
+        value={stat}
+        valueLabel={HERO_TREND_LABELS[stat]}
+        onValueChange={(value) => onStatChange(value as HeroTrendStat)}
+      >
+        {METRIC_GROUPS.map((group) => (
+          <SelectGroup key={group.label}>
+            <SelectLabel>{group.label}</SelectLabel>
+            {heroStatsFor(group.stats, gameMode).map((value) => (
+              <SelectItem key={value} value={value}>
+                {HERO_TREND_LABELS[value]}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        ))}
+      </MetricSelect>
       <TrendIntervalField value={interval} onValueChange={onIntervalChange}>
         {intervals.map((entry) => (
           <SegmentedItem key={entry.value} value={entry.value}>
@@ -70,6 +66,6 @@ export function HeroTrendControls({
           </SegmentedItem>
         ))}
       </TrendIntervalField>
-    </FilterBar>
+    </>
   );
 }

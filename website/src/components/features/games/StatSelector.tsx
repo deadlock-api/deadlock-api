@@ -1,38 +1,49 @@
-import { ChartNoAxesCombined } from "lucide-react";
-import type React from "react";
-
 import { MetricSelect } from "~/components/patterns/charts/MetricSelect";
-import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
-import { Field } from "~/components/ui/field";
+import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
+import { SegmentedItem } from "~/components/ui/segmented";
 import { SelectGroup, SelectItem, SelectLabel } from "~/components/ui/select";
 import { getFilteredCategories, getStatDefinition } from "~/lib/game-stat-definitions";
 
-/** The one picker of the `stat` URL parameter, on every tab that plots a game stat; `children` add more controls. */
+/** The one picker of the `stat` URL parameter, in the page's filter row on every tab that plots a game stat. */
 export function StatSelector({
   value,
   onChange,
-  children,
   isStreetBrawl = false,
 }: {
   value: string;
   onChange: (val: string) => void;
-  children?: React.ReactNode;
   isStreetBrawl?: boolean;
 }) {
   return (
-    <FilterBar variant="toolbar" title="Game metrics" icon={ChartNoAxesCombined} aria-label="Metric controls">
-      <Field label="Metric" orientation="horizontal" className="w-full @sm:w-auto">
-        <MetricSelect
-          value={value}
-          valueLabel={getStatDefinition(value)?.label}
-          onValueChange={onChange}
-          label="Game metric"
-        >
-          <GameMetricOptions isStreetBrawl={isStreetBrawl} />
-        </MetricSelect>
-      </Field>
-      {children}
-    </FilterBar>
+    <MetricSelect value={value} valueLabel={getStatDefinition(value)?.label} onValueChange={onChange} label="Metric">
+      <GameMetricOptions isStreetBrawl={isStreetBrawl} />
+    </MetricSelect>
+  );
+}
+
+/** The trend chart's time buckets: the interval picker offers them, the chart names its points by them. */
+export const GAME_TIME_BUCKETS = [
+  { value: "start_time_day", label: "Day", one: "day", other: "days" },
+  { value: "start_time_week", label: "Week", one: "week", other: "weeks" },
+  { value: "start_time_month", label: "Month", one: "month", other: "months" },
+] as const;
+
+/** The over-time chart's interval, for the page's filter row. */
+export function GameTimeBucketField({
+  value,
+  onValueChange,
+}: {
+  value: string;
+  onValueChange: (value: string) => void;
+}) {
+  return (
+    <TrendIntervalField value={value} onValueChange={onValueChange}>
+      {GAME_TIME_BUCKETS.map((entry) => (
+        <SegmentedItem key={entry.value} value={entry.value}>
+          {entry.label}
+        </SegmentedItem>
+      ))}
+    </TrendIntervalField>
   );
 }
 

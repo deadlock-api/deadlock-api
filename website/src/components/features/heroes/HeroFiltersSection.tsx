@@ -25,7 +25,10 @@ type HeroFiltersProps = Pick<
   | "endDate"
   | "handleDateChange"
   | "defaultRange"
->;
+> & {
+  /** The open tab's own controls, after the page's filters in the same row. */
+  children?: React.ReactNode;
+};
 
 const together = { limitUrlUpdates: throttle(50) };
 
@@ -47,6 +50,7 @@ export function HeroFiltersSection({
   endDate,
   handleDateChange,
   defaultRange,
+  children,
 }: HeroFiltersProps) {
   const statsTab = STATS_TABS.includes(tab);
   // By Experience buckets heroes by a player's own match count, which replaces the total threshold.
@@ -112,6 +116,7 @@ export function HeroFiltersSection({
           />
         )}
       </Filter.Advanced>
+      {children}
     </Filter.Root>
   );
 }

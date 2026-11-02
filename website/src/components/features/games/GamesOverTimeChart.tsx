@@ -15,9 +15,7 @@ import {
   CHART_Y_AXIS,
   CHART_COLOR,
 } from "~/components/patterns/charts/theme";
-import { TrendIntervalField } from "~/components/patterns/charts/TrendControls";
 import { NoValue } from "~/components/ui/no-value";
-import { SegmentedItem } from "~/components/ui/segmented";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { day } from "~/dayjs";
 import { BUFF_TIMINGS_NOTE } from "~/lib/buffs";
@@ -25,33 +23,17 @@ import { formatAxisTick, formatStatValue, getStatDefinition, valueSpan } from "~
 import { wholeTimeBuckets } from "~/lib/time-buckets";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 
-import { StatSelector } from "./StatSelector";
-
-const TIME_BUCKETS = [
-  { value: "start_time_day", label: "Day", one: "day", other: "days" },
-  { value: "start_time_week", label: "Week", one: "week", other: "weeks" },
-  { value: "start_time_month", label: "Month", one: "month", other: "months" },
-] as const;
+import { GAME_TIME_BUCKETS } from "./StatSelector";
 
 const PLURAL = new Intl.PluralRules("en-US");
 
 interface GamesOverTimeChartProps {
   params: AnalyticsApiGameStatsRequest;
   stat: string;
-  onStatChange: (stat: string) => void;
   timeBucket: GameStatsBucketEnum;
-  onTimeBucketChange: (bucket: GameStatsBucketEnum) => void;
-  isStreetBrawl?: boolean;
 }
 
-export default function GamesOverTimeChart({
-  params,
-  stat,
-  onStatChange,
-  timeBucket,
-  onTimeBucketChange,
-  isStreetBrawl = false,
-}: GamesOverTimeChartProps) {
+export default function GamesOverTimeChart({ params, stat, timeBucket }: GamesOverTimeChartProps) {
   const { data, isPending, isError, isFetching, refetch } = useQuery(
     gameStatsQueryOptions({ ...params, bucket: timeBucket }),
   );
@@ -82,24 +64,11 @@ export default function GamesOverTimeChart({
   const matches = chartData.reduce((sum, entry) => sum + (entry.matches ?? 0), 0);
   const formatValue = (value: number) => (statDef ? formatStatValue(value, statDef.format) : String(value));
   const formatDate = (date: number) => day.utc(date).format("MMM D, YYYY");
-  const bucketDef = TIME_BUCKETS.find((b) => b.value === timeBucket) ?? TIME_BUCKETS[0];
+  const bucketDef = GAME_TIME_BUCKETS.find((b) => b.value === timeBucket) ?? GAME_TIME_BUCKETS[0];
   const bucketUnit = bucketDef[PLURAL.select(chartData.length) === "one" ? "one" : "other"];
 
   return (
     <div className="@container flex flex-col gap-3">
-      <StatSelector value={stat} onChange={onStatChange} isStreetBrawl={isStreetBrawl}>
-        <TrendIntervalField
-          value={timeBucket}
-          onValueChange={(value) => onTimeBucketChange(value as GameStatsBucketEnum)}
-        >
-          {TIME_BUCKETS.map((entry) => (
-            <SegmentedItem key={entry.value} value={entry.value}>
-              {entry.label}
-            </SegmentedItem>
-          ))}
-        </TrendIntervalField>
-      </StatSelector>
-
       {/* The plot's numbers as text; it stays while a new interval loads, so the plot below it does not move. */}
       <StatGroup variant="joined" size="sm" className="grid-cols-2 @2xl:grid-cols-4">
         <Stat

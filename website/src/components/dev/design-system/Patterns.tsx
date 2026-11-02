@@ -15,6 +15,7 @@ import { Round3Patterns } from "~/components/dev/design-system/Round3Patterns";
 import { Round3PatternsMore } from "~/components/dev/design-system/Round3PatternsMore";
 import { Chapter, Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { HighlightedCode } from "~/components/patterns/code/HighlightedCode";
+import { ColumnFilter } from "~/components/patterns/data-table/ColumnFilter";
 import { JumpInput } from "~/components/patterns/data-table/JumpInput";
 import { PaginationControls, PaginationStatus } from "~/components/patterns/data-table/PaginationControls";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
@@ -199,6 +200,7 @@ export function Patterns() {
   const { sortKey, dir: sortDir, toggle: onSort } = useSort<Key>({ defaultValue: { key: "winRate", dir: "desc" } });
   const [density, setDensity] = useState<"default" | "compact" | "dense">("compact");
   const [tableWidth, setTableWidth] = useState<"full" | "narrow">("full");
+  const [heroQuery, setHeroQuery] = useState("");
   const [page, setPage] = useState(1);
   const [jumped, setJumped] = useState<number | null>(null);
   const [perPage, setPerPage] = useState(25);
@@ -352,11 +354,11 @@ export function Patterns() {
       <Specimen
         name="FilterBar cells"
         source="patterns/filter-bar/FilterBar · FilterCell · FilterAdvanced · StringSelector · NumberSelector · TriStateSelector · DateRangePicker"
-        note="The filters of a page: two across on a phone, three on a tablet, one row on a desktop. A FilterToggleCell is as wide as its segments: where they do not fit beside the other cells it takes a row of its own rather than wrapping them. A changed filter is underlined and gets a reset. The compact width is a narrow cell for a short value (Tags, Language here): a third of a phone's row, its content's width on a desktop. StringSelector shows up to five options as segments, more as a list; StringOptionGroups put headings over a long list (Rank by). FilterAdvanced is the last cell: a popover holding the rarely used filters (Min matches here), each a standalone cell; it counts the ones set and resets them together."
+        note="The filters of a page: one row of identical chips (label, value, chevron) that wraps on a narrow screen, after a Filters label counting the ones set. Every kind of filter is that chip: a FilterToggleCell shows its chosen option and lists the others in its popover. A changed filter gets a raised fill and its reset takes the chevron's place. StringSelector shows up to five options as segments, more as a list; StringOptionGroups put headings over a long list (Rank by). FilterAdvanced is the last cell: a popover holding the rarely used filters (Min matches here), each a standalone cell; it counts the ones set and resets them together."
       >
         <Variants className="block">
           <FilterBar>
-            <FilterToggleCell label="Side" value={side} defaultValue="all" onValueChange={setSide} width="wide">
+            <FilterToggleCell label="Side" value={side} defaultValue="all" onValueChange={setSide}>
               <SegmentedItem value="all">All</SegmentedItem>
               <SegmentedItem value="amber">Amber</SegmentedItem>
               <SegmentedItem value="sapphire">Sapphire</SegmentedItem>
@@ -416,12 +418,12 @@ export function Patterns() {
       </Specimen>
 
       <Specimen
-        name="FilterBar toolbar"
+        name="FilterBar with a view's own controls"
         source="patterns/filter-bar/FilterBar"
-        note='variant="toolbar": the controls of one chart or table, as compact Fields that wrap. Its title names the region and shows from @lg; it is not a heading, the Section or Panel around it is.'
+        note="A view's own controls (a metric, a search, a switch) follow the page's filter chips in the same row: a page has one row of controls, never a second bar inside a tab or panel."
       >
         <Variants className="block">
-          <FilterBar variant="toolbar" title="Trend" icon={Swords}>
+          <FilterBar aria-label="Trend controls">
             <Field label="Metric" orientation="horizontal">
               <Select defaultValue="winrate">
                 <SelectTrigger size="sm" aria-label="Metric">
@@ -451,7 +453,7 @@ export function Patterns() {
       <Specimen
         name="Data table"
         source="ui/table · patterns/data-table/*"
-        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, the button is named by its visible label (aria-sort on the cell gives the state), label takes a node, and description explains the column behind a focusable info button ("About Win rate"). data-pinned pins the identity column while the rest scrolls; a table wider than its container fades the edge with more columns past it (only the end edge with a pinned column), and a pinned table is the "table" container, so its pinned cell can shrink with @md/table: variants. Tones come from toneOf(). The sort is useSort: a press on the active column flips it, another column starts in its first direction.'
+        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, the button is named by its visible label (aria-sort on the cell gives the state), label takes a node, and description explains the column behind a focusable info button ("About Win rate"). data-pinned pins the identity column while the rest scrolls; a table wider than its container fades the edge with more columns past it (only the end edge with a pinned column), and a pinned table is the "table" container, so its pinned cell can shrink with @md/table: variants. A ColumnFilter in a head (filter on SortableHeader) narrows the rows of that column from a popover: a name search, a few toggles; its funnel turns solid red while set. Tones come from toneOf(). The sort is useSort: a press on the active column flips it, another column starts in its first direction.'
       >
         <Inline gap={2}>
           <Segmented size="sm" width="hug" aria-label="Density" value={density} onValueChange={setDensity}>
@@ -476,6 +478,17 @@ export function Patterns() {
                   activeSortKey={sortKey}
                   sortDir={sortDir}
                   onSortChange={onSort}
+                  filter={
+                    <ColumnFilter label="Hero" active={heroQuery.trim() !== ""} onReset={() => setHeroQuery("")}>
+                      <SearchInput
+                        value={heroQuery}
+                        onValueChange={setHeroQuery}
+                        placeholder="Find a hero…"
+                        aria-label="Filter heroes by name"
+                        size="sm"
+                      />
+                    </ColumnFilter>
+                  }
                 />
                 <SortableHeader
                   label="Win rate"
