@@ -20,9 +20,37 @@ use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{cached_ch_query, impl_match_info};
 
+/// How to split the metrics.
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub(crate) enum BucketQuery {
+    /// No Bucketing: the response is one metrics object.
+    #[default]
+    NoBucket,
+    /// Bucket By Hero: the response is a list with one metrics object per hero, each with the
+    /// hero id in `bucket`. Combine with `hero_ids` to get only those heroes.
+    Hero,
+}
+
+impl BucketQuery {
+    /// The bucket expression against `match_player`, `None` without bucketing.
+    const fn expr(self) -> Option<&'static str> {
+        match self {
+            Self::NoBucket => None,
+            Self::Hero => Some("toUInt32(hero_id)"),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct PlayerStatsMetricsQuery {
+    /// Bucket allows you to group the stats by a specific field.
+    #[serde(default)]
+    #[param(inline)]
+    bucket: BucketQuery,
     /// Filter matches based on the hero IDs. See more: <https://api.deadlock-api.com/v1/assets/heroes>
     #[param(value_type = Option<String>)]
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -274,6 +302,25 @@ impl Metric {
 
 pub(super) type AnalyticsPlayerStatsMetrics = HashMap<Metric, MetricValues>;
 
+/// One bucket's metrics: the metrics object of an unbucketed response, plus the bucket.
+#[derive(Debug, Clone, Serialize)]
+pub(super) struct PlayerStatsMetricsBucket {
+    /// The bucket's value: the hero id for `bucket=hero`.
+    bucket: u32,
+    #[serde(flatten)]
+    metrics: AnalyticsPlayerStatsMetrics,
+}
+
+/// One metrics object without `bucket`, one per bucket with it. The `OpenAPI` response stays the
+/// metrics object, so generated clients keep their types: the endpoint description documents the
+/// bucketed list.
+#[derive(Debug, Clone, Serialize)]
+#[serde(untagged)]
+pub(super) enum PlayerStatsMetricsResponse {
+    Metrics(AnalyticsPlayerStatsMetrics),
+    Buckets(Vec<PlayerStatsMetricsBucket>),
+}
+
 /// Declares [`AnalyticsPlayerStatsMetricsRow`], with an `avg_*`, `std_*` and `quantiles_*` column
 /// per metric in [`Metric::VARIANTS`] order (the order [`build_query`] selects them in), and
 /// [`Metric::extract_values`], which reads one metric's three columns, or for an alias
@@ -286,6 +333,24 @@ macro_rules! metrics_row {
         #[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
         pub(super) struct AnalyticsPlayerStatsMetricsRow {
             $($avg: f64, $std: f64, $quantiles: Vec<f64>,)*
+        }
+
+        /// An [`AnalyticsPlayerStatsMetricsRow`] with its bucket, from a bucketed [`build_query`].
+        #[derive(Debug, Clone, Row, Serialize, Deserialize)]
+        pub(super) struct AnalyticsPlayerStatsMetricsBucketRow {
+            bucket: u32,
+            $($avg: f64, $std: f64, $quantiles: Vec<f64>,)*
+        }
+
+        impl AnalyticsPlayerStatsMetricsBucketRow {
+            fn to_parts(&self) -> (u32, AnalyticsPlayerStatsMetricsRow) {
+                (
+                    self.bucket,
+                    AnalyticsPlayerStatsMetricsRow {
+                        $($avg: self.$avg, $std: self.$std, $quantiles: self.$quantiles.clone(),)*
+                    },
+                )
+            }
         }
 
         impl Metric {
@@ -395,9 +460,18 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     } else {
         ""
     };
+    // Without a bucket the SQL stays as it was before bucketing existed: the result cache keys on it.
+    let bucket = query.bucket.expr();
+    let bucket_column = bucket.map_or_else(String::new, |expr| format!("{expr} AS bucket, "));
+    let bucket_select = if bucket.is_some() { "bucket,\n" } else { "" };
+    let group_by = if bucket.is_some() {
+        "\n    GROUP BY bucket\n    ORDER BY bucket"
+    } else {
+        ""
+    };
     let data_columns = format!(
         "
-                kills, deaths, assists, net_worth, denies, last_hits,
+                {bucket_column}kills, deaths, assists, net_worth, denies, last_hits,
                 max_hero_bullets_hit_crit, max_hero_bullets_hit,
                 max_shots_hit, max_shots_missed,
                 max_player_damage, max_max_health, max_player_damage_taken,
@@ -451,8 +525,8 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     // production shapes: identical results, 20% of the bytes and 32% of the CPU.
     format!(
         "
-    SELECT {selects}
-    FROM {t_data}
+    SELECT {bucket_select}{selects}
+    FROM {t_data}{group_by}
     SETTINGS log_comment = 'player_stats_metrics', apply_patch_parts = 0, max_threads = 32
     "
     )
@@ -460,6 +534,10 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
 
 cached_ch_query! {
     fn run_query(3600) -> AnalyticsPlayerStatsMetricsRow = fetch_one;
+}
+
+cached_ch_query! {
+    fn run_bucket_query(3600) -> Vec<AnalyticsPlayerStatsMetricsBucketRow>;
 }
 
 async fn fetch_one(
@@ -472,11 +550,33 @@ async fn fetch_one(
 async fn get_player_stats_metrics(
     ch_client: &clickhouse::Client,
     mut query: PlayerStatsMetricsQuery,
-) -> APIResult<AnalyticsPlayerStatsMetricsRow> {
+) -> APIResult<PlayerStatsMetricsResponse> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
     let query_str = build_query(&query);
     debug!(?query_str);
-    Ok(run_query(ch_client, &query_str).await?)
+    let metrics = |row: &AnalyticsPlayerStatsMetricsRow| {
+        Metric::VARIANTS
+            .iter()
+            .filter(|m| query.include_buff_metrics || !m.is_buff())
+            .map(|m| (*m, m.extract_values(row)))
+            .collect::<AnalyticsPlayerStatsMetrics>()
+    };
+    if query.bucket == BucketQuery::NoBucket {
+        let row = run_query(ch_client, &query_str).await?;
+        return Ok(PlayerStatsMetricsResponse::Metrics(metrics(&row)));
+    }
+    let rows = run_bucket_query(ch_client, &query_str).await?;
+    Ok(PlayerStatsMetricsResponse::Buckets(
+        rows.iter()
+            .map(|row| {
+                let (bucket, row) = row.to_parts();
+                PlayerStatsMetricsBucket {
+                    bucket,
+                    metrics: metrics(&row),
+                }
+            })
+            .collect(),
+    ))
 }
 
 #[utoipa::path(
@@ -499,6 +599,10 @@ row in each matching match is one value, so players with more matches weigh more
 match, not a player: a player's average over many matches spreads much narrower than single
 matches do, so read against these percentiles it looks less extreme than it is among players.
 
+With `bucket=hero` the response is instead a list with one such object per hero, each with an
+extra `bucket` field holding the hero id: `[{\"bucket\": 15, \"kills\": {...}, ...}, ...]`.
+Combined with `hero_ids` it returns every listed hero's metrics from one request.
+
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
 
 > Note: Quantiles are calculated using the [DDSketch](https://www.vldb.org/pvldb/vol12/p2195-masson.pdf) algorithm, so they are not exact but have a maximum relative error of 0.01.
@@ -515,16 +619,8 @@ pub(crate) async fn player_stats_metrics(
         query.max_average_badge,
     )?;
     filter_protected_accounts(&state, &mut query.account_ids, None).await?;
-    let include_buff_metrics = query.include_buff_metrics;
     get_player_stats_metrics(&state.ch_client_ro, query)
         .await
-        .map(|rows| {
-            Metric::VARIANTS
-                .iter()
-                .filter(|m| include_buff_metrics || !m.is_buff())
-                .map(|m| (*m, m.extract_values(&rows)))
-                .collect::<AnalyticsPlayerStatsMetrics>()
-        })
         .map(Json)
 }
 
@@ -614,6 +710,43 @@ mod tests {
         assert!(sql.contains("avg(permanent_buffs / duration_m) AS avg_permanent_buffs_per_min"));
         assert!(sql.contains("ifNull(avg(first_permanent_buff_time_s), nan)"));
         assert!(sql.contains("AS quantiles_permanent_buffs_per_min"));
+    }
+
+    #[test]
+    fn hero_bucket_groups_by_hero() {
+        for max_matches in [None, Some(100)] {
+            let sql = build_query(&PlayerStatsMetricsQuery {
+                bucket: BucketQuery::Hero,
+                hero_ids: Some(vec![1, 15]),
+                max_matches,
+                ..Default::default()
+            });
+            assert_valid_sql(&sql);
+            assert!(sql.contains("toUInt32(hero_id) AS bucket, kills"));
+            assert!(sql.contains("SELECT bucket,\navg(kills) AS avg_kills"));
+            assert!(sql.contains("GROUP BY bucket\n    ORDER BY bucket"));
+        }
+        assert!(!build_query(&PlayerStatsMetricsQuery::default()).contains("bucket"));
+    }
+
+    #[test]
+    fn hero_buckets_are_metrics_objects_with_a_bucket() {
+        let metrics =
+            HashMap::from([(Metric::Kills, MetricValues::from_stats(5.0, 1.0, &[1.0; 9]))]);
+        let single =
+            serde_json::to_value(PlayerStatsMetricsResponse::Metrics(metrics.clone())).unwrap();
+        assert!(single["kills"]["avg"].is_number());
+        assert!(single.get("bucket").is_none());
+
+        let buckets = serde_json::to_value(PlayerStatsMetricsResponse::Buckets(vec![
+            PlayerStatsMetricsBucket {
+                bucket: 15,
+                metrics,
+            },
+        ]))
+        .unwrap();
+        assert_eq!(buckets[0]["bucket"], 15);
+        assert_eq!(buckets[0]["kills"], single["kills"]);
     }
 
     #[test]
