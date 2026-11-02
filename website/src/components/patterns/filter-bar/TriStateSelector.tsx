@@ -90,7 +90,7 @@ export function TriStateGroup({
       className={cn("flex min-w-0 flex-col", className)}
       {...props}
     >
-      <div className="px-2 py-1 eyebrow text-xs text-foreground" style={color ? { color } : undefined}>
+      <div className="px-2 py-1 eyebrow text-foreground" style={color ? { color } : undefined}>
         {label}
       </div>
       {children}
@@ -112,7 +112,7 @@ export function TriStateSection({
       className={cn("flex min-w-0 flex-col", className)}
       {...props}
     >
-      <div className="px-1 py-1 eyebrow text-xs">{label}</div>
+      <div className="px-1 py-1 eyebrow">{label}</div>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-x-3">{children}</div>
     </section>
   );

@@ -37,7 +37,7 @@ import {
   SideNavHeader,
   SideNavShell,
 } from "~/components/patterns/navigation/SideNavShell";
-import { AppBody, AppFrame, PageBackdrop } from "~/components/patterns/page/AppFrame";
+import { AppBody, AppFrame } from "~/components/patterns/page/AppFrame";
 import { Hero, HeroActions, HeroLead } from "~/components/patterns/page/Hero";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -61,16 +61,15 @@ function PageChromeSpecimens() {
   return (
     <>
       <Specimen
-        name="AppBody, PageBackdrop and AppFrame"
+        name="AppBody and AppFrame"
         source="patterns/page/AppFrame"
-        note="The three layers under every page: the body with its background image and shade, the tilted brand mark, and the glass panel pages are drawn on. Used once, in the root route. Below md the frame's gutter reserves the app bar at the top (--app-bar-height) and room for the floating feedback button at the bottom (--floating-control-clearance); narrow the window to see it."
+        note="The two layers under every page: the body on the graphite ground and the padded frame beside the sidebar. Used once, in the root route. Below md the frame's gutter reserves the app bar at the top (--app-bar-height) and room for the floating feedback button at the bottom (--floating-control-clearance); narrow the window to see it."
       >
         <Variants label="composed (the body is rendered as a div here)" className="block">
           <Viewport className="h-80">
-            <AppBody as="div" backgroundSrc="/background.svg" className="h-full">
-              <PageBackdrop src="/logo/hexe.svg" />
+            <AppBody as="div" className="h-full">
               <AppFrame className="min-h-80">
-                <PageHeader as="div" title="A page" description="Everything a route renders sits on this panel." />
+                <PageHeader as="div" title="A page" description="Everything a route renders sits in this frame." />
               </AppFrame>
             </AppBody>
           </Viewport>

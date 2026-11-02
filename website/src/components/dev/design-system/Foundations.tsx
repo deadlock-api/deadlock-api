@@ -148,7 +148,7 @@ export function Foundations() {
 
       <Specimen
         name="Type scale"
-        note="Inter for UI, JetBrains Mono for code and ids, New Rocker (font-game) for game titles only."
+        note="Barlow for UI, Barlow Condensed capitals (font-display) for page titles and labels, JetBrains Mono for code and ids, New Rocker (font-game) for the minigames' titles only."
       >
         <div className="flex flex-col gap-2">
           {TYPE_SCALE.map(([cls, use]) => (
@@ -164,6 +164,10 @@ export function Foundations() {
             <code className="font-mono text-xs text-muted-foreground">eyebrow · the label above a value</code>
           </div>
           <div className="flex flex-wrap items-baseline gap-x-4">
+            <span className="font-display text-3xl font-bold tracking-wide uppercase">Hero win rates</span>
+            <code className="font-mono text-xs text-muted-foreground">font-display · page titles (PageHeader)</code>
+          </div>
+          <div className="flex flex-wrap items-baseline gap-x-4">
             <span className="font-game text-2xl">Deadlockdle</span>
             <code className="font-mono text-xs text-muted-foreground">font-game</code>
           </div>
@@ -172,7 +176,7 @@ export function Foundations() {
 
       <Specimen
         name="Radius"
-        note="Controls are rounded-md, nested blocks rounded-lg, cards and panels rounded-xl, pills rounded-full."
+        note="Controls and chips are rounded-md (6px), cards and panels rounded-lg (8px), pills rounded-full."
       >
         <Variants>
           {RADII.map(([cls, use]) => (

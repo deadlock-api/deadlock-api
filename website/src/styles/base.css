@@ -5,11 +5,6 @@
 
   body {
     @apply bg-background text-foreground;
-    background-image: radial-gradient(
-      ellipse 80% 50% at 50% -20%,
-      color-mix(in srgb, var(--primary) 3%, transparent) 0%,
-      transparent 70%
-    );
   }
 
   button:not(:disabled),

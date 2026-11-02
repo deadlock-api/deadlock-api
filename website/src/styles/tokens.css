@@ -1,27 +1,28 @@
 /* Design tokens, in three tiers. Components reference tier 2 only, through the utilities tier 3 generates
    (bg-card, text-positive, border-hairline). Tier 1 exists so a rebrand is a change to this block alone. */
 
-/* Tier 1: primitives. Raw values with no meaning attached. */
+/* Tier 1: primitives. Raw values with no meaning attached. The ink scale is broadcast graphite: a cool near-black
+   ground, panels one step up, hairlines two. */
 :root {
-  --ink-950: #010409;
-  --ink-900: #0d1117;
-  --ink-850: #151b23;
+  --ink-950: #0b0d10;
+  --ink-900: #11141a;
+  --ink-850: #1a1f26;
   /* The card under the 2% white of --subtle, opaque: a table's even-row stripe on its pinned cells. */
-  --ink-880: #12161c;
+  --ink-880: #16191f;
   --ink-800: #1c2128;
-  --ink-700: #21262d;
+  --ink-700: #252b33;
   /* Between the surfaces and the muted text: the lightest grey that is still quiet, at 3:1 on the muted track. */
   --ink-500: #656f7a;
-  --ink-400: #8b949e;
+  --ink-400: #98a2ae;
   /* A quiet grey that still reads at 4.5:1 on the strongest fill of a heat cell. */
-  --ink-300: #b1bac4;
-  --ink-200: #d2d8de;
-  --ink-100: #e6edf3;
+  --ink-300: #b4bdc8;
+  --ink-200: #d5dbe1;
+  --ink-100: #eef1f4;
 
   --red-500: #fa4454;
   --red-400: #f85149;
   /* The brand red at 10% over the card, opaque, so a pinned cell can carry it over scrolling rows. */
-  --red-950: #25161d;
+  --red-950: #281920;
   --teal-500: #0ea5a0;
   --amber-400: #fbbf24;
   --amber-500: #f59e0b;
@@ -46,11 +47,14 @@
 
   /* Dense data type size: Tailwind's text-xs (12px), the floor. In rem, so it follows the reader's font size. */
   --type-xs: 0.75rem;
+  /* Condensed capitals (`eyebrow`): 13px, which reads like 12px lowercase. */
+  --type-caps: 0.8125rem;
 }
 
 /* Tier 2: semantic tokens. What a color is for. */
 :root {
-  --radius: 0.75rem;
+  /* Controls take --radius-md (6px), cards and panels --radius-lg (8px). */
+  --radius: 0.5rem;
 
   /* Surfaces, darkest to most raised */
   --background: var(--ink-950);
@@ -162,7 +166,7 @@
   --stage-dark: var(--grey-850);
 
   /* Sidebar */
-  --sidebar: var(--ink-950);
+  --sidebar: var(--ink-900);
   --sidebar-foreground: var(--ink-100);
   --sidebar-accent: var(--ink-800);
   --sidebar-accent-foreground: var(--ink-100);
@@ -315,8 +319,13 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans: "Inter Variable", sans-serif;
+  --font-sans: "Barlow", system-ui, sans-serif;
+  /* Page titles, nav group names, table heads and field labels: condensed capitals (`font-display`). */
+  --font-display: "Barlow Condensed", "Barlow", system-ui, sans-serif;
   --font-mono: JetBrains Mono, monospace;
+  /* Condensed capitals: `text-caps` with `font-display uppercase` (table heads, the `eyebrow` label). */
+  --text-caps: var(--type-caps);
+  --text-caps--line-height: 1rem;
   --font-game: "New Rocker", system-ui;
 
   --blur-hairline: 1px;

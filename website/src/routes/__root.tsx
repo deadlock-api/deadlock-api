@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
-import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
+import barlowCondensedBoldWoff2 from "@fontsource/barlow-condensed/files/barlow-condensed-latin-700-normal.woff2?url";
+import barlowWoff2 from "@fontsource/barlow/files/barlow-latin-400-normal.woff2?url";
+import barlowSemiboldWoff2 from "@fontsource/barlow/files/barlow-latin-600-normal.woff2?url";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext, useRouterState } from "@tanstack/react-router";
 import { Agentation } from "agentation";
@@ -15,7 +17,7 @@ import { FindOnPage } from "~/components/app/FindOnPage";
 import { PendingNavigation } from "~/components/app/PendingNavigation";
 import { ThemeProvider } from "~/components/app/ThemeProvider";
 import { FeedbackWidget } from "~/components/features/annotate/FeedbackWidget";
-import { AppBody, AppFrame, PageBackdrop } from "~/components/patterns/page/AppFrame";
+import { AppBody, AppFrame } from "~/components/patterns/page/AppFrame";
 import { SkipLink } from "~/components/ui/skip-link";
 import { Toaster } from "~/components/ui/sonner";
 import { Stack } from "~/components/ui/stack";
@@ -126,13 +128,15 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         { rel: "icon", type: "image/png", href: "https://deadlock-api.com/favicon.png" },
         { rel: "manifest", href: "/manifest.webmanifest" },
         { rel: "api-catalog", href: "/.well-known/api-catalog" },
-        {
+        // `font-display: optional` keeps a face only if it arrives in the first render's block window, so the body,
+        // its semibold and the condensed titles are fetched ahead of the CSS that names them.
+        ...[barlowWoff2, barlowSemiboldWoff2, barlowCondensedBoldWoff2].map((href) => ({
           rel: "preload",
-          href: interWoff2,
+          href,
           as: "font",
           type: "font/woff2",
-          crossOrigin: "anonymous",
-        },
+          crossOrigin: "anonymous" as const,
+        })),
       ],
     };
   },
@@ -227,9 +231,6 @@ function RootComponent() {
               <AppSidebar />
               <main id="main-content" className="min-w-0 flex-1 overflow-x-clip md:ps-64">
                 <MobileMenuButton />
-                {/* Low priority: a 10% opacity decoration, it was preloaded ahead of the CSS and the font and became every page's
-                    largest contentful paint. */}
-                <PageBackdrop src="/logo/hexe.svg" />
                 <AppFrame>
                   <Stack gap={4} className="flex-1">
                     <Breadcrumbs />
@@ -270,7 +271,7 @@ function RootDocument({ children, bare = false }: { children: React.ReactNode; b
       <head>
         <HeadContent />
       </head>
-      <AppBody variant={bare ? "bare" : "page"} backgroundSrc="/background.svg">
+      <AppBody variant={bare ? "bare" : "page"}>
         {children}
         <Scripts />
       </AppBody>

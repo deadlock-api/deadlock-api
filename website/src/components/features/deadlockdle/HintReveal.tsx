@@ -29,7 +29,7 @@ export function HintReveal({ hints, revealedCount, className }: HintRevealProps)
             data-state={revealed ? "revealed" : "locked"}
             className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:gap-2"
           >
-            <dt className="shrink-0 font-mono eyebrow">[{hint.label}]</dt>
+            <dt className="shrink-0 eyebrow font-mono">[{hint.label}]</dt>
             <dd className="grid text-xs text-foreground sm:text-sm">
               <motion.span
                 key={revealed ? "revealed" : "locked"}
