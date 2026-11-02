@@ -58,15 +58,6 @@ export function ItemsPage() {
   const [tab, setTab] = useAnalyticsTab("items");
   // Build Designer and Item Combos do not take a purchase window; a filter there would silently do nothing.
   const purchaseWindowTab = tab === "item-stats" || tab === "item-purchase-analysis";
-  const advancedCount =
-    Number(minMatches !== DEFAULT_MIN_MATCHES) +
-    Number(purchaseWindowTab && (minBoughtAtS !== null || maxBoughtAtS !== null));
-  const resetAdvanced = () =>
-    startTransition(() => {
-      void setMinMatches(null, together);
-      void setMinBoughtAtS(null, together);
-      void setMaxBoughtAtS(null, together);
-    });
 
   return (
     <PageShell>
@@ -129,7 +120,7 @@ export function ItemsPage() {
             defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
           />
           {tab === "item-combos" && <ItemCombFilters />}
-          <Filter.Advanced activeCount={advancedCount} onReset={resetAdvanced}>
+          <>
             <Filter.MinMatches
               value={minMatches}
               onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
@@ -148,7 +139,7 @@ export function ItemsPage() {
                 title="Purchase Time Window"
               />
             )}
-          </Filter.Advanced>
+          </>
           {tab === "item-stats" && (
             <>
               <ItemStatsControls />

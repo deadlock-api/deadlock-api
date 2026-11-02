@@ -154,8 +154,6 @@ function BuildsPage() {
   const [duration, setDuration] = useQueryStates({ min_duration_s: parseAsInteger, max_duration_s: parseAsInteger });
   const minDurationS = duration.min_duration_s ?? undefined;
   const maxDurationS = duration.max_duration_s ?? undefined;
-  const advancedCount =
-    Number(minMatches !== DEFAULT_MIN_MATCHES) + Number(minDurationS !== undefined || maxDurationS !== undefined);
   const [minPlayers, setMinPlayers] = useQueryState("min_players", parseAsInteger.withDefault(DEFAULT_MIN_PLAYERS));
   const { mode: urlMode, setMode } = useModeState();
   // A Street Brawl link from another page reads as the default mode here.
@@ -269,15 +267,7 @@ function BuildsPage() {
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
           defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
-        <Filter.Advanced
-          activeCount={advancedCount}
-          onReset={() =>
-            startTransition(() => {
-              void setMinMatches(null, together);
-              void setDuration({ min_duration_s: null, max_duration_s: null }, together);
-            })
-          }
-        >
+        <>
           <Filter.MinMatches
             value={minMatches}
             onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
@@ -291,7 +281,7 @@ function BuildsPage() {
               )
             }
           />
-        </Filter.Advanced>
+        </>
       </Filter.Root>
 
       <ChunkErrorBoundary>

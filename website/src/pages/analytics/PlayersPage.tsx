@@ -155,13 +155,7 @@ export function PlayersPage({
             defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
           />
           {tab === "scoreboard" && (
-            <Filter.Advanced
-              activeCount={Number(minMatches !== DEFAULT_MIN_MATCHES)}
-              onReset={() => {
-                void setMinMatches(null, together);
-                firstPage();
-              }}
-            >
+            <>
               <Filter.MinMatches
                 value={minMatches}
                 onValueChange={(n) => {
@@ -171,7 +165,7 @@ export function PlayersPage({
                 min={0}
                 defaultValue={DEFAULT_MIN_MATCHES}
               />
-            </Filter.Advanced>
+            </>
           )}
           {tab === "scoreboard" && (
             <SortBySelector

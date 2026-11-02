@@ -22,7 +22,7 @@ import { SortableHeader } from "~/components/patterns/data-table/SortableHeader"
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { DateRangePicker } from "~/components/patterns/filter-bar/DateRangePicker";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
-import { FilterAdvanced, FilterCell, FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
+import { FilterCell, FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { NumberSelector } from "~/components/patterns/filter-bar/NumberSelector";
 import { StringOption, StringOptionGroup, StringSelector } from "~/components/patterns/filter-bar/StringSelector";
 import { type TriState, TriStateItem, TriStateSelector } from "~/components/patterns/filter-bar/TriStateSelector";
@@ -353,8 +353,8 @@ export function Patterns() {
 
       <Specimen
         name="FilterBar cells"
-        source="patterns/filter-bar/FilterBar · FilterCell · FilterAdvanced · StringSelector · NumberSelector · TriStateSelector · DateRangePicker"
-        note="The filters of a page: one row of identical chips (label, value, chevron) that wraps on a narrow screen, after a Filters label counting the ones set. Every kind of filter is that chip: a FilterToggleCell shows its chosen option and lists the others in its popover. A changed filter gets a raised fill and its reset takes the chevron's place. StringSelector shows up to five options as segments, more as a list; StringOptionGroups put headings over a long list (Rank by). FilterAdvanced is the last cell: a popover holding the rarely used filters (Min matches here), each a standalone cell; it counts the ones set and resets them together."
+        source="patterns/filter-bar/FilterBar · FilterCell · StringSelector · NumberSelector · TriStateSelector · DateRangePicker"
+        note="The filters of a page: one row of identical chips (label, value, chevron) that wraps on a narrow screen, after a Filters label counting the ones set. Every kind of filter is that chip: a FilterToggleCell shows its chosen option and lists the others in its popover. A changed filter gets a raised fill and its reset takes the chevron's place. Every single-choice popover (FilterToggleCell, StringSelector) is the same menu: one OptionRow per option, a check on the chosen one; StringOptionGroups put headings over a long list (Rank by). Every filter sits in the row itself: there is no Advanced popover hiding some of them."
       >
         <Variants className="block">
           <FilterBar>
@@ -403,7 +403,7 @@ export function Patterns() {
               {/* Presets: Last 24h (open-ended, from the hour a day back), Last 7 days, Last 30 days. */}
               <DateRangePicker value={dates} onValueChange={setDates} />
             </FilterCell>
-            <FilterAdvanced activeCount={Number(minMatches !== 50)} onReset={() => setMinMatches(50)}>
+            <>
               <NumberSelector
                 label="Min matches"
                 value={minMatches}
@@ -412,7 +412,7 @@ export function Patterns() {
                 min={0}
                 defaultValue={50}
               />
-            </FilterAdvanced>
+            </>
           </FilterBar>
         </Variants>
       </Specimen>

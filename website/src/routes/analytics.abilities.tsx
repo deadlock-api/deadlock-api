@@ -125,17 +125,14 @@ function AbilitiesPage() {
           onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
           defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
         />
-        <Filter.Advanced
-          activeCount={Number(minMatches !== DEFAULT_MIN_MATCHES)}
-          onReset={() => void setMinMatches(null)}
-        >
+        <>
           <Filter.MinMatches
             value={minMatches}
             onValueChange={setMinMatches}
             min={0}
             defaultValue={DEFAULT_MIN_MATCHES}
           />
-        </Filter.Advanced>
+        </>
       </Filter.Root>
 
       <ChunkErrorBoundary>

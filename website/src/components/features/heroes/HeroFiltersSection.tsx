@@ -55,15 +55,6 @@ export function HeroFiltersSection({
   const statsTab = STATS_TABS.includes(tab);
   // By Experience buckets heroes by a player's own match count, which replaces the total threshold.
   const showTotal = statsTab && tab !== "stats-by-experience";
-  const advancedCount = statsTab
-    ? Number(minHeroMatches !== 0) + Number(showTotal && minHeroMatchesTotal !== 0)
-    : Number(minMatches !== DEFAULT_MIN_MATCHES);
-  const resetAdvanced = () =>
-    startTransition(() => {
-      void setMinHeroMatches(null, together);
-      void setMinHeroMatchesTotal(null, together);
-      void setMinMatches(null, together);
-    });
   return (
     <Filter.Root>
       <Filter.ModeWithRank
@@ -86,7 +77,7 @@ export function HeroFiltersSection({
         onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
         defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
       />
-      <Filter.Advanced activeCount={advancedCount} onReset={resetAdvanced}>
+      <>
         {statsTab ? (
           <>
             <Filter.MinMatches
@@ -115,7 +106,7 @@ export function HeroFiltersSection({
             defaultValue={DEFAULT_MIN_MATCHES}
           />
         )}
-      </Filter.Advanced>
+      </>
       {children}
     </Filter.Root>
   );

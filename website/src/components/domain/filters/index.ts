@@ -9,7 +9,6 @@ import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { MatchTimeRangeSelector } from "~/components/domain/selectors/MatchTimeRangeSelector";
 import { SeasonPatchDatePicker } from "~/components/domain/selectors/SeasonPatchDatePicker";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
-import { FilterAdvanced } from "~/components/patterns/filter-bar/FilterCell";
 
 export const Filter = {
   Root: FilterBar,
@@ -23,5 +22,4 @@ export const Filter = {
   BuildTags: BuildTagFilter,
   BuildLanguage: BuildLanguageFilter,
   BuildUpdated: BuildUpdatedFilter,
-  Advanced: FilterAdvanced,
 };
