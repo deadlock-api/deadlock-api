@@ -4,6 +4,7 @@ import { startTransition, Suspense } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import { BuildsExplorer, heroBuildStatsRequest, useBuildFacets } from "~/components/features/builds/BuildsExplorer";
+import { BuildColumnsFilter } from "~/components/features/builds/BuildTable";
 import type { TriState } from "~/components/patterns/filter-bar/TriStateSelector";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
@@ -282,6 +283,7 @@ function BuildsPage() {
             }
           />
         </>
+        <BuildColumnsFilter />
       </Filter.Root>
 
       <ChunkErrorBoundary>

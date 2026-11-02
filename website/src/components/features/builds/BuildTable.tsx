@@ -12,8 +12,10 @@ import { useRef, useState } from "react";
 
 import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { BuildSummaryStats } from "~/components/features/builds/BuildSummaryStats";
+import { ColumnFilter } from "~/components/patterns/data-table/ColumnFilter";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
+import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import type { TriState } from "~/components/patterns/filter-bar/TriStateSelector";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { Button } from "~/components/ui/button";
@@ -23,7 +25,7 @@ import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import { NoValue } from "~/components/ui/no-value";
 import { DivergingBar } from "~/components/ui/rate-bar";
 import { SearchInput } from "~/components/ui/search-input";
-import { Segmented, SegmentedItem } from "~/components/ui/segmented";
+import { SegmentedItem } from "~/components/ui/segmented";
 import { Skeleton } from "~/components/ui/skeleton";
 import {
   Table,
@@ -62,6 +64,18 @@ const parseSortDir = parseAsStringLiteral(["asc", "desc"] as const).withDefault(
 const VIEWS = ["overview", "combat", "economy"] as const;
 type View = (typeof VIEWS)[number];
 const parseView = parseAsStringLiteral(VIEWS).withDefault("overview");
+
+/** Which metrics the builds list shows (overview, combat, economy): a chip of the page's filter row. */
+export function BuildColumnsFilter() {
+  const [view, setView] = useQueryState("columns", parseView.withOptions({ history: "replace" }));
+  return (
+    <FilterToggleCell label="Columns" value={view} defaultValue="overview" onValueChange={(next) => void setView(next)}>
+      <SegmentedItem value="overview">Overview</SegmentedItem>
+      <SegmentedItem value="combat">Combat</SegmentedItem>
+      <SegmentedItem value="economy">Economy</SegmentedItem>
+    </FilterToggleCell>
+  );
+}
 
 /**
  * Where a column that gives way is hidden: `compact` below a phone-wide table (all but one metric of a view go, so a
@@ -231,7 +245,7 @@ export function BuildTable({
     if (!narrowing) setHeldHeight(null);
     else if (heldHeight === null && panelRef.current) setHeldHeight(panelRef.current.getBoundingClientRect().height);
   };
-  const [view, setView] = useQueryState("columns", parseView.withOptions({ history: "replace" }));
+  const [view] = useQueryState("columns", parseView.withOptions({ history: "replace" }));
   const metricColumns = view === "overview" ? [] : VIEW_METRICS[view];
   const columns: Column[] =
     view === "overview"
@@ -333,41 +347,6 @@ export function BuildTable({
     >
       <PanelHeader title="Builds" icon={ListOrdered} size="sm">
         <BuildSummaryStats summary={summary} heroWinRate={heroWinRate} />
-        {/* One width whatever it holds, like the search: a pick that widened it re-wrapped the header under the
-            open menu. A longer summary truncates. */}
-        <ItemSelector
-          selection="tri-state"
-          size="sm"
-          value={itemStates}
-          onValueChange={setItemStates}
-          className="w-36"
-        />
-        <SearchInput
-          value={query}
-          onValueChange={(next) => {
-            holdHeight(next.trim() !== "" || filteringItems);
-            void setQuery(next);
-          }}
-          onKeyDown={(event) => {
-            if (event.key !== "Enter") return;
-            event.preventDefault();
-            void submitSearch();
-          }}
-          loading={searching}
-          loadingLabel="Finding the build"
-          enterKeyHint="search"
-          placeholder="Search name or build ID…"
-          aria-label="Search builds by name, author or build ID; Enter finds a build ID or game code of any hero"
-          // Names, handles and IDs, not prose: no autocorrect or spellcheck.
-          kind="identifier"
-          size="sm"
-          className="w-full @sm:ms-auto @sm:w-60"
-        />
-        <Segmented size="sm" width="hug" value={view} onValueChange={setView} aria-label="Columns">
-          <SegmentedItem value="overview">Overview</SegmentedItem>
-          <SegmentedItem value="combat">Combat</SegmentedItem>
-          <SegmentedItem value="economy">Economy</SegmentedItem>
-        </Segmented>
       </PanelHeader>
       <Table density="dense" height="scroll" aria-label={`Builds, ${view} columns`}>
         <TableHeader position="sticky">
@@ -376,7 +355,50 @@ export function BuildTable({
             <TableHead tone="muted" className={cn("w-8 text-end", HIDE_BELOW.compact)}>
               #
             </TableHead>
-            <TableHead tone="muted">Build</TableHead>
+            <TableHead tone="muted">
+              <span className="inline-flex items-center gap-1">
+                Build
+                {/* The list's own filters, in the column they narrow: the items a build holds, and a search by name,
+                    author or build ID (Enter finds a build ID or game code of any hero). */}
+                <ColumnFilter
+                  label="Build"
+                  active={query.trim() !== "" || filteringItems}
+                  onReset={() => {
+                    holdHeight(false);
+                    void setQuery(null);
+                    void setItemParams({ with_items: null, without_items: null });
+                  }}
+                >
+                  <SearchInput
+                    value={query}
+                    onValueChange={(next) => {
+                      holdHeight(next.trim() !== "" || filteringItems);
+                      void setQuery(next);
+                    }}
+                    onKeyDown={(event) => {
+                      if (event.key !== "Enter") return;
+                      event.preventDefault();
+                      void submitSearch();
+                    }}
+                    loading={searching}
+                    loadingLabel="Finding the build"
+                    enterKeyHint="search"
+                    placeholder="Search name or build ID…"
+                    aria-label="Search builds by name, author or build ID; Enter finds a build ID or game code of any hero"
+                    // Names, handles and IDs, not prose: no autocorrect or spellcheck.
+                    kind="identifier"
+                    size="sm"
+                  />
+                  <ItemSelector
+                    selection="tri-state"
+                    size="sm"
+                    value={itemStates}
+                    onValueChange={setItemStates}
+                    className="w-full"
+                  />
+                </ColumnFilter>
+              </span>
+            </TableHead>
             {columns.map(({ key, label, className }) => (
               <SortableHeader
                 key={key}
