@@ -312,16 +312,21 @@
     /* Its room is kept while nothing is set: the chips after it never move when the first filter changes. */
     display: inline-block;
     visibility: hidden;
+    /* A circle for one digit, a pill from two. The box is trimmed to the digits' cap height and padded equally above
+       and below up to the circle's height, so the digit sits in its true middle, not where the font's uneven line
+       box would put it. */
     min-width: 1.125rem;
-    padding-inline: --spacing(1.5);
+    padding-inline: --spacing(1);
+    padding-block: calc((1.125rem - 1cap) / 2);
+    text-box: trim-both cap alphabetic;
     border-radius: 9999px;
     background: var(--primary);
     color: var(--primary-foreground);
     font-family: var(--font-sans);
     font-size: var(--text-xs);
-    line-height: 1.125rem;
-    letter-spacing: 0;
+    line-height: 1;
     text-align: center;
+    letter-spacing: 0;
     font-variant-numeric: tabular-nums;
   }
 }
