@@ -102,6 +102,8 @@ interface AiSearchProps {
    */
   size?: "default" | "sm";
   className?: string;
+  /** Where the home's example questions sit under the field: from the start edge, or centred under a centred field. */
+  align?: "start" | "center";
 }
 
 /**
@@ -109,7 +111,7 @@ interface AiSearchProps {
  * filtered. It never answers itself. The field keeps the question after it opens the page, and a question it cannot
  * place is said in a callout over the page under the field, so nothing around the field ever moves.
  */
-export function AiSearch({ size = "default", className }: AiSearchProps) {
+export function AiSearch({ size = "default", align = "start", className }: AiSearchProps) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const closeDrawer = useCloseSideNavDrawer();
@@ -342,8 +344,8 @@ export function AiSearch({ size = "default", className }: AiSearchProps) {
         )}
       </Callout>
       {home && (
-        // Under the field, from its start edge like the page around it.
-        <Inline gap={2}>
+        // Under the field, aligned like the block around it.
+        <Inline gap={2} justify={align === "center" ? "center" : undefined}>
           {EXAMPLE_QUESTIONS.map((example) => (
             <Button
               key={example}

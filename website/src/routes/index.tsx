@@ -176,18 +176,19 @@ function IndexRoute() {
       {/* Two columns: the search and the site map, the page's work, beside a rail of small panels that go with it. */}
       <Grid columns={{ base: 1, lg: 3 }} gap={6}>
         <Stack gap={6} className="lg:col-span-2">
-          {/* What the site is, then the search, its main action: a phone reaches it without scrolling. */}
-          <Stack gap={4}>
-            <Stack gap={2}>
-              <PageHeader size="display" title="Deadlock API" />
-              <Text as="p" tone="muted" className="max-w-4xl type-prose">
+          {/* What the site is, then the search, its main action: a phone reaches it without scrolling. Centred in the
+              column, the site's front door. */}
+          <Stack gap={4} align="center" className="text-center">
+            <Stack gap={2} align="center">
+              <PageHeader size="display" title="Deadlock API" align="center" />
+              <Text as="p" tone="muted" align="center" className="max-w-3xl type-prose">
                 Track Deadlock stats: hero win rates, pick rates, item analytics, rank distribution, and leaderboards,
                 updated live from Valve's servers. A comprehensive set of endpoints also gives developers access to
                 Deadlock game data, match history, player statistics, hero analytics, and more.
               </Text>
             </Stack>
-            <AiSearch className="max-w-4xl" />
-            <Inline gap={2}>
+            <AiSearch align="center" className="max-w-3xl" />
+            <Inline gap={2} justify="center">
               <InstallButton size="default" installHref={INGEST_INSTALL_PATH} placement="home_hero" />
               {valueProps.map((prop) => (
                 <Button key={prop.label} asChild variant="outline">
