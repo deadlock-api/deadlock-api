@@ -387,7 +387,7 @@ struct BrawlParts {
     purchase_columns: String,
 }
 
-#[allow(
+#[expect(
     clippy::too_many_lines,
     reason = "one linear query builder reads clearer than split helpers"
 )]

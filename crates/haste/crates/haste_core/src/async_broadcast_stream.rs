@@ -16,6 +16,7 @@ use crate::demostream::{
     parse_broadcast_cmd_header,
 };
 
+#[derive(Debug)]
 pub struct AsyncBroadcastStream<R: AsyncRead + Unpin + Send> {
     reader: R,
     buffer: Vec<u8>,

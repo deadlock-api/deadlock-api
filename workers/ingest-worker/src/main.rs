@@ -252,6 +252,9 @@ fn lock_inflight(inflight: &InflightSet) -> std::sync::MutexGuard<'_, HashSet<Pa
         .unwrap_or_else(std::sync::PoisonError::into_inner)
 }
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let _otel_guard = telemetry::init_tracing(env!("CARGO_PKG_NAME"));

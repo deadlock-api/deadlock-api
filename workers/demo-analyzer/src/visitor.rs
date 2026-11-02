@@ -1,4 +1,4 @@
-use core::future::{Future, ready};
+use core::future::ready;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 

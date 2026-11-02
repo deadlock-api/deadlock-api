@@ -73,6 +73,9 @@ const MIN_CYCLE_INTERVAL: Duration = Duration::from_mins(1);
 static PRIORITIZATION_MAX_RETRIES: LazyLock<u32> =
     LazyLock::new(|| service_utils::env_or("PRIORITIZATION_MAX_RETRIES", 5));
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[tokio::main]
 #[expect(
     clippy::too_many_lines,

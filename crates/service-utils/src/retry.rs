@@ -1,6 +1,5 @@
 //! Retry utilities using tryhard for resilient operations.
 
-use core::future::Future;
 use core::time::Duration;
 
 use crate::ErrorChain;

@@ -11,7 +11,6 @@
 //! 2. Upstream source blocks/waits
 //! 3. This naturally throttles the data source
 
-use core::future::Future;
 use std::io;
 
 use bytes::Bytes;
@@ -28,6 +27,7 @@ use crate::packet_source::PacketSource;
 /// Each packet is a complete HTTP response body from GOTV broadcast endpoints
 /// (`/start`, `/full`, `/delta`). Commands are read from the current packet,
 /// and when exhausted, the next packet is awaited from the source.
+#[derive(Debug)]
 pub struct PacketChannelBroadcastStream<P: PacketSource> {
     source: P,
     /// Current packet being read (ref-counted, zero-copy slicing).

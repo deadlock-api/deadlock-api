@@ -12,6 +12,7 @@ steam-proxy = { workspace = true }
 telemetry = { workspace = true, features = ["prometheus"] }
 itertools = { workspace = true }
 metrics = { workspace = true }
+mimalloc = { workspace = true }
 rand = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 serde_json = { workspace = true }

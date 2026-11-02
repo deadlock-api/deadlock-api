@@ -98,6 +98,9 @@ enum Error {
 #[error("Failed to fetch prioritized account {0}")]
 struct PrioritizedFetchError(u32);
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let _otel_guard = telemetry::init_tracing(env!("CARGO_PKG_NAME"));

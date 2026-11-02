@@ -15,6 +15,7 @@ telemetry = { workspace = true, features = ["prometheus"] }
 futures = { workspace = true }
 haste = { workspace = true, features = ["async"] }
 metrics = { workspace = true }
+mimalloc = { workspace = true }
 prost = { workspace = true }
 reqwest = { workspace = true, features = ["stream"] }
 serde = { workspace = true }

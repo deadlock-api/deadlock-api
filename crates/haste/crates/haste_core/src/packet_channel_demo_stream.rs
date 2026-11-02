@@ -23,6 +23,7 @@ const DEMO_HEADER_SIZE: usize = size_of::<DemoHeader>();
 ///
 /// Each packet is a chunk of demo file bytes. Commands are read by parsing
 /// varint-encoded headers, and command bodies may be snappy-compressed.
+#[derive(Debug)]
 pub struct PacketChannelDemoStream<P: PacketSource> {
     source: P,
     /// Current packet being read.

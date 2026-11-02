@@ -1,11 +1,7 @@
 use haste::entities::{Entity, ehandle_to_index, is_ehandle_valid};
 use haste::parser::Context;
 
-#[allow(
-    clippy::wildcard_imports,
-    reason = "`expect` on a `use` item is not fulfilled"
-)]
-use crate::demo_parser::hashes::*;
+use crate::demo_parser::hashes::{CX, CY, CZ, VX, VY, VZ};
 
 fn get_entity_coord(ctx: &Context, entity: &Entity, cell_key: u64, vec_key: u64) -> Option<f32> {
     // NOTE: goes through the context because the world size (max coord) is announced by the

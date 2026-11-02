@@ -37,6 +37,9 @@ pub(crate) enum Error {
     SpectateBot(#[from] cmd::run_spectate_bot::SpectateBotError),
 }
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let _otel_guard = telemetry::init_tracing(env!("CARGO_PKG_NAME"));

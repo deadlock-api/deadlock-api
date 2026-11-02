@@ -412,6 +412,12 @@ pub struct ClickhouseBatcher<T: BatchQuery> {
     engine: BatchEngine<SingleBridge<T>>,
 }
 
+impl<T: BatchQuery> fmt::Debug for ClickhouseBatcher<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ClickhouseBatcher").finish_non_exhaustive()
+    }
+}
+
 impl<T: BatchQuery> Clone for ClickhouseBatcher<T> {
     fn clone(&self) -> Self {
         Self {
@@ -465,6 +471,13 @@ pub struct ClickhouseBatcherMulti<T: BatchQueryMulti> {
     engine: BatchEngine<MultiBridge<T>>,
 }
 
+impl<T: BatchQueryMulti> fmt::Debug for ClickhouseBatcherMulti<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ClickhouseBatcherMulti")
+            .finish_non_exhaustive()
+    }
+}
+
 impl<T: BatchQueryMulti> Clone for ClickhouseBatcherMulti<T> {
     fn clone(&self) -> Self {
         Self {
@@ -490,6 +503,13 @@ impl<T: BatchQueryMulti> ClickhouseBatcherMulti<T> {
 
 pub struct ClickhouseBatcherGrouped<T: BatchQueryGrouped> {
     engine: BatchEngine<GroupedBridge<T>>,
+}
+
+impl<T: BatchQueryGrouped> fmt::Debug for ClickhouseBatcherGrouped<T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("ClickhouseBatcherGrouped")
+            .finish_non_exhaustive()
+    }
 }
 
 impl<T: BatchQueryGrouped> Clone for ClickhouseBatcherGrouped<T> {

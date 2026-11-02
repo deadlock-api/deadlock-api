@@ -1,4 +1,3 @@
-use core::future::Future;
 use core::ops::Range;
 use core::time::Duration;
 use std::collections::HashSet;
@@ -27,11 +26,7 @@ use crate::demo_parser::entity_events::{
     banned_heroes_from_game_rules, corrupted_item,
 };
 use crate::demo_parser::error::DemoParseError;
-#[allow(
-    clippy::wildcard_imports,
-    reason = "`expect` on a `use` item is not fulfilled"
-)]
-use crate::demo_parser::hashes::*;
+use crate::demo_parser::hashes::{OWNER_ENTITY_HASH, TEAM_HASH};
 use crate::demo_parser::types::{Delta, DemoEvent, DemoEventPayload};
 use crate::demo_parser::utils::{get_entity_handle_index, handle_to_entity_index};
 

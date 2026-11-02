@@ -169,7 +169,7 @@ fn console_label(name: &str) -> Option<&'static str> {
 /// — i.e. the `request` span wrapping every log line — are reduced to the legacy
 /// console field set via [`console_label`], keeping console output identical to
 /// the pre-OTLP behaviour while the spans still export their full attribute set.
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct ConsoleFields {
     default: DefaultFields,
 }

@@ -12,6 +12,7 @@ steam-proxy = { workspace = true }
 telemetry = { workspace = true, features = ["prometheus"] }
 futures = { workspace = true }
 metrics = { workspace = true }
+mimalloc = { workspace = true }
 player-match-history = { workspace = true }
 reqwest = { workspace = true }
 sqlx = { workspace = true, features = ["postgres", "runtime-tokio"] }

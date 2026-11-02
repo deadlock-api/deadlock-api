@@ -98,7 +98,6 @@ pub async fn fetch_accolades(
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
 
     use super::*;
     use keyvalues::localization as kv1;

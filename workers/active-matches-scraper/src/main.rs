@@ -45,6 +45,9 @@ enum Error {
     Http(#[from] reqwest::Error),
 }
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[tokio::main]
 #[expect(
     clippy::infinite_loop,

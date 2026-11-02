@@ -25,7 +25,6 @@ pub mod expiry;
 mod memory;
 
 use core::any::TypeId;
-use core::future::Future;
 use core::marker::PhantomData;
 use core::time::Duration;
 use std::sync::{Arc, OnceLock};

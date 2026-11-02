@@ -16,6 +16,7 @@ service-utils = { workspace = true }
 telemetry = { workspace = true, features = ["prometheus"] }
 futures = { workspace = true }
 metrics = { workspace = true }
+mimalloc = { workspace = true }
 object_store = { workspace = true }
 prost = { workspace = true }
 reqwest = { workspace = true }

@@ -10,6 +10,7 @@ game-assets = { workspace = true }
 service-utils = { workspace = true }
 telemetry = { workspace = true, features = ["prometheus"] }
 metrics = { workspace = true }
+mimalloc = { workspace = true }
 serde = { workspace = true }
 serde_repr = { workspace = true }
 thiserror = { workspace = true }

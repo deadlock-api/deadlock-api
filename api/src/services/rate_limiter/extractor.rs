@@ -1,4 +1,4 @@
-use core::future::{Future, ready};
+use core::future::ready;
 use core::net::Ipv4Addr;
 
 use axum::extract::FromRequestParts;

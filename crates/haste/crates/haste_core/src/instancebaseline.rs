@@ -18,6 +18,14 @@ pub(crate) struct InstanceBaseline {
     data: Vec<Option<Arc<[u8]>>>,
 }
 
+impl core::fmt::Debug for InstanceBaseline {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("InstanceBaseline")
+            .field("len", &self.data.len())
+            .finish_non_exhaustive()
+    }
+}
+
 impl InstanceBaseline {
     /// syncs baselines with the `instancebaseline` string table. `on_change` is called with the
     /// class id of every baseline whose bytes differ from what was stored before, so that caches

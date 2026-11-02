@@ -442,7 +442,7 @@ fn player_select_list(projection: &Projection) -> String {
 mod tests {
     use super::*;
     use crate::routes::v1::graphql::projection::{
-        FINAL_STAT_SUBFIELDS, MATCH_COLUMNS, PLAYER_COLUMNS, Projection,
+        FINAL_STAT_SUBFIELDS, MATCH_COLUMNS, PLAYER_COLUMNS,
     };
 
     fn match_id_only() -> Projection {
@@ -953,7 +953,7 @@ mod proptests {
         (where_, having).prop_map(|(where_, having)| MatchHistorySqlFilters { where_, having })
     }
 
-    use crate::routes::v1::graphql::projection::{Column, MATCH_COLUMNS, PLAYER_COLUMNS};
+    use crate::routes::v1::graphql::projection::{MATCH_COLUMNS, PLAYER_COLUMNS};
     use crate::utils::proptest_utils::assert_valid_sql;
 
     fn arb_columns(pool: &'static [Column]) -> impl Strategy<Value = Vec<Column>> {

@@ -266,8 +266,6 @@ pub(super) fn map_demofusion_err(e: &demofusion::DemoError) -> APIError {
 
 #[cfg(test)]
 mod tests {
-    use std::sync::Arc;
-
     use datafusion::arrow::array::{Int32Array, StringArray};
     use datafusion::arrow::datatypes::{DataType, Field, Schema};
     use rstest::rstest;

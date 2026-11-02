@@ -20,6 +20,7 @@ itertools = { workspace = true }
 jiff = { version = "0.2.38", features = ["serde"] }
 lru = "0.19.0"
 metrics = { workspace = true }
+mimalloc = { workspace = true }
 object_store = { workspace = true }
 prost = { workspace = true }
 redis = { workspace = true }

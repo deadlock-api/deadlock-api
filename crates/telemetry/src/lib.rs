@@ -45,6 +45,7 @@ use tracing_subscriber::layer::SubscriberExt as _;
 use tracing_subscriber::util::SubscriberInitExt as _;
 use tracing_subscriber::{EnvFilter, Layer as _};
 
+#[derive(Debug)]
 pub struct OtelGuard {
     tracer_provider: SdkTracerProvider,
     logger_provider: SdkLoggerProvider,
@@ -96,6 +97,7 @@ pub const TOOLS_LOG_FILTER: &str = "debug,h2=warn,hyper_util=warn,reqwest=warn,r
      steam_vent=info,opentelemetry_sdk=info,tower=info,opentelemetry-otlp=info";
 
 /// How [`init_tracing_with`] sets up logging for one service.
+#[derive(Debug)]
 pub struct TracingConfig<'a, N> {
     /// `service.name` of the exported traces and logs.
     pub service_name: &'a str,

@@ -1,5 +1,3 @@
-#[cfg(feature = "async")]
-use core::future::Future;
 use prost::Message as _;
 use std::io;
 use std::io::SeekFrom;
@@ -154,6 +152,7 @@ fn full_packet_interval(tick_interval: f32) -> i32 {
 // there also must be an intermediary variant (or maybe stuff can be piled into Uninitialized
 // variant) for incremental initialization. this may improve public api because string_tables,
 // serializer, and other methods will not have to return Option when context is initialized.
+#[derive(Debug)]
 pub struct Context {
     string_tables: StringTableContainer,
     instance_baseline: InstanceBaseline,
@@ -623,7 +622,7 @@ impl FullPacketIndex {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SharedState {
     serializers: Arc<FlattenedSerializerContainer>,
     entity_classes: Arc<EntityClasses>,
@@ -790,6 +789,7 @@ enum ControlFlow {
 }
 
 // TODO: maybe rename to DemoPlayer (or DemoRunner?)
+#[derive(Debug)]
 pub struct Parser<D: DemoStream, V: Visitor> {
     demo_stream: D,
     buf: Vec<u8>,
@@ -1392,6 +1392,7 @@ impl<D: SeekableDemoStream, V: Visitor> Parser<D, V> {
 use crate::async_demostream::AsyncDemoStream;
 
 #[cfg(feature = "async")]
+#[derive(Debug)]
 pub struct AsyncStreamingParser<D: AsyncDemoStream, V: AsyncVisitor> {
     demo_stream: D,
     buf: Vec<u8>,

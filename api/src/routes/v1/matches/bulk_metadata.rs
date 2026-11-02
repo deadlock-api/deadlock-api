@@ -561,7 +561,28 @@ fn build_query(
             select_fields.push(format!("any({quoted}) as `{alias}`"));
         }
     }
-    let player_columns = player_columns(&query);
+    // A player column named like a match-level alias (`any(created_at) as created_at`) would
+    // bind to that aggregate inside `groupUniqArray` (ILLEGAL_AGGREGATION), so those are
+    // qualified with the table. Only colliding columns are, keeping all other SQL unchanged.
+    let match_aliases: HashSet<&str> = select_fields
+        .iter()
+        .filter_map(|field| {
+            field
+                .rsplit_once(" as ")
+                .map(|(_, alias)| alias.trim_matches('`'))
+        })
+        .collect();
+    let player_columns = player_columns(&query)
+        .into_iter()
+        .map(|(expr, alias)| {
+            let root = expr.split('.').next().unwrap_or_default().trim_matches('`');
+            if match_aliases.contains(root) {
+                (format!("match_player.{expr}"), alias)
+            } else {
+                (expr, alias)
+            }
+        })
+        .collect_vec();
     let has_player_fields = !player_columns.is_empty();
     if has_player_fields {
         select_fields.push(players_select_field(&player_columns, players_tuple_type));
@@ -1035,6 +1056,34 @@ mod proptests {
         assert!(!sql.contains("any(`match_id`)"));
         assert!(!sql.contains("any(`average_badge`)"));
         assert_eq!(sql.matches("any(`team_score`) as `team_score`").count(), 1);
+    }
+
+    #[test]
+    fn player_columns_named_like_match_aliases_are_qualified() {
+        // Both shapes failed in prod with ILLEGAL_AGGREGATION: the player column bound to the
+        // match-level `any(...)` alias of the same name.
+        let sql = build_query(
+            BulkMatchMetadataQuery {
+                include_more_info: true,
+                include_player_info: true,
+                extra_match_columns: Some(vec!["created_at".to_owned()]),
+                extra_player_columns: Some(vec![
+                    "ranked_type".to_owned(),
+                    "created_at".to_owned(),
+                    "won".to_owned(),
+                ]),
+                limit: 50,
+                ..BulkMatchMetadataQuery::default()
+            },
+            None,
+        )
+        .expect("query should build");
+        assert_valid_sql(&sql);
+        assert!(sql.contains("match_player.`ranked_type` AS `ranked_type`"));
+        assert!(sql.contains("match_player.`created_at` AS `created_at`"));
+        assert!(sql.contains(", `won` AS `won`") || sql.contains(", `won`"));
+        assert!(!sql.contains("match_player.`won`"));
+        assert!(!sql.contains("match_player.account_id"));
     }
 
     #[test]

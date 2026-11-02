@@ -32,6 +32,7 @@ async fn read_demo_header_async<R: AsyncRead + Unpin>(
     })
 }
 
+#[derive(Debug)]
 pub struct AsyncDemoFile<R: AsyncRead + Unpin> {
     rdr: R,
     buf: Vec<u8>,

@@ -22,6 +22,14 @@ pub struct BroadcastFile<R: Read + Seek> {
     total_ticks: Option<i32>,
 }
 
+impl<R: Read + Seek> core::fmt::Debug for BroadcastFile<R> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("BroadcastFile")
+            .field("total_ticks", &self.total_ticks)
+            .finish_non_exhaustive()
+    }
+}
+
 impl<R: Read + Seek> BroadcastFile<R> {
     /// creates a new [`BroadcastFile`] instance from the given reader.
     ///

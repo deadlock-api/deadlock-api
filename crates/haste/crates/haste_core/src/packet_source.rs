@@ -5,8 +5,6 @@
 //! - `mpsc::Receiver<Bytes>` (Rust-native channel)
 //! - Any other async byte source
 
-use core::future::Future;
-
 use bytes::Bytes;
 use tokio::sync::mpsc;
 

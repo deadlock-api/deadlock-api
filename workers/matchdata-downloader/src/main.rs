@@ -270,6 +270,9 @@ struct Cli {
     match_ids_file: Option<String>,
 }
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let _otel_guard = telemetry::init_tracing(env!("CARGO_PKG_NAME"));

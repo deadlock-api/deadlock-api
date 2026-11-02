@@ -3,6 +3,7 @@ use dungers_varint::{CONTINUE_BIT, PAYLOAD_BITS, zigzag_encode64};
 
 use crate::{BitError, bit_write_mask, extra_mask};
 
+#[derive(Debug)]
 pub struct BitWriter<'a> {
     data_bits: usize,
     /// written in little-endian 64-bit blocks; a trailing partial block can't be written to.

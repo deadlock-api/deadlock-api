@@ -1,6 +1,5 @@
 //! Graceful shutdown on SIGTERM (container stop) or Ctrl-C.
 
-use core::future::Future;
 use std::sync::OnceLock;
 
 use tokio_util::sync::CancellationToken;

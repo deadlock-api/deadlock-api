@@ -33,6 +33,9 @@ const PORT: u16 = 3000;
 /// demo streams last as long as their match, so they are cut off after this.
 const SHUTDOWN_GRACE: Duration = Duration::from_secs(5);
 
+#[global_allocator]
+static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+
 #[tokio::main]
 async fn main() -> Result<(), StartupError> {
     let _otel_guard = telemetry::init_tracing_with(telemetry::TracingConfig::new(

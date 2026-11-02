@@ -49,7 +49,7 @@ impl VersionStoreError {
 const ON_DEMAND_COOLDOWN: Duration = Duration::from_mins(1);
 
 /// Cached listing of versions plus the latest one. Refreshed in the background.
-#[derive(Clone, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct VersionStore {
     versions: Arc<ArcSwap<Vec<u32>>>,
     /// Time of the last successful listing. Written under `refresh_lock`, read

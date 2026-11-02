@@ -18,6 +18,7 @@ where
 }
 
 /// Displays an error with its whole source chain, `outer: inner: ...`.
+#[derive(Debug)]
 pub struct ErrorChain<'a>(pub &'a dyn core::error::Error);
 
 impl core::fmt::Display for ErrorChain<'_> {

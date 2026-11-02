@@ -1,5 +1,4 @@
 use core::error::Error;
-use core::future::Future;
 
 use bytes::Bytes;
 

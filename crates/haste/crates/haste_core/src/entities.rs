@@ -599,11 +599,6 @@ impl EntityContainer {
 }
 
 #[cfg(test)]
-// NOTE: the values compared below are exactly representable.
-#[allow(
-    clippy::float_cmp,
-    reason = "the compared values are exactly representable"
-)]
 mod tests {
     use super::*;
 

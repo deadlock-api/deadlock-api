@@ -56,7 +56,7 @@ pub(crate) async fn reject_cache_busts(req: Request, next: Next) -> Response {
 mod tests {
     use axum::Router;
     use axum::body::Body;
-    use axum::http::{Request, StatusCode};
+    use axum::http::Request;
     use axum::routing::get;
     use rstest::rstest;
     use tower::ServiceExt as _;

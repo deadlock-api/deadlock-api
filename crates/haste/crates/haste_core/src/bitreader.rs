@@ -15,6 +15,7 @@ pub(crate) const NORMAL_FRACTIONAL_BITS: usize = 11;
 pub(crate) const ANGLE_BITS: usize = 20;
 
 // BitRead is a port of valve's CBitRead(or/and old_bf_read) from valve's tier1 lib.
+#[derive(Debug)]
 pub struct BitReader<'a> {
     inner: bitbuf::BitReader<'a>,
 }
@@ -510,11 +511,6 @@ impl<'a> BitReader<'a> {
 }
 
 #[cfg(test)]
-// NOTE: the values compared below are exactly representable.
-#[allow(
-    clippy::float_cmp,
-    reason = "the compared values are exactly representable"
-)]
 mod test {
     use super::*;
 

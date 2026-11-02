@@ -46,6 +46,7 @@ async fn eval_if_owned(
 }
 
 /// A held lease on a Redis key, renewed in the background until released or dropped.
+#[derive(Debug)]
 pub struct Lease {
     redis: ConnectionManager,
     key: String,

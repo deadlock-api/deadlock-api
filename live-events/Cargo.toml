@@ -27,6 +27,7 @@ thiserror = "2.0.21"
 serde-env = "0.3.0"
 steam-id = { workspace = true }
 bytes = "1.12.1"
+mimalloc = { workspace = true }
 
 [lints]
 workspace = true

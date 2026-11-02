@@ -19,7 +19,7 @@ static SCRIPT: LazyLock<Script> = LazyLock::new(|| Script::new(include_str!("cha
 ///
 /// A charge is one atomic script call, so concurrent requests cannot interleave; the counts assume
 /// the replicas' clocks agree.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct RedisStore {
     connection: ConnectionManager,
 }

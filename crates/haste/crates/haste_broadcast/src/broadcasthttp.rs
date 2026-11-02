@@ -269,6 +269,16 @@ pub struct BroadcastHttp<'client, C: HttpClient + 'client> {
     total_ticks: Option<i32>,
 }
 
+impl<'client, C: HttpClient + 'client> core::fmt::Debug for BroadcastHttp<'client, C> {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("BroadcastHttp")
+            .field("stream_fragment", &self.stream_fragment)
+            .field("signup_fragment", &self.signup_fragment)
+            .field("total_ticks", &self.total_ticks)
+            .finish_non_exhaustive()
+    }
+}
+
 impl<'client, C: HttpClient + 'client> BroadcastHttp<'client, C> {
     pub async fn start_streaming(
         http_client: C,
@@ -623,7 +633,6 @@ impl<'client, C: HttpClient + 'client> SeekableDemoStream for BroadcastHttp<'cli
 
 #[cfg(test)]
 mod tests {
-    use core::future::Future;
     use core::sync::atomic::{AtomicU32, Ordering};
     use std::collections::VecDeque;
     use std::sync::Mutex;

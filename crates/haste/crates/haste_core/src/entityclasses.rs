@@ -2,11 +2,12 @@ use valveprotos::common::CDemoClassInfo;
 
 use crate::fxhash;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ClassInfo {
     pub network_name_hash: u64,
 }
 
+#[derive(Debug)]
 pub struct EntityClasses {
     pub classes: usize,
     pub bits: usize,

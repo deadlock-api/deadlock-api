@@ -8,6 +8,7 @@ use crate::{BitError, extra_mask};
 // NOTE(blukai): introduction of "caching" didn't yeild any performance inprovements, in fact quite
 // the opposite happened. numbers were degraded.
 
+#[derive(Debug)]
 pub struct BitReader<'a> {
     data: &'a [u8],
     num_bits: usize,

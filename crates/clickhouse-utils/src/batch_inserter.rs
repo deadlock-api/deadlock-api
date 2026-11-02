@@ -39,6 +39,7 @@ struct Request<T> {
 /// Resolves once the rows of one [`BatchInserter::insert`] call were flushed: `true` if
 /// they reached `ClickHouse`, `false` if the flush failed after its retries. Dropping it
 /// does not cancel the insert.
+#[derive(Debug)]
 pub struct InsertAck(oneshot::Receiver<bool>);
 
 impl InsertAck {
@@ -48,6 +49,7 @@ impl InsertAck {
 }
 
 /// Room for one [`BatchInserter::insert`] call, from [`BatchInserter::reserve`].
+#[derive(Debug)]
 pub struct InsertPermit<'a, T>(mpsc::Permit<'a, Request<T>>);
 
 impl<T> InsertPermit<'_, T> {
@@ -60,7 +62,7 @@ impl<T> InsertPermit<'_, T> {
     }
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 struct Stats {
     flushed_rows: AtomicUsize,
     failed_rows: AtomicUsize,
@@ -71,6 +73,7 @@ struct Stats {
 /// It flushes on size, on an interval, and on [`BatchInserter::shutdown`]. Each flush is
 /// retried with backoff; on persistent failure the batch is dropped and its acks
 /// report `false`.
+#[derive(Debug)]
 pub struct BatchInserter<T> {
     tx: mpsc::Sender<Request<T>>,
     config: Arc<BatchInserterConfig>,

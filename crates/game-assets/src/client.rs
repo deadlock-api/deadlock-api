@@ -39,7 +39,7 @@ pub type AssetsClientResult<T> = Result<T, AssetsClientError>;
 /// Builds the data in-process from the latest published game version. The
 /// underlying `build_*` functions are cached per `(version, language)`, so
 /// repeated calls don't re-parse the source files.
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct AssetsClient {
     r2_client: AmazonS3,
     version_store: VersionStore,

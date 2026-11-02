@@ -382,6 +382,7 @@ fn field_serializer(
     serializer_map.get(&name.hash).cloned()
 }
 
+#[derive(Debug)]
 pub struct FlattenedSerializerContainer {
     serializer_map: SerializerMap,
     coord_size_params: CoordSizeParams,

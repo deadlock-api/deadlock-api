@@ -34,6 +34,7 @@ pub enum StringTableError {
     BitReader(#[from] BitError),
 }
 
+#[derive(Debug)]
 pub struct StringTableItem {
     pub string: Option<Vec<u8>>,
     /// replaced (never mutated in place) when an update brings new user data, so holders of an
@@ -53,6 +54,7 @@ impl StringTableItem {
     }
 }
 
+#[derive(Debug)]
 pub struct StringTable {
     name: Box<str>,
     user_data_fixed_size: bool,
@@ -309,7 +311,7 @@ impl StringTable {
 }
 
 // NOTE: this is modelled after CNetworkStringTableContainer
-#[derive(Default)]
+#[derive(Default, Debug)]
 pub struct StringTableContainer {
     tables: Vec<StringTable>,
 }

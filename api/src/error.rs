@@ -344,10 +344,6 @@ impl IntoResponse for APIError {
 
 #[cfg(test)]
 mod tests {
-    use core::time::Duration;
-
-    use axum::http::StatusCode;
-
     use super::*;
 
     #[test]

@@ -6,7 +6,6 @@
 //! long without serving anything older than the process itself would.
 
 use core::cell::Cell;
-use core::future::Future;
 use std::time::SystemTime;
 
 tokio::task_local! {

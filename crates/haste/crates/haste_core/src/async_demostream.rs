@@ -1,4 +1,3 @@
-use core::future::Future;
 use dungers::varint::{CONTINUE_BIT, PAYLOAD_BITS, VarintError, max_varint_size};
 use tokio::io::{AsyncRead, AsyncReadExt as _};
 use valveprotos::common::{CDemoClassInfo, CDemoFullPacket, CDemoSendTables};
