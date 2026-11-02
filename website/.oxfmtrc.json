@@ -26,6 +26,7 @@
     ".claude/skills/contrast-master",
     ".claude/skills/data-visualization-accessibility",
     ".claude/skills/design-system-auditor",
-    ".claude/skills/accessibility-regression-detector"
+    ".claude/skills/accessibility-regression-detector",
+    ".agents/skills/impeccable"
   ]
 }
