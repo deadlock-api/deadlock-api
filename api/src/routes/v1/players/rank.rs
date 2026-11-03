@@ -469,55 +469,6 @@ fn average_badge(badges: &[u32]) -> u32 {
     idx_to_badge(avg_idx).cast_unsigned()
 }
 
-#[utoipa::path(
-    get,
-    path = "/{account_id}/rank-predict",
-    params(AccountIdQuery),
-    responses(
-        (status = OK, body = RankResponse),
-        (status = BAD_REQUEST, description = "Invalid account ID"),
-        (status = FORBIDDEN, description = "User is protected or endpoint unavailable"),
-        (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
-    ),
-    tags = ["Players"],
-    summary = "Rank Predict (Deprecated)",
-    description = "Deprecated alias of `/v1/players/{account_id}/rank`. The rank is no longer predicted, it is read from the player's latest ranked match."
-)]
-#[deprecated(note = "renamed to `rank`")]
-pub(super) async fn rank_predict(
-    account_id: Path<AccountIdQuery>,
-    state: State<AppState>,
-) -> APIResult<Json<RankResponse>> {
-    rank(account_id, state).await
-}
-
-#[utoipa::path(
-    get,
-    path = "/{account_id}/rank-predict/image",
-    params(AccountIdQuery, RankImageQuery),
-    responses(
-        (status = OK, description = "Rank badge image", content(
-            ([u8] = "image/png"),
-            ([u8] = "image/webp"),
-        )),
-        (status = BAD_REQUEST, description = "Invalid account ID"),
-        (status = FORBIDDEN, description = "User is protected or endpoint unavailable"),
-        (status = NOT_FOUND, description = "No image available for the rank"),
-        (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
-    ),
-    tags = ["Players"],
-    summary = "Rank Predict Image (Deprecated)",
-    description = "Deprecated alias of `/v1/players/{account_id}/rank/image`. The rank is no longer predicted, it is read from the player's latest ranked match."
-)]
-#[deprecated(note = "renamed to `rank_image`")]
-pub(super) async fn rank_predict_image(
-    account_id: Path<AccountIdQuery>,
-    format: Query<RankImageQuery>,
-    state: State<AppState>,
-) -> APIResult<impl IntoResponse> {
-    rank_image(account_id, format, state).await
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
