@@ -70,4 +70,5 @@ export const TRACKER_SITES: readonly TrackerSite[] = [
   { name: "LOK.GG", icon: "/tracker-sites/lok-gg.webp" },
   { name: "Deadlock Assistant", icon: "/tracker-sites/deadlock-assistant.webp" },
   { name: "Randomlock", icon: "/tracker-sites/randomlock.webp" },
+  { name: "DeadlockBuild", icon: "/tracker-sites/deadlockbuild.webp" },
 ];
