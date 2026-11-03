@@ -321,36 +321,34 @@ fn build_tree_query(query: &AbilityOrderStatsQuery) -> String {
     )
 }
 
-/// Aggregates the players per order first, then finds the ability each order maxes first: the first one whose upgrade
-/// is its fourth (unlock and three upgrades). Every player counts, in one row: `min_matches` never drops the players
-/// who maxed none.
+/// Finds the ability each player maxes first: the first one whose upgrade is its fourth (unlock and three upgrades),
+/// i.e. where `arrayEnumerateUniq` (each element's occurrence count so far) reaches 4. Every player counts, in one
+/// row: `min_matches` never drops the players who maxed none.
+///
+/// Grouped per row, not per distinct order first like the tree query: almost every order is unique (~450k orders over
+/// ~3M rows for one hero over 25 days), so the per-order pass hashed the arrays and kept a `uniqExact` state per order
+/// for nothing. Measured on prod: -60% CPU, -86% memory, identical rows.
 fn build_max_first_query(query: &AbilityOrderStatsQuery) -> String {
     let where_clause = where_clause(query);
     let upgrade_order = upgrade_order(query);
     format!(
         "
     SELECT
-        nullIf(upgrade_order[arrayFirstIndex(
-            i -> countEqual(arraySlice(upgrade_order, 1, i), upgrade_order[i]) = {MAXED_UPGRADES},
-            arrayEnumerate(upgrade_order)
-        )], 0) AS ability_id,
-        sum(order_wins) AS wins,
-        sum(order_losses) AS losses,
+        nullIf(upgrade_order[indexOf(arrayEnumerateUniq(upgrade_order), {MAXED_UPGRADES})], 0) AS ability_id,
+        countIf(won) AS wins,
+        countIf(not won) AS losses,
         wins + losses AS matches,
-        uniqExactMerge(order_players) AS players
+        uniqExact(account_id) AS players
     FROM (
         SELECT
             {upgrade_order} AS upgrade_order,
-            order_wins, order_losses, order_players
+            won, account_id
         FROM (
             SELECT
                 abilities AS full_order,
-                countIf(won) AS order_wins,
-                countIf(not won) AS order_losses,
-                uniqExactState(account_id) AS order_players
+                won, account_id
             FROM match_player
             WHERE {where_clause}
-            GROUP BY full_order
         )
     )
     GROUP BY ability_id

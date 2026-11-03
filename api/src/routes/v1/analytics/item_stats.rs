@@ -1216,10 +1216,15 @@ fn build_query(query: &ItemStatsQuery) -> String {
         // the join hashed every row of the window before discarding the buyer's own team,
         // while the IN set is evaluated in PREWHERE, so the item arrays are only read for
         // rows on the enemy side (measured -25% CPU, -21% memory, identical rows).
+        // The (match, team) pair packs into one integer like the enemy hero bucket's roster key:
+        // the buyer's `match_id * 2 + (team = 'Team0')` equals its enemy team's `match_id * 2 +
+        // (team = 'Team1')`, so the set holds a UInt64 instead of a (UInt64, String) tuple built by
+        // `if()` per row. Measured on no-buyer-hero 5-week windows: -6% CPU, -12% memory, identical
+        // rows; no significant change on the smaller same-lane shapes.
         let semi_join = if same_lane {
-            "(match_id, if(team = 'Team0', 'Team1', 'Team0'), assigned_lane) IN (SELECT match_id, enemy_team, arrayJoin(enemy_lanes) FROM t_enemy_teams)"
+            "(match_id * 2 + (team = 'Team0'), assigned_lane) IN (SELECT match_id * 2 + (enemy_team = 'Team1'), arrayJoin(enemy_lanes) FROM t_enemy_teams)"
         } else {
-            "(match_id, if(team = 'Team0', 'Team1', 'Team0')) IN (SELECT match_id, enemy_team FROM t_enemy_teams)"
+            "(match_id * 2 + (team = 'Team0')) IN (SELECT match_id * 2 + (enemy_team = 'Team1') FROM t_enemy_teams)"
         };
         (cte, format!("\n        AND {semi_join}"))
     } else {
@@ -1861,7 +1866,7 @@ mod tests {
         assert!(!sql.contains("INNER JOIN"));
         assert!(sql.contains("PREWHERE match_mode IN ('Ranked', 'Unranked') AND 1=1 "));
         assert!(sql.contains(
-            "AND (match_id, if(team = 'Team0', 'Team1', 'Team0')) IN (SELECT match_id, enemy_team FROM t_enemy_teams)\nWHERE true"
+            "AND (match_id * 2 + (team = 'Team0')) IN (SELECT match_id * 2 + (enemy_team = 'Team1') FROM t_enemy_teams)\nWHERE true"
         ));
         assert!(sql.contains("use_index_for_in_with_subqueries = 0"));
 
@@ -1871,7 +1876,7 @@ mod tests {
             ..Default::default()
         });
         assert!(same_lane.contains(
-            "(match_id, if(team = 'Team0', 'Team1', 'Team0'), assigned_lane) IN (SELECT match_id, enemy_team, arrayJoin(enemy_lanes) FROM t_enemy_teams)"
+            "(match_id * 2 + (team = 'Team0'), assigned_lane) IN (SELECT match_id * 2 + (enemy_team = 'Team1'), arrayJoin(enemy_lanes) FROM t_enemy_teams)"
         ));
 
         let plain = build_query(&ItemStatsQuery::default());
