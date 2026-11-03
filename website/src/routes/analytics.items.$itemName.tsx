@@ -22,7 +22,7 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Badge } from "~/components/ui/badge";
 import { Stat, StatGroup } from "~/components/ui/stat";
 import { useSeasons } from "~/hooks/useSeasons";
-import type { DateFilterPreference } from "~/lib/date-filter-preference";
+import { DEFAULT_DATE_FILTER, type DateFilterPreference } from "~/lib/date-filter-preference";
 import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
@@ -74,7 +74,10 @@ function itemTitle(itemId: number, itemName: string): string {
 }
 
 // Mirrors the items page's default request so both pages share one cache entry.
-function currentItemStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
+function currentItemStatsParams(
+  seasons: readonly SeasonInfo[],
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
+) {
   return {
     minMatches: 10,
     heroId: null,
@@ -87,7 +90,7 @@ function currentItemStatsParams(seasons: readonly SeasonInfo[], preference: Date
   };
 }
 
-function byRankItemStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
+function byRankItemStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
   return {
     minMatches: 10,
     gameMode: GAME_MODE,
@@ -99,7 +102,10 @@ function byRankItemStatsParams(seasons: readonly SeasonInfo[], preference: DateF
 // The denominator of every "bought" share. No `minHeroMatches` / `minHeroMatchesTotal`, not even 0: either one sends
 // the request to the exact-timestamp base table while the item stats come from day-grained rollups, and right after a
 // mid-day patch the shares passed 100%. Without them both come from the rollups over the same days.
-function currentHeroStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
+function currentHeroStatsParams(
+  seasons: readonly SeasonInfo[],
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
+) {
   return {
     ...DEFAULT_BADGES,
     gameMode: GAME_MODE,

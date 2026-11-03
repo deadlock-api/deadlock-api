@@ -37,7 +37,7 @@ import { Stat, StatGroup } from "~/components/ui/stat";
 import { useSeasons } from "~/hooks/useSeasons";
 import { computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
-import type { DateFilterPreference } from "~/lib/date-filter-preference";
+import { DEFAULT_DATE_FILTER, type DateFilterPreference } from "~/lib/date-filter-preference";
 import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
@@ -91,7 +91,7 @@ const GAME_MODE = "normal" as const;
 // table, while item stats come from day-grained rollups that start at midnight. Right after a mid-day patch the item
 // counts then cover hours the hero counts do not, and "bought in X% of matches" passed 100%. Without them both come
 // from the rollups over the same days.
-function currentStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
+function currentStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
   return {
     ...DEFAULT_BADGES,
     gameMode: GAME_MODE,
@@ -100,7 +100,7 @@ function currentStatsParams(seasons: readonly SeasonInfo[], preference: DateFilt
   };
 }
 
-function byRankStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
+function byRankStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
   return {
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
@@ -108,19 +108,22 @@ function byRankStatsParams(seasons: readonly SeasonInfo[], preference: DateFilte
   };
 }
 
-function currentItemStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
+function currentItemStatsParams(
+  seasons: readonly SeasonInfo[],
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
+) {
   return { minMatches: 10, ...currentStatsParams(seasons, preference) };
 }
 
 function currentAbilityOrderParams(
   seasons: readonly SeasonInfo[],
   heroMatches: number,
-  preference: DateFilterPreference = "season",
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
 ) {
   return { minMatches: Math.max(20, skillPathMinMatches(heroMatches)), ...currentStatsParams(seasons, preference) };
 }
 
-function currentBanParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = "season") {
+function currentBanParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
   return {
     matchMode: DEFAULT_MATCH_MODE,
     ...DEFAULT_BADGES,
@@ -131,7 +134,7 @@ function currentBanParams(seasons: readonly SeasonInfo[], preference: DateFilter
 function matchupsRequest(
   heroId: number,
   seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = "season",
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
 ): HeroMatchupsRequest {
   const prev = defaultPrevUnixRange(seasons, preference);
   return {
