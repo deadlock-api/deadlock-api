@@ -21,6 +21,16 @@ pub(crate) const MIN_FILTERING_AVERAGE_BADGE: u8 = 11;
 /// A `max_average_badge` at or above this keeps every badge, so no predicate is emitted.
 pub(crate) const MAX_FILTERING_AVERAGE_BADGE: u8 = 116;
 
+/// Thread cap for the batched point lookups (salts, steam profiles, ranks, demo players).
+///
+/// They read a few granules from 10-15 parts, so the client default of 16 threads only
+/// adds pipeline and thread setup. Replayed on distinct production batches (n=80-100 per shape,
+/// paired): CPU -7% to -25%, peak memory -5% to -35%, no significant wall regression, and
+/// -18% wall on multi-match salts and match-info lookups. One thread was slower for multi-part ranges
+/// (`player_rank` +28% wall); `player_hero_stats` and `mmr_history` got slower at 2 and keep
+/// the default.
+pub(crate) const POINT_LOOKUP_MAX_THREADS: u8 = 2;
+
 /// Duration column of `match_player`, `match_info` and `player_match_stats`.
 pub(crate) const DURATION_COLUMN: &str = "duration_s";
 /// Duration column of `player_match_roster`.

@@ -25,6 +25,7 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 use crate::services::steam_search_index::IndexedProfile;
 use crate::utils::parse::comma_separated_deserialize;
+use crate::utils::sql::POINT_LOOKUP_MAX_THREADS;
 
 use crate::utils::types::AccountIdQuery;
 
@@ -252,7 +253,8 @@ impl BatchQuery for SteamProfileQuery {
                 )
             ORDER BY last_updated DESC
             LIMIT 1 BY sp.account_id
-            SETTINGS log_comment = 'steam_profile', use_statistics = 0
+            SETTINGS log_comment = 'steam_profile', use_statistics = 0,
+                max_threads = {POINT_LOOKUP_MAX_THREADS}
              "
         )
     }

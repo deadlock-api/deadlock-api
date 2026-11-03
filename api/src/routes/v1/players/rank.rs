@@ -22,6 +22,7 @@ use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
 use crate::utils::badge::{
     ETERNUS_PROGRESS, badge_from_flat_progress, badge_to_idx, idx_to_badge, subrank_progress,
 };
+use crate::utils::sql::POINT_LOOKUP_MAX_THREADS;
 use crate::utils::types::AccountIdQuery;
 
 const RATE_LIMIT: RateLimit = RateLimit::new(
@@ -185,7 +186,7 @@ impl BatchQuery for PlayerRankQuery {
             WHERE account_id IN ({ids}) AND match_mode = 'Ranked'
             ORDER BY match_id DESC
             LIMIT 1 BY account_id
-            SETTINGS log_comment = 'player_rank'
+            SETTINGS log_comment = 'player_rank', max_threads = {POINT_LOOKUP_MAX_THREADS}
             "
         )
     }

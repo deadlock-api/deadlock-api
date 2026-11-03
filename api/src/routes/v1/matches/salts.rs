@@ -25,6 +25,7 @@ use crate::services::feature_flags::STEAM_SALTS_FALLBACK;
 use crate::services::pending_matches::{queue_requested_match, resolve_invalid_match};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
+use crate::utils::sql::POINT_LOOKUP_MAX_THREADS;
 use crate::utils::types::MatchIdQuery;
 use crate::utils::valve_replay::replay_file_url;
 
@@ -93,7 +94,7 @@ impl BatchQuery for MatchSaltsReadQuery {
              ) \
              ORDER BY failed_at IS NULL DESC, verified_at IS NOT NULL DESC, created_at DESC \
              LIMIT 1 BY match_id \
-             SETTINGS log_comment = 'salts_read'",
+             SETTINGS log_comment = 'salts_read', max_threads = {POINT_LOOKUP_MAX_THREADS}",
             in_clause(keys)
         )
     }
@@ -141,7 +142,7 @@ impl BatchQuery for MatchSaltsExistsQuery {
              FROM match_salts \
              WHERE match_id IN ({}) \
              GROUP BY match_id \
-             SETTINGS log_comment = 'salts_exists'",
+             SETTINGS log_comment = 'salts_exists', max_threads = {POINT_LOOKUP_MAX_THREADS}",
             in_clause(keys)
         )
     }
@@ -167,7 +168,8 @@ impl BatchQuery for MatchInfoExistsQuery {
     fn build_query(keys: &[u64]) -> String {
         format!(
             "SELECT DISTINCT match_id FROM match_player WHERE match_id IN ({}) \
-             SETTINGS log_comment = 'salts_match_info_exists', apply_patch_parts = 0",
+             SETTINGS log_comment = 'salts_match_info_exists', apply_patch_parts = 0, \
+                 max_threads = {POINT_LOOKUP_MAX_THREADS}",
             in_clause(keys)
         )
     }

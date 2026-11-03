@@ -34,6 +34,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::{self, fetch_match_salts};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
+use crate::utils::sql::POINT_LOOKUP_MAX_THREADS;
 use crate::utils::types::MatchIdQuery;
 use crate::utils::valve_replay::is_zstd;
 
@@ -67,7 +68,8 @@ impl BatchQueryMulti for DemoPlayerQuery {
         format!(
             "SELECT match_id, account_id, hero_build_id, pregame_hero_id, banned_hero_ids \
              FROM match_player WHERE match_id IN ({}) AND demo_processed = 1 \
-             SETTINGS log_comment = 'metadata_demo_player', use_statistics = 0",
+             SETTINGS log_comment = 'metadata_demo_player', use_statistics = 0, \
+             max_threads = {POINT_LOOKUP_MAX_THREADS}",
             in_clause(keys)
         )
     }
