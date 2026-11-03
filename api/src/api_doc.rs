@@ -67,7 +67,7 @@ pub(super) const SCALAR_HTML: &str = r#"<!doctype html>
 <noscript>
     <h1>Deadlock API</h1>
     <p>A free, open REST API for Valve's Deadlock, serving match history and metadata, player
-    statistics and MMR, hero and item analytics, ability and build data, leaderboards, patch notes
+    statistics and ranks, hero and item analytics, ability and build data, leaderboards, patch notes
     and live in-game events, all derived from real match data.</p>
     <p>The interactive endpoint reference on this page needs JavaScript. The machine-readable
     specification is at <a href="https://api.deadlock-api.com/openapi.json">/openapi.json</a>, and
@@ -113,7 +113,6 @@ const TAG_GROUPS: &[(&str, &[&str])] = &[
             "Players",
             "Matches",
             "Steam",
-            "MMR",
             "Analytics",
             "Builds",
             "Leaderboard",

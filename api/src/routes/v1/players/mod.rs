@@ -3,7 +3,6 @@ pub mod hero_stats;
 mod ingest_status;
 pub(crate) mod match_history;
 pub mod mate_stats;
-pub mod mmr;
 pub(crate) mod rank;
 mod rank_distribution;
 mod roster_stats;
@@ -41,7 +40,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(rank::rank_predict))
         .routes(routes!(rank::rank_predict_image))
         .routes(routes!(rank::rank_predict_avg_image))
-        .merge(mmr::router())
         .merge(steam::router())
         .layer(CACHE_CONTROL)
 }

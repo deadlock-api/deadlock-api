@@ -20,7 +20,6 @@ use crate::utils::sql::{DURATION_COLUMN, MatchPoolFilters, cached_ch_query, impl
 
 /// The distribution queries scan every ranked match instead of a primary-key range, costing roughly
 /// two orders of magnitude more than the account-scoped rank endpoints, so they get their own bucket.
-/// The deprecated MMR distribution endpoints run the same queries and share it.
 pub(super) const DISTRIBUTION_RATE_LIMIT: RateLimit = RateLimit::new(
     "mmr_distribution",
     &[
