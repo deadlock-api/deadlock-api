@@ -39,7 +39,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(rank_distribution::rank_distribution))
         .routes(routes!(rank::rank_predict))
         .routes(routes!(rank::rank_predict_image))
-        .routes(routes!(rank::rank_predict_avg_image))
         .merge(steam::router())
         .layer(CACHE_CONTROL)
 }
@@ -68,7 +67,6 @@ mod tests {
         for path in [
             "/{account_id}/rank-predict",
             "/{account_id}/rank-predict/image",
-            "/rank-predict/image",
         ] {
             let op = api
                 .paths

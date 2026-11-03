@@ -518,32 +518,6 @@ pub(super) async fn rank_predict_image(
     rank_image(account_id, format, state).await
 }
 
-#[utoipa::path(
-    get,
-    path = "/rank-predict/image",
-    params(RankAvgImageQuery),
-    responses(
-        (status = OK, description = "Average rank badge image", content(
-            ([u8] = "image/png"),
-            ([u8] = "image/webp"),
-        )),
-        (status = BAD_REQUEST, description = "Invalid or missing account IDs"),
-        (status = FORBIDDEN, description = "One of the users is protected"),
-        (status = NOT_FOUND, description = "No image available for the rank"),
-        (status = INTERNAL_SERVER_ERROR, description = "Rank lookup failed"),
-    ),
-    tags = ["Players"],
-    summary = "Rank Predict Avg Image (Deprecated)",
-    description = "Deprecated alias of `/v1/players/rank/image`. The rank is no longer predicted, it is read from each player's latest ranked match."
-)]
-#[deprecated(note = "renamed to `rank_avg_image`")]
-pub(super) async fn rank_predict_avg_image(
-    query: Query<RankAvgImageQuery>,
-    state: State<AppState>,
-) -> APIResult<impl IntoResponse> {
-    rank_avg_image(query, state).await
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
