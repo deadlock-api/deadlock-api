@@ -1,7 +1,6 @@
+import interWoff2 from "@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url";
 /// <reference types="vite/client" />
 import barlowCondensedBoldWoff2 from "@fontsource/barlow-condensed/files/barlow-condensed-latin-700-normal.woff2?url";
-import barlowWoff2 from "@fontsource/barlow/files/barlow-latin-400-normal.woff2?url";
-import barlowSemiboldWoff2 from "@fontsource/barlow/files/barlow-latin-600-normal.woff2?url";
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext, useRouterState } from "@tanstack/react-router";
 import { Agentation } from "agentation";
@@ -128,9 +127,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         { rel: "icon", type: "image/png", href: "https://deadlock-api.com/favicon.png" },
         { rel: "manifest", href: "/manifest.webmanifest" },
         { rel: "api-catalog", href: "/.well-known/api-catalog" },
-        // `font-display: optional` keeps a face only if it arrives in the first render's block window, so the body,
-        // its semibold and the condensed titles are fetched ahead of the CSS that names them.
-        ...[barlowWoff2, barlowSemiboldWoff2, barlowCondensedBoldWoff2].map((href) => ({
+        // `font-display: optional` keeps a face only if it arrives in the first render's block window, so the body
+        // (one variable file for every weight) and the condensed titles are fetched ahead of the CSS that names them.
+        ...[interWoff2, barlowCondensedBoldWoff2].map((href) => ({
           rel: "preload",
           href,
           as: "font",

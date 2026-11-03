@@ -148,7 +148,7 @@ export function Foundations() {
 
       <Specimen
         name="Type scale"
-        note="Barlow for UI, Barlow Condensed capitals (font-display) for page titles and labels, JetBrains Mono for code and ids, New Rocker (font-game) for the minigames' titles only."
+        note="Inter for UI and data, Barlow Condensed capitals (font-display) for page titles and labels, JetBrains Mono for code and ids, New Rocker (font-game) for the minigames' titles only."
       >
         <div className="flex flex-col gap-2">
           {TYPE_SCALE.map(([cls, use]) => (

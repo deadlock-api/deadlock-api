@@ -3,8 +3,9 @@
     @apply border-border outline-ring;
   }
 
+  /* Grayscale smoothing: light text on a dark ground otherwise renders heavier and fuzzier on macOS. */
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
   }
 
   button:not(:disabled),

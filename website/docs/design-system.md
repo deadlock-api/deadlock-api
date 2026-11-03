@@ -90,7 +90,7 @@ File names: `ui/` is kebab-case (`stat-bar.tsx`), everything else is PascalCase 
 
 The world is broadcast graphite: a cool near-black ground (`--ink-950`), panels one step up (`--ink-900`), hairlines
 two (`--ink-700`), ink text, and the brand red `--primary` for primary actions and for whatever is current (the
-sidebar item, the tab underline, the filter count, the sorted column, a set column filter). Type is Barlow for the UI
+sidebar item, the tab underline, the filter count, the sorted column, a set column filter). Type is Inter for the UI
 and Barlow Condensed capitals (`font-display`) for page titles and labels; New Rocker (`font-game`) stays the minigames'
 own.
 

@@ -16,8 +16,10 @@
   --ink-400: #98a2ae;
   /* A quiet grey that still reads at 4.5:1 on the strongest fill of a heat cell. */
   --ink-300: #b4bdc8;
-  --ink-200: #d5dbe1;
-  --ink-100: #eef1f4;
+  /* The text inks stop short of white: near-white on the near-black ground (17:1) glared and tired the eyes. 15:1 on
+     the ground, 14:1 on a card. */
+  --ink-200: #cdd3da;
+  --ink-100: #dde2e8;
 
   --red-500: #fa4454;
   --red-400: #f85149;
@@ -322,9 +324,9 @@
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
 
-  --font-sans: "Barlow", system-ui, sans-serif;
+  --font-sans: "Inter Variable", system-ui, sans-serif;
   /* Page titles, nav group names, table heads and field labels: condensed capitals (`font-display`). */
-  --font-display: "Barlow Condensed", "Barlow", system-ui, sans-serif;
+  --font-display: "Barlow Condensed", system-ui, sans-serif;
   --font-mono: JetBrains Mono, monospace;
   /* Condensed capitals: `text-caps` with `font-display uppercase` (table heads, the `eyebrow` label). */
   --text-caps: var(--type-caps);
