@@ -86,7 +86,7 @@ function percentile(sorted: readonly number[], p: number): number {
 
 /**
  * The metrics the API would return for these matches: over single matches, `std` the population deviation as
- * ClickHouse's `std`. The API's percentiles are DDSketch estimates within 1%; these are exact. No matches, no metrics.
+ * ClickHouse's `std`. The API's percentiles are bfloat16 estimates within 1%; these are exact. No matches, no metrics.
  */
 export function playerMetricsOf(rows: readonly PlayerMetricRow[]): Record<string, MetricDistribution> {
   if (rows.length === 0) return {};

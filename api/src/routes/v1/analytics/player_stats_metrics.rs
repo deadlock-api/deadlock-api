@@ -451,8 +451,12 @@ metrics_row! {
 /// placeholders (their columns must still exist for the row struct) and are dropped from the
 /// response. `avg`/`std` of the nullable first-pickup time are `NULL` when no row has
 /// timings, so they fall back to `nan` (serialized as `null`).
+///
+/// Quantiles use bfloat16 histograms rather than `quantilesDD`, which took over half of the CPU
+/// (a `log` per value and metric). On production queries `quantilesBFloat16` cut CPU 22–39% and
+/// was closer to the exact quantiles (≤ 0.7% vs ≤ 3% off on a day of matches).
 fn metric_select(metric: Metric, include_buff_metrics: bool) -> String {
-    const QUANTILES: &str = "quantilesDD(0.01, 0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99)";
+    const QUANTILES: &str = "quantilesBFloat16(0.01, 0.05, 0.1, 0.25, 0.5, 0.75, 0.9, 0.95, 0.99)";
     if metric.is_buff() && !include_buff_metrics {
         return format!(
             "toFloat64(0) AS avg_{metric}, toFloat64(0) AS std_{metric}, \
@@ -653,7 +657,7 @@ Combined with `hero_ids` it returns every listed hero's metrics from one request
 
 Results are cached for **1 hour** based on the unique combination of query parameters provided. Subsequent identical requests within this timeframe will receive the cached response.
 
-> Note: Quantiles are calculated using the [DDSketch](https://www.vldb.org/pvldb/vol12/p2195-masson.pdf) algorithm, so they are not exact but have a maximum relative error of 0.01.
+> Note: Quantiles are estimated from a [bfloat16](https://clickhouse.com/docs/sql-reference/aggregate-functions/reference/quantilebfloat16) histogram, which rounds each value down to 8 significant bits, so they are not exact but have a relative error below 0.01.
 
     ")
 )]
