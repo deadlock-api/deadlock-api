@@ -37,7 +37,7 @@ import {
   useItemSlots,
   useItemTiers,
 } from "~/components/features/items/ItemStatsControls";
-import { ItemStatTrend } from "~/components/features/items/ItemStatTrend";
+import { ItemStatTrend, ItemTrendValue } from "~/components/features/items/ItemStatTrend";
 import { useCorruptedItemMode } from "~/components/features/items/useCorruptedItemMode";
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
@@ -60,6 +60,8 @@ import { Tooltip, TooltipHeader, TooltipStat, TooltipStats, TooltipTarget } from
 import { useHydrated } from "~/hooks/useHydrated";
 import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
+import { itemKeptRate, itemTierTotals, itemVsTier, type ItemVsTier } from "~/lib/item-table-trends";
+import { formatStatValue } from "~/lib/stat-format";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import type { SlimUpgrade } from "~/queries/asset-queries";
 
@@ -156,7 +158,7 @@ export interface CorruptedStats {
   matches: number;
 }
 
-export interface DisplayItemStats {
+export interface DisplayItemStats extends ItemVsTier {
   item?: SlimUpgrade;
   item_id: number;
   wins: number;
@@ -165,15 +167,6 @@ export interface DisplayItemStats {
   players: number;
   winRate: number;
   itemTier: number;
-  /** The pooled win rate of every row of the same tier: tier 4 items win more because their buyers are ahead. */
-  tierWinRate: number;
-  /** `winRate - tierWinRate`. */
-  vsTier: number;
-  /**
-   * How often the item is bought against the average item of its tier: 2 is twice as often. A multiple, not a
-   * percentage: a tier's few staples are bought several times as often as its long tail drags the average down to.
-   */
-  pickVsTier: number;
   /** Average buy time in seconds. */
   buyTime: number;
   /** The share of purchases still owned when the match ended (not sold, and not used up by an upgrade). */
@@ -220,20 +213,10 @@ export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: 
   const baselineWidth = baselineUpper - baselineLower;
   const itemsById = new Map(assetsItems.map((item) => [item.id, item]));
   const tierOf = (d: ItemStats) => itemsById.get(d.item_id)?.item_tier || 0;
-  const tierTotals = new Map<number, { wins: number; matches: number; items: number }>();
-  for (const d of data) {
-    const totals = tierTotals.get(tierOf(d)) ?? { wins: 0, matches: 0, items: 0 };
-    totals.wins += d.wins;
-    totals.matches += d.matches;
-    totals.items += 1;
-    tierTotals.set(tierOf(d), totals);
-  }
+  const tierTotals = itemTierTotals(data, tierOf);
 
   return data.map((d): DisplayItemStats => {
     const item = itemsById.get(d.item_id);
-    const tierTotal = tierTotals.get(tierOf(d));
-    const winRate = d.wins / d.matches;
-    const tierWinRate = tierTotal && tierTotal.matches > 0 ? tierTotal.wins / tierTotal.matches : winRate;
     const [lower, upper] = wilsonScoreInterval(d.wins, d.matches);
 
     const width = upper - lower;
@@ -248,13 +231,11 @@ export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: 
     return {
       ...d,
       item,
-      winRate,
+      winRate: d.wins / d.matches,
       itemTier: tierOf(d),
-      tierWinRate,
-      vsTier: winRate - tierWinRate,
-      pickVsTier: tierTotal && tierTotal.matches > 0 ? (d.matches * tierTotal.items) / tierTotal.matches : 1,
+      ...itemVsTier(d, tierTotals.get(tierOf(d))),
       buyTime: d.avg_buy_time_s,
-      keptRate: 1 - Math.min(d.sold ?? 0, d.matches) / d.matches,
+      keptRate: itemKeptRate(d),
       confidenceTier: confidenceTier,
       confidenceWidth: width,
       confidenceBaselineWidth: baselineWidth,
@@ -264,12 +245,6 @@ export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: 
       confidenceLower: lower,
     };
   });
-}
-
-/** Seconds as minutes and seconds: 754 is "12:34". */
-function formatGameTime(seconds: number): string {
-  const total = Math.round(seconds);
-  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
 // Confidence tier is 1-5
@@ -363,6 +338,7 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
   const itemName = row.item?.name ?? "Unknown Item";
   const rowContext = useMemo((): ItemStatsRow => ({ itemId: row.item_id, matches: row.matches }), [row]);
   const prev = prevStatsMap?.get(row.item_id);
+  const trend = { params: trendParams, itemId: row.item_id, itemName };
 
   const cells = (
     <>
@@ -441,13 +417,15 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
         })()}
       </TableCell>
       <TableCell className="hidden text-center @4xl:table-cell">
-        {/* Colored only where the item's 95% range leaves out its tier's win rate. */}
-        <Delta
-          value={row.vsTier}
-          unit=" pp"
-          zero="visible"
-          significant={row.confidenceLower > row.tierWinRate || row.confidenceUpper < row.tierWinRate}
-        />
+        <ItemTrendValue {...trend} stat="vsTier">
+          {/* Colored only where the item's 95% range leaves out its tier's win rate. */}
+          <Delta
+            value={row.vsTier}
+            unit=" pp"
+            zero="visible"
+            significant={row.confidenceLower > row.tierWinRate || row.confidenceUpper < row.tierWinRate}
+          />
+        </ItemTrendValue>
       </TableCell>
       <TableCell>
         {(() => {
@@ -486,9 +464,21 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
           );
         })()}
       </TableCell>
-      <TableCell className="hidden text-center @6xl:table-cell">{row.pickVsTier.toFixed(1)}×</TableCell>
-      <TableCell className="hidden text-center @5xl:table-cell">{formatGameTime(row.buyTime)}</TableCell>
-      <TableCell className="hidden text-center @6xl:table-cell">{formatPercent(row.keptRate, 0)}</TableCell>
+      <TableCell className="hidden text-center @6xl:table-cell">
+        <ItemTrendValue {...trend} stat="pickVsTier">
+          {formatStatValue(row.pickVsTier, "multiple")}
+        </ItemTrendValue>
+      </TableCell>
+      <TableCell className="hidden text-center @5xl:table-cell">
+        <ItemTrendValue {...trend} stat="buyTime">
+          {formatStatValue(row.buyTime, "duration")}
+        </ItemTrendValue>
+      </TableCell>
+      <TableCell className="hidden text-center @6xl:table-cell">
+        <ItemTrendValue {...trend} stat="kept">
+          {formatPercent(row.keptRate, 0)}
+        </ItemTrendValue>
+      </TableCell>
       <TableCell className="hidden text-center @md:table-cell">
         <div className="inline-flex">
           <ConfidenceTierBadge row={row} />

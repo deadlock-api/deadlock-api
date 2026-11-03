@@ -1,14 +1,23 @@
-import { formatPercent } from "~/lib/format";
+import { formatPercent, formatSignedPoints } from "~/lib/format";
 
-/** `duration` is seconds as m:ss (a match); `hours` is seconds as hours played. */
-export type StatFormat = "integer" | "duration" | "hours" | "percent" | "decimal1" | "decimal2";
+/**
+ * `duration` is seconds as m:ss (a match); `hours` is seconds as hours played. `points` is a difference between two
+ * rates, a fraction printed in percentage points (0.021 is +2.1 pp); `multiple` is a ratio (4.9×).
+ */
+export type StatFormat = "integer" | "duration" | "hours" | "percent" | "points" | "multiple" | "decimal1" | "decimal2";
 
 const BASE_DECIMALS: Record<Exclude<StatFormat, "duration" | "hours">, number> = {
   integer: 0,
   percent: 1,
+  points: 1,
+  multiple: 1,
   decimal1: 1,
   decimal2: 2,
 };
+
+/** What an axis tick's number is multiplied by, and the unit after it. */
+const TICK_SCALE: Partial<Record<StatFormat, number>> = { percent: 100, points: 100 };
+const TICK_UNIT: Partial<Record<StatFormat, string>> = { percent: "%", points: "\u00a0pp", multiple: "×" };
 
 export function valueSpan(data: { value: number | null }[]): number {
   const values = data.map((d) => d.value).filter((v): v is number => Number.isFinite(v));
@@ -22,11 +31,11 @@ export function valueSpan(data: { value: number | null }[]): number {
  */
 export function formatAxisTick(value: number, format: StatFormat, span: number): string {
   if (format === "duration" || format === "hours") return formatStatValue(value, format) ?? "";
-  const scale = format === "percent" ? 100 : 1;
+  const scale = TICK_SCALE[format] ?? 1;
   const step = (span * scale) / 4;
   const decimals = Math.min(4, Math.max(BASE_DECIMALS[format], step > 0 ? Math.ceil(-Math.log10(step)) : 0));
   const text = decimals === 0 ? Math.round(value * scale).toLocaleString("en-US") : (value * scale).toFixed(decimals);
-  return format === "percent" ? `${text}%` : text;
+  return `${text}${TICK_UNIT[format] ?? ""}`;
 }
 
 /** Seconds as m:ss, e.g. `12:05`. Rounds first, so 359.6 is `6:00`, not `5:00` or `5:60`. */
@@ -50,6 +59,10 @@ export function formatStatValue(value: number | undefined | null, format: StatFo
     }
     case "percent":
       return formatPercent(value);
+    case "points":
+      return formatSignedPoints(value);
+    case "multiple":
+      return `${value.toFixed(1)}×`;
     case "decimal1":
       return value.toFixed(1);
     case "decimal2":

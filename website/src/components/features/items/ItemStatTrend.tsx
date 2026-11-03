@@ -1,4 +1,4 @@
-import { lazy, Suspense, type ComponentProps } from "react";
+import { lazy, Suspense, type ComponentProps, type ReactNode } from "react";
 
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { ProgressBarWithLabel } from "~/components/ui/progress-bar";
@@ -9,13 +9,20 @@ import type { ItemStatTrendChartProps } from "./ItemStatTrendChart";
 
 const ItemStatTrendChart = lazy(() => import("./ItemStatTrendChart"));
 
-export function ItemStatTrend({
+type ItemTrendProps = ItemStatTrendChartProps & { itemName: string };
+
+/**
+ * A table value with the item's trend of that stat in a hover card. `block` holds a bar that fills its column; a plain
+ * value sits inline with the dashed underline that marks a hover card behind it.
+ */
+export function ItemTrendValue({
   params,
   itemId,
   itemName,
   stat,
-  ...progressProps
-}: ItemStatTrendChartProps & Omit<ComponentProps<typeof ProgressBarWithLabel>, "tooltip"> & { itemName: string }) {
+  display = "inline-block",
+  children,
+}: ItemTrendProps & { display?: "block" | "inline-block"; children: ReactNode }) {
   return (
     <Tooltip
       variant="preview"
@@ -30,10 +37,25 @@ export function ItemStatTrend({
         </Suspense>
       }
     >
-      <TooltipTarget display="block">
+      <TooltipTarget display={display} underline={display === "block" ? "none" : "dashed"}>
         <span className="sr-only">{`${itemName} ${ITEM_TABLE_TRENDS[stat].label} over time`}</span>
-        <ProgressBarWithLabel {...progressProps} />
+        {children}
       </TooltipTarget>
     </Tooltip>
+  );
+}
+
+/** A rate bar with the item's trend of that rate in a hover card. */
+export function ItemStatTrend({
+  params,
+  itemId,
+  itemName,
+  stat,
+  ...progressProps
+}: ItemTrendProps & Omit<ComponentProps<typeof ProgressBarWithLabel>, "tooltip">) {
+  return (
+    <ItemTrendValue params={params} itemId={itemId} itemName={itemName} stat={stat} display="block">
+      <ProgressBarWithLabel {...progressProps} />
+    </ItemTrendValue>
   );
 }

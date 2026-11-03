@@ -7,7 +7,7 @@ import type { StatFormat } from "~/lib/stat-format";
  */
 export function statDelta(format: StatFormat, value: number | null | undefined, prev: number | null | undefined) {
   if (value == null || prev == null) return null;
-  if (format === "percent") return Math.round((value - prev) * 1000) / 1000;
+  if (format === "percent" || format === "points") return Math.round((value - prev) * 1000) / 1000;
   if (prev === 0) return null;
   return Math.round(((value - prev) / Math.abs(prev)) * 1000) / 1000;
 }
