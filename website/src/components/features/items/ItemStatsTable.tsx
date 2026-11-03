@@ -49,6 +49,7 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
+import { Delta } from "~/components/ui/delta";
 import { anyValue } from "~/components/ui/hooks/any-selection";
 import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
 import { ProgressBarMarker, ProgressBarSegment } from "~/components/ui/progress-bar";
@@ -62,7 +63,7 @@ import { formatPercent } from "~/lib/format";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import type { SlimUpgrade } from "~/queries/asset-queries";
 
-const SORT_FIELDS = ["winRate", "matches", "name", "tier"] as const;
+const SORT_FIELDS = ["winRate", "vsTier", "matches", "pickVsTier", "buyTime", "kept", "name", "tier"] as const;
 type SortField = (typeof SORT_FIELDS)[number];
 const parseAsSortField = parseAsStringLiteral(SORT_FIELDS);
 const parseAsSortDirection = parseAsStringLiteral(["asc", "desc"] as const);
@@ -164,6 +165,19 @@ export interface DisplayItemStats {
   players: number;
   winRate: number;
   itemTier: number;
+  /** The pooled win rate of every row of the same tier: tier 4 items win more because their buyers are ahead. */
+  tierWinRate: number;
+  /** `winRate - tierWinRate`. */
+  vsTier: number;
+  /**
+   * How often the item is bought against the average item of its tier: 2 is twice as often. A multiple, not a
+   * percentage: a tier's few staples are bought several times as often as its long tail drags the average down to.
+   */
+  pickVsTier: number;
+  /** Average buy time in seconds. */
+  buyTime: number;
+  /** The share of purchases still owned when the match ended (not sold, and not used up by an upgrade). */
+  keptRate: number;
   confidenceTier: number;
   confidenceWidth: number;
   confidenceBaselineWidth: number;
@@ -193,8 +207,11 @@ interface ItemStatsTableRowProps {
   details?: ReactNode;
 }
 
-/** Index, item, tier, win rate, pick rate, confidence and the filter toggles; the expand toggle comes before them. */
-const COLUMN_COUNT = 7;
+/**
+ * Index, item, tier, win rate and pick rate (each with its difference to the tier), buy time, kept, confidence and the
+ * filter toggles; the expand toggle comes before them.
+ */
+const COLUMN_COUNT = 11;
 
 export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: SlimUpgrade[]): DisplayItemStats[] {
   if (!data || data.length === 0) return [];
@@ -202,9 +219,21 @@ export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: 
   const [baselineLower, baselineUpper] = wilsonScoreInterval(baselineRow.wins, baselineRow.matches);
   const baselineWidth = baselineUpper - baselineLower;
   const itemsById = new Map(assetsItems.map((item) => [item.id, item]));
+  const tierOf = (d: ItemStats) => itemsById.get(d.item_id)?.item_tier || 0;
+  const tierTotals = new Map<number, { wins: number; matches: number; items: number }>();
+  for (const d of data) {
+    const totals = tierTotals.get(tierOf(d)) ?? { wins: 0, matches: 0, items: 0 };
+    totals.wins += d.wins;
+    totals.matches += d.matches;
+    totals.items += 1;
+    tierTotals.set(tierOf(d), totals);
+  }
 
   return data.map((d): DisplayItemStats => {
     const item = itemsById.get(d.item_id);
+    const tierTotal = tierTotals.get(tierOf(d));
+    const winRate = d.wins / d.matches;
+    const tierWinRate = tierTotal && tierTotal.matches > 0 ? tierTotal.wins / tierTotal.matches : winRate;
     const [lower, upper] = wilsonScoreInterval(d.wins, d.matches);
 
     const width = upper - lower;
@@ -219,8 +248,13 @@ export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: 
     return {
       ...d,
       item,
-      winRate: d.wins / d.matches,
-      itemTier: item?.item_tier || 0,
+      winRate,
+      itemTier: tierOf(d),
+      tierWinRate,
+      vsTier: winRate - tierWinRate,
+      pickVsTier: tierTotal && tierTotal.matches > 0 ? (d.matches * tierTotal.items) / tierTotal.matches : 1,
+      buyTime: d.avg_buy_time_s,
+      keptRate: 1 - Math.min(d.sold ?? 0, d.matches) / d.matches,
       confidenceTier: confidenceTier,
       confidenceWidth: width,
       confidenceBaselineWidth: baselineWidth,
@@ -230,6 +264,12 @@ export function getDisplayItemStats(data: ItemStats[] | undefined, assetsItems: 
       confidenceLower: lower,
     };
   });
+}
+
+/** Seconds as minutes and seconds: 754 is "12:34". */
+function formatGameTime(seconds: number): string {
+  const total = Math.round(seconds);
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
 }
 
 // Confidence tier is 1-5
@@ -400,6 +440,15 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
           );
         })()}
       </TableCell>
+      <TableCell className="hidden text-center @4xl:table-cell">
+        {/* Colored only where the item's 95% range leaves out its tier's win rate. */}
+        <Delta
+          value={row.vsTier}
+          unit=" pp"
+          zero="visible"
+          significant={row.confidenceLower > row.tierWinRate || row.confidenceUpper < row.tierWinRate}
+        />
+      </TableCell>
       <TableCell>
         {(() => {
           const corruptedMatches = corrupted ? Math.min(corrupted.matches, row.matches) : undefined;
@@ -437,6 +486,9 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
           );
         })()}
       </TableCell>
+      <TableCell className="hidden text-center @6xl:table-cell">{row.pickVsTier.toFixed(1)}×</TableCell>
+      <TableCell className="hidden text-center @5xl:table-cell">{formatGameTime(row.buyTime)}</TableCell>
+      <TableCell className="hidden text-center @6xl:table-cell">{formatPercent(row.keptRate, 0)}</TableCell>
       <TableCell className="hidden text-center @md:table-cell">
         <div className="inline-flex">
           <ConfidenceTierBadge row={row} />
@@ -527,8 +579,9 @@ export function ItemStatsTable({
 
   const sort = useSort<SortField>({
     ...sortParams([sortField, setSortField], [sortDirection, setSortDirection], together),
-    // Names and tiers read from the top down (A first, tier 1 first); numbers from the largest.
-    firstDir: (field) => (field === "name" || field === "tier" ? "asc" : "desc"),
+    // Names, tiers and buy times read from the top down (A first, tier 1 first, the earliest buy first); other numbers
+    // from the largest.
+    firstDir: (field) => (field === "name" || field === "tier" || field === "buyTime" ? "asc" : "desc"),
   });
   const toggleSort = (field: SortField) => startTransition(() => sort.toggle(field));
 
@@ -594,9 +647,21 @@ export function ItemStatsTable({
       if (rowSortKey === "winRate") {
         aValue = a.wins / a.matches;
         bValue = b.wins / b.matches;
+      } else if (rowSortKey === "vsTier") {
+        aValue = a.vsTier;
+        bValue = b.vsTier;
       } else if (rowSortKey === "matches") {
         aValue = a.matches;
         bValue = b.matches;
+      } else if (rowSortKey === "pickVsTier") {
+        aValue = a.pickVsTier;
+        bValue = b.pickVsTier;
+      } else if (rowSortKey === "buyTime") {
+        aValue = a.buyTime;
+        bValue = b.buyTime;
+      } else if (rowSortKey === "kept") {
+        aValue = a.keptRate;
+        bValue = b.keptRate;
       } else {
         return 0;
       }
@@ -637,7 +702,8 @@ export function ItemStatsTable({
       ) : (
         <StaleOverlay active={isRefetching} label="item statistics">
           {/* A size container, so a phone drops the rank, tier and confidence columns (row order is the rank, the tier
-              a filter above) and keeps the win rate, which the table is sorted by, on screen. */}
+              a filter above) and keeps the win rate, which the table is sorted by, on screen. The columns beside the
+              rates come in as the table widens, each where the whole table still fits without scrolling sideways. */}
           <div className="@container">
             <Table aria-label="Item statistics" density="compact" className="tabular-nums">
               <TableHeader tone="muted">
@@ -735,7 +801,21 @@ export function ItemStatsTable({
                     activeSortKey={sort.sortKey}
                     sortDir={sort.dir}
                     onSortChange={toggleSort}
-                    className="w-1/2 text-start"
+                    className="w-1/4 text-start"
+                  />
+                  <SortableHeader
+                    // Both differences to the tier read "vs Tier" beside their rate; the hidden part tells them apart
+                    // in a screen reader's column names.
+                    label={
+                      <>
+                        <span className="sr-only">Win rate </span>vs Tier
+                      </>
+                    }
+                    sortKey="vsTier"
+                    activeSortKey={sort.sortKey}
+                    sortDir={sort.dir}
+                    onSortChange={toggleSort}
+                    className="hidden w-1/10 whitespace-nowrap @4xl:table-cell"
                   />
                   <SortableHeader
                     // Relative to the most bought item, like the hero tables' normalized pick rate; the item page's
@@ -751,7 +831,36 @@ export function ItemStatsTable({
                     activeSortKey={sort.sortKey}
                     sortDir={sort.dir}
                     onSortChange={toggleSort}
-                    className="w-1/2 text-start"
+                    // Allowed onto two lines, so the long label does not set the bar's width.
+                    className="w-1/4 text-start whitespace-normal"
+                  />
+                  <SortableHeader
+                    label={
+                      <>
+                        <span className="sr-only">Pick rate </span>vs Tier
+                      </>
+                    }
+                    sortKey="pickVsTier"
+                    activeSortKey={sort.sortKey}
+                    sortDir={sort.dir}
+                    onSortChange={toggleSort}
+                    className="hidden w-1/10 whitespace-nowrap @6xl:table-cell"
+                  />
+                  <SortableHeader
+                    label="Bought At"
+                    sortKey="buyTime"
+                    activeSortKey={sort.sortKey}
+                    sortDir={sort.dir}
+                    onSortChange={toggleSort}
+                    className="hidden w-1/10 whitespace-nowrap @5xl:table-cell"
+                  />
+                  <SortableHeader
+                    label="Kept"
+                    sortKey="kept"
+                    activeSortKey={sort.sortKey}
+                    sortDir={sort.dir}
+                    onSortChange={toggleSort}
+                    className="hidden w-1/10 whitespace-nowrap @6xl:table-cell"
                   />
                   <TableHead className="hidden w-1/100 text-center @md:table-cell">Confidence</TableHead>
                   <TableHead className="text-center">
