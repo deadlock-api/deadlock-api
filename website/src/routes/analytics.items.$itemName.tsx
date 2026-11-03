@@ -26,7 +26,7 @@ import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
-import { fetchItemBestHeroes } from "~/lib/item-hero-fns";
+import { fetchItemBestHeroes, fetchItemCohort } from "~/lib/item-hero-fns";
 import { findItemBySlug, findRenamedItem, itemSlug } from "~/lib/item-slug";
 import { catchPrefetch, ensureCached, prefetchCached, requireOnServer } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
@@ -156,24 +156,23 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       }
       throw notFound({ data: { suggestion: closestNameBySlug(shopable, params.itemName)?.name } });
     }
-    const [stats, heroStats, ranks, , , bestHeroes] = await Promise.all([
+    // Best heroes and pairings are computed on the server from responses too large to send, over the page's defaults.
+    const breakdownRequest = {
+      itemId: item.id,
+      ...DEFAULT_BADGES,
+      gameMode: GAME_MODE,
+      matchMode: DEFAULT_MATCH_MODE,
+      ...defaultUnixRange(seasons, preferences.dateFilter),
+    };
+    const [stats, heroStats, ranks, , , bestHeroes, cohort] = await Promise.all([
       prefetchCached(queryClient, itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter))),
       prefetchCached(queryClient, heroStatsQueryOptions(currentHeroStatsParams(seasons, preferences.dateFilter))),
       prefetchCached(queryClient, ranksQueryOptions),
       prefetchCached(queryClient, itemQueryOptions(item.id)),
       // The corrupted section's penalties and frame art; only items the Broker trades have one.
       item.corrupted_info && prefetchCached(queryClient, corruptionQueryOptions),
-      catchPrefetch(
-        fetchItemBestHeroes({
-          data: {
-            itemId: item.id,
-            ...DEFAULT_BADGES,
-            gameMode: GAME_MODE,
-            matchMode: DEFAULT_MATCH_MODE,
-            ...defaultUnixRange(seasons, preferences.dateFilter),
-          },
-        }),
-      ),
+      catchPrefetch(fetchItemBestHeroes({ data: breakdownRequest })),
+      catchPrefetch(fetchItemCohort({ data: breakdownRequest })),
     ]);
     const summary = summarizeItemStats(
       requireOnServer(stats, "Item stats"),
@@ -191,6 +190,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       cost: item.cost ?? null,
       breadcrumb: item.name,
       bestHeroes,
+      cohort,
       rankRange: rankRangeLabel(ranks, DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max),
       coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
       summary: summary && {
@@ -231,7 +231,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
 
 function ItemDetailPage() {
   const { preferences } = Route.useRouteContext();
-  const { itemId, itemName, tier, slot, slotType, cost, rankRange, bestHeroes } = Route.useLoaderData();
+  const { itemId, itemName, tier, slot, slotType, cost, rankRange, bestHeroes, cohort } = Route.useLoaderData();
   const router = useRouter();
   const { seasons } = useSeasons();
   const period = defaultPeriodLabel(seasons, preferences.dateFilter);
@@ -352,7 +352,7 @@ function ItemDetailPage() {
       <Section title={`Who Should Buy ${itemName}`} description={`${rankRange} matches`}>
         <div className="grid gap-4 lg:grid-cols-2">
           <ItemBestHeroes itemName={itemName} bestHeroes={bestHeroes} onRetry={() => void router.invalidate()} />
-          <ItemPairings itemId={itemId} itemName={itemName} itemRequest={itemRequest} />
+          <ItemPairings itemId={itemId} itemName={itemName} cohort={cohort} onRetry={() => void router.invalidate()} />
         </div>
       </Section>
 

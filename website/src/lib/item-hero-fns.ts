@@ -94,3 +94,33 @@ export const fetchItemBestHeroes = createServerFn({ method: "GET" })
     ]);
     return pickTopHeroes(itemStats.data, heroStats.data, itemId);
   });
+
+/** One item's purchases in the builds that also bought the requested item, summed over heroes. */
+export interface ItemCohortRow {
+  item_id: number;
+  wins: number;
+  matches: number;
+}
+
+/**
+ * Every item bought in the same builds as `itemId`, which its pairings rank. The per-hero rows run to 600 KB per item,
+ * so the server sums them to one row per item (a few KB) and the item page renders its pairings in its first HTML.
+ */
+export const fetchItemCohort = createServerFn({ method: "GET" })
+  .validator((request: ItemBestHeroesRequest) => request)
+  .handler(async ({ data: { itemId, ...filters } }): Promise<ItemCohortRow[]> => {
+    const { data } = await api.analytics_api.itemStats({
+      ...filters,
+      minMatches: 10,
+      bucket: "hero",
+      includeItemIds: [itemId],
+    });
+    const totals = new Map<number, ItemCohortRow>();
+    for (const row of data) {
+      const total = totals.get(row.item_id) ?? { item_id: row.item_id, wins: 0, matches: 0 };
+      total.wins += row.wins;
+      total.matches += row.matches;
+      totals.set(row.item_id, total);
+    }
+    return [...totals.values()];
+  });

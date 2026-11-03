@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
 import { RankedEntityList, RankedEntityMetric, RankedEntityRow } from "~/components/domain/assets/RankedEntityList";
@@ -10,20 +9,12 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { buildComponentImplications } from "~/lib/build-transform";
 import { formatPercent, formatShare, formatSignedPoints, possessive } from "~/lib/format";
-import type { ItemBestHero } from "~/lib/item-hero-fns";
+import type { ItemBestHero, ItemCohortRow } from "~/lib/item-hero-fns";
 import { toneOf } from "~/lib/tone";
 import { winRateNoise } from "~/lib/wilson";
 import { filterShopableItems, itemUpgradesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
-import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 
 const TOP_COUNT = 8;
-
-interface CohortRow {
-  item_id: number;
-  bucket: number;
-  wins: number;
-  matches: number;
-}
 
 interface PairedItem {
   item: SlimUpgrade;
@@ -36,14 +27,12 @@ interface PairedItem {
  * T1 component too, not just the T2 it builds from): buying the item implies buying those, so they would trivially
  * top the list.
  */
-function pickPairedItems(rows: readonly CohortRow[], item: SlimUpgrade, items: readonly SlimUpgrade[]): PairedItem[] {
-  const totals = new Map<number, { wins: number; matches: number }>();
-  for (const row of rows) {
-    const acc = totals.get(row.item_id) ?? { wins: 0, matches: 0 };
-    acc.wins += row.wins;
-    acc.matches += row.matches;
-    totals.set(row.item_id, acc);
-  }
+function pickPairedItems(
+  rows: readonly ItemCohortRow[],
+  item: SlimUpgrade,
+  items: readonly SlimUpgrade[],
+): PairedItem[] {
+  const totals = new Map(rows.map((row) => [row.item_id, row]));
   const own = totals.get(item.id);
   if (!own || own.matches === 0) return [];
   const implied = buildComponentImplications([...items]);
@@ -144,41 +133,45 @@ export function ItemBestHeroes({
   );
 }
 
-/** The pairings need the whole cohort of builds with the item and load in the browser. */
+/**
+ * `cohort` comes from the page loader (`fetchItemCohort`), so the pairings are in the server HTML; undefined when it
+ * failed.
+ */
 export function ItemPairings({
   itemId,
   itemName,
-  itemRequest,
+  cohort,
+  onRetry,
   className,
 }: {
   itemId: number;
   itemName: string;
-  itemRequest: AnalyticsApiItemStatsRequest;
+  cohort: ItemCohortRow[] | undefined;
+  onRetry?: () => void;
   className?: string;
 }) {
-  const cohortQuery = useQuery(itemStatsQueryOptions({ ...itemRequest, bucket: "hero", includeItemIds: [itemId] }));
   const itemsQuery = useQuery(itemUpgradesQueryOptions);
 
   const paired = useMemo(() => {
     const items = itemsQuery.data;
     const item = items?.find((candidate) => candidate.id === itemId);
-    if (!cohortQuery.data || !items || !item) return null;
-    return pickPairedItems(cohortQuery.data, item, filterShopableItems(items));
-  }, [cohortQuery.data, itemsQuery.data, itemId]);
+    if (!cohort || !items || !item) return null;
+    return pickPairedItems(cohort, item, filterShopableItems(items));
+  }, [cohort, itemsQuery.data, itemId]);
 
   // Checked before loading: without the item list the pairings never resolve, so a failed one would spin forever.
-  const failed = [cohortQuery, itemsQuery].filter((query) => query.isError && !query.data);
+  const itemsFailed = itemsQuery.isError && !itemsQuery.data;
 
   return (
     <Panel className={className}>
       <PanelHeader title={`Often Built with ${itemName}`} description="in the same build" />
       <PanelBody className="flex-1">
-        {failed.length > 0 ? (
+        {cohort === undefined || itemsFailed ? (
           <ErrorState
             variant="inline"
             title={`Could not load ${possessive(itemName)} pairings`}
-            retrying={failed.some((query) => query.isFetching)}
-            onRetry={() => failed.forEach((query) => void query.refetch())}
+            retrying={itemsFailed && itemsQuery.isFetching}
+            onRetry={() => (itemsFailed ? void itemsQuery.refetch() : onRetry?.())}
           />
         ) : !paired ? (
           <LoadingState label={`${itemName} pairings`} variant="skeleton" />
