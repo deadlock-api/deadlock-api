@@ -46,7 +46,7 @@ demofusion = { workspace = true }
 prost = "0.14.4"
 base64 = "0.23.1"
 tryhard = "0.5.2"
-async-compression = { version = "0.4.51", features = ["bzip2", "zstd", "tokio"] }
+async-compression = { version = "0.4.52", features = ["bzip2", "zstd", "tokio"] }
 bzip2 = "0.6"
 zstd = { workspace = true }
 strum = { version = "0.28.0", features = ["derive"] }

@@ -48,9 +48,9 @@ dungers_bitbuf = { path = "crates/haste/crates/dungers_bitbuf" }
 dungers_charsor = { path = "crates/haste/crates/dungers_charsor" }
 dungers_varint = { path = "crates/haste/crates/dungers_varint" }
 
-async-compression = "0.4.51"
+async-compression = "0.4.52"
 base64 = "0.23.1"
-cached = "4.0"
+cached = "4.1"
 clap = { version = "4.6.7", features = ["derive", "env"] }
 clickhouse = { version = "0.15.3" }
 futures = "0.3.34"
@@ -65,7 +65,7 @@ opentelemetry-otlp = { version = "0.33", features = ["grpc-tonic", "logs", "trac
 opentelemetry-appender-tracing = { version = "0.33", features = ["experimental_metadata_attributes"] }
 prost = "0.14.4"
 rand = "0.10.3"
-redis = { version = "1.8.0", default-features = false, features = ["tokio-comp", "connection-manager"] }
+redis = { version = "1.8.1", default-features = false, features = ["tokio-comp", "connection-manager"] }
 reqwest = "0.13.5"
 rmp-serde = "1.3.1"
 rstest = "0.28.0"
@@ -88,7 +88,7 @@ bytes = "1.12.1"
 expect-test = "1.5.1"
 hashbrown = { version = "0.17.1", default-features = false }
 http = "1.5.0"
-log = "0.4.34"
+log = "0.4.35"
 nohash = "0.2.0"
 snap = "1.1.2"
 
