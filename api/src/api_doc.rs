@@ -134,7 +134,6 @@ const TAG_GROUPS: &[(&str, &[&str])] = &[
             "Assets Bucket",
             "Misc Entities",
             "Generic Data",
-            "Loot Tables",
             "Accolades",
             "Steam Info",
             "Colors",

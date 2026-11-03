@@ -54,25 +54,6 @@ where
         .collect())
 }
 
-/// Like [`build_from_kv3`], but collects into an [`IndexMap`] keyed by
-/// `class_name`.
-pub(crate) fn build_map_from_kv3<Raw, Out>(
-    vdata: &str,
-    label: &'static str,
-    keep: impl Fn(&str, &serde_json::Value) -> bool,
-    mut transform: impl FnMut(&str, Raw) -> Out,
-) -> Result<IndexMap<String, Out>, AssetsError>
-where
-    Raw: serde::de::DeserializeOwned,
-{
-    Ok(kv3_entries(vdata, label, keep)?
-        .map(|(class_name, raw)| {
-            let v = transform(&class_name, raw);
-            (class_name, v)
-        })
-        .collect())
-}
-
 /// The top-level entries of a KV3 source file that pass `keep` and deserialize
 /// into `Raw`; the others are skipped (with a `warn!` for the malformed ones).
 fn kv3_entries<Raw>(

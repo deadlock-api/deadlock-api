@@ -16,7 +16,6 @@ pub mod generic_data;
 pub mod heroes;
 pub mod items;
 pub(crate) mod localization;
-pub mod loot_tables;
 pub mod map;
 pub mod misc_entities;
 pub(crate) mod models;

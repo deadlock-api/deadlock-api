@@ -14,7 +14,6 @@ mod convars;
 mod generic_data;
 mod heroes;
 mod items;
-mod loot_tables;
 mod map;
 mod misc_entities;
 mod modifiers;
@@ -34,7 +33,6 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .nest("/generic-data", generic_data::router())
         .nest("/heroes", heroes::router())
         .nest("/items", items::router())
-        .nest("/loot-tables", loot_tables::router())
         .nest("/map", map::router())
         .nest("/misc-entities", misc_entities::router())
         .nest("/modifiers", modifiers::router())
