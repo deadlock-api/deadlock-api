@@ -55,9 +55,14 @@ export function getRouter() {
   // A `preload="intent"` link preloads synchronously in touchstart, which runs before the tap's first paint: route
   // matching, loaders and the chunk import held that paint back 40-80 ms on a throttled phone. Starting the preload
   // after the next paint lets the tap show first; it still starts well before the click that follows.
+  // A navigation renders the new route synchronously inside the click handler (the router's store updates opt out of
+  // the transition): 60-210 ms of click processing on a throttled desktop, which took the field INP p75 from 65 to
+  // 211 ms (CrUX desktop origin, 2026-10). Committing it after the next paint lets the click paint first.
   if (typeof window !== "undefined") {
     const preloadRoute = router.preloadRoute;
     router.preloadRoute = (options) => afterNextPaint().then(() => preloadRoute(options));
+    const navigate = router.navigate;
+    router.navigate = (options) => afterNextPaint().then(() => navigate(options));
   }
 
   return router;
