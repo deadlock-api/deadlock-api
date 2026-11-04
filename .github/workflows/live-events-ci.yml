@@ -14,6 +14,8 @@ on:
       - 'rustfmt.toml'
       - 'clippy.toml'
       - '_typos.toml'
+      - 'scripts/docker/**'
+      - '.dockerignore'
       - '.github/workflows/live-events-ci.yml'
       - '.github/workflows/rust-checks.yml'
       - '.github/actions/**'
@@ -58,26 +60,25 @@ jobs:
         platform: [amd64, arm64]
         include:
           - platform: amd64
-            runner: blacksmith-4vcpu-ubuntu-2404
+            runner: ubuntu-24.04
             docker_platform: linux/amd64
           - platform: arm64
-            runner: blacksmith-4vcpu-ubuntu-2404-arm
+            runner: ubuntu-24.04-arm
             docker_platform: linux/arm64
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
+      - name: Login to Docker Hub
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Login to GitHub Container Registry
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
         with:
           registry: ghcr.io
           username: ${{ github.repository_owner }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup Docker Builder
-        uses: useblacksmith/setup-docker-builder@19215110ab936351210feebdfa5b440b4493e184 # v2.2.0
-        with:
-          cache-key: deadlock-api/live-events-${{ matrix.platform }}
 
       - name: Determine Docker Tag
         run: |
@@ -90,14 +91,11 @@ jobs:
           fi
           echo "DOCKER_TAG=$DOCKER_TAG" >> $GITHUB_ENV
 
-      - name: Build and push Docker image
-        uses: useblacksmith/build-push-action@9b0579bbec7a6cad2f171596c57e7ac1e7658850 # v2.3.0
+      - uses: ./.github/actions/build-image
         with:
-          # Build context is the repo root: live-events is a member of the root cargo workspace.
-          context: .
           file: live-events/Dockerfile
-          push: true
           tags: ${{ env.IMAGE_NAME }}:${{ env.DOCKER_TAG }}-${{ matrix.platform }}
+          cache-ref: ${{ env.IMAGE_NAME }}:buildcache-${{ matrix.platform }}
           platforms: ${{ matrix.docker_platform }}
 
   # The per-platform images build in parallel with the checks; only the merged tag is deployed,
@@ -106,7 +104,7 @@ jobs:
     name: "Deploy: Merge Manifests"
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
     needs: [checks, deploy]
-    runs-on: blacksmith-2vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     steps:
       - name: Login to GitHub Container Registry
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0

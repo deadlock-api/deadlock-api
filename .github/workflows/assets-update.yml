@@ -63,7 +63,7 @@ jobs:
     needs: check
     # Run on a new client version, when manually forced
     if: needs.check.outputs.changed == 'true' || inputs.force
-    runs-on: blacksmith-4vcpu-ubuntu-2404
+    runs-on: ubuntu-latest
     timeout-minutes: 180
     # contents:write so the release-notes step can publish a GitHub release.
     permissions:
@@ -78,7 +78,29 @@ jobs:
       RCLONE_CONFIG_R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
       RCLONE_CONFIG_R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
     steps:
-      - uses: useblacksmith/checkout@2b9fe87d796feea153b455ec2f3125b471a7b0e7 # v1.8.2
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # The depot (~12 GB) is copied once more while it is extracted, which is more than the root
+      # disk of a GitHub-hosted runner has free. Build on whichever disk has the most room (the
+      # runner's /mnt scratch disk when it has one) and, if that is still tight, delete preinstalled
+      # SDKs this job never uses.
+      - name: Pick the work dir
+        run: |
+          df -h / /mnt 2>/dev/null || true
+          avail() { df --output=avail -k "$1" 2>/dev/null | tail -n 1 || echo 0; }
+          work_dir="$GITHUB_WORKSPACE/.assets-build"
+          if [ -d /mnt ] && [ "$(avail /mnt)" -gt "$(avail "$GITHUB_WORKSPACE")" ]; then
+            work_dir=/mnt/assets-build
+            sudo mkdir -p "$work_dir"
+            sudo chown "$(id -u):$(id -g)" "$work_dir"
+          fi
+          mkdir -p "$work_dir"
+          if [ "$(avail "$work_dir")" -lt $((50 * 1024 * 1024)) ]; then
+            sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup \
+              /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          fi
+          df -h "$work_dir"
+          echo "WORK_DIR=$work_dir" >> "$GITHUB_ENV"
 
       - name: Install system dependencies
         run: |
@@ -97,18 +119,18 @@ jobs:
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
 
       # The ~12 GB Steam depot is deliberately NOT cached: each client version
-      # saved a new 12 GB entry, which blew the repo's 25 GB Blacksmith cache
-      # quota and evicted the Rust build caches (and itself, so it rarely hit).
+      # would save a new 12 GB entry, more than the repo's 10 GB Actions cache
+      # quota, evicting the Rust build caches (and itself, so it rarely hit).
       - name: Cache tooling
-        uses: useblacksmith/cache@c5fe29eb0efdf1cf4186b9f7fcbbcbc0cf025662 # v5.0.2
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
-            .assets-build/DepotDownloader
-            .assets-build/Source2Viewer-CLI
-            .assets-build/.vrf-version
-            .assets-build/*.so
-            .assets-build/gltf-transform
-            .assets-build/.video-hashes
+            ${{ env.WORK_DIR }}/DepotDownloader
+            ${{ env.WORK_DIR }}/Source2Viewer-CLI
+            ${{ env.WORK_DIR }}/.vrf-version
+            ${{ env.WORK_DIR }}/*.so
+            ${{ env.WORK_DIR }}/gltf-transform
+            ${{ env.WORK_DIR }}/.video-hashes
           key: assets-tooling-${{ needs.check.outputs.version }}
           restore-keys: |
             assets-tooling-
