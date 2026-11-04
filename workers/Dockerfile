@@ -1,7 +1,11 @@
+# syntax=docker/dockerfile:1
 FROM rust:1.99-slim-trixie AS builder
 RUN apt-get update \
     && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl git mold \
     && rm -rf /var/lib/apt/lists/*
+# sccache caches compiled crates across CI runs (see scripts/docker/with-sccache.sh).
+COPY scripts/docker/ /usr/local/lib/docker-build/
+RUN /usr/local/lib/docker-build/install-sccache.sh
 ENV SQLX_OFFLINE=true
 WORKDIR /app
 # Tune codegen for the deploy host (AMD EPYC 7502P, Zen 2). Includes the mold
@@ -16,7 +20,9 @@ COPY . .
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=/usr/local/cargo/git \
     --mount=type=cache,target=/app/target,sharing=locked \
-    cargo build --release --locked $(for m in workers/*/Cargo.toml; do sed -n 's/^name = "\(.*\)"/-p \1/p' "$m"; done) \
+    --mount=type=secret,id=ACTIONS_RESULTS_URL,env=ACTIONS_RESULTS_URL \
+    --mount=type=secret,id=ACTIONS_RUNTIME_TOKEN,env=ACTIONS_RUNTIME_TOKEN \
+    /usr/local/lib/docker-build/with-sccache.sh cargo build --release --locked $(for m in workers/*/Cargo.toml; do sed -n 's/^name = "\(.*\)"/-p \1/p' "$m"; done) \
     && mkdir -p /tmp/release-bin \
     && for m in workers/*/Cargo.toml; do \
          name=$(sed -n 's/^name = "\(.*\)"/\1/p' "$m"); \

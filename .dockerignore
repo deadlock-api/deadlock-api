@@ -18,6 +18,8 @@ website/*
 # Workspace members (see Cargo.toml): cargo needs their manifests to load the workspace.
 !website/wasm/
 scripts/
+# The image builds' sccache helpers.
+!scripts/docker/
 live-events/docker-compose.yaml
 workers/docker-compose.yaml
 api/docker-compose.yaml
