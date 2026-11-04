@@ -1,9 +1,10 @@
 //! Refreshes every day-partitioned analytics rollup every 30 minutes, not just the cohort ones
 //! the name comes from: `item_stats_agg_v2`, the cohort rollups by buy time and net worth, the
-//! enemy-hero rollup, `player_performance_curve_agg_v2`, the three item-flow rollups (nodes,
-//! edges, totals), `game_stats_agg` and `hero_pair_stats_agg`. Each run rebuilds only the days
-//! whose source matches grew past [`rebuild_threshold`] since their last build, plus the days a
-//! [`History`] rollup has due by age.
+//! enemy-hero rollup, `player_performance_curve_agg_v2`, the item-flow rollups (nodes, edges,
+//! totals; of all players and per included upgrade), `game_stats_agg` and `hero_pair_stats_agg`.
+//! Each run rebuilds only the days whose source matches grew past [`rebuild_threshold`] since
+//! their last build, plus the days a [`History`] rollup has due by age, and the include item-flow
+//! rollups a few days per run (see [`include_rollup_due`]).
 
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
@@ -42,6 +43,11 @@ pub(crate) const HORIZON_DAYS: u32 = 120;
 const BUILT_THROUGH_LAG: &str = "INTERVAL 5 MINUTE";
 const GROUP_BY_SPILL_BYTES: u64 = 8_000_000_000;
 const PER_DAY_MAX_MEMORY_BYTES: u64 = 15_032_385_536;
+
+/// Days an include item-flow rollup builds per run. A day of its normal-mode edges takes ~1,000
+/// CPU-s (~4 min at 8 threads), so the first runs, which build the whole horizon, interleave with
+/// the other rollups' instead of holding them stale for ~5 h.
+const INCLUDE_ROLLUP_DAYS_PER_RUN: usize = 6;
 
 /// Floor on the per-day rebuild threshold, so sparse horizon-edge days still build.
 const MIN_NEW_MATCHES: u64 = 10;
@@ -114,20 +120,31 @@ enum Source {
     /// Sums the stats of every pair of players per match-level grain (`hero_pair_stats_agg`).
     HeroPairs,
     /// One of the item build-flow rollups (`item_flow_*_agg`).
-    ItemFlow(item_flow_agg::Kind),
+    ItemFlow(item_flow_agg::Agg),
 }
 
 // The _v2 tables carry uniqCombined(14) player states (migration 40); the plain uniq states
 // of the former v1 tables were ~90% of item_stats_cohort_mv's CPU.
-fn cohort_specs() -> [CohortSpec; 10] {
-    let item_flow = |kind: item_flow_agg::Kind| CohortSpec {
-        table: kind.table(),
-        staging: kind.staging(),
-        source: Source::ItemFlow(kind),
+fn cohort_specs() -> Vec<CohortSpec> {
+    let item_flow = |agg: item_flow_agg::Agg| CohortSpec {
+        table: agg.table(),
+        staging: agg.staging(),
+        source: Source::ItemFlow(agg),
         horizon_days: HORIZON_DAYS,
         history: None,
     };
-    [
+    let [
+        flow_nodes,
+        flow_edges,
+        flow_totals,
+        include_nodes,
+        include_edges,
+        include_totals,
+        brawl_include_nodes,
+        brawl_include_edges,
+        brawl_include_totals,
+    ] = item_flow_agg::Agg::ALL.map(item_flow);
+    vec![
         // Replaces the `item_stats_agg` refreshable MV, which recomputed all 65 days every hour.
         CohortSpec {
             table: item_stats::ITEM_STATS_AGG_TABLE,
@@ -173,9 +190,16 @@ fn cohort_specs() -> [CohortSpec; 10] {
             horizon_days: player_performance_curve_agg::AGG_HORIZON_DAYS,
             history: None,
         },
-        item_flow(item_flow_agg::Kind::Nodes),
-        item_flow(item_flow_agg::Kind::Edges),
-        item_flow(item_flow_agg::Kind::Totals),
+        flow_nodes,
+        flow_edges,
+        flow_totals,
+        // Their first runs build the horizon a few days per run (see `include_rollup_due`).
+        include_nodes,
+        include_edges,
+        include_totals,
+        brawl_include_nodes,
+        brawl_include_edges,
+        brawl_include_totals,
         // Last: their first runs build all of history, up to `max_days_per_run` days each.
         CohortSpec {
             table: game_stats::AGG_TABLE,
@@ -230,7 +254,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
         Source::ItemStats => return item_stats::item_stats_agg_select_body(since_clause),
         Source::GameStats => return game_stats::agg_select_body(since_clause),
         Source::HeroPairs => return hero_pair_agg::agg_select_body(since_clause),
-        Source::ItemFlow(kind) => return item_flow_agg::agg_select_body(kind, since_clause),
+        Source::ItemFlow(agg) => return item_flow_agg::agg_select_body(agg, since_clause),
     };
     format!(
         "SELECT
@@ -547,6 +571,35 @@ fn history_due(
         .collect()
 }
 
+impl CohortSpec {
+    /// Whether this is an include item-flow rollup (see [`include_rollup_due`]).
+    const fn is_include_rollup(&self) -> bool {
+        matches!(
+            self.source,
+            Source::ItemFlow(item_flow_agg::Agg {
+                scope: item_flow_agg::Scope::Include(_),
+                ..
+            })
+        )
+    }
+}
+
+/// The `stale` days (newest first) an include item-flow rollup rebuilds this run: not the newest
+/// day of `source`, which grows all day, and at most [`INCLUDE_ROLLUP_DAYS_PER_RUN`]. Reads take
+/// a day the rollup lacks from `match_player`, where a request reads only the item's buyers, ~1
+/// CPU-s for a day of normal mode; rebuilding the newest day every run would cost ~500 CPU-s.
+fn include_rollup_due(
+    source: &[WatermarkRow],
+    stale: Vec<(String, u32, u64)>,
+) -> Vec<(String, u32, u64)> {
+    let newest = source.first().map(|row| row.day.as_str());
+    stale
+        .into_iter()
+        .filter(|(day, ..)| Some(day.as_str()) != newest)
+        .take(INCLUDE_ROLLUP_DAYS_PER_RUN)
+        .collect()
+}
+
 /// Rebuilds only the day partitions whose source watermark advanced since the
 /// last run (and, for a [`History`] spec, the days due by age), then prunes agg days that fell
 /// out of the horizon unless the spec keeps its history. On a cold start
@@ -578,6 +631,7 @@ async fn refresh(
         .collect();
     let stale = match &spec.history {
         Some(history) => history_rebuilds(ch_client, history, &source, stale, &stored).await?,
+        None if spec.is_include_rollup() => include_rollup_due(&source, stale),
         None => stale,
     };
     // Newest first: recent days are read the most, and fill in from `match_player` until built.

@@ -3,11 +3,13 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
+use cached::macros::once;
 use clickhouse::Row;
 use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::sync::Arc;
-use tracing::debug;
+use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
@@ -279,6 +281,11 @@ fn time_phase_expr(buy_time_expr: &str) -> String {
     format!("toUInt8({raw})")
 }
 
+/// The street-brawl columns (rounds) of `query`.
+fn brawl_phase_count(query: &ItemFlowStatsQuery) -> u8 {
+    query.phase_count.unwrap_or(4).clamp(2, 12)
+}
+
 /// Whether the query reads the materialized `upgrades.*` from the base table with projections off,
 /// see [`upgrades_source`].
 fn reads_base_upgrades(query: &ItemFlowStatsQuery, is_brawl: bool) -> bool {
@@ -412,7 +419,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     }
     .build();
     let count = if is_brawl {
-        query.phase_count.unwrap_or(4).clamp(2, 12)
+        brawl_phase_count(query)
     } else {
         TIME_PHASE_COLUMNS
     };
@@ -718,7 +725,7 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
         )
         GROUP BY column, pos"
         );
-        return nodes_from_cells(query, &cells, "item_flow_stats_nodes", extra_settings);
+        return nodes_from_cells(query, &cells, "item_flow_stats_nodes", extra_settings, true);
     }
     let cells = format!(
         "SELECT
@@ -760,16 +767,20 @@ fn build_nodes_query(query: &ItemFlowStatsQuery, parts: &QueryParts) -> String {
         )
         GROUP BY column, item_id, nb"
     );
-    nodes_from_cells(query, &cells, "item_flow_stats_nodes", extra_settings)
+    nodes_from_cells(query, &cells, "item_flow_stats_nodes", extra_settings, true)
 }
 
-/// The nodes rows from the rollup source of [`agg::sources`].
-fn build_nodes_agg_query(query: &ItemFlowStatsQuery, source: &str) -> String {
+/// The nodes rows from the rollup source of [`agg::sources`]. Street brawl's cells have no
+/// net-worth bucket.
+fn build_nodes_agg_query(query: &ItemFlowStatsQuery, stages: agg::Stages, source: &str) -> String {
+    let (nb_select, nb_group) = match stages {
+        agg::Stages::Normal => ("\n            nw_bucket AS nb,", ", nb"),
+        agg::Stages::Brawl => ("", ""),
+    };
     let cells = format!(
         "SELECT
             phase AS column,
-            item_id,
-            nw_bucket AS nb,
+            item_id,{nb_select}
             sum(n_wins) AS cwins,
             sum(n_buys) AS cm,
             sum(n_players) AS cpl,
@@ -778,30 +789,34 @@ fn build_nodes_agg_query(query: &ItemFlowStatsQuery, source: &str) -> String {
             sum(sum_assists) AS ca,
             sum(sum_net_worth_at_buy) AS cnw
         FROM {source}
-        GROUP BY column, item_id, nb"
+        GROUP BY column, item_id{nb_group}"
     );
-    nodes_from_cells(query, &cells, "item_flow_stats_nodes_agg", "")
+    nodes_from_cells(query, &cells, "item_flow_stats_nodes_agg", "", false)
 }
 
 /// The nodes query over `cells`, a `SELECT` of per (column, item, net-worth-at-buy bucket `nb`)
 /// sums: `cwins`, `cm` (purchases), `cpl` (first purchases), `ck`, `cd`, `ca` and `cnw`. Street
-/// brawl cells are per (column, `pos`), the item's 1-based position in `u_ids`, without `nb`.
+/// brawl cells are per (column, item), without `nb`: per `pos`, the item's 1-based position in
+/// `u_ids`, when `brawl_by_pos`, else per `item_id`.
 fn nodes_from_cells(
     query: &ItemFlowStatsQuery,
     cells: &str,
     log_comment: &str,
     extra_settings: &str,
+    brawl_by_pos: bool,
 ) -> String {
     let min_matches = query.min_matches.unwrap_or(20);
     // Net worth resets each round in street brawl, so net-worth-at-buy is not a meaningful
     // "ahead-ness" measure there — fall back to the raw win rate for the adjusted field.
     let (adjusted_win_rate_expr, with_head, source) =
-        if query.game_mode == Some(GameMode::StreetBrawl) {
+        if query.game_mode == Some(GameMode::StreetBrawl) && brawl_by_pos {
             (
                 "sum(cwins) / sum(cm)",
                 format!("{UPGRADE_IDS_WITH}, "),
                 "(SELECT * EXCEPT pos, toUInt32(u_ids[pos]) AS item_id FROM cells)",
             )
+        } else if query.game_mode == Some(GameMode::StreetBrawl) {
+            ("sum(cwins) / sum(cm)", String::new(), "cells")
         } else {
             (
                 "sum(w * (cwins / cm)) / sum(w)",
@@ -958,14 +973,10 @@ fn build_edges_agg_query(query: &ItemFlowStatsQuery, source: &str) -> String {
     )
 }
 
-/// The totals query over the rollup source of [`agg::sources`]. Without locks, the locked build
-/// path is the baseline, so `summary` repeats it.
-fn build_totals_agg_query(source: &str) -> String {
-    let reached = |name: &str| {
-        (0..TIME_PHASE_COLUMNS)
-            .map(|c| format!("sum({name}_{c})"))
-            .join(", ")
-    };
+/// The totals query over the rollup source of [`agg::sources`], with `columns` stages. Without
+/// locks, the locked build path is the baseline, so `summary` repeats it.
+fn build_totals_agg_query(source: &str, columns: u8) -> String {
+    let reached = |name: &str| (0..columns).map(|c| format!("sum({name}_{c})")).join(", ");
     let reached_cols = reached("n_reached");
     let reached_win_cols = reached("n_reached_wins");
     format!(
@@ -1003,6 +1014,19 @@ fn build_totals_agg_query(source: &str) -> String {
 
 cached_ch_query! {
     fn run_nodes_query(3600) -> Vec<ItemFlowNode>;
+}
+
+/// The upgrade ids, the items `default.upgrade_items_dict` holds (same source query): the include
+/// rollups serve a request including one of them (see [`agg::sources`]).
+#[once(ttl_secs = 600)]
+async fn upgrade_item_ids(
+    ch_client: &clickhouse::Client,
+) -> clickhouse::error::Result<Arc<HashSet<u32>>> {
+    let ids = ch_client
+        .query("SELECT DISTINCT toUInt32(id) FROM items WHERE type = 'upgrade' SETTINGS log_comment = 'item_flow_stats_upgrade_ids'")
+        .fetch_all::<u32>()
+        .await?;
+    Ok(Arc::new(ids.into_iter().collect()))
 }
 
 cached_ch_query! {
@@ -1066,12 +1090,20 @@ async fn get_item_flow_stats(
     // The locks in request order, which `leave_one_out` follows.
     let locked_ids = query.locked_item_ids.clone().unwrap_or_default();
     let locked_columns = query.locked_columns.clone().unwrap_or_default();
+    let upgrades = if agg::wants_upgrade_ids(&query) {
+        upgrade_item_ids(ch_client)
+            .await
+            .inspect_err(|e| warn!("upgrade ids for the item-flow rollups failed: {e}"))
+            .ok()
+    } else {
+        None
+    };
     let (nodes_query, edges_query, totals_query) =
-        if let Some([nodes, edges, totals]) = agg::sources(&query) {
+        if let Some((stages, [nodes, edges, totals])) = agg::sources(&query, upgrades.as_deref()) {
             (
-                build_nodes_agg_query(&query, &nodes),
+                build_nodes_agg_query(&query, stages, &nodes),
                 build_edges_agg_query(&query, &edges),
-                build_totals_agg_query(&totals),
+                build_totals_agg_query(&totals, stages.columns()),
             )
         } else {
             let parts = query_parts(&query);
