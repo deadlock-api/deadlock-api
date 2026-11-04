@@ -179,17 +179,7 @@ AS WITH
             SELECT
                 toStartOfInterval(TimeUnix, toIntervalSecond(900)) AS t,
                 sum(delta) AS v
-            FROM
-            (
-                SELECT
-                    TimeUnix,
-                    Value,
-                    lagInFrame(Value, 1, -1.) OVER (PARTITION BY ServiceName, Attributes ORDER BY TimeUnix ASC) AS prev,
-                    multiIf(prev < 0, if(Value <= 10, Value, 0.), Value < prev, Value, Value - prev) AS delta
-                FROM otel.otel_metrics_sum
-                WHERE (MetricName = 'steam_proxy_call_success') AND (Flags = 0) AND (TimeUnix >= toDateTime64((now() - toIntervalDay(30)) - toIntervalHour(1), 9)) AND (TimeUnix <= toDateTime64(now(), 9))
-            )
-            WHERE TimeUnix >= toDateTime64((now() - toIntervalDay(30)), 9)
+            FROM `otel.counter_deltas`(metric = 'steam_proxy_call_success', from_s = toUInt32(now() - toIntervalDay(30)), to_s = toUInt32(now()))
             GROUP BY t
             HAVING v < 400
         )
@@ -204,17 +194,8 @@ AS WITH
             SELECT
                 toStartOfInterval(TimeUnix, toIntervalSecond(1800)) AS t,
                 sum(delta) AS v
-            FROM
-            (
-                SELECT
-                    TimeUnix,
-                    Value,
-                    lagInFrame(Value, 1, -1.) OVER (PARTITION BY ServiceName, Attributes ORDER BY TimeUnix ASC) AS prev,
-                    multiIf(prev < 0, if(Value <= 10, Value, 0.), Value < prev, Value, Value - prev) AS delta
-                FROM otel.otel_metrics_sum
-                WHERE (MetricName = 'ingest_worker_batch_flush_failure') AND (Flags = 0) AND (ServiceName = 'ingest-worker') AND (TimeUnix >= toDateTime64((now() - toIntervalDay(30)) - toIntervalHour(1), 9)) AND (TimeUnix <= toDateTime64(now(), 9))
-            )
-            WHERE TimeUnix >= toDateTime64((now() - toIntervalDay(30)), 9)
+            FROM `otel.counter_deltas`(metric = 'ingest_worker_batch_flush_failure', from_s = toUInt32(now() - toIntervalDay(30)), to_s = toUInt32(now()))
+            WHERE (ServiceName = 'ingest-worker')
             GROUP BY t
             HAVING v >= 2
         )
