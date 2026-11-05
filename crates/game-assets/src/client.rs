@@ -9,6 +9,7 @@ use crate::types::{AssetsHero, AssetsRanks};
 use crate::versions::error::AssetsError;
 use crate::versions::heroes::{Hero, fetch_heroes as build_heroes};
 use crate::versions::items::{Item, fetch_items as build_items};
+use crate::versions::ranked_seasons::{RankedSeason, fetch_ranked_seasons as build_ranked_seasons};
 use crate::versions::ranks::{Rank, RankImages, fetch_ranks as build_ranks};
 use crate::versions::store::{VersionStore, VersionStoreError};
 
@@ -154,6 +155,17 @@ impl AssetsClient {
             .await
             .map_err(|source| AssetsClientError::Build {
                 what: "items",
+                source,
+            })
+    }
+
+    /// Cached `Arc<Vec<RankedSeason>>` for the latest version (shared underlying allocation).
+    pub async fn ranked_seasons(&self) -> AssetsClientResult<Arc<Vec<RankedSeason>>> {
+        let version = self.latest_version().await?;
+        build_ranked_seasons(&self.r2_client, version, DEFAULT_LANGUAGE)
+            .await
+            .map_err(|source| AssetsClientError::Build {
+                what: "ranked seasons",
                 source,
             })
     }

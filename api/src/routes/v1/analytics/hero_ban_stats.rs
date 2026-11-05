@@ -67,8 +67,9 @@ pub struct HeroBanStats {
     pub bucket: u32,
     /// The number of matches in which this hero was banned.
     pub bans: u64,
-    /// The number of matches with ban data in this bucket. A hero's ban rate is `bans / matches`; a ranked match has 3
-    /// bans and an unranked match 2, so the bans of all heroes do not divide into matches by a fixed count.
+    /// The number of matches with ban data in this bucket. A hero's ban rate is `bans / matches`; a ranked match has 4
+    /// bans (3 before Beta Season 2) and an unranked match 2, so the bans of all heroes do not divide into matches by a
+    /// fixed count.
     pub matches: u64,
 }
 

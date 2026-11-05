@@ -2,7 +2,7 @@ import type { HeroBanStats } from "deadlock_api_client";
 
 /**
  * The matches with ban data in each bucket. Every row of a bucket repeats the count, so it is taken once per bucket.
- * The bans don't divide into matches by a fixed count: a ranked match has 3 bans, an unranked match 2.
+ * The bans don't divide into matches by a fixed count: a ranked match has 4 bans (3 before Beta Season 2), an unranked match 2.
  */
 export function banMatchesByBucket(banData: readonly HeroBanStats[]): Map<number, number> {
   const matches = new Map<number, number>();

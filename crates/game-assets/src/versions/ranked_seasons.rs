@@ -84,16 +84,19 @@ pub struct SeasonInterval {
 #[derive(Debug, Serialize, Clone)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct RankInfo {
-    /// Rank badge (tier * 10 + subrank) the entry runs up to, when the entry sets one.
+    /// Rank badge (tier * 10 + subrank) the entry stops at: it covers the ranks below it. In Beta
+    /// Season 2, 91 (Phantom I) gives every rank below Phantom shields and Phantom and up none.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rank_end: Option<u32>,
-    /// Rank XP per subrank, when the entry sets it.
+    /// Rank points needed per subrank step, the last one being the step to the next badge
+    /// (Beta Season 2: 1000 between subranks, 1500 from the final subrank).
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub sub_rank_xp: Vec<u32>,
-    /// Demotion protections for the rank badge, when the entry sets them.
+    /// Losses a player at a badge's first subrank with 0 rank points can take before dropping
+    /// a badge (rank loss protection shields).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub badge_shields: Option<i32>,
-    /// Demotion protections per subrank, when the entry sets them.
+    /// Losses a player can take before dropping a subrank (rank loss protection shields).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sub_rank_shields: Option<i32>,
 }
@@ -115,8 +118,9 @@ pub struct RankedSeason {
     pub min_hero_unlock_points: Option<u32>,
     pub min_hero_unlocks: u32,
     pub calibration_matches: u32,
-    /// Highest rank badge (tier * 10 + subrank) calibration can place a player at
-    /// (build 6857+).
+    /// Highest rank badge (tier * 10 + subrank) placements put a player at (build 6857+).
+    /// Valve's notes for Beta Season 2 (101, Ascendant I) allow up to Ascendant III for
+    /// strong previous-season performance.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub calibration_max_rank: Option<u32>,
     /// Base rank points granted per win / taken per loss (build 6701+).

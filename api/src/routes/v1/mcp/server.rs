@@ -43,6 +43,7 @@ Read-only SQL access to hourly parquet snapshots of the Deadlock API database (h
 - Schema exploration: `SHOW TABLES`, `DESCRIBE match_player`, `SUMMARIZE match_salts`, `duckdb_columns()`.
 - DuckDB extras: `SELECT * EXCLUDE (col)`, `GROUP BY ALL`, `QUALIFY`, `arg_max(x, y)`, list/struct literals, `strftime`/`date_trunc`. Lambdas use `lambda x: x + 1`; the arrow form `x -> x + 1` fails.
 - Heroes and items (abilities, weapons, shop upgrades) are stored as numeric ids. `list_heroes` and `list_items` map them to names; pass an `id` to get the full details of one hero or item.
+- `list_ranked_seasons` lists the ranked seasons with their intervals (unix seconds) and rules. The `rank_interval` column of the match tables is an interval's `interval`; rank badges are `tier * 10 + subrank`.
 - Players are stored by numeric `account_id`. To find one by name, search `steam_profiles` (Steam name and profile URL) or `steam_profile_observed_names` (in-game names).
 - `list_patches` lists the patch notes of the official forum changelog and the Steam news feed (the REST `/v2/patches` feed). Pass a patch `link` to get its full notes.";
 
@@ -419,6 +420,21 @@ impl McpServer {
     }
 
     #[tool(
+        title = "List Ranked Seasons",
+        description = "List the ranked seasons of the current game version, as the REST `/v1/assets/ranked-seasons` returns them: `class_name`, `name`, eligibility rules (`min_wins`, `min_hero_unlocks` with `min_hero_wins` or `min_hero_unlock_points`), `calibration_matches`, `calibration_max_rank`, `base_win_loss_point_grant`, `valid_party_sizes`, the `intervals` the season runs for (`interval` as in the `rank_interval` column, `start_timestamp`/`end_timestamp` in unix seconds, `leaderboard_id`) and `rank_info` (rank point steps and rank loss protection shields). Rank badges are `tier * 10 + subrank`."
+    )]
+    async fn list_ranked_seasons(&self) -> CallToolResult {
+        match self.assets.ranked_seasons().await {
+            Ok(seasons) => success(&json!({
+                "success": true,
+                "seasonCount": seasons.len(),
+                "seasons": seasons.as_slice(),
+            })),
+            Err(e) => assets_error("list_ranked_seasons", &e),
+        }
+    }
+
+    #[tool(
         title = "List Patches",
         description = "List the game patches, newest first, from the official forum changelog (`forum`) and the Steam news feed (`steam`), with `title`, `link` and `pubDate` (when the post was published; a forum thread's is when it was last edited). Pass `link` to get the full notes of one patch instead."
     )]
@@ -694,6 +710,7 @@ mod tests {
                 "list_heroes",
                 "list_items",
                 "list_patches",
+                "list_ranked_seasons",
                 "list_tables",
             ]
         );
