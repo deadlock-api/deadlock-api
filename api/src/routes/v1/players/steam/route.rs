@@ -383,7 +383,18 @@ pub(super) async fn steam(
             .map(SteamProfile::from)
             .collect::<Vec<_>>();
         hide_protected_friends(&state, &mut profiles).await?;
-        return Ok((HeaderMap::new(), Json(profiles)));
+        // The steam-profile-fetcher stores the profile of an account it has not seen within a
+        // couple of minutes (e.g. right after a player's first matches are ingested). Caching the
+        // answer without it for the router's hour (plus an hour stale) kept such players nameless
+        // on the tracker long after the profile existed.
+        let mut headers = HeaderMap::new();
+        if !all_profiles_found(&account_ids, &profiles) {
+            headers.insert(
+                header::CACHE_CONTROL,
+                HeaderValue::from_static(INCOMPLETE_CACHE_CONTROL),
+            );
+        }
+        return Ok((headers, Json(profiles)));
     }
 
     let refreshed = refresh_steam_profiles(&state, &rate_limit_key, &account_ids).await?;
@@ -428,6 +439,15 @@ pub(super) async fn steam(
     let mut headers = HeaderMap::new();
     headers.insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
     Ok((headers, Json(profiles)))
+}
+
+/// `Cache-Control` of a batch answer missing some of the requested profiles.
+const INCOMPLETE_CACHE_CONTROL: &str = "public, max-age=60";
+
+/// Whether every requested account has a profile in `profiles`.
+fn all_profiles_found(account_ids: &[u32], profiles: &[SteamProfile]) -> bool {
+    let found: HashSet<u32> = profiles.iter().map(|p| p.account_id).collect();
+    account_ids.iter().all(|id| found.contains(id))
 }
 
 #[derive(Debug, Clone, Row, Deserialize)]
