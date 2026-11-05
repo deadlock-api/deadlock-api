@@ -1,12 +1,13 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { LeaderboardRegionEnum } from "deadlock_api_client";
-import { parseAsInteger, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
+import { parseAsInteger, parseAsString, parseAsStringLiteral, throttle, useQueryState } from "nuqs";
 import { useCallback } from "react";
 
 import { Filter } from "~/components/domain/filters";
 import { LeaderboardTable } from "~/components/features/leaderboard/LeaderboardTable";
 import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
+import { StringOption, StringSelector } from "~/components/patterns/filter-bar/StringSelector";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -14,28 +15,45 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { useHeroById } from "~/hooks/useAssetById";
+import { useSeasons } from "~/hooks/useSeasons";
 import { prefetchCached } from "~/lib/prefetch-safe";
 import { isLeaderboardRegion, REGION_LABELS } from "~/lib/region";
 import { fetchDefaultRegion } from "~/lib/region-fns";
+import { currentSeason, type SeasonInfo } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
+import { loadSeasons } from "~/queries/asset-queries";
 import { leaderboardQueryOptions } from "~/queries/leaderboard-queries";
+
+/**
+ * The past season `season` (a season's `id`) names, or undefined for the current one, whose board the API serves
+ * without a `leaderboard_id`. An unknown or board-less season also falls back to the current board.
+ */
+function pastSeason(seasons: readonly SeasonInfo[], season: string | null): SeasonInfo | undefined {
+  if (season === null || season === currentSeason(seasons)?.id) return undefined;
+  return seasons.find((s) => s.id === season && s.leaderboardId != null);
+}
 
 export const Route = createFileRoute("/community/leaderboard")({
   component: LeaderboardPage,
-  // The region and hero filters live in the URL under nuqs; read them here so the loader warms the board the page will
-  // show.
+  // The region, hero and season filters live in the URL under nuqs; read them here so the loader warms the board the
+  // page will show.
   loaderDeps: ({ search }) => {
-    const { region, hero_id: heroId } = search as { region?: unknown; hero_id?: unknown };
+    const { region, hero_id: heroId, season } = search as { region?: unknown; hero_id?: unknown; season?: unknown };
     return {
       region: isLeaderboardRegion(region) ? region : null,
       heroId: typeof heroId === "number" && Number.isInteger(heroId) ? heroId : null,
+      season: typeof season === "string" ? season : null,
     };
   },
   loader: async ({ context: { queryClient }, deps }) => {
     // Resolved on the server on every visit, client-side navigations included, so the default follows the
     // visitor's location the same way each time.
-    const defaultRegion = await fetchDefaultRegion();
-    await prefetchCached(queryClient, leaderboardQueryOptions(deps.region ?? defaultRegion, deps.heroId));
+    const [defaultRegion, seasons] = await Promise.all([fetchDefaultRegion(), loadSeasons(queryClient)]);
+    const leaderboardId = pastSeason(seasons, deps.season)?.leaderboardId;
+    await prefetchCached(
+      queryClient,
+      leaderboardQueryOptions(deps.region ?? defaultRegion, deps.heroId, leaderboardId),
+    );
     return { defaultRegion };
   },
   head: () =>
@@ -65,6 +83,7 @@ function LeaderboardPage() {
   const { defaultRegion } = Route.useLoaderData();
   const [region, setRegionParam] = useQueryState("region", parseAsStringLiteral(regions).withDefault(defaultRegion));
   const [heroId, setHeroIdParam] = useQueryState("hero_id", parseAsInteger);
+  const [seasonParam, setSeasonParam] = useQueryState("season", parseAsString);
   const [, setPage] = useQueryState("page", parseAsInteger);
   // Another board starts on its first page: a kept `page=6` showed an empty page for a four-player hero board and
   // jumped back to rank 126 when the hero was cleared.
@@ -82,10 +101,27 @@ function LeaderboardPage() {
     },
     [setRegionParam, setPage],
   );
+  const { seasons } = useSeasons();
+  const current = currentSeason(seasons);
+  const past = pastSeason(seasons, seasonParam);
+  const selectedSeason = past ?? current;
+  const leaderboardId = past?.leaderboardId;
+  // A season without a board of its own has nothing to show.
+  const seasonOptions = seasons.filter((s) => s.leaderboardId != null);
+  const setSeason = useCallback(
+    (next: string) => {
+      void setSeasonParam(next === current?.id ? null : next, together);
+      void setPage(null, together);
+    },
+    [current?.id, setSeasonParam, setPage],
+  );
 
   // A region or hero change keeps the old table, dimmed, until the new one arrives, instead of emptying the page.
   // `useQuery`, not `useQueries`: the latter starts a new observer for the new key, which has no previous data.
-  const leaderboardQuery = useQuery({ ...leaderboardQueryOptions(region, heroId), placeholderData: keepPreviousData });
+  const leaderboardQuery = useQuery({
+    ...leaderboardQueryOptions(region, heroId, leaderboardId),
+    placeholderData: keepPreviousData,
+  });
   const { isPending, isError, error } = leaderboardQuery;
   const { hero } = useHeroById(heroId ?? -1);
 
@@ -107,6 +143,20 @@ function LeaderboardPage() {
             </SegmentedItem>
           ))}
         </FilterToggleCell>
+        {current && seasonOptions.length > 1 ? (
+          <StringSelector
+            label="Season"
+            value={(past ?? current).id}
+            defaultValue={current.id}
+            onValueChange={setSeason}
+          >
+            {seasonOptions.map((season) => (
+              <StringOption key={season.id} value={season.id}>
+                {season.name}
+              </StringOption>
+            ))}
+          </StringSelector>
+        ) : null}
       </Filter.Root>
       <div className="min-h-200">
         {isPending ? (
@@ -122,9 +172,9 @@ function LeaderboardPage() {
           <StaleOverlay active={leaderboardQuery.isPlaceholderData} label="leaderboard">
             {/* Keyed by the board, so a jump or a highlighted rank from another board does not carry over. */}
             <LeaderboardTable
-              key={`${region}-${heroId}`}
+              key={`${region}-${heroId}-${leaderboardId}`}
               leaderboard={leaderboardQuery.data}
-              label={`${REGION_LABELS[region]} leaderboard${hero?.name ? ` for ${hero.name}` : ""}`}
+              label={`${REGION_LABELS[region]} leaderboard${hero?.name ? ` for ${hero.name}` : ""}${selectedSeason ? `, ${selectedSeason.name}` : ""}`}
               onHeroClick={setHeroId}
             />
           </StaleOverlay>

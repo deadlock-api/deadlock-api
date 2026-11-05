@@ -57,7 +57,8 @@ export const queryKeys = {
     crosshairCodec: () => ["assets-crosshair-codec"] as const,
   },
   leaderboard: {
-    data: (region: string, heroId?: number | null) => ["api-leaderboard-data", region, heroId] as const,
+    data: (region: string, heroId?: number | null, leaderboardId?: number | null) =>
+      ["api-leaderboard-data", region, heroId, leaderboardId] as const,
   },
   analytics: {
     badgeDistribution: (filter: AnalyticsApiBadgeDistributionRequest) => ["api-badge-distribution", filter] as const,

@@ -11,13 +11,19 @@ export type SlimLeaderboard = Omit<Leaderboard, "entries"> & {
   entries: Omit<Leaderboard["entries"][number], "possible_account_ids">[];
 };
 
-export function leaderboardQueryOptions(region: LeaderboardRegionEnum, heroId?: number | null) {
+/** `leaderboardId` picks a season's board (`SeasonInfo.leaderboardId`); without it the API serves the current one. */
+export function leaderboardQueryOptions(
+  region: LeaderboardRegionEnum,
+  heroId?: number | null,
+  leaderboardId?: number | null,
+) {
   return queryOptions({
-    queryKey: queryKeys.leaderboard.data(region, heroId),
+    queryKey: queryKeys.leaderboard.data(region, heroId, leaderboardId),
     queryFn: async (): Promise<SlimLeaderboard> => {
+      const board = leaderboardId ?? undefined;
       const response = heroId
-        ? await api.leaderboard_api.leaderboardHero({ region, heroId })
-        : await api.leaderboard_api.leaderboard({ region });
+        ? await api.leaderboard_api.leaderboardHero({ region, heroId, leaderboardId: board })
+        : await api.leaderboard_api.leaderboard({ region, leaderboardId: board });
       // The candidate account ids were 555 KB of the 630 KB the page embedded in its HTML, and nothing shows them.
       return {
         ...response.data,

@@ -12,6 +12,8 @@ export interface SeasonInfo {
   // Undefined = season is still running (open-ended), mirroring the active patch.
   endDate?: Dayjs;
   scheduledEndDate: Dayjs;
+  /** The leaderboard of the season's latest started interval, for `/v1/leaderboard`'s `leaderboard_id`. */
+  leaderboardId?: number;
 }
 
 /**
@@ -26,12 +28,16 @@ export function toSeasons(raw: readonly RankedSeason[]): SeasonInfo[] {
     .map((season) => {
       const startDate = day.unix(Math.min(...season.intervals.map((i) => i.start_timestamp)));
       const scheduledEndDate = day.unix(Math.max(...season.intervals.map((i) => i.end_timestamp)));
+      const leaderboardId = season.intervals
+        .filter((i) => i.leaderboard_id != null && i.start_timestamp <= now.unix())
+        .toSorted((a, b) => b.start_timestamp - a.start_timestamp)[0]?.leaderboard_id;
       return {
         id: season.class_name,
         name: season.name,
         startDate,
         endDate: scheduledEndDate.isAfter(now) ? undefined : scheduledEndDate,
         scheduledEndDate,
+        leaderboardId: leaderboardId ?? undefined,
       };
     })
     .filter((season) => !season.startDate.isAfter(now))
