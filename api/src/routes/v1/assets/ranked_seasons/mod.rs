@@ -2,14 +2,11 @@
 
 pub(super) mod route;
 
-use core::time::Duration;
-
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
 use crate::context::AppState;
-use crate::middleware::cache::CacheControlLayer;
 
 #[derive(OpenApi)]
 #[openapi(tags((
@@ -19,13 +16,7 @@ use crate::middleware::cache::CacheControlLayer;
 struct ApiDoc;
 
 pub(super) fn router() -> OpenApiRouter<AppState> {
-    // Seasons only change with a game update, and the website blocks every analytics page on this list: keep it at the
-    // edge for a day and serve it stale for a week while it revalidates.
-    OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .routes(routes!(route::list_ranked_seasons))
-        .layer(
-            CacheControlLayer::new(Duration::from_hours(24))
-                .with_stale_while_revalidate(Duration::from_hours(24 * 7))
-                .with_stale_if_error(Duration::from_hours(24 * 30)),
-        )
+    // Inherits the assets router's 1 h edge cache: a game update can move an interval boundary on short notice (build
+    // 6851 moved interval 2's start by 4 h on its go-live day), and the unversioned URL must pick that up quickly.
+    OpenApiRouter::with_openapi(ApiDoc::openapi()).routes(routes!(route::list_ranked_seasons))
 }
