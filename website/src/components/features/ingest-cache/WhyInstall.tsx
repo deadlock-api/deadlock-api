@@ -3,7 +3,6 @@ import { ChartLine, CloudDownload, Gamepad2, History, Power, ShieldCheck } from 
 import { INGEST_TRACKER_WINDOW_DAYS } from "~/components/domain/ingest/links";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
-import { Code } from "~/components/ui/code";
 import { IconTile } from "~/components/ui/icon-tile";
 import { Inline, Stack } from "~/components/ui/stack";
 import { Text } from "~/components/ui/text";
@@ -41,8 +40,8 @@ export function WhyInstall() {
               It sends each match as soon as Deadlock loads it, and everything already in your Steam cache.
             </Reason>
             <Reason icon={<History />} title="Your whole match history, not just new games">
-              With Deadlock closed, run <Code>deadlock-api-ingest --own-matches</Code> once and it also sends your past
-              matches that are still missing.
+              Run the last install step once, with Deadlock closed, and it also sends your past matches that are still
+              missing.
             </Reason>
             <Reason icon={<CloudDownload />} title="Finds matches nobody has yet">
               While Deadlock is closed, it uses your Steam session to fetch up to 40 missing matches a day: new matches

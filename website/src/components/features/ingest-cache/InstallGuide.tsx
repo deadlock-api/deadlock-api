@@ -23,6 +23,18 @@ const DOCKER_INSTALL = `docker run -d --restart unless-stopped --name deadlock-a
   -v ~/.steam/steam:/root/.steam/steam:ro \\
   ghcr.io/deadlock-api/deadlock-api-ingest:latest`;
 const DOCKER_UNINSTALL = "docker rm -f deadlock-api-ingest";
+const WINDOWS_OWN_MATCHES = `& "$env:LOCALAPPDATA\\deadlock-api-ingest\\deadlock-api-ingest.exe" --own-matches`;
+const LINUX_OWN_MATCHES = "deadlock-api-ingest --own-matches";
+const DOCKER_OWN_MATCHES = "docker exec deadlock-api-ingest deadlock-api-ingest --own-matches";
+
+/** The optional last step of every tab: send the past matches that are still missing, once. */
+function OwnMatches({ shell, code }: { shell: string; code: string }) {
+  return (
+    <Step title={`To also send your past matches, close Deadlock and run this once in ${shell}.`}>
+      <CopyableCode overflow="wrap" size="sm" language="bash" code={code} copyLabel="Copy match history command" />
+    </Step>
+  );
+}
 
 function Uninstall({ code, children }: { code: string; children?: React.ReactNode }) {
   return (
@@ -67,6 +79,7 @@ export function InstallGuide() {
                 <Step title="Open it. It installs for your account only, so no admin rights are needed, and starts by itself every time you sign in." />
                 <Step title="A small window opens and shows every match you send. You can close it, the tool keeps running." />
                 <Step title="Play Deadlock. Your matches are sent while you play." />
+                <OwnMatches shell="PowerShell" code={WINDOWS_OWN_MATCHES} />
               </Steps>
               <Disclosure variant="inline" title="Install with PowerShell instead">
                 <Steps variant="plain">
@@ -115,6 +128,7 @@ export function InstallGuide() {
                     </>
                   }
                 />
+                <OwnMatches shell="a terminal" code={LINUX_OWN_MATCHES} />
               </Steps>
               <Uninstall code={LINUX_UNINSTALL} />
             </TabsContent>
@@ -131,6 +145,7 @@ export function InstallGuide() {
                   <CopyableCode overflow="wrap" language="bash" code={DOCKER_INSTALL} copyLabel="Copy Docker command" />
                 </Step>
                 <Step title="Play Deadlock. Your matches are sent while you play." />
+                <OwnMatches shell="a terminal" code={DOCKER_OWN_MATCHES} />
               </Steps>
               <Uninstall code={DOCKER_UNINSTALL} />
             </TabsContent>
