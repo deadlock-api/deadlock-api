@@ -1,0 +1,93 @@
+<!-- kv3 encoding:text:version{e21c7f3c-8a33-41c5-9977-a76d3a32aa0d} format:generic:version{7412167c-06e9-4698-aff2-e63eb59037e7} -->
+{
+	generic_data_type = "CRankedSeasonDefinition"
+	default_ranked = 
+	{
+		_not_pickable = 2
+		m_eRankedType = "k_eCitadelRankedType_Normal"
+		m_unMinWins = 60
+		m_unMinHeroUnlocks = 3
+		m_unCalibrationMatches = 8
+		m_vecValidPartySizes = [ 1, 2 ]
+	}
+	season_1 = 
+	{
+		m_eRankedType = "k_eCitadelRankedType_Normal"
+		m_unMinWins = 60
+		m_unMinHeroUnlocks = 3
+		m_unCalibrationMatches = 8
+		m_vecValidPartySizes = [ 1, 2 ]
+		_multibase = 
+		[
+			"default_ranked",
+		]
+		m_unMinHeroWins = 15
+		m_unBaseWinLossPointGrant = 300
+		m_unCalibrationMaxRank = 86
+		m_strSeasonLocName = "#Citadel_RankedSeasonName_BetaSeason1"
+		m_vecIntervals = 
+		[
+			{
+				m_unInterval = 1
+				m_rtIntervalStartTimestamp = 1785430800
+				m_rtIntervalEndTimestamp = 1793908800
+				m_unLeaderboardID = 1001
+			},
+		]
+		m_vecRankInfo = 
+		[
+			{
+				m_vecSubRankXP = 
+				[
+					1000, 1000, 1000, 1000,
+					1000, 2000,
+				]
+			},
+			{
+				m_unRankEnd = 111
+				m_nBadgeShields = 5
+				m_nSubRankShields = 2
+			},
+		]
+	}
+	season_2 = 
+	{
+		m_eRankedType = "k_eCitadelRankedType_Normal"
+		m_unMinWins = 60
+		m_unMinHeroUnlocks = 3
+		m_unCalibrationMatches = 8
+		m_vecValidPartySizes = [ 1, 2 ]
+		_multibase = 
+		[
+			"default_ranked",
+		]
+		m_unMinHeroUnlockPoints = 35
+		m_unBaseWinLossPointGrant = 350
+		m_unCalibrationMaxRank = 101
+		m_strSeasonLocName = "#Citadel_RankedSeasonName_BetaSeason2"
+		m_vecIntervals = 
+		[
+			{
+				m_unInterval = 2
+				m_rtIntervalStartTimestamp = 1793908800
+				m_rtIntervalEndTimestamp = 1804802400
+				m_unLeaderboardID = 1002
+			},
+		]
+		m_vecRankInfo = 
+		[
+			{
+				m_vecSubRankXP = 
+				[
+					1000, 1000, 1000, 1000,
+					1000, 1500,
+				]
+			},
+			{
+				m_unRankEnd = 91
+				m_nBadgeShields = 3
+				m_nSubRankShields = 1
+			},
+		]
+	}
+}

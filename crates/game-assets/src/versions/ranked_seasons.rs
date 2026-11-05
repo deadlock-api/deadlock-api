@@ -21,18 +21,36 @@ struct RawRankedSeason {
     ranked_type: String,
     #[serde(rename = "m_unMinWins")]
     min_wins: u32,
-    #[serde(rename = "m_unMinHeroWins")]
-    min_hero_wins: u32,
+    #[serde(default, rename = "m_unMinHeroWins")]
+    min_hero_wins: Option<u32>,
+    #[serde(default, rename = "m_unMinHeroUnlockPoints")]
+    min_hero_unlock_points: Option<u32>,
     #[serde(rename = "m_unMinHeroUnlocks")]
     min_hero_unlocks: u32,
     #[serde(rename = "m_unCalibrationMatches")]
     calibration_matches: u32,
+    #[serde(default, rename = "m_unCalibrationMaxRank")]
+    calibration_max_rank: Option<u32>,
     #[serde(default, rename = "m_unBaseWinLossPointGrant")]
     base_win_loss_point_grant: Option<u32>,
     #[serde(default, rename = "m_vecValidPartySizes")]
     valid_party_sizes: Vec<u32>,
     #[serde(default, rename = "m_vecIntervals")]
     intervals: Vec<RawSeasonInterval>,
+    #[serde(default, rename = "m_vecRankInfo")]
+    rank_info: Vec<RawRankInfo>,
+}
+
+#[derive(Debug, Deserialize)]
+struct RawRankInfo {
+    #[serde(default, rename = "m_unRankEnd")]
+    rank_end: Option<u32>,
+    #[serde(default, rename = "m_vecSubRankXP")]
+    sub_rank_xp: Vec<u32>,
+    #[serde(default, rename = "m_nBadgeShields")]
+    badge_shields: Option<i32>,
+    #[serde(default, rename = "m_nSubRankShields")]
+    sub_rank_shields: Option<i32>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -62,6 +80,24 @@ pub struct SeasonInterval {
     pub leaderboard_id: Option<u32>,
 }
 
+/// One `m_vecRankInfo` entry of the game file (build 6857+), as listed there.
+#[derive(Debug, Serialize, Clone)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+pub struct RankInfo {
+    /// Rank badge (tier * 10 + subrank) the entry runs up to, when the entry sets one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub rank_end: Option<u32>,
+    /// Rank XP per subrank, when the entry sets it.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub sub_rank_xp: Vec<u32>,
+    /// Demotion protections for the rank badge, when the entry sets them.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub badge_shields: Option<i32>,
+    /// Demotion protections per subrank, when the entry sets them.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub sub_rank_shields: Option<i32>,
+}
+
 #[derive(Debug, Serialize, Clone)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 pub struct RankedSeason {
@@ -69,14 +105,28 @@ pub struct RankedSeason {
     pub name: String,
     pub ranked_type: String,
     pub min_wins: u32,
-    pub min_hero_wins: u32,
+    /// Wins a hero needs to count towards `min_hero_unlocks`. Absent where the season
+    /// counts hero points instead, see `min_hero_unlock_points`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_hero_wins: Option<u32>,
+    /// Points a hero needs to count towards `min_hero_unlocks`: 2 per win, 1 per loss
+    /// (build 6857+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub min_hero_unlock_points: Option<u32>,
     pub min_hero_unlocks: u32,
     pub calibration_matches: u32,
+    /// Highest rank badge (tier * 10 + subrank) calibration can place a player at
+    /// (build 6857+).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub calibration_max_rank: Option<u32>,
     /// Base rank points granted per win / taken per loss (build 6701+).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub base_win_loss_point_grant: Option<u32>,
     pub valid_party_sizes: Vec<u32>,
     pub intervals: Vec<SeasonInterval>,
+    /// Rank progression settings (build 6857+).
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub rank_info: Vec<RankInfo>,
 }
 
 pub(crate) fn build_ranked_seasons(
@@ -104,8 +154,10 @@ fn transform(
         ranked_type: map_ranked_type(&r.ranked_type),
         min_wins: r.min_wins,
         min_hero_wins: r.min_hero_wins,
+        min_hero_unlock_points: r.min_hero_unlock_points,
         min_hero_unlocks: r.min_hero_unlocks,
         calibration_matches: r.calibration_matches,
+        calibration_max_rank: r.calibration_max_rank,
         base_win_loss_point_grant: r.base_win_loss_point_grant,
         valid_party_sizes: r.valid_party_sizes,
         intervals: r
@@ -116,6 +168,16 @@ fn transform(
                 start_timestamp: i.start_timestamp,
                 end_timestamp: i.end_timestamp,
                 leaderboard_id: i.leaderboard_id,
+            })
+            .collect(),
+        rank_info: r
+            .rank_info
+            .into_iter()
+            .map(|i| RankInfo {
+                rank_end: i.rank_end,
+                sub_rank_xp: i.sub_rank_xp,
+                badge_shields: i.badge_shields,
+                sub_rank_shields: i.sub_rank_shields,
             })
             .collect(),
     }
@@ -249,6 +311,37 @@ mod tests {
         insta::with_settings!(
             { snapshot_path => "ranked_seasons_snapshots", prepend_module_to_snapshot => false },
             { insta::assert_json_snapshot!("ranked_seasons_6712", out); }
+        );
+    }
+
+    /// Build 6857 moved interval 2 into `season_2`, which counts hero points instead of
+    /// hero wins and carries the new calibration cap and rank info.
+    #[test]
+    fn snapshot_6857_second_season() {
+        let (_, loc) = fixtures();
+        let manifest = env!("CARGO_MANIFEST_DIR");
+        let vdata = std::fs::read_to_string(format!(
+            "{manifest}/../keyvalues/src/kv3_fixtures/ranked_seasons_6857.vdata"
+        ))
+        .expect("vdata fixture");
+        let out = build_ranked_seasons(&vdata, &loc).expect("builds");
+        let names: Vec<_> = out.iter().map(|s| s.name.as_str()).collect();
+        assert_eq!(names, ["Beta Season 1", "Beta Season 2"]);
+        let season_2 = &out[1];
+        assert_eq!(season_2.min_hero_wins, None);
+        assert_eq!(season_2.min_hero_unlock_points, Some(35));
+        assert_eq!(season_2.calibration_max_rank, Some(101));
+        // 2026-11-05 20:00 UTC: interval 1 (season 1) hands over to interval 2 (season 2).
+        assert_eq!(interval_at(&out, 1_793_908_799), Some(1));
+        assert_eq!(interval_at(&out, 1_793_908_800), Some(2));
+        let (current, start, end) = season_at(&out, 1_793_908_800).expect("season running");
+        assert_eq!(
+            (current.class_name.as_str(), start, end),
+            ("season_2", 1_793_908_800, 1_804_802_400)
+        );
+        insta::with_settings!(
+            { snapshot_path => "ranked_seasons_snapshots", prepend_module_to_snapshot => false },
+            { insta::assert_json_snapshot!("ranked_seasons_6857", out); }
         );
     }
 

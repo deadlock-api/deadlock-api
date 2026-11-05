@@ -1,0 +1,86 @@
+---
+source: crates/game-assets/src/versions/ranked_seasons.rs
+expression: out
+---
+[
+  {
+    "class_name": "season_1",
+    "name": "Beta Season 1",
+    "ranked_type": "normal",
+    "min_wins": 60,
+    "min_hero_wins": 15,
+    "min_hero_unlocks": 3,
+    "calibration_matches": 8,
+    "calibration_max_rank": 86,
+    "base_win_loss_point_grant": 300,
+    "valid_party_sizes": [
+      1,
+      2
+    ],
+    "intervals": [
+      {
+        "interval": 1,
+        "start_timestamp": 1785430800,
+        "end_timestamp": 1793908800,
+        "leaderboard_id": 1001
+      }
+    ],
+    "rank_info": [
+      {
+        "sub_rank_xp": [
+          1000,
+          1000,
+          1000,
+          1000,
+          1000,
+          2000
+        ]
+      },
+      {
+        "rank_end": 111,
+        "badge_shields": 5,
+        "sub_rank_shields": 2
+      }
+    ]
+  },
+  {
+    "class_name": "season_2",
+    "name": "Beta Season 2",
+    "ranked_type": "normal",
+    "min_wins": 60,
+    "min_hero_unlock_points": 35,
+    "min_hero_unlocks": 3,
+    "calibration_matches": 8,
+    "calibration_max_rank": 101,
+    "base_win_loss_point_grant": 350,
+    "valid_party_sizes": [
+      1,
+      2
+    ],
+    "intervals": [
+      {
+        "interval": 2,
+        "start_timestamp": 1793908800,
+        "end_timestamp": 1804802400,
+        "leaderboard_id": 1002
+      }
+    ],
+    "rank_info": [
+      {
+        "sub_rank_xp": [
+          1000,
+          1000,
+          1000,
+          1000,
+          1000,
+          1500
+        ]
+      },
+      {
+        "rank_end": 91,
+        "badge_shields": 3,
+        "sub_rank_shields": 1
+      }
+    ]
+  }
+]

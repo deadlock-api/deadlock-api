@@ -4,5 +4,6 @@
 	"Tokens"
 	{
 		"Citadel_RankedSeasonName_BetaSeason1"		"Beta Season 1"
+		"Citadel_RankedSeasonName_BetaSeason2"		"Beta Season 2"
 	}
 }
