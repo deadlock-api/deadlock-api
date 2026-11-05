@@ -137,6 +137,14 @@ pub struct HeroStats {
 /// First match with MVP ranks. Every match from this id on carries them.
 const MVP_RANK_SINCE_MATCH_ID: u64 = 50_367_982;
 
+/// Threads for the hero stats read. A batch of 12 accounts touches ~150 granules of 1024 rows
+/// spread over every part, and each granule read decompresses a whole 64 KB block per column,
+/// so the client default of 16 threads decompresses the same blocks several times over.
+/// Replayed on distinct production batches (n=30 per shape, paired): 4 threads cut CPU by 15-38%
+/// and peak memory by 14-46%. Uncontended wall rose by 35-50 ms on two of the four shapes, but
+/// this endpoint's tail is CPU contention. Two threads saved more CPU but added up to 78% wall.
+const MAX_THREADS: u8 = 4;
+
 #[expect(
     clippy::too_many_lines,
     reason = "one linear query builder reads clearer than split helpers"
@@ -254,7 +262,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     {outer_where}
     GROUP BY account_id, hero_id
     ORDER BY account_id, hero_id
-    SETTINGS log_comment = 'player_hero_stats'
+    SETTINGS log_comment = 'player_hero_stats', max_threads = {MAX_THREADS}
     "
     )
 }
