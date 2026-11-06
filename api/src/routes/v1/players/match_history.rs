@@ -5,6 +5,7 @@ use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum_extra::extract::Query;
+use cached::CachedPeek as _;
 use cached::macros::cached;
 use chrono::Utc;
 use clickhouse::Row as _;
@@ -433,13 +434,21 @@ pub(super) async fn match_history(
         return Ok((StatusCode::OK, called_steam(false), Json(ch_match_history)));
     }
 
+    let rank_interval = current_rank_interval(&state).await;
+    // The limit protects Steam: a history still in the Steam cache costs it nothing, so a tracker
+    // tab polling every few minutes does not use up the lookups its visitor has left.
+    let steam_cached = !query.force_refetch
+        && FETCH_STEAM_MATCH_HISTORY
+            .read()
+            .await
+            .cache_peek(&(account_id, rank_interval))
+            .is_some();
     let limit = if query.force_refetch {
         REFETCH_RATE_LIMIT
     } else {
         RATE_LIMIT
     };
-    let res = state.rate_limit_client.check(&rate_limit_key, limit).await;
-    if let Err(e) = res {
+    if !steam_cached && let Err(e) = state.rate_limit_client.check(&rate_limit_key, limit).await {
         warn!("Reached rate limits: {e:?}");
         if query.force_refetch {
             return Err(e);
@@ -458,7 +467,7 @@ pub(super) async fn match_history(
         account_id,
         query.force_refetch,
         bot_username,
-        current_rank_interval(&state).await,
+        rank_interval,
     )
     .await
     {
