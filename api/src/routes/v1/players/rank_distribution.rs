@@ -13,7 +13,7 @@ use crate::context::AppState;
 use crate::error::APIResult;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
-use crate::utils::badge::badge_from_flat_progress_sql;
+use crate::utils::badge::rank_badge_sql;
 use crate::utils::parse::default_last_month_timestamp;
 
 use crate::utils::sql::{DURATION_COLUMN, MatchPoolFilters, cached_ch_query, impl_match_info};
@@ -88,9 +88,10 @@ fn build_query(query: &RankDistributionQuery) -> String {
     );
     let where_clause = filters.join(" AND ");
 
-    let badge = badge_from_flat_progress_sql(
+    let badge = rank_badge_sql(
         "assumeNotNull(argMax(player_rank_final_flat_progress, match_id))",
         "assumeNotNull(argMax(player_rank_initial_display_rank, match_id))",
+        "argMax(rank_interval, match_id)",
     );
 
     format!(

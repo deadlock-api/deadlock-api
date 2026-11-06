@@ -1,0 +1,1 @@
+CREATE FUNCTION rankSubrankXp AS rank_interval -> dictGetOrDefault('default.ranked_intervals_dict', 'sub_rank_xp', toUInt64(ifNull(rank_interval, 1)), if(ifNull(rank_interval, 1) <= 1, [1000, 1000, 1000, 1000, 1000, 2000], [1000, 1000, 1000, 1000, 1000, 1500])::Array(UInt32));

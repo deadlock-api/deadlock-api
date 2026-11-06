@@ -1,0 +1,1 @@
+CREATE FUNCTION rankSubrankProgress AS (flat_progress, rank_interval) -> if(flat_progress >= rankEternusProgress(rank_interval), toUInt32(flat_progress - rankEternusProgress(rank_interval)), toUInt32((flat_progress % arraySum(rankSubrankXp(rank_interval))) - arrayCumSum(arrayPushFront(arrayPopBack(rankSubrankXp(rank_interval)), 0))[rankSubrank(flat_progress, rank_interval)]));

@@ -1,0 +1,1 @@
+CREATE FUNCTION rankSubrank AS (flat_progress, rank_interval) -> toUInt32(arrayCount(s -> s <= flat_progress % arraySum(rankSubrankXp(rank_interval)), arrayCumSum(arrayPushFront(arrayPopBack(rankSubrankXp(rank_interval)), 0))));

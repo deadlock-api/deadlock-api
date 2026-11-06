@@ -120,11 +120,17 @@ pub struct PlayerEntry {
     /// See more: <https://api.deadlock-api.com/v1/assets/ranks>
     #[serde(skip_serializing_if = "Option::is_none")]
     pub badge: Option<u32>,
-    /// `rank` and `peak_rank` sorts only: progress points into `badge`. A subrank spans 1000
-    /// points, the sixth of a tier 2000. `null` in Eternus, whose subranks are percentile cuts
-    /// rather than point spans, and when the player has no ranked match in range.
+    /// `rank` and `peak_rank` sorts only: progress points into `badge`, out of
+    /// `badge_progress_max`. In Eternus, whose subranks are percentile cuts rather than point
+    /// spans, the points past the start of Eternus. `null` when the player has no ranked match in
+    /// range.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub badge_progress: Option<u32>,
+    /// `rank` and `peak_rank` sorts only: the points the subrank of `badge` spans in that match's
+    /// season (`sub_rank_xp` in <https://api.deadlock-api.com/v1/assets/ranked-seasons>). `null` in
+    /// Eternus and when the player has no ranked match in range.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub badge_progress_max: Option<u32>,
 }
 
 /// Picks the `FROM`/dedup strategy: returns the from-clause, whether the outer query keeps the
@@ -232,10 +238,18 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         query.sort_by.get_select_clause()
     };
     let sort_direction = query.sort_direction;
-    let (badge_clause, badge_progress_clause) = query.sort_by.badge_columns().map_or_else(
-        || ("NULL".to_owned(), "NULL".to_owned()),
-        |c| (c.badge, c.badge_progress),
-    );
+    let (badge_clause, badge_progress_clause, badge_progress_max_clause) =
+        query.sort_by.badge_columns().map_or_else(
+            || ("NULL".to_owned(), "NULL".to_owned(), "NULL".to_owned()),
+            |c| (c.badge, c.badge_progress, c.badge_progress_max),
+        );
+    // Rank sorts compare badges first: the flat progress in `value` has a different scale in each
+    // season.
+    let order_by = if query.sort_by.is_rank_sort() {
+        format!("badge {sort_direction}, badge_progress {sort_direction}")
+    } else {
+        format!("value {sort_direction}")
+    };
     let limit = query.limit.unwrap_or_default();
     let first_rank = offset.saturating_add(1);
 
@@ -243,12 +257,13 @@ fn build_query(query: &PlayerScoreboardQuery) -> String {
         "
 SELECT rowNumberInAllBlocks() + {first_rank} as rank, account_id, toFloat64({select_clause}) as \
          value, {matches_expr} as matches, CAST({badge_clause}, 'Nullable(UInt32)') as badge, \
-         CAST({badge_progress_clause}, 'Nullable(UInt32)') as badge_progress
+         CAST({badge_progress_clause}, 'Nullable(UInt32)') as badge_progress, \
+         CAST({badge_progress_max_clause}, 'Nullable(UInt32)') as badge_progress_max
 {from_clause}
 {outer_where}
 GROUP BY account_id
 {having_clause}
-ORDER BY value {sort_direction}
+ORDER BY {order_by}
 LIMIT {limit} OFFSET {offset}
 SETTINGS log_comment = 'player_scoreboard', apply_patch_parts = 0, do_not_merge_across_partitions_select_final = 1
     "
@@ -423,7 +438,7 @@ mod tests {
     }
 
     #[test]
-    fn rank_sort_carries_both_rank_columns_through_the_dedup_subquery() {
+    fn rank_sort_carries_the_rank_columns_through_the_dedup_subquery() {
         let sql = build_query(&PlayerScoreboardQuery {
             sort_by: ScoreboardQuerySortBy::Rank,
             // hero_id forces the inline dedup path over FINAL.
@@ -439,7 +454,11 @@ mod tests {
         assert!(sql.contains(
             ", any(player_rank_initial_display_rank) as player_rank_initial_display_rank"
         ));
-        assert!(sql.contains("argMaxIf(player_rank_final_flat_progress, match_id"));
+        assert!(sql.contains(", any(rank_interval) as rank_interval"));
+        assert!(sql.contains(
+            "argMaxIf((player_rank_final_flat_progress, player_rank_initial_display_rank, \
+             rank_interval), match_id,"
+        ));
     }
 
     #[test]
@@ -450,7 +469,7 @@ mod tests {
         });
         assert_valid_sql(&sql);
         assert!(sql.contains("FROM player_match_stats FINAL"));
-        assert!(sql.contains("argMaxIf(player_rank_final_flat_progress, match_id"));
+        assert!(sql.contains("argMaxIf((player_rank_final_flat_progress,"));
     }
 
     #[test]
@@ -464,13 +483,12 @@ mod tests {
         assert!(deduped.contains(
             ", any(player_rank_initial_display_rank) as player_rank_initial_display_rank"
         ));
+        // The peak is the highest badge on each row's own ladder, then the most progress into it;
+        // the Eternus division and the ladder come from the row that set it.
         assert!(deduped.contains(
-            "toFloat64(ifNull(maxIf(player_rank_final_flat_progress, \
-             ifNull(player_rank_initial_display_rank, 0) > 0), 0)) as value"
-        ));
-        // The Eternus division comes from the row that set the peak.
-        assert!(deduped.contains(
-            "argMaxIf(player_rank_initial_display_rank, player_rank_final_flat_progress,"
+            "rank_interval), (rankBadge(ifNull(player_rank_final_flat_progress, 0), \
+             ifNull(player_rank_initial_display_rank, 0), rank_interval), \
+             rankSubrankProgress(ifNull(player_rank_final_flat_progress, 0), rank_interval)),"
         ));
 
         let unscoped = build_query(&PlayerScoreboardQuery {
@@ -558,8 +576,10 @@ mod tests {
             ..Default::default()
         });
         assert!(sql.contains(
-            "toFloat64(ifNull(argMaxIf(player_rank_final_flat_progress, match_id, \
-             ifNull(player_rank_initial_display_rank, 0) > 0), 0)) as value"
+            "toFloat64(ifNull(tupleElement(argMaxIf((player_rank_final_flat_progress, \
+             player_rank_initial_display_rank, rank_interval), match_id, \
+             ifNull(player_rank_initial_display_rank, 0) > 0 AND player_rank_final_flat_progress \
+             IS NOT NULL), 1), 0)) as value"
         ));
         assert!(sql.contains("IS NULL, 0,"));
     }
@@ -575,7 +595,10 @@ mod tests {
                 });
                 assert_valid_sql(&sql);
                 assert!(sql.contains("HAVING badge > 0"));
-                assert!(sql.contains(&format!("ORDER BY value {sort_direction}")));
+                // Badges first: flat progress has a different scale in each season.
+                assert!(sql.contains(&format!(
+                    "ORDER BY badge {sort_direction}, badge_progress {sort_direction}"
+                )));
             }
         }
         let kills = build_query(&PlayerScoreboardQuery {
@@ -593,7 +616,9 @@ mod tests {
         });
         assert_valid_sql(&kills);
         assert!(kills.contains("CAST(NULL, 'Nullable(UInt32)') as badge,"));
-        assert!(kills.contains("CAST(NULL, 'Nullable(UInt32)') as badge_progress"));
+        assert!(kills.contains("CAST(NULL, 'Nullable(UInt32)') as badge_progress,"));
+        assert!(kills.contains("CAST(NULL, 'Nullable(UInt32)') as badge_progress_max"));
+        assert!(kills.contains("ORDER BY value"));
         let rank = build_query(&PlayerScoreboardQuery {
             sort_by: ScoreboardQuerySortBy::Rank,
             ..Default::default()
@@ -601,8 +626,9 @@ mod tests {
         assert!(!rank.contains("CAST(NULL,"));
         assert_valid_sql(&rank);
         assert!(rank.contains("'Nullable(UInt32)') as badge,"));
-        assert!(rank.contains("'Nullable(UInt32)') as badge_progress"));
-        assert!(rank.contains("% 1000 + if(intDiv("));
+        assert!(rank.contains("'Nullable(UInt32)') as badge_progress,"));
+        assert!(rank.contains("'Nullable(UInt32)') as badge_progress_max"));
+        assert!(rank.contains("rankSubrankWidth("));
     }
 }
 

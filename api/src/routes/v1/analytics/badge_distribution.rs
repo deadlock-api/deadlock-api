@@ -11,7 +11,7 @@ use utoipa::{IntoParams, ToSchema};
 use super::common_filters::{ceil_to_hour, floor_to_hour};
 use crate::context::AppState;
 use crate::error::APIResult;
-use crate::utils::badge::badge_from_flat_progress_sql;
+use crate::utils::badge::rank_badge_sql;
 use crate::utils::match_modes::{GameMode, MatchMode};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 
@@ -116,9 +116,10 @@ fn build_query(query: &BadgeDistributionQuery) -> String {
     let filters = join_filters(&info_filters);
     let game_mode_filter = GameMode::sql_filter(query.game_mode);
     let match_mode_filter = MatchMode::sql_filter(query.match_mode.as_deref());
-    let player_badge = badge_from_flat_progress_sql(
+    let player_badge = rank_badge_sql(
         "assumeNotNull(argMax(player_rank_final_flat_progress, match_id))",
         "assumeNotNull(argMax(player_rank_initial_display_rank, match_id))",
+        "argMax(rank_interval, match_id)",
     );
     // The only projection covering these columns is ordered by hero_id and carries no skip indexes,
     // so ClickHouse picks it and then can't prune by start_time: ~70x more rows read.

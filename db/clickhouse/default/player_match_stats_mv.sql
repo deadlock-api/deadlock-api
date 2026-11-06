@@ -38,6 +38,7 @@ CREATE MATERIALIZED VIEW default.player_match_stats_mv TO default.player_match_s
     `player_rank_initial_demotion_protection_games` Nullable(UInt32),
     `player_rank_consumed_demotion_protection` Nullable(Bool),
     `player_rank_initial_win_streak` Nullable(UInt32),
+    `rank_interval` Nullable(UInt32),
     `mvp_rank` Nullable(UInt32),
     `permanent_buffs` UInt32,
     `first_permanent_buff_time_s` Nullable(UInt32)
@@ -81,6 +82,7 @@ AS SELECT
     player_rank_initial_demotion_protection_games,
     player_rank_consumed_demotion_protection,
     player_rank_initial_win_streak,
+    rank_interval,
     mvp_rank,
     permanent_buffs,
     first_permanent_buff_time_s

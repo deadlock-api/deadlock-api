@@ -20,7 +20,7 @@ use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
 use crate::utils::badge::{
-    ETERNUS_PROGRESS, badge_from_flat_progress, badge_to_idx, idx_to_badge, subrank_progress,
+    badge_to_idx, idx_to_badge, rank_badge_sql, rank_subrank_progress_sql, rank_subrank_width_sql,
 };
 use crate::utils::sql::POINT_LOOKUP_MAX_THREADS;
 use crate::utils::types::AccountIdQuery;
@@ -73,7 +73,7 @@ pub(crate) struct AccountRank {
     pub(crate) rank: RankResponse,
 }
 
-#[derive(Debug, Clone, Row, Serialize, Deserialize, ToSchema)]
+#[derive(Debug, Clone, Serialize, ToSchema)]
 pub(crate) struct LastRankedMatch {
     pub(crate) match_id: u64,
     /// Match start time as a unix timestamp.
@@ -94,31 +94,31 @@ pub(crate) struct LastRankedMatch {
     pub(crate) player_rank_consumed_demotion_protection: Option<bool>,
     /// Win streak the player entered the match with.
     pub(crate) player_rank_initial_win_streak: Option<u32>,
+    /// Ranked interval the match counted for, which sets the scale of the flat progress. See
+    /// <https://api.deadlock-api.com/v1/assets/ranked-seasons>. `null` for matches before
+    /// 2026-11-05 19:00 UTC, which are all interval 1.
+    pub(crate) rank_interval: Option<u32>,
+    /// See [`Self::badge`].
+    #[serde(skip)]
+    badge: u32,
+    /// See [`Self::progress`].
+    #[serde(skip)]
+    progress: Option<(u32, u32)>,
 }
 
 impl LastRankedMatch {
     /// The badge the player left the match with, i.e. the badge they entered it with plus the
-    /// progress the match awarded. `0` while the player is still in placement games.
-    pub(crate) fn badge(&self) -> u32 {
-        if self.player_rank_initial_display_rank == 0 {
-            return 0;
-        }
-        self.player_rank_final_flat_progress
-            .map_or(self.player_rank_initial_display_rank, |progress| {
-                badge_from_flat_progress(progress, self.player_rank_initial_display_rank)
-            })
+    /// progress the match awarded, on the ladder of the match's interval. `0` while the player is
+    /// still in placement games.
+    pub(crate) const fn badge(&self) -> u32 {
+        self.badge
     }
 
     /// Progress into the badge from [`Self::badge`] and the width of that subrank, in progress
     /// points. `None` while the player is in placement games, when the match reports no final
     /// progress, or in Eternus, where subranks are percentile cuts rather than point spans.
-    pub(crate) fn progress(&self) -> Option<(u32, u32)> {
-        if self.player_rank_initial_display_rank == 0 {
-            return None;
-        }
-        self.player_rank_final_flat_progress
-            .filter(|&progress| progress < ETERNUS_PROGRESS)
-            .map(subrank_progress)
+    pub(crate) const fn progress(&self) -> Option<(u32, u32)> {
+        self.progress
     }
 }
 
@@ -135,6 +135,10 @@ pub(crate) struct LastRankedMatchRow {
     player_rank_initial_demotion_protection_games: Option<u32>,
     player_rank_consumed_demotion_protection: Option<bool>,
     player_rank_initial_win_streak: Option<u32>,
+    rank_interval: Option<u32>,
+    badge: u32,
+    subrank_progress: Option<u32>,
+    subrank_width: Option<u32>,
 }
 
 impl From<LastRankedMatchRow> for LastRankedMatch {
@@ -151,6 +155,9 @@ impl From<LastRankedMatchRow> for LastRankedMatch {
                 .player_rank_initial_demotion_protection_games,
             player_rank_consumed_demotion_protection: row.player_rank_consumed_demotion_protection,
             player_rank_initial_win_streak: row.player_rank_initial_win_streak,
+            rank_interval: row.rank_interval,
+            badge: row.badge,
+            progress: row.subrank_progress.zip(row.subrank_width),
         }
     }
 }
@@ -162,12 +169,25 @@ pub(crate) struct PlayerRankQuery;
 ///
 /// `player_match_stats` is sorted by `(account_id, match_id)`, so the newest ranked row per
 /// account is a primary-key range read; no detour through `player_match_history` is needed.
+///
+/// The badge and the progress into it are read on the ladder of the row's `rank_interval` (see
+/// [`rank_badge_sql`]). Rows backfilled with `rank_interval` sit next to their older copy without
+/// it until a merge drops that one, so the copy with an interval wins.
 impl BatchQuery for PlayerRankQuery {
     type Key = u32;
     type Value = LastRankedMatchRow;
 
     fn build_query(keys: &[u32]) -> String {
         let ids = in_clause(keys);
+        let progress = "assumeNotNull(player_rank_final_flat_progress)";
+        let display_rank = "assumeNotNull(player_rank_initial_display_rank)";
+        let badge = rank_badge_sql(progress, display_rank, "rank_interval");
+        let width = rank_subrank_width_sql(progress, "rank_interval");
+        let subrank_progress = rank_subrank_progress_sql(progress, "rank_interval");
+        // In placement (display rank 0) there is no badge; without final progress the badge is the
+        // one the player entered with. Eternus has no subrank width, so no progress either.
+        let unranked =
+            "player_rank_initial_display_rank = 0 OR player_rank_final_flat_progress IS NULL";
         format!(
             "
             SELECT
@@ -181,10 +201,15 @@ impl BatchQuery for PlayerRankQuery {
                 player_rank_initial_calibration_games,
                 player_rank_initial_demotion_protection_games,
                 player_rank_consumed_demotion_protection,
-                player_rank_initial_win_streak
+                player_rank_initial_win_streak,
+                rank_interval,
+                toUInt32(if(player_rank_initial_display_rank = 0, 0,
+                    if(player_rank_final_flat_progress IS NULL, {display_rank}, {badge}))) AS badge,
+                if({unranked}, NULL, {width}) AS subrank_width,
+                if({unranked} OR subrank_width IS NULL, NULL, {subrank_progress}) AS subrank_progress
             FROM player_match_stats
             WHERE account_id IN ({ids}) AND match_mode = 'Ranked'
-            ORDER BY match_id DESC
+            ORDER BY match_id DESC, rank_interval DESC NULLS LAST
             LIMIT 1 BY account_id
             SETTINGS log_comment = 'player_rank', max_threads = {POINT_LOOKUP_MAX_THREADS}
             "
@@ -230,8 +255,9 @@ pub(crate) async fn fetch_last_ranked_match(
     summary = "Rank",
     description = "
 Returns the player's rank at the end of their latest ranked match, i.e. the rank they entered that
-match with plus the progress the match awarded. A subrank spans 1000 progress points (the sixth
-subrank of a tier spans 2000), so a single match can move the badge. Eternus subranks are instead percentile cuts Valve recomputes daily, so
+match with plus the progress the match awarded. Subranks span the points of the match's ranked
+interval (`sub_rank_xp` in `/v1/assets/ranked-seasons`: 1000 each in Beta Season 2, the last of
+a tier 1500), so a single match can move the badge. Eternus subranks are instead percentile cuts Valve recomputes daily, so
 within Eternus the badge is the one the player entered the match with.
 
 Only ranked matches carry a rank, and it stays unset while the player is in placement games.
@@ -483,43 +509,14 @@ mod tests {
         assert_eq!(average_badge(&[11, 21]), 14);
     }
 
-    fn last_ranked_match(initial_badge: u32, final_progress: Option<u32>) -> LastRankedMatch {
-        LastRankedMatch {
-            match_id: 1,
-            start_time: 0,
-            player_rank_initial_display_rank: initial_badge,
-            player_rank_initial_flat_progress: None,
-            player_rank_final_flat_progress: final_progress,
-            player_rank_desired_progress_change: None,
-            player_rank_initial_calibration_games: None,
-            player_rank_initial_demotion_protection_games: None,
-            player_rank_consumed_demotion_protection: None,
-            player_rank_initial_win_streak: None,
-        }
-    }
-
     #[test]
-    fn test_badge_includes_progress_made_in_the_match() {
-        // Entered subrank 84 at 52_800, the match pushed them over the 53_000 line into 85.
-        assert_eq!(last_ranked_match(84, Some(53_225)).badge(), 85);
-        assert_eq!(last_ranked_match(85, Some(52_800)).badge(), 84);
-    }
-
-    #[test]
-    fn test_badge_falls_back_and_stays_zero_in_placement() {
-        assert_eq!(last_ranked_match(84, None).badge(), 84);
-        assert_eq!(last_ranked_match(0, Some(53_225)).badge(), 0);
-    }
-
-    #[test]
-    fn test_progress_needs_final_flat_progress_and_a_rank() {
-        assert_eq!(
-            last_ranked_match(84, Some(53_225)).progress(),
-            Some((225, 1000))
-        );
-        assert_eq!(last_ranked_match(84, None).progress(), None);
-        assert_eq!(last_ranked_match(0, Some(53_225)).progress(), None);
-        assert_eq!(last_ranked_match(111, Some(72_170)).progress(), None);
+    fn test_rank_query_prefers_the_row_with_an_interval() {
+        let sql = PlayerRankQuery::build_query(&[1, 2]);
+        assert!(sql.contains("ORDER BY match_id DESC, rank_interval DESC NULLS LAST"));
+        assert!(sql.contains(
+            "rankBadge(assumeNotNull(player_rank_final_flat_progress), \
+             assumeNotNull(player_rank_initial_display_rank), rank_interval)"
+        ));
     }
 
     #[derive(Debug, Deserialize)]

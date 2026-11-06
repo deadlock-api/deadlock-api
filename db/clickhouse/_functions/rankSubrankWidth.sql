@@ -1,0 +1,1 @@
+CREATE FUNCTION rankSubrankWidth AS (flat_progress, rank_interval) -> if(flat_progress >= rankEternusProgress(rank_interval), NULL, rankSubrankXp(rank_interval)[rankSubrank(flat_progress, rank_interval)]);

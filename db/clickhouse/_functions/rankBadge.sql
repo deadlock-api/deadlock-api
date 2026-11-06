@@ -1,0 +1,1 @@
+CREATE FUNCTION rankBadge AS (flat_progress, display_rank, rank_interval) -> toUInt32(if(flat_progress >= rankEternusProgress(rank_interval), greatest(111, display_rank), (intDiv(flat_progress, arraySum(rankSubrankXp(rank_interval))) + 1) * 10 + rankSubrank(flat_progress, rank_interval)));

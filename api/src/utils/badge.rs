@@ -1,5 +1,5 @@
-//! Rank badges: Valve's badge ids (tier × 10 + subtier, 11–116), their contiguous index, and how
-//! a badge follows from the flat rank progress, in Rust and as `ClickHouse` expressions.
+//! Rank badges: Valve's badge ids (tier × 10 + subtier, 11–116), their contiguous index, and the
+//! `ClickHouse` expressions that turn flat rank progress into a badge.
 
 /// Eternus I, the first badge whose subranks are percentile cuts rather than point spans.
 pub(crate) const ETERNUS_MIN_BADGE: u32 = 111;
@@ -28,57 +28,37 @@ pub(crate) fn idx_to_badge(idx: i32) -> i32 {
         .saturating_add(zero_based % 6)
 }
 
-/// Progress at which Eternus I starts. Progress keeps accumulating past it without a ceiling.
-pub(crate) const ETERNUS_PROGRESS: u32 = 70_000;
-
-/// Convert Valve's flat rank progress to a badge ID.
+/// The ladder that turns flat rank progress into a badge depends on the ranked interval: a tier
+/// spans the sum of the interval's `sub_rank_xp` (7000 in interval 1, 6500 in interval 2) and
+/// Eternus starts after 10 tiers, where subranks are percentile cuts that only the display rank
+/// knows. The ladders come from the game files (`default.ranked_season_intervals`, filled by the
+/// update-assets-tables worker) and are applied in SQL by the functions in
+/// `db/clickhouse/_functions/rank*.sql`, so every query reads them the same way:
 ///
-/// Below Eternus, progress is a ladder-wide counter in fixed 1000-point steps, seven per tier,
-/// with the sixth subtier spanning two of them. Eternus subranks are percentile cuts Valve
-/// recomputes daily, so progress alone can't place a player within Eternus: the division comes
-/// from `initial_display_rank`, the badge the player entered the match with, and is at least
-/// Eternus I in case the match promoted them into it.
-pub(crate) fn badge_from_flat_progress(flat_progress: u32, initial_display_rank: u32) -> u32 {
-    if flat_progress >= ETERNUS_PROGRESS {
-        return initial_display_rank.max(ETERNUS_MIN_BADGE);
-    }
-    let idx = flat_progress / 1000;
-    (idx / 7)
-        .saturating_add(1)
-        .saturating_mul(10)
-        .saturating_add((idx % 7).saturating_add(1).min(6))
-}
-
-/// Progress into the current subrank and the width of that subrank, both in progress points.
+/// - `rankBadge(flat_progress, display_rank, rank_interval)`: the badge, in Eternus the larger of
+///   Eternus I and `display_rank`.
+/// - `rankSubrankProgress(flat_progress, rank_interval)`: progress into the subrank, in Eternus the
+///   points past its start.
+/// - `rankSubrankWidth(flat_progress, rank_interval)`: the subrank's width, `NULL` in Eternus.
 ///
-/// The sixth subtier spans two of the 1000-point steps, so it is 2000 wide.
-pub(crate) const fn subrank_progress(flat_progress: u32) -> (u32, u32) {
-    let step = flat_progress / 1000 % 7;
-    let progress = (flat_progress % 1000).saturating_add(if step == 6 { 1000 } else { 0 });
-    let width = if step >= 5 { 2000 } else { 1000 };
-    (progress, width)
-}
-
-/// `ClickHouse` expression equivalent to [`badge_from_flat_progress`]. Both arguments must be
-/// non-nullable numeric expressions; `flat_progress` is inlined three times.
-pub(crate) fn badge_from_flat_progress_sql(
+/// A `NULL` interval reads as interval 1, the only one before `rank_interval` was recorded.
+/// Arguments must be non-nullable apart from `rank_interval`.
+pub(crate) fn rank_badge_sql(
     flat_progress: &str,
-    initial_display_rank: &str,
+    display_rank: &str,
+    rank_interval: &str,
 ) -> String {
-    format!(
-        "toUInt32(if({flat_progress} >= {ETERNUS_PROGRESS}, greatest({ETERNUS_MIN_BADGE}, {initial_display_rank}), \
-         (intDiv(intDiv({flat_progress}, 1000), 7) + 1) * 10 + least(intDiv({flat_progress}, 1000) % 7 + 1, 6)))"
-    )
+    format!("rankBadge({flat_progress}, {display_rank}, {rank_interval})")
 }
 
-/// `ClickHouse` expression for the progress half of [`subrank_progress`], `NULL` in Eternus where
-/// subranks are percentile cuts rather than point spans. `flat_progress` must be a non-nullable
-/// numeric expression and is inlined three times.
-pub(crate) fn subrank_progress_sql(flat_progress: &str) -> String {
-    format!(
-        "if({flat_progress} >= {ETERNUS_PROGRESS}, NULL, toUInt32({flat_progress} % 1000 + \
-         if(intDiv({flat_progress}, 1000) % 7 = 6, 1000, 0)))"
-    )
+/// Progress into the subrank of [`rank_badge_sql`], in Eternus the points past its start.
+pub(crate) fn rank_subrank_progress_sql(flat_progress: &str, rank_interval: &str) -> String {
+    format!("rankSubrankProgress({flat_progress}, {rank_interval})")
+}
+
+/// Width of the subrank of [`rank_badge_sql`], `NULL` in Eternus.
+pub(crate) fn rank_subrank_width_sql(flat_progress: &str, rank_interval: &str) -> String {
+    format!("rankSubrankWidth({flat_progress}, {rank_interval})")
 }
 
 #[cfg(test)]
@@ -102,53 +82,6 @@ mod tests {
         assert_eq!(badge_to_idx(21), 7);
         assert_eq!(badge_to_idx(82), 44);
         assert_eq!(badge_to_idx(116), 66);
-    }
-
-    #[test]
-    fn test_badge_from_flat_progress() {
-        // Subtier 6 spans two 1000-point steps, so each tier covers seven of them.
-        for (progress, expected) in [
-            (0, 11),
-            (999, 11),
-            (1_000, 12),
-            (4_000, 15),
-            (5_000, 16),
-            (6_975, 16),
-            (7_000, 21),
-            (35_000, 61),
-            (53_225, 85),
-            (69_999, 106),
-        ] {
-            assert_eq!(
-                badge_from_flat_progress(progress, 84),
-                expected,
-                "{progress}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_badge_in_eternus_comes_from_the_initial_display_rank() {
-        // Promoted into Eternus by this match: the initial badge is still Ascendant VI.
-        assert_eq!(badge_from_flat_progress(70_000, 106), 111);
-        assert_eq!(badge_from_flat_progress(84_830, 112), 112);
-        assert_eq!(badge_from_flat_progress(84_830, 116), 116);
-    }
-
-    #[test]
-    fn test_subrank_progress() {
-        for (progress, expected) in [
-            (0, (0, 1000)),
-            (250, (250, 1000)),
-            (4_600, (600, 1000)),
-            // Subtier 6 spans 5_000..7_000.
-            (5_000, (0, 2000)),
-            (6_400, (1_400, 2000)),
-            (7_000, (0, 1000)),
-            (53_225, (225, 1000)),
-        ] {
-            assert_eq!(subrank_progress(progress), expected, "{progress}");
-        }
     }
 
     #[test]

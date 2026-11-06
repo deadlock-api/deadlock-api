@@ -17,5 +17,7 @@ GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.player_mat
 GRANT SELECT ON default.player_match_roster TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.player_match_stats TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.player_performance_curve_agg_v2 TO api_readonly_user;
+GRANT dictGet ON default.ranked_intervals_dict TO api_readonly_user;
+GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.ranked_season_intervals TO api_readonly_user;
 GRANT SELECT ON default.steam_profiles TO api_readonly_user;
 GRANT dictGet ON default.upgrade_items_dict TO api_readonly_user;

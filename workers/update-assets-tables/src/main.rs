@@ -26,7 +26,7 @@ use game_assets::versions::store::VersionStore;
 use metrics::counter;
 use tracing::{debug, error, info, instrument, warn};
 
-use crate::models::{ChHero, ChItem, ItemSkip};
+use crate::models::{ChHero, ChItem, ChRankedSeasonInterval, ItemSkip};
 
 mod models;
 
@@ -83,15 +83,19 @@ async fn main() -> Result<(), Error> {
 
             info!("Updating assets");
             // Boxed: building the items in place makes these futures tens of KB.
-            let (heroes_result, items_result) = tokio::join!(
+            let (heroes_result, items_result, seasons_result) = tokio::join!(
                 Box::pin(update_heroes(&ch_client, &assets_client)),
                 Box::pin(update_items(&ch_client, &assets_client)),
+                Box::pin(update_ranked_seasons(&ch_client, &assets_client)),
             );
             if let Err(e) = heroes_result {
                 error!("Failed to update heroes: {e}");
             }
             if let Err(e) = items_result {
                 error!("Failed to update items: {e}");
+            }
+            if let Err(e) = seasons_result {
+                error!("Failed to update ranked seasons: {e}");
             }
             info!("Updated assets");
         }
@@ -210,6 +214,47 @@ async fn update_items(
         "Updated items: inserted={inserted}, skipped_not_shopable={skipped_not_shopable}, \
          skipped_unknown_type={skipped_unknown_type}, fetched={fetched}"
     );
+    Ok(())
+}
+
+/// Writes the ranked intervals and their rank ladders to `ranked_season_intervals`, which
+/// `ranked_intervals_dict` and the `rankBadge` SQL functions read to turn flat rank progress into
+/// badges. The game files list a season before it starts, so its interval is in the table before
+/// the first match counts for it.
+#[instrument(skip_all)]
+async fn update_ranked_seasons(
+    ch_client: &clickhouse::Client,
+    assets_client: &AssetsClient,
+) -> Result<(), UpdateError> {
+    info!("Updating ranked seasons");
+    let seasons = assets_client.ranked_seasons().await?;
+    let mut rows = Vec::new();
+    for season in seasons.iter() {
+        match ChRankedSeasonInterval::from_season(season) {
+            Ok(intervals) => rows.extend(intervals),
+            Err(e) => warn!("Season {} skipped: {e:?}", season.class_name),
+        }
+    }
+
+    let staging = create_staging(ch_client, "ranked_season_intervals").await?;
+    let mut insert = sync_insert_client(ch_client)
+        .insert::<ChRankedSeasonInterval>(&staging)
+        .await?;
+    let mut inserted: u32 = 0;
+    for row in &rows {
+        insert.write(row).await?;
+        inserted = inserted.saturating_add(1);
+    }
+    insert.end().await?;
+    if inserted == 0 {
+        warn!(
+            "0 ranked intervals to insert, keeping the current table (seasons={})",
+            seasons.len()
+        );
+        return Ok(());
+    }
+    swap_in(ch_client, "ranked_season_intervals", &staging, inserted).await?;
+    info!("Updated ranked seasons: intervals={inserted}");
     Ok(())
 }
 

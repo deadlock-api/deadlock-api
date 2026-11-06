@@ -2,7 +2,7 @@ use serde::Deserialize;
 use strum::Display;
 use utoipa::ToSchema;
 
-use crate::utils::badge::{badge_from_flat_progress_sql, subrank_progress_sql};
+use crate::utils::badge::{rank_badge_sql, rank_subrank_progress_sql, rank_subrank_width_sql};
 
 #[derive(Copy, Clone, Debug, Deserialize, ToSchema, Display, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
@@ -12,14 +12,15 @@ pub enum ScoreboardQuerySortBy {
     /// Sort by the number of matches
     #[default]
     Matches,
-    /// Sort by the rank progress the player ended their latest ranked match in range on, which
-    /// also orders players within Eternus. The entry's `badge` is the matching rank badge.
-    /// Players without a ranked match in range are not listed.
-    /// Player scoreboard only.
-    Rank,
-    /// Sort by the highest rank progress the player ended any ranked match in range on. The
-    /// entry's `badge` is the matching rank badge. Players without a ranked match in range are
+    /// Sort by the rank the player ended their latest ranked match in range on: by `badge`, then
+    /// by `badge_progress`, which also orders players within Eternus. `value` is the flat rank
+    /// progress, whose scale depends on the season. Players without a ranked match in range are
     /// not listed. Player scoreboard only.
+    Rank,
+    /// Sort by the highest rank the player ended any ranked match in range on, compared by
+    /// `badge` and then `badge_progress`, so ranks of different seasons compare by badge.
+    /// `value` is the flat rank progress of that match. Players without a ranked match in range
+    /// are not listed. Player scoreboard only.
     PeakRank,
     /// Sort by the number of wins
     Wins,
@@ -149,32 +150,51 @@ pub enum ScoreboardQuerySortBy {
     PermanentBuffs,
 }
 
-/// Only rows of ranked matches after placement carry a rank: `initial_display_rank` stays `0`
-/// through placement, so those rows must not contribute.
-const RANKED_ROW: &str = "ifNull(player_rank_initial_display_rank, 0) > 0";
+/// Only rows of ranked matches after placement with a final progress carry a rank:
+/// `initial_display_rank` stays `0` through placement, so those rows must not contribute.
+const RANKED_ROW: &str = "ifNull(player_rank_initial_display_rank, 0) > 0 AND player_rank_final_flat_progress IS NOT NULL";
 
-/// Rank progress the player ended their latest ranked match on.
-fn latest_progress_clause() -> String {
-    format!("argMaxIf(player_rank_final_flat_progress, match_id, {RANKED_ROW})")
+/// The progress, display rank and ranked interval of one row, read together so the badge comes
+/// from the ladder of the row's own season.
+const RANK_TUPLE: &str =
+    "(player_rank_final_flat_progress, player_rank_initial_display_rank, rank_interval)";
+
+/// The [`RANK_TUPLE`] of the player's latest ranked match.
+fn latest_rank_clause() -> String {
+    format!("argMaxIf({RANK_TUPLE}, match_id, {RANKED_ROW})")
 }
 
-/// Highest rank progress the player ended any ranked match on.
-fn peak_progress_clause() -> String {
-    format!("maxIf(player_rank_final_flat_progress, {RANKED_ROW})")
-}
-
-/// Badge for `progress`, with the Eternus division read from `display_rank` of the same row, and
-/// the progress into that badge. The badge is `0` and the progress `NULL` when no grouped row
-/// carries a rank; the progress is also `NULL` in Eternus.
-fn badge_columns(progress: &str, display_rank: &str) -> RankBadgeColumns {
-    let badge = badge_from_flat_progress_sql(
-        &format!("assumeNotNull({progress})"),
-        &format!("assumeNotNull({display_rank})"),
+/// The [`RANK_TUPLE`] of the player's highest rank: the highest badge, then the most progress
+/// into it. Raw progress would compare seasons on different scales.
+fn peak_rank_clause() -> String {
+    let progress = "ifNull(player_rank_final_flat_progress, 0)";
+    let badge = rank_badge_sql(
+        progress,
+        "ifNull(player_rank_initial_display_rank, 0)",
+        "rank_interval",
     );
-    let badge_progress = subrank_progress_sql(&format!("assumeNotNull({progress})"));
+    let badge_progress = rank_subrank_progress_sql(progress, "rank_interval");
+    format!("argMaxIf({RANK_TUPLE}, ({badge}, {badge_progress}), {RANKED_ROW})")
+}
+
+/// The badge for the rank tuple `rank` (see [`RANK_TUPLE`]), the progress into it and the width
+/// of its subrank. The badge is `0` and the others `NULL` when no grouped row carries a rank;
+/// in Eternus the progress is the points past its start and the width `NULL`.
+fn badge_columns(rank: &str) -> RankBadgeColumns {
+    let progress = format!("assumeNotNull(tupleElement({rank}, 1))");
+    let interval = format!("tupleElement({rank}, 3)");
+    let badge = rank_badge_sql(
+        &progress,
+        &format!("assumeNotNull(tupleElement({rank}, 2))"),
+        &interval,
+    );
+    let badge_progress = rank_subrank_progress_sql(&progress, &interval);
+    let badge_progress_max = rank_subrank_width_sql(&progress, &interval);
+    let unranked = format!("tupleElement({rank}, 1) IS NULL");
     RankBadgeColumns {
-        badge: format!("if({progress} IS NULL, 0, {badge})"),
-        badge_progress: format!("if({progress} IS NULL, NULL, {badge_progress})"),
+        badge: format!("if({unranked}, 0, {badge})"),
+        badge_progress: format!("if({unranked}, NULL, {badge_progress})"),
+        badge_progress_max: format!("if({unranked}, NULL, {badge_progress_max})"),
     }
 }
 
@@ -182,14 +202,15 @@ fn badge_columns(progress: &str, display_rank: &str) -> RankBadgeColumns {
 pub(super) struct RankBadgeColumns {
     pub(super) badge: String,
     pub(super) badge_progress: String,
+    pub(super) badge_progress_max: String,
 }
 
 impl ScoreboardQuerySortBy {
     pub(super) fn get_select_clause(self) -> String {
         let clause = match self {
             // Sorting by progress rather than badge orders players within Eternus by points.
-            Self::Rank => return format!("ifNull({}, 0)", latest_progress_clause()),
-            Self::PeakRank => return format!("ifNull({}, 0)", peak_progress_clause()),
+            Self::Rank => return format!("ifNull(tupleElement({}, 1), 0)", latest_rank_clause()),
+            Self::PeakRank => return format!("ifNull(tupleElement({}, 1), 0)", peak_rank_clause()),
             Self::MaxPermanentBuffsPerMatch => "max(permanent_buffs)",
             Self::AvgPermanentBuffsPerMatch => "avg(permanent_buffs)",
             Self::PermanentBuffs => "sum(permanent_buffs)",
@@ -274,18 +295,8 @@ impl ScoreboardQuerySortBy {
     /// The badge the rank sorts report next to their progress value, `None` for the others.
     pub(super) fn badge_columns(self) -> Option<RankBadgeColumns> {
         match self {
-            Self::Rank => Some(badge_columns(
-                &latest_progress_clause(),
-                &format!("argMaxIf(player_rank_initial_display_rank, match_id, {RANKED_ROW})"),
-            )),
-            // The Eternus division comes from the row that set the peak.
-            Self::PeakRank => Some(badge_columns(
-                &peak_progress_clause(),
-                &format!(
-                    "argMaxIf(player_rank_initial_display_rank, player_rank_final_flat_progress, \
-                     {RANKED_ROW})"
-                ),
-            )),
+            Self::Rank => Some(badge_columns(&latest_rank_clause())),
+            Self::PeakRank => Some(badge_columns(&peak_rank_clause())),
             _ => None,
         }
     }
@@ -314,9 +325,11 @@ impl ScoreboardQuerySortBy {
     pub(super) const fn inner_columns(self) -> &'static [&'static str] {
         match self {
             Self::Matches => &[],
+            // `any` skips `NULL`, so a backfilled copy's interval wins over the older copy's `NULL`.
             Self::Rank | Self::PeakRank => &[
                 "player_rank_final_flat_progress",
                 "player_rank_initial_display_rank",
+                "rank_interval",
             ],
             Self::Wins | Self::Losses | Self::Winrate => &["won"],
             Self::MaxKillsPerMatch | Self::AvgKillsPerMatch | Self::Kills => &["kills"],
