@@ -10,6 +10,7 @@ use crate::services::steam::types::FeedItem;
 #[utoipa::path(
     get,
     path = "/",
+    operation_id = "feed_v2",
     responses(
         (status = OK, body = [FeedItem]),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching or parsing one of the RSS feeds failed")
