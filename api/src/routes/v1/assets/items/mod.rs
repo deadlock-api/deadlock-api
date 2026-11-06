@@ -6,10 +6,13 @@ use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
 use utoipa_axum::routes;
 
+use game_assets::versions::items::types::ItemType;
+
 use crate::context::AppState;
 
 #[derive(OpenApi)]
-#[openapi(tags((
+// `ItemType` is only referenced by the `/by-type/{type}` path param, which doesn't register it.
+#[openapi(components(schemas(ItemType)), tags((
     name = "Items",
     description = "Item, ability, and weapon definitions parsed from the patch's KV3 source files."
 )))]

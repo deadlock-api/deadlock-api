@@ -18,6 +18,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
+#[cfg(feature = "utoipa")]
+use crate::versions::items::raw::BonusValue;
 use crate::versions::items::raw::{
     DependantAbilities, RawAbilityUpgrade, RawAbilityUpgradePropertyUpgrade,
     RawCustomCrosshairSettings, RawItemPropertyScaleFunctionSubclass,
@@ -140,10 +142,10 @@ pub(crate) struct ItemProperty {
     /// Raw JSON value preserves the source distinction between numeric and
     /// stringly-typed bonuses (`"14.5"` vs `14.5`).
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "utoipa", schema(value_type = Option<String>))]
+    #[cfg_attr(feature = "utoipa", schema(value_type = Option<BonusValue>))]
     pub(crate) value: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    #[cfg_attr(feature = "utoipa", schema(value_type = Option<String>))]
+    #[cfg_attr(feature = "utoipa", schema(value_type = Option<BonusValue>))]
     pub(crate) street_brawl_value: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) can_set_token_override: Option<bool>,
@@ -514,7 +516,6 @@ pub struct Ability {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "graphql", graphql(skip))]
     pub(crate) weapon_info: Option<RawItemWeaponInfoInner>,
-    pub(crate) r#type: ItemType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) grant_ammo_on_cast: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -534,15 +535,20 @@ pub struct Ability {
     pub(crate) dependant_abilities: Option<Vec<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) videos: Option<AbilityVideos>,
+    /// Abilities this one depends on. Entries whose ability has no data are left out.
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "utoipa", schema(value_type = Option<std::collections::HashMap<String, DependantAbilities>>))]
     #[cfg_attr(feature = "graphql", graphql(skip))]
-    pub(crate) dependent_abilities: Option<IndexMap<String, Option<DependantAbilities>>>,
+    pub(crate) dependent_abilities: Option<IndexMap<String, DependantAbilities>>,
 }
 
 #[cfg(feature = "graphql")]
 #[async_graphql::ComplexObject(rename_fields = "snake_case")]
 impl Ability {
+    #[graphql(name = "type")]
+    async fn item_type(&self) -> ItemType {
+        ItemType::Ability
+    }
     async fn properties(&self) -> async_graphql::Json<Option<IndexMap<String, ItemProperty>>> {
         async_graphql::Json(self.properties.clone())
     }
@@ -557,7 +563,7 @@ impl Ability {
     }
     async fn dependent_abilities(
         &self,
-    ) -> async_graphql::Json<Option<IndexMap<String, Option<DependantAbilities>>>> {
+    ) -> async_graphql::Json<Option<IndexMap<String, DependantAbilities>>> {
         async_graphql::Json(self.dependent_abilities.clone())
     }
 }
@@ -589,7 +595,6 @@ pub struct Weapon {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "graphql", graphql(skip))]
     pub(crate) weapon_info: Option<WeaponInfo>,
-    pub(crate) r#type: ItemType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) crosshair_css_class: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -602,6 +607,10 @@ pub struct Weapon {
 #[cfg(feature = "graphql")]
 #[async_graphql::ComplexObject(rename_fields = "snake_case")]
 impl Weapon {
+    #[graphql(name = "type")]
+    async fn item_type(&self) -> ItemType {
+        ItemType::Weapon
+    }
     async fn properties(&self) -> async_graphql::Json<Option<IndexMap<String, ItemProperty>>> {
         async_graphql::Json(self.properties.clone())
     }
@@ -638,7 +647,6 @@ pub struct Upgrade {
     #[serde(skip_serializing_if = "Option::is_none")]
     #[cfg_attr(feature = "graphql", graphql(skip))]
     pub(crate) weapon_info: Option<RawItemWeaponInfoInner>,
-    pub(crate) r#type: ItemType,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub(crate) shop_image: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -693,6 +701,10 @@ pub struct Upgrade {
 #[cfg(feature = "graphql")]
 #[async_graphql::ComplexObject(rename_fields = "snake_case")]
 impl Upgrade {
+    #[graphql(name = "type")]
+    async fn item_type(&self) -> ItemType {
+        ItemType::Upgrade
+    }
     async fn weapon_info(&self) -> async_graphql::Json<Option<RawItemWeaponInfoInner>> {
         async_graphql::Json(self.weapon_info.clone())
     }
@@ -714,7 +726,7 @@ impl Upgrade {
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "graphql", derive(async_graphql::Union))]
 #[cfg_attr(feature = "graphql", graphql(name = "AssetItem"))]
-#[serde(untagged)]
+#[serde(tag = "type", rename_all = "lowercase")]
 pub enum Item {
     Ability(Ability),
     Weapon(Weapon),

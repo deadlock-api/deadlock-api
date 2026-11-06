@@ -17,10 +17,9 @@ use crate::versions::items::template::{ItemView, TemplateCtx, replace_templates}
 use crate::versions::items::types::{
     Ability, AbilityActivation, AbilityDescription, AbilityImbue, AbilitySectionType,
     AbilityTooltipDetails, AbilityVideos, CorruptedItemInfo, Item, ItemProperty, ItemSlotType,
-    ItemType, StatsUsageFlag, TooltipDetailsBlock, TooltipDetailsBlockProperty,
-    TooltipDetailsInfoSection, Upgrade, UpgradeDescription, UpgradeProperty,
-    UpgradeTooltipImportantPropertyWithIcon, UpgradeTooltipSection, UpgradeTooltipSectionAttribute,
-    Weapon, WeaponInfo,
+    StatsUsageFlag, TooltipDetailsBlock, TooltipDetailsBlockProperty, TooltipDetailsInfoSection,
+    Upgrade, UpgradeDescription, UpgradeProperty, UpgradeTooltipImportantPropertyWithIcon,
+    UpgradeTooltipSection, UpgradeTooltipSectionAttribute, Weapon, WeaponInfo,
 };
 use crate::versions::localization;
 
@@ -459,7 +458,6 @@ async fn transform_ability(
         update_time: raw.base.update_time,
         properties,
         weapon_info: raw.base.weapon_info_inner().cloned(),
-        r#type: ItemType::Ability,
         grant_ammo_on_cast: raw.grant_ammo_on_cast,
         behaviours,
         description,
@@ -469,7 +467,15 @@ async fn transform_ability(
         boss_damage_scale: raw.boss_damage_scale,
         dependant_abilities: raw.dependant_abilities.clone(),
         videos,
-        dependent_abilities: raw.dependent_abilities.clone(),
+        dependent_abilities: raw
+            .dependent_abilities
+            .as_ref()
+            .map(|deps| {
+                deps.iter()
+                    .filter_map(|(name, dep)| Some((name.clone(), dep.clone()?)))
+                    .collect::<IndexMap<_, _>>()
+            })
+            .filter(|deps| !deps.is_empty()),
     }
 }
 
@@ -684,7 +690,6 @@ fn transform_weapon(
         update_time: raw.base.update_time,
         properties,
         weapon_info,
-        r#type: ItemType::Weapon,
         crosshair_css_class: raw
             .crosshair_css_class
             .filter(|s| !s.is_empty())
@@ -997,7 +1002,6 @@ async fn transform_upgrade(
         heroes: Some(heroes),
         update_time: raw.base.update_time,
         weapon_info: raw.base.weapon_info_inner().cloned(),
-        r#type: ItemType::Upgrade,
         shop_image,
         shop_image_webp,
         shop_image_small,

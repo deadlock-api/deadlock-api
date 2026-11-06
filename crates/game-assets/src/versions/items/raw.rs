@@ -230,7 +230,6 @@ pub(crate) struct RawAbilityUpgradePropertyUpgrade {
     #[serde(alias = "m_strPropertyName", alias = "m_StrPropertyNAme")]
     pub(crate) name: String,
     #[serde(alias = "m_strBonus")]
-    #[cfg_attr(feature = "utoipa", schema(value_type = String))]
     pub(crate) bonus: BonusValue,
     #[serde(
         default,
@@ -260,7 +259,10 @@ pub(crate) struct RawAbilityUpgradePropertyUpgrade {
     pub(crate) fixed_corrupted_bonus: Option<bool>,
 }
 
+/// A value the game files hold either as a string (`"14.5"`, `"-1m"`) or as a number.
 #[derive(Debug, Clone, Serialize)]
+#[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "utoipa", schema(as = StringOrNumber))]
 #[serde(untagged)]
 pub(crate) enum BonusValue {
     Str(String),
