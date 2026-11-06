@@ -481,6 +481,7 @@ pub struct VerticalRecoil {
 
 #[derive(Debug, Serialize, Clone, Default)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "utoipa", schema(as = NpcWeaponInfo))]
 pub struct WeaponInfo {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_zoom: Option<bool>,
