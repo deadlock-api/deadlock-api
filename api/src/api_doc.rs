@@ -49,7 +49,8 @@ pub(super) struct ApiDoc;
 /// Scalar template with a `data-configuration` override. `hideModels` drops the
 /// schema "Models" section from the sidebar; `customCss` centers and enlarges the
 /// `x-tagGroups` headers (the non-interactive `cursor-auto` sidebar entries).
-/// `$spec` is substituted by `Scalar::to_html`.
+/// The spec is loaded from `data-url`, not inlined as `$spec`: with an inlined spec Scalar's
+/// "Open API Client" button hands client.scalar.com the page URL instead of the spec URL.
 pub(super) const SCALAR_HTML: &str = r#"<!doctype html>
 <html>
 <head>
@@ -74,9 +75,7 @@ pub(super) const SCALAR_HTML: &str = r#"<!doctype html>
     pre-generated clients for many languages are at
     <a href="https://github.com/deadlock-api/openapi-clients">github.com/deadlock-api/openapi-clients</a>.</p>
 </noscript>
-<script id="api-reference" type="application/json" data-configuration='{"hideModels":true,"customCss":".text-sidebar-c-2.cursor-auto>.group\\/button-label{text-align:center;font-size:1rem;font-weight:700}"}'>
-    $spec
-</script>
+<script id="api-reference" type="application/json" data-url="/openapi.json" data-configuration='{"hideModels":true,"customCss":".text-sidebar-c-2.cursor-auto>.group\\/button-label{text-align:center;font-size:1rem;font-weight:700}"}'></script>
 <script src="https://cdn.jsdelivr.net/npm/@scalar/api-reference"></script>
 </body>
 </html>
