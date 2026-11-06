@@ -92,7 +92,10 @@ function HeatmapPage() {
   const [minGameTime, setMinGameTime] = useQueryState("min_game_time", parseAsInteger.withDefault(0));
   const [maxGameTime, setMaxGameTime] = useQueryState("max_game_time", parseAsInteger.withDefault(MAX_GAME_TIME_S));
   const [minEvents, setMinEvents] = useQueryState("min_events", parseAsInteger.withDefault(0));
-  const [outlier, setOutlierSensitivity] = useQueryState("outlier", parseAsInteger.withDefault(9900));
+  const [outlier, setOutlierSensitivity] = useQueryState(
+    "outlier",
+    parseAsInteger.withDefault(9900).withOptions({ history: "replace" }),
+  );
   // The slider's range (80-100%): an edited `?outlier=5000` saturated half the map with the thumb stuck at its minimum.
   const sensitivity = Math.min(10000, Math.max(8000, outlier));
   // Positions from two map layouts do not add up, so the default season or patch starts no earlier than the current one.

@@ -4,7 +4,7 @@ import barlowCondensedBoldWoff2 from "@fontsource/barlow-condensed/files/barlow-
 import { QueryErrorResetBoundary } from "@tanstack/react-query";
 import { HeadContent, Outlet, Scripts, createRootRouteWithContext, useRouterState } from "@tanstack/react-router";
 import { Agentation } from "agentation";
-import { debounce } from "nuqs";
+import { throttle } from "nuqs";
 import { NuqsAdapter } from "nuqs/adapters/tanstack-router";
 import * as React from "react";
 import { Component, type ErrorInfo, type ReactNode } from "react";
@@ -223,7 +223,9 @@ function RootComponent() {
   return (
     <RootDocument>
       <ThemeProvider>
-        <NuqsAdapter defaultOptions={{ history: "push", limitUrlUpdates: debounce(300) }}>
+        {/* Not debounce: a debounced key reads its old value for a frame when the URL update lands. Fields that
+            update per keystroke or drag pass history "replace" so they do not add a history entry each time. */}
+        <NuqsAdapter defaultOptions={{ history: "push", limitUrlUpdates: throttle(50) }}>
           <TooltipProvider>
             <SkipLink />
             <div className="flex min-h-screen">

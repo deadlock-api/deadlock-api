@@ -110,7 +110,11 @@ export function SeasonPatchDatePicker({
   const matchingPatch =
     !matchingSeason && valueStart ? PATCHES.find((patch) => patchMatches(patch, valueStart, valueEnd)) : undefined;
 
-  const [queryTab, setQueryTab] = useQueryState("pd-picker-tab", parseAsStringLiteral(TABS));
+  const [queryTab, setQueryTab] = useQueryState(
+    "pd-picker-tab",
+    // Browsing the tabs is not a navigation: Back should not step through them.
+    parseAsStringLiteral(TABS).withOptions({ history: "replace" }),
+  );
   const tab =
     queryTab ??
     inferTabFromValue({

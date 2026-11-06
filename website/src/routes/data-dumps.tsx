@@ -65,7 +65,7 @@ async function fetchManifest(): Promise<Manifest> {
 }
 
 function DataDumps() {
-  const [searchParam, setSearch] = useQueryState("q", parseAsString);
+  const [searchParam, setSearch] = useQueryState("q", parseAsString.withOptions({ history: "replace" }));
   const [sqlQueryParam, setSqlQueryParam] = useQueryState("sql", parseAsString);
   // A shared `?sql=` link opens the playground; after that the dialog owns its open state, so emptying the editor
   // (which empties the param) never closes it.

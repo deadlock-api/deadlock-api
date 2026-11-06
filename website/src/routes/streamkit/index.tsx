@@ -41,7 +41,10 @@ export const Route = createFileRoute("/streamkit/")({
 });
 
 function StreamKit() {
-  const [steamId, setSteamId] = useQueryState("steamid", parseAsString.withDefault(""));
+  const [steamId, setSteamId] = useQueryState(
+    "steamid",
+    parseAsString.withDefault("").withOptions({ history: "replace" }),
+  );
   const [region, setRegion] = useQueryState("region", parseAsString.withDefault(""));
   const navigate = useNavigate();
 
