@@ -141,6 +141,7 @@ mod subclass {
 /// including when used as a JSON map key.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString, Display)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
+#[cfg_attr(feature = "utoipa", schema(rename_all = "snake_case"))]
 pub enum HeroItemType {
     #[strum(serialize = "ESlot_Weapon_Primary", to_string = "weapon_primary")]
     WeaponPrimary,
@@ -181,6 +182,7 @@ pub enum HeroItemType {
     #[strum(serialize = "ESlot_Signature_4", to_string = "signature4")]
     Signature4,
     #[strum(serialize = "ESlot_Cosmetic_1", to_string = "eslot_cosmetic_1")]
+    #[cfg_attr(feature = "utoipa", schema(rename = "eslot_cosmetic_1"))]
     EslotCosmetic1,
 }
 
