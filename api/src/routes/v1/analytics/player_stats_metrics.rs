@@ -14,7 +14,8 @@ use utoipa::openapi::{Ref, RefOr};
 use utoipa::{IntoParams, PartialSchema as _, ToSchema};
 
 use super::common_filters::{
-    PlayerFilters, filter_protected_accounts, join_filters, round_timestamps,
+    MatchScope, PlayerFilters, account_match_prefilter, filter_protected_accounts, join_filters,
+    round_timestamps,
 };
 use crate::context::AppState;
 use crate::error::APIResult;
@@ -476,22 +477,54 @@ fn metric_select(metric: Metric, include_buff_metrics: bool) -> String {
     )
 }
 
+/// The player filters as ` AND ...`, and the settings they need as `, ...` (or empty).
+fn player_filters(query: &PlayerStatsMetricsQuery) -> (String, &'static str) {
+    let player_filter_inputs = PlayerFilters {
+        hero_ids: query.hero_ids.as_deref(),
+        account_ids: query.account_ids.as_deref(),
+        min_networth: query.min_networth,
+        max_networth: query.max_networth,
+        include_item_ids: query.include_item_ids.as_deref(),
+        exclude_item_ids: query.exclude_item_ids.as_deref(),
+        ability_order_prefix: query.ability_order_prefix.as_deref(),
+        ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
+        ..Default::default()
+    };
+    let mut player_filters = player_filter_inputs.build();
+    // An account-scoped read without `max_matches` looks the account's matches up on
+    // `player_match_stats` and reads them from `match_player` by primary key. Without it the
+    // planner spent most of the CPU on index analysis: the account bloom filters and the
+    // match/game mode sets over every granule of the window, and the projections, which it
+    // analyzed and then rejected (the hero-sorted one needs 10x the marks). The skip indexes the
+    // `match_id` set makes redundant are ignored, the narrow account bloom filter stays.
+    // Measured on production shapes: identical results, -43% to -57% CPU.
+    // With `max_matches` the settings would also hit the hero-agnostic latest-matches subquery,
+    // which needs the `start_time` indexes, and the prefilter does not help it.
+    let account_prefilter = if query.max_matches.is_none() {
+        account_match_prefilter(
+            player_filter_inputs,
+            &MatchScope::new(
+                query.match_mode.as_deref(),
+                query.game_mode,
+                query.match_info(),
+            ),
+        )
+    } else {
+        None
+    };
+    let account_settings = if account_prefilter.is_some() {
+        ", optimize_use_projections = 0, ignore_data_skipping_indices = \
+         'idx_account_id,idx_game_mode,idx_match_mode,idx_start_time,idx_start_time_coarse'"
+    } else {
+        ""
+    };
+    player_filters.extend(account_prefilter);
+    (join_filters(&player_filters), account_settings)
+}
+
 fn build_query(query: &PlayerStatsMetricsQuery) -> String {
     let info_filters = query.match_info().build();
-    let player_filters = join_filters(
-        &PlayerFilters {
-            hero_ids: query.hero_ids.as_deref(),
-            account_ids: query.account_ids.as_deref(),
-            min_networth: query.min_networth,
-            max_networth: query.max_networth,
-            include_item_ids: query.include_item_ids.as_deref(),
-            exclude_item_ids: query.exclude_item_ids.as_deref(),
-            ability_order_prefix: query.ability_order_prefix.as_deref(),
-            ability_unlock_order_prefix: query.ability_unlock_order_prefix.as_deref(),
-            ..Default::default()
-        }
-        .build(),
-    );
+    let (player_filters, account_settings) = player_filters(query);
     let selects = Metric::VARIANTS
         .iter()
         .filter(|metric| metric.alias_of().is_none())
@@ -569,15 +602,16 @@ fn build_query(query: &PlayerStatsMetricsQuery) -> String {
             )
         },
     );
-    // No `optimize_use_projections = 0` here: with skip indexes evaluated at planning time
-    // (`use_skip_indexes_on_data_read = 0` on the clients) the hero-led projection is pruned
-    // by start_time, so the planner may pick it even without a hero filter. Measured on
-    // production shapes: identical results, 20% of the bytes and 32% of the CPU.
+    // No `optimize_use_projections = 0` without an account filter: with skip indexes evaluated
+    // at planning time (`use_skip_indexes_on_data_read = 0` on the clients) the hero-led
+    // projection is pruned by start_time, so the planner may pick it even without a hero
+    // filter. Measured on production shapes: identical results, 20% of the bytes and 32% of
+    // the CPU.
     format!(
         "
     SELECT {bucket_select}{selects}
     FROM {t_data}{group_by}
-    SETTINGS log_comment = 'player_stats_metrics', apply_patch_parts = 0, max_threads = 32
+    SETTINGS log_comment = 'player_stats_metrics', apply_patch_parts = 0, max_threads = 32{account_settings}
     "
     )
 }
@@ -812,6 +846,35 @@ mod tests {
             ..Default::default()
         });
         assert!(!hero_scoped.contains("optimize_use_projections"));
+    }
+
+    #[test]
+    fn account_reads_go_through_the_player_match_stats_prefilter() {
+        let sql = build_query(&PlayerStatsMetricsQuery {
+            hero_ids: Some(vec![15]),
+            account_ids: Some(vec![42]),
+            game_mode: Some(GameMode::Normal),
+            min_unix_timestamp: Some(1_700_000_000),
+            ..Default::default()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains(
+            "AND match_id IN (SELECT match_id FROM player_match_stats WHERE match_mode IN \
+             ('Ranked', 'Unranked') AND game_mode = 1 AND start_time >= 1700000000 AND \
+             hero_id IN (15) AND account_id IN (42))"
+        ));
+        assert!(sql.contains("optimize_use_projections = 0, ignore_data_skipping_indices"));
+
+        // The latest-matches subquery of `max_matches` needs the projections and skip indexes.
+        let limited = build_query(&PlayerStatsMetricsQuery {
+            account_ids: Some(vec![42]),
+            max_matches: Some(100),
+            ..Default::default()
+        });
+        assert_valid_sql(&limited);
+        assert!(!limited.contains("player_match_stats"));
+        assert!(!limited.contains("optimize_use_projections"));
+        assert!(!limited.contains("ignore_data_skipping_indices"));
     }
 }
 
