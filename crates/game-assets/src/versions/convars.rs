@@ -47,7 +47,6 @@ pub struct Convar {
     pub value_type: ConvarType,
     /// Default value, typed by `type`: a bool, number or string, `[r, g, b, a]`
     /// for `color`, and an array of floats for vectors / `qangle`.
-    #[cfg_attr(feature = "utoipa", schema(value_type = Object))]
     pub default: serde_json::Value,
     /// Raw `FCVAR_*` flag bits.
     pub flags: u64,
