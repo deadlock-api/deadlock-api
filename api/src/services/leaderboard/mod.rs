@@ -4,13 +4,15 @@
 pub(crate) mod types;
 
 use core::time::Duration;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::LazyLock;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use base64::Engine as _;
 use base64::prelude::BASE64_STANDARD;
-use cached::macros::cached;
 use clickhouse::{RowOwned, RowWrite};
 use clickhouse_utils::insert_rows;
+use moka::Expiry;
+use moka::future::Cache;
 use prost::Message as _;
 use steam_proxy::{SteamProxyError, SteamProxyOptions, SteamProxyResponse};
 use tracing::warn;
@@ -24,17 +26,90 @@ use crate::services::leaderboard::types::{
     HeroLeaderboardClickhouse, LeaderboardClickhouse, LeaderboardRegion,
 };
 
-/// Fetches a leaderboard from Steam, at most every ten minutes per variant; concurrent misses on
-/// the same variant wait for one Steam call instead of each making their own. Each fetch of the
-/// current leaderboard is also snapshotted: here, not in the callers, so cache hits do not store
-/// the same entries again.
-#[cached(
-    ttl_secs = 600,
-    convert = "{ (region, hero_id, leaderboard_id) }",
-    key = "(LeaderboardRegion, Option<u32>, Option<u32>)",
-    sync_writes = "by_key"
-)]
+/// How long a leaderboard the Game Coordinator returned is served.
+const LEADERBOARD_TTL: Duration = Duration::from_mins(10);
+/// How long a failure is served: a proxy error, or a reply whose result is not success (the GC
+/// answers `KEInternalError` with no entries during its own outages).
+const LEADERBOARD_FAILURE_TTL: Duration = Duration::from_mins(5);
+
+type LeaderboardKey = (LeaderboardRegion, Option<u32>, Option<u32>);
+
+/// A fetched leaderboard and whether the Game Coordinator reported success, which picks its TTL.
+#[derive(Clone)]
+struct CachedLeaderboard {
+    response: Result<SteamProxyResponse, SteamProxyError>,
+    succeeded: bool,
+}
+
+/// Serves a successful leaderboard for [`LEADERBOARD_TTL`] and a failure for
+/// [`LEADERBOARD_FAILURE_TTL`].
+struct LeaderboardExpiry;
+
+impl Expiry<LeaderboardKey, CachedLeaderboard> for LeaderboardExpiry {
+    fn expire_after_create(
+        &self,
+        _: &LeaderboardKey,
+        value: &CachedLeaderboard,
+        _: Instant,
+    ) -> Option<Duration> {
+        Some(if value.succeeded {
+            LEADERBOARD_TTL
+        } else {
+            LEADERBOARD_FAILURE_TTL
+        })
+    }
+}
+
+static LEADERBOARDS: LazyLock<Cache<LeaderboardKey, CachedLeaderboard>> = LazyLock::new(|| {
+    Cache::builder()
+        .max_capacity(10_000)
+        .expire_after(LeaderboardExpiry)
+        .build()
+});
+
+/// Fetches a leaderboard from Steam, at most every ten minutes per variant, or every five
+/// minutes while it fails; concurrent misses on the same variant wait for one Steam call
+/// instead of each making their own. Each fetch of the current leaderboard is also snapshotted:
+/// here, not in the callers, so cache hits do not store the same entries again.
 pub(crate) async fn fetch_leaderboard_raw(
+    state: &AppState,
+    region: LeaderboardRegion,
+    hero_id: Option<u32>,
+    leaderboard_id: Option<u32>,
+) -> Result<SteamProxyResponse, SteamProxyError> {
+    LEADERBOARDS
+        .get_with((region, hero_id, leaderboard_id), async {
+            let response = fetch_leaderboard_uncached(state, region, hero_id, leaderboard_id).await;
+            let proto = response
+                .as_ref()
+                .ok()
+                .and_then(|r| BASE64_STANDARD.decode(&r.data).ok())
+                .and_then(|data| {
+                    CMsgClientToGcGetLeaderboardResponse::decode(data.as_slice()).ok()
+                });
+            let succeeded = proto.as_ref().is_some_and(|p| {
+                p.result
+                    == Some(c_msg_client_to_gc_get_leaderboard_response::EResult::KESuccess as i32)
+            });
+            // Snapshots track the current leaderboard only; other leaderboards would mix
+            // seasons. A failed or undecodable response is skipped here; the caller reports it.
+            if leaderboard_id.is_none()
+                && succeeded
+                && let Some(proto) = proto
+            {
+                spawn_snapshot(state.ch_client.clone(), region, hero_id, proto.entries);
+            }
+            CachedLeaderboard {
+                response,
+                succeeded,
+            }
+        })
+        .await
+        .response
+}
+
+/// Asks the Game Coordinator for a leaderboard.
+async fn fetch_leaderboard_uncached(
     state: &AppState,
     region: LeaderboardRegion,
     hero_id: Option<u32>,
@@ -45,7 +120,7 @@ pub(crate) async fn fetch_leaderboard_raw(
         hero_id,
         leaderboard_id,
     };
-    let response = state
+    state
         .steam_client
         .call_steam_proxy_raw(
             EgcCitadelClientMessages::KEMsgClientToGcGetLeaderboard,
@@ -59,16 +134,7 @@ pub(crate) async fn fetch_leaderboard_raw(
                 username: None,
             },
         )
-        .await?;
-    // Snapshots track the current leaderboard only; other leaderboards would mix seasons. A
-    // response that does not decode is skipped here; the caller reports it.
-    if leaderboard_id.is_none()
-        && let Ok(data) = BASE64_STANDARD.decode(&response.data)
-        && let Ok(proto) = CMsgClientToGcGetLeaderboardResponse::decode(data.as_slice())
-    {
-        spawn_snapshot(state.ch_client.clone(), region, hero_id, proto.entries);
-    }
-    Ok(response)
+        .await
 }
 
 /// Snapshots the current leaderboard into `leaderboard`, or a hero's into `hero_leaderboard`, in
