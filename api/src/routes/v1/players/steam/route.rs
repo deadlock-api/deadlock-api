@@ -45,24 +45,24 @@ pub(super) struct SteamSearchQuery {
     /// Search query for Steam profiles.
     search_query: String,
     /// Maximum number of profiles to return.
-    #[param(inline, default = "100", maximum = 1000, minimum = 1)]
+    #[param(inline, default = 100, maximum = 1000, minimum = 1)]
     limit: Option<u32>,
     /// Only return profiles that have played at least this many matches in the
     /// last 30 days. Defaults to 5 to filter out inactive/empty profiles and
     /// keep search responsive.
-    #[param(inline, default = "5", minimum = 0)]
+    #[param(inline, default = 5, minimum = 0)]
     min_matches_played_last_30d: Option<u32>,
     /// Only return profiles whose `last_team_avg_badge` is at least this
     /// value. Defaults to 0 (no filter). Profiles with no recorded badge are
     /// stored as 0 and are excluded when this is set above 0.
-    #[param(inline, default = "0", minimum = 0)]
+    #[param(inline, default = 0, minimum = 0)]
     min_last_team_avg_badge: Option<u32>,
     /// Weight applied to `log1p(matches_played_last_30d)` when reranking
     /// candidates. The final score per profile is
     /// `jaro_winkler(personaname_lc, query) + weight * log1p(matches_played)`.
     /// Set to 0 to rank purely by string similarity; raise it to bias toward
     /// active/popular players.
-    #[param(inline, default = "0.02", minimum = 0.0)]
+    #[param(inline, default = 0.02, minimum = 0.0)]
     matches_played_weight: Option<f64>,
 }
 

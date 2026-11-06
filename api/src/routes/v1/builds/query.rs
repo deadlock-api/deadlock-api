@@ -83,7 +83,7 @@ pub(crate) struct BuildsSearchQuery {
     pub(crate) start: Option<u32>,
     /// The maximum number of builds to return.
     #[serde(default = "default_limit")]
-    #[param(inline, default = "100")]
+    #[param(inline, default = 100)]
     pub(crate) limit: Option<u32>,
     /// The direction to sort the builds in.
     #[serde(default)]

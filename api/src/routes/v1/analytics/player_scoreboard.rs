@@ -95,7 +95,7 @@ pub(crate) struct PlayerScoreboardQuery {
     start: Option<u32>,
     /// The maximum number of players to fetch.
     #[serde(default = "default_limit")]
-    #[param(inline, default = "100", maximum = 10000, minimum = 1)]
+    #[param(inline, default = 100, maximum = 10000, minimum = 1)]
     limit: Option<u32>,
     /// Comma separated list of account ids to include
     #[param(inline, min_items = 1, max_items = 1_000)]
