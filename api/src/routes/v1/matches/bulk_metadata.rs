@@ -100,7 +100,7 @@ pub(super) struct BulkMatchMetadataQuery {
     // Parameters that influence what data is included in the response (SELECT)
     /// Include match info in the response.
     #[serde(default = "default_true")]
-    #[param(inline, default = "true")]
+    #[param(inline, default = true)]
     include_info: bool,
     /// Include more match info in the response.
     #[serde(default)]
