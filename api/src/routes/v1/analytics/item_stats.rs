@@ -1188,12 +1188,21 @@ fn build_query(query: &ItemStatsQuery) -> String {
         if let Some(v) = query.max_enemy_networth {
             enemy_having.push(format!("max(net_worth) <= {v}"));
         }
-        let enemy_having_clause = if enemy_having.is_empty() {
-            String::new()
-        } else {
-            format!("\n        HAVING {}", enemy_having.join(" AND "))
-        };
         let same_lane = query.same_lane_filter == Some(true);
+        // Without a HAVING or the lanes, the CTE only lists the enemy (match, team) pairs, and the
+        // semi-join's IN set dedups them itself: the GROUP BY hashed every enemy row once more.
+        // Measured on a buyer hero vs five enemy heroes over 30 days: -9% CPU, -9% memory,
+        // identical rows; no significant change with a single enemy hero.
+        let enemy_group_by = if enemy_having.is_empty() && !same_lane {
+            String::new()
+        } else if enemy_having.is_empty() {
+            "\n        GROUP BY match_id, team".to_owned()
+        } else {
+            format!(
+                "\n        GROUP BY match_id, team\n        HAVING {}",
+                enemy_having.join(" AND ")
+            )
+        };
         let lanes_col = if same_lane {
             ",\n            groupUniqArray(assigned_lane) AS enemy_lanes"
         } else {
@@ -1207,8 +1216,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
         FROM match_player
         WHERE {scope_filters}
             AND team IN ('Team0', 'Team1')
-            AND hero_id IN ({})
-        GROUP BY match_id, team{enemy_having_clause}
+            AND hero_id IN ({}){enemy_group_by}
     )",
             id_list(&unique_ids)
         );
@@ -1869,12 +1877,23 @@ mod tests {
             "AND (match_id * 2 + (team = 'Team0')) IN (SELECT match_id * 2 + (enemy_team = 'Team1') FROM t_enemy_teams)\nWHERE true"
         ));
         assert!(sql.contains("use_index_for_in_with_subqueries = 0"));
+        // The IN set dedups the enemy (match, team) pairs; only a HAVING or the lanes group them.
+        assert!(!sql.contains("GROUP BY match_id, team"));
+        let all_match = build_query(&ItemStatsQuery {
+            enemy_hero_ids: Some(vec![66, 67]),
+            enemy_hero_ids_all_match: Some(true),
+            ..Default::default()
+        });
+        assert!(
+            all_match.contains("GROUP BY match_id, team\n        HAVING uniqExact(hero_id) = 2")
+        );
 
         let same_lane = build_query(&ItemStatsQuery {
             enemy_hero_ids: Some(vec![66]),
             same_lane_filter: Some(true),
             ..Default::default()
         });
+        assert!(same_lane.contains("GROUP BY match_id, team\n"));
         assert!(same_lane.contains(
             "(match_id * 2 + (team = 'Team0'), assigned_lane) IN (SELECT match_id * 2 + (enemy_team = 'Team1'), arrayJoin(enemy_lanes) FROM t_enemy_teams)"
         ));
