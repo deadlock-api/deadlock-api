@@ -19,6 +19,7 @@
     )
 )]
 
+use assets_client::{RankLadder, Seasons};
 use core::sync::atomic::{AtomicU32, AtomicUsize, Ordering};
 use core::time::Duration;
 use std::borrow::Cow;
@@ -55,8 +56,26 @@ fn calibration_matches() -> Option<u32> {
     Some(CALIBRATION_MATCHES.load(Ordering::Relaxed)).filter(|v| *v > 0)
 }
 
+/// The ranked seasons of the last refresh, for each interval's rank ladder. `None` until the first
+/// refresh succeeds, when [`RankLadder::builtin`] stands in.
+static SEASONS: std::sync::RwLock<Option<Seasons>> = std::sync::RwLock::new(None);
+
+/// The rank ladder of ranked interval `interval`.
+fn rank_ladder(interval: Option<u32>) -> RankLadder {
+    SEASONS
+        .read()
+        .unwrap_or_else(std::sync::PoisonError::into_inner)
+        .as_ref()
+        .map_or_else(|| RankLadder::builtin(interval), |s| s.ladder(interval))
+}
+
 fn spawn_season_refresh_task() -> reqwest::Result<()> {
-    assets_client::spawn_season_refresh_task(|season| {
+    assets_client::spawn_season_refresh_task(|seasons| {
+        let season = seasons.current;
+        debug!(intervals = ?seasons.ladders.keys().collect::<Vec<_>>(), "Refreshed rank ladders");
+        *SEASONS
+            .write()
+            .unwrap_or_else(std::sync::PoisonError::into_inner) = Some(seasons);
         if let Some(s) = season {
             debug!(
                 calibration_matches = s.calibration_matches,
@@ -633,12 +652,18 @@ fn is_identified(player: &Players) -> bool {
 
 fn build_parsed_match(match_info: &MatchInfo) -> ParsedMatch {
     let players = build_ch_players(match_info);
+    let ladder = rank_ladder(match_info.rank_interval);
     let history: Vec<PlayerMatchHistoryEntry> = match_info
         .players
         .iter()
         .filter(|p| is_identified(p))
         .filter_map(|p| {
-            PlayerMatchHistoryEntry::from_info_and_player(match_info, p, calibration_matches())
+            PlayerMatchHistoryEntry::from_info_and_player(
+                match_info,
+                p,
+                calibration_matches(),
+                &ladder,
+            )
         })
         .collect();
     ParsedMatch { players, history }

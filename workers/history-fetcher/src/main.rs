@@ -190,8 +190,8 @@ async fn main() -> Result<(), Error> {
 
 /// Keeps [`RANK_INTERVAL`] current.
 fn spawn_rank_interval_refresh_task() -> reqwest::Result<()> {
-    assets_client::spawn_season_refresh_task(|season| {
-        let interval = season.map(|s| s.interval);
+    assets_client::spawn_season_refresh_task(|seasons| {
+        let interval = seasons.current.map(|s| s.interval);
         debug!(rank_interval = ?interval, "Refreshed ranked interval");
         *RANK_INTERVAL
             .write()

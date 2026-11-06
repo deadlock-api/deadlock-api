@@ -1,3 +1,4 @@
+use assets_client::RankLadder;
 use clickhouse::Row;
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -50,17 +51,15 @@ pub(crate) struct PlayerMatchHistoryEntry {
     pub source: Source,
 }
 
-/// Flat progress maps to a badge in fixed 1000-point steps, seven per tier with the
-/// sixth subtier twice as wide. Verified against 141,541 ranked rows.
+/// The badge the final flat progress falls in on the ladder of the match's ranked interval
+/// (Season 1: 7000 per tier, Season 2: 6500), in Eternus the division of the display rank.
 /// Players still in placement show no badge at all, which the GC reports as 0.
-fn derived_badge(rank: &CMsgMatchPlayerRankData) -> Option<u32> {
-    if rank.initial_display_rank? == 0 {
+fn derived_badge(rank: &CMsgMatchPlayerRankData, ladder: &RankLadder) -> Option<u32> {
+    let display_rank = rank.initial_display_rank?;
+    if display_rank == 0 {
         return Some(0);
     }
-    let idx = rank.final_flat_progress? / 1000;
-    let tier = (idx / 7).saturating_add(1);
-    let subtier = (idx % 7).saturating_add(1).min(6);
-    Some(tier.saturating_mul(10).saturating_add(subtier))
+    Some(ladder.badge(rank.final_flat_progress?, display_rank))
 }
 
 /// The GC (and the in-game history screen) reports `desired_progress_change` on the
@@ -89,6 +88,7 @@ fn derived_used_demotion_protection(rank: &CMsgMatchPlayerRankData) -> Option<bo
 }
 
 impl PlayerMatchHistoryEntry {
+    /// `ladder` is the rank ladder of the match's ranked interval, which the badge is read on.
     /// `calibration_matches` is the current season's placement length, needed
     /// because metadata counts placement games remaining while the GC counts the
     /// match's position in the sequence. `None` leaves that one field unset.
@@ -96,6 +96,7 @@ impl PlayerMatchHistoryEntry {
         match_info: &MatchInfo,
         player: &Players,
         calibration_matches: Option<u32>,
+        ladder: &RankLadder,
     ) -> Option<Self> {
         let rank = player.player_rank_data;
         let calibration_left = rank
@@ -146,7 +147,7 @@ impl PlayerMatchHistoryEntry {
                     .checked_div(n)
             }),
             player_match_outcome: PlayerMatchOutcome::from(player.player_match_outcome()),
-            ranked_display_badge: rank.as_ref().and_then(derived_badge),
+            ranked_display_badge: rank.as_ref().and_then(|r| derived_badge(r, ladder)),
             ranked_delta: rank.as_ref().and_then(|r| derived_delta(r, in_calibration)),
             ranked_calibration_match: if in_calibration {
                 calibration_matches
@@ -176,29 +177,29 @@ mod tests {
     }
 
     #[test]
-    fn badge_maps_flat_progress_to_tier_and_subtier() {
-        // Subtier 6 spans two 1000-point steps, so each tier covers seven of them.
-        for (progress, expected) in [
-            (0, 11),
-            (1_000, 12),
-            (4_000, 15),
-            (5_000, 16),
-            (6_975, 16),
-            (7_000, 21),
-            (35_000, 61),
-            (53_225, 85),
-        ] {
+    fn badge_is_read_on_the_ladder_of_the_interval() {
+        // Season 1: subtier 6 spans two 1000-point steps, so each tier covers seven of them.
+        for (progress, expected) in [(0, 11), (5_000, 16), (6_975, 16), (7_000, 21), (53_225, 85)] {
             assert_eq!(
-                derived_badge(&rank(85, progress)),
+                derived_badge(&rank(85, progress), &RankLadder::SEASON_1),
                 Some(expected),
                 "progress {progress}"
             );
         }
+        // #675: match 131960662 of account 76343519 ended on 49_900, Oracle V in Season 2.
+        assert_eq!(
+            derived_badge(&rank(85, 49_900), &RankLadder::SEASON_2),
+            Some(85)
+        );
+        assert_eq!(
+            derived_badge(&rank(105, 64_000), &RankLadder::SEASON_2),
+            Some(106)
+        );
     }
 
     #[test]
     fn badge_is_zero_while_still_in_placement() {
-        assert_eq!(derived_badge(&rank(0, 125)), Some(0));
+        assert_eq!(derived_badge(&rank(0, 125), &RankLadder::SEASON_2), Some(0));
     }
 
     #[test]

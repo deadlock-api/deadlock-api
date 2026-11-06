@@ -11,5 +11,8 @@ service-utils = { workspace = true }
 tokio = { workspace = true, features = ["time"] }
 tracing = { workspace = true }
 
+[dev-dependencies]
+serde_json = { workspace = true }
+
 [lints]
 workspace = true
