@@ -50,14 +50,14 @@ function PickToggle({
   );
 }
 
-/** Progress at which Eternus starts; Eternus progress keeps counting up without subrank spans. */
-const ETERNUS_PROGRESS = 70_000;
-
-/** "450 / 1,000" into a subrank (the sixth of a tier spans 2,000), or the points past the start of Eternus. */
-function rankProgressLabel({ value, badge, badge_progress }: PlayerEntry): string {
-  if (badge_progress == null) return `${Math.max(0, value - ETERNUS_PROGRESS).toLocaleString("en-US")} pts`;
-  const width = (badge ?? 0) % 10 === 6 ? 2000 : 1000;
-  return `${badge_progress.toLocaleString("en-US")} / ${width.toLocaleString("en-US")}`;
+/**
+ * "450 / 1,000" into a subrank, or the points past the start of Eternus, which has no subrank spans. Both come from
+ * the API: a subrank's width depends on the season of the match.
+ */
+function rankProgressLabel({ badge_progress, badge_progress_max }: PlayerEntry): string {
+  const progress = (badge_progress ?? 0).toLocaleString("en-US");
+  if (badge_progress_max == null) return `${progress} pts`;
+  return `${progress} / ${badge_progress_max.toLocaleString("en-US")}`;
 }
 
 export type ScoreboardSort = { sortBy: string; sortDirection: "desc" | "asc" };
