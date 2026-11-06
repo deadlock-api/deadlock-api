@@ -23,6 +23,7 @@ use crate::utils::parse::{comma_separated_deserialize_option, default_last_month
 use crate::utils::sql::{and_all, cached_ch_query, impl_match_info};
 
 pub(crate) mod agg;
+mod locked;
 
 fn default_phase_interval_s() -> Option<u32> {
     600.into()
@@ -1090,35 +1091,50 @@ async fn get_item_flow_stats(
     // The locks in request order, which `leave_one_out` follows.
     let locked_ids = query.locked_item_ids.clone().unwrap_or_default();
     let locked_columns = query.locked_columns.clone().unwrap_or_default();
-    let upgrades = if agg::wants_upgrade_ids(&query) {
-        upgrade_item_ids(ch_client)
-            .await
-            .inspect_err(|e| warn!("upgrade ids for the item-flow rollups failed: {e}"))
-            .ok()
+    let (nodes, edges, totals) = if locked::applies(&query) {
+        // One scan for the locked path, the baseline from the unlocked totals (see `locked`).
+        let locked_query = locked::build_locked_query(&query, &query_parts(&query));
+        let baseline_query = build_totals_query(&query_parts(&locked::unlocked(&query)));
+        debug!(?locked_query, ?baseline_query);
+        let (rows, baseline) = tokio::try_join!(
+            locked::run_locked_query(ch_client, &locked_query),
+            run_totals_query(ch_client, &baseline_query),
+        )?;
+        let (nodes, edges, totals) = locked::split(&rows, baseline, locked_ids.len());
+        (Arc::new(nodes), Arc::new(edges), totals)
     } else {
-        None
-    };
-    let (nodes_query, edges_query, totals_query) =
-        if let Some((stages, [nodes, edges, totals])) = agg::sources(&query, upgrades.as_deref()) {
-            (
-                build_nodes_agg_query(&query, stages, &nodes),
-                build_edges_agg_query(&query, &edges),
-                build_totals_agg_query(&totals, stages.columns()),
-            )
+        let upgrades = if agg::wants_upgrade_ids(&query) {
+            upgrade_item_ids(ch_client)
+                .await
+                .inspect_err(|e| warn!("upgrade ids for the item-flow rollups failed: {e}"))
+                .ok()
         } else {
-            let parts = query_parts(&query);
-            (
-                build_nodes_query(&query, &parts),
-                build_edges_query(&query, &parts),
-                build_totals_query(&parts),
-            )
+            None
         };
-    debug!(?nodes_query, ?edges_query, ?totals_query);
-    let (nodes, edges, totals) = tokio::try_join!(
-        run_nodes_query(ch_client, &nodes_query),
-        run_edges_query(ch_client, &edges_query),
-        run_totals_query(ch_client, &totals_query),
-    )?;
+        let (nodes_query, edges_query, totals_query) =
+            if let Some((stages, [nodes, edges, totals])) =
+                agg::sources(&query, upgrades.as_deref())
+            {
+                (
+                    build_nodes_agg_query(&query, stages, &nodes),
+                    build_edges_agg_query(&query, &edges),
+                    build_totals_agg_query(&totals, stages.columns()),
+                )
+            } else {
+                let parts = query_parts(&query);
+                (
+                    build_nodes_query(&query, &parts),
+                    build_edges_query(&query, &parts),
+                    build_totals_query(&parts),
+                )
+            };
+        debug!(?nodes_query, ?edges_query, ?totals_query);
+        tokio::try_join!(
+            run_nodes_query(ch_client, &nodes_query),
+            run_edges_query(ch_client, &edges_query),
+            run_totals_query(ch_client, &totals_query),
+        )?
+    };
     // avgIf over an empty population yields NaN; JSON can't represent it, so coalesce to 0.
     let finite = |v: f64| if v.is_finite() { v } else { 0.0 };
     Ok(ItemFlowStats {
@@ -1335,6 +1351,13 @@ mod proptests {
     fn sql_dump() {
         dump_sql("item_flow_stats", |q: &ItemFlowStatsQuery| {
             let parts = query_parts(q);
+            if locked::applies(q) {
+                return [
+                    locked::build_locked_query(q, &parts),
+                    build_totals_query(&query_parts(&locked::unlocked(q))),
+                ]
+                .join("\n");
+            }
             [
                 build_totals_query(&parts),
                 build_nodes_query(q, &parts),
@@ -1360,6 +1383,11 @@ mod proptests {
         #[test]
         fn item_flow_stats_build_totals_query_is_valid_sql(query: ItemFlowStatsQuery) {
             assert_valid_sql(&build_totals_query(&query_parts(&query)));
+        }
+
+        #[test]
+        fn item_flow_stats_build_locked_query_is_valid_sql(query: ItemFlowStatsQuery) {
+            assert_valid_sql(&locked::build_locked_query(&query, &query_parts(&query)));
         }
     }
 }
