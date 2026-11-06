@@ -4,7 +4,6 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
-import { API_ORIGIN } from "~/lib/constants";
 import { ensureCached } from "~/lib/prefetch-safe";
 import { isDemoAccount } from "~/lib/tracker/demo";
 
@@ -12,21 +11,16 @@ import { playableHeroesQueryOptions } from "./asset-queries";
 import { queryKeys } from "./query-keys";
 
 /**
- * A player's match history. Bot-friend accounts hit a strict rate limit on the live endpoint; a 429 falls back to the
- * stored ClickHouse history, which is not rate limited.
+ * A player's match history. Bot-friend accounts hit a strict rate limit on the live Steam lookup; the API then answers
+ * 429 with the stored ClickHouse history as the body, which is the history to show.
  */
 async function fetchPlayerMatchHistory(accountId: number): Promise<PlayerMatchHistoryEntry[]> {
   try {
     const response = await api.players_api.matchHistory({ accountId });
     return response.data;
   } catch (error) {
-    if (isAxiosError(error) && error.response?.status === 429) {
-      // The SDK has no `only_stored_history` parameter.
-      const fallback = await api.client.get<PlayerMatchHistoryEntry[]>(
-        `${API_ORIGIN}/v1/players/${accountId}/match-history`,
-        { params: { only_stored_history: true } },
-      );
-      return fallback.data;
+    if (isAxiosError(error) && error.response?.status === 429 && Array.isArray(error.response.data)) {
+      return error.response.data as PlayerMatchHistoryEntry[];
     }
     throw error;
   }
