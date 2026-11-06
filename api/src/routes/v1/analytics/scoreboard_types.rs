@@ -166,15 +166,26 @@ fn latest_rank_clause() -> String {
 
 /// The [`RANK_TUPLE`] of the player's highest rank: the highest badge, then the most progress
 /// into it. Raw progress would compare seasons on different scales.
+///
+/// Within one interval more progress is never a lower rank, so the rows only keep each
+/// interval's highest progress (packed with its display rank, which never reaches 1000, for the
+/// Eternus division), and the badges are compared on those few. Reading the badge of every row
+/// tripled the CPU of a 10-day `match_player FINAL` scan (13 → 40 s); this costs 19 s.
 fn peak_rank_clause() -> String {
-    let progress = "ifNull(player_rank_final_flat_progress, 0)";
-    let badge = rank_badge_sql(
-        progress,
-        "ifNull(player_rank_initial_display_rank, 0)",
-        "rank_interval",
+    let peaks = format!(
+        "maxMapIf([toUInt64(ifNull(rank_interval, 1))], \
+         [toUInt64(ifNull(player_rank_final_flat_progress, 0)) * 1000 \
+         + ifNull(player_rank_initial_display_rank, 0)], {RANKED_ROW})"
     );
-    let badge_progress = rank_subrank_progress_sql(progress, "rank_interval");
-    format!("argMaxIf({RANK_TUPLE}, ({badge}, {badge_progress}), {RANKED_ROW})")
+    let badge = rank_badge_sql("intDiv(v, 1000)", "v % 1000", "i");
+    let badge_progress = rank_subrank_progress_sql("intDiv(v, 1000)", "i");
+    // Without a ranked row the array is empty and `[1]` is the default tuple, whose `NULL`
+    // progress reads as no rank.
+    format!(
+        "tupleElement(arrayReverseSort(arrayMap((i, v) -> ({badge}, {badge_progress}, \
+         (toNullable(intDiv(v, 1000)), v % 1000, i)), tupleElement({peaks}, 1), \
+         tupleElement({peaks}, 2)))[1], 3)"
+    )
 }
 
 /// The badge for the rank tuple `rank` (see [`RANK_TUPLE`]), the progress into it and the width

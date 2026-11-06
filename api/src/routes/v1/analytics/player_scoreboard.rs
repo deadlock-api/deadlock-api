@@ -483,12 +483,16 @@ mod tests {
         assert!(deduped.contains(
             ", any(player_rank_initial_display_rank) as player_rank_initial_display_rank"
         ));
-        // The peak is the highest badge on each row's own ladder, then the most progress into it;
-        // the Eternus division and the ladder come from the row that set it.
+        // The peak is the highest badge on each interval's own ladder, then the most progress
+        // into it; the Eternus division comes from the row that set the interval's peak.
         assert!(deduped.contains(
-            "rank_interval), (rankBadge(ifNull(player_rank_final_flat_progress, 0), \
-             ifNull(player_rank_initial_display_rank, 0), rank_interval), \
-             rankSubrankProgress(ifNull(player_rank_final_flat_progress, 0), rank_interval)),"
+            "maxMapIf([toUInt64(ifNull(rank_interval, 1))], \
+             [toUInt64(ifNull(player_rank_final_flat_progress, 0)) * 1000 \
+             + ifNull(player_rank_initial_display_rank, 0)],"
+        ));
+        assert!(deduped.contains(
+            "arrayMap((i, v) -> (rankBadge(intDiv(v, 1000), v % 1000, i), \
+             rankSubrankProgress(intDiv(v, 1000), i),"
         ));
 
         let unscoped = build_query(&PlayerScoreboardQuery {
