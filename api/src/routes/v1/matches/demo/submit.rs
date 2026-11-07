@@ -20,12 +20,16 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
 use crate::utils::valve_replay::replay_file_url;
 
+/// The global quota is sized by the host's 1 Gbit/s inbound link: each job downloads a ~240 MB
+/// demo, and only ~60% of submits become jobs (the rest are deduplicated, invalid or have no
+/// demo). 1200 submits/h is ~45 MB/s of downloads, on top of up to ~55 MB/s of other inbound
+/// traffic in the busiest hours.
 const RATE_LIMIT: RateLimit = RateLimit::new(
     "demo_query",
     &[
         Quota::new(Scope::Ip, 200, Duration::from_hours(1)),
         Quota::new(Scope::Key, 400, Duration::from_hours(1)),
-        Quota::new(Scope::Global, 600, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 1200, Duration::from_hours(1)),
     ],
 );
 
@@ -65,7 +69,7 @@ pub(super) struct DemoQueryJobResponse {
     description = describe(
         "
 Submit a SQL query against a match's demo file. The work (download + decompress + parse +
-query) takes ~10s on average and up to about a minute, so this is asynchronous: the endpoint returns a `job_id` you poll via
+query) takes ~13s on average and up to about a minute, so this is asynchronous: the endpoint returns a `job_id` you poll via
 `/demo/query/{job_id}`. Once done, the status response carries a public URL to the result
 artifact (Parquet or NDJSON).
 

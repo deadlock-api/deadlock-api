@@ -26,17 +26,18 @@ use crate::utils::valve_replay::is_zstd;
 
 /// Max jobs waiting in the channel before submits get a 429.
 const MAX_QUEUE_DEPTH: usize = 128;
-/// Concurrent jobs. Each one holds the full demo in memory (~350 MB decompressed), so keep
-/// this small. Jobs are download-bound (~7.5 s of a ~10 s job is the download from Valve, the
-/// parse ~0.6 s) and parse on the fixed-size demo parse pool, so extra slots overlap downloads
-/// without raising peak parse CPU.
-pub(super) const MAX_CONCURRENT: usize = 4;
+/// Concurrent jobs. Each one holds the full demo in memory (~240 MB bzip2 + ~390 MB decompressed
+/// at the median), so keep this small. Jobs are download-bound (~10 s of a ~13 s job is the
+/// download from Valve, the parse ~0.8 s) and parse on the fixed-size demo parse pool, so extra
+/// slots overlap downloads without raising peak parse CPU. Bursts already fill the host's 1 Gbit/s
+/// link with ~4 downloads at once, so more than ~6 slots would only split the bandwidth.
+pub(super) const MAX_CONCURRENT: usize = 6;
 /// Wall-time budget for one job, download through upload, so a pathological query cannot hold
 /// one of the [`MAX_CONCURRENT`] slots indefinitely. Real jobs finish in under 5 minutes (p99
 /// ~1 min; the slowest are a 4 min download or a 2 min query).
 const JOB_TIMEOUT: Duration = Duration::from_mins(10);
 /// Rough per-job duration used purely for the status endpoint's wait estimate.
-pub(super) const AVG_JOB_SECONDS: u64 = 10;
+pub(super) const AVG_JOB_SECONDS: u64 = 13;
 /// Multipart part size. A whole-artifact `put` cannot finish inside the `object_store`
 /// 30s request timeout once an extract reaches a few hundred MB (NDJSON routinely does),
 /// so parts are sized to upload well inside that budget and to be retried individually.
