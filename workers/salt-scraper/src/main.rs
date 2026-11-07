@@ -64,6 +64,11 @@ enum FetchError {
 /// `match_ids` fit in `u32`.
 const MAX_VALID_MATCH_ID: &str = "4294967295";
 
+/// Minutes after a match ends before it is fetched. The GC hands out replay salts within a
+/// minute of the end; the wait only gives community uploads (~35% of prio matches within
+/// 15 minutes) the chance to spare a bot call.
+const MIN_MINUTES_SINCE_END: u32 = 15;
+
 static SALTS_COOLDOWN_MILLIS: LazyLock<u64> =
     LazyLock::new(|| service_utils::env_or("SALTS_COOLDOWN_MILLIS", 24 * 60 * 60 * 1000 / 50));
 /// Shortest time between the starts of two cycles. Each cycle runs a full-history anti-join,
@@ -131,7 +136,10 @@ async fn main() -> Result<(), Error> {
             // Scans full history via LEFT ANTI JOIN against a merged, bounded anti-set.
             // The `match_id < MAX_VALID_MATCH_ID` bound on match_salts strips garbage sentinels
             // so the join side stays dense. A match whose every candidate salt has been written off
-            // counts as uncovered: the GC is the only source that can replace them.
+            // counts as uncovered: the GC is the only source that can replace them. Once the GC
+            // has answered (a `salt-scraper:` or `api-fetch:` row), it has nothing better to give:
+            // it returns the same salts, so a written-off answer means the replay is gone, and
+            // asking again would only burn a bot call every cycle.
             let prio_query = format!(
                 "
             SELECT pmh.match_id, groupArray(pmh.account_id) AS participants
@@ -142,12 +150,14 @@ async fn main() -> Result<(), Error> {
                 GROUP BY match_id
                 HAVING uniqExact((cluster_id, metadata_salt))
                      > uniqExactIf((cluster_id, metadata_salt), failed_at IS NOT NULL)
+                    OR countIf(username LIKE 'salt-scraper:%' OR username LIKE 'api-fetch:%') > 0
                 UNION DISTINCT
                 SELECT match_id FROM match_player WHERE match_id >= 31247321
             ) ex ON ex.match_id = pmh.match_id
             WHERE pmh.account_id IN ?
               AND pmh.match_mode IN ('Ranked', 'Unranked')
-              AND pmh.start_time < now() - INTERVAL 2 HOUR
+              AND pmh.start_time + pmh.match_duration_s
+                    < now() - INTERVAL {MIN_MINUTES_SINCE_END} MINUTE
               AND pmh.match_id >= 31247321
             GROUP BY pmh.match_id
             ORDER BY pmh.match_id DESC
