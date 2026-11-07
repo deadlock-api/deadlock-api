@@ -133,26 +133,35 @@ async fn main() -> Result<(), Error> {
                 continue;
             }
 
-            // Scans full history via LEFT ANTI JOIN against a merged, bounded anti-set.
-            // The `match_id < MAX_VALID_MATCH_ID` bound on match_salts strips garbage sentinels
-            // so the join side stays dense. A match whose every candidate salt has been written off
-            // counts as uncovered: the GC is the only source that can replace them. Once the GC
-            // has answered (a `salt-scraper:` or `api-fetch:` row), it has nothing better to give:
-            // it returns the same salts, so a written-off answer means the replay is gone, and
-            // asking again would only burn a bot call every cycle.
+            // Anti-joins the prio accounts' matches against the ones already covered, looking up
+            // only those candidates' match_ids in match_salts and match_player rather than
+            // aggregating the whole tables. The `match_id < MAX_VALID_MATCH_ID` bound strips
+            // garbage sentinels. A match whose every candidate salt has been written off counts as
+            // uncovered: the GC is the only source that can replace them. Once the GC has answered
+            // (a `salt-scraper:` or `api-fetch:` row), it has nothing better to give: it returns
+            // the same salts, so a written-off answer means the replay is gone, and asking again
+            // would only burn a bot call every cycle.
             let prio_query = format!(
                 "
+            WITH candidates AS (
+                SELECT match_id FROM player_match_history
+                WHERE account_id IN ?
+                  AND match_mode IN ('Ranked', 'Unranked')
+                  AND start_time + match_duration_s
+                        < now() - INTERVAL {MIN_MINUTES_SINCE_END} MINUTE
+                  AND match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
+            )
             SELECT pmh.match_id, groupArray(pmh.account_id) AS participants
             FROM player_match_history pmh
             LEFT ANTI JOIN (
                 SELECT match_id FROM match_salts
-                WHERE match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
+                WHERE match_id IN candidates
                 GROUP BY match_id
                 HAVING uniqExact((cluster_id, metadata_salt))
                      > uniqExactIf((cluster_id, metadata_salt), failed_at IS NOT NULL)
                     OR countIf(username LIKE 'salt-scraper:%' OR username LIKE 'api-fetch:%') > 0
                 UNION DISTINCT
-                SELECT match_id FROM match_player WHERE match_id >= 31247321
+                SELECT match_id FROM match_player WHERE match_id IN candidates
             ) ex ON ex.match_id = pmh.match_id
             WHERE pmh.account_id IN ?
               AND pmh.match_mode IN ('Ranked', 'Unranked')
@@ -166,6 +175,7 @@ async fn main() -> Result<(), Error> {
             );
             let pending_matches = match ch_client
                 .query(&prio_query)
+                .bind(&account_ids_u32)
                 .bind(&account_ids_u32)
                 .fetch_all::<PendingMatch>()
                 .await
