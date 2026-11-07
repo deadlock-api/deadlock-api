@@ -45,6 +45,15 @@ const SALTS_JOB_COOLDOWN: Duration = Duration::from_secs(24 * 60 * 60 / 50);
 /// `Cache-Control` of a response whose salts can no longer change: one week, as for metadata.
 const SETTLED_CACHE_CONTROL: &str = "public, max-age=604800";
 
+/// `match_salts.username` prefix of salts this route fetched from Steam.
+const API_FETCH_USERNAME_PREFIX: &str = "api-fetch:";
+
+/// Username prefixes that mark salts as answered by Steam: this route's and the salt scraper's.
+/// The salt scraper reads them to tell GC answers from uploads, so `POST /v1/matches/salts`
+/// rejects them.
+pub(super) const RESERVED_USERNAME_PREFIXES: [&str; 2] =
+    [API_FETCH_USERNAME_PREFIX, "salt-scraper:"];
+
 #[derive(Debug, Clone, Row, Deserialize)]
 pub(crate) struct StoredSaltsRow {
     pub(crate) match_id: u64,
@@ -356,7 +365,7 @@ pub(super) async fn fetch_match_salts(
             return Err(e.into());
         }
     };
-    let username = format!("api-fetch:{}", result.username);
+    let username = format!("{API_FETCH_USERNAME_PREFIX}{}", result.username);
     let salts: SteamProxyReply<CMsgClientToGcGetMatchMetaDataResponse> = result.try_into()?;
     let salts = salts.msg;
     if salts.result == Some(EResult::KEResultInvalidMatch as i32) {

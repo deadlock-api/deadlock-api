@@ -9,11 +9,19 @@ use tracing::debug;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
-use crate::routes::v1::matches::salts::insert_salts;
+use crate::routes::v1::matches::salts::{RESERVED_USERNAME_PREFIXES, insert_salts};
 use crate::routes::v1::matches::types::ClickhouseSalts;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 
 const MAX_SALTS_PER_REQUEST: usize = 1000;
+
+/// Whether `username` claims one of the prefixes reserved for salts fetched from Steam.
+fn is_reserved_username(username: &str) -> bool {
+    let username = username.trim_start().to_ascii_lowercase();
+    RESERVED_USERNAME_PREFIXES
+        .iter()
+        .any(|prefix| username.starts_with(prefix))
+}
 
 #[utoipa::path(
     post,
@@ -37,7 +45,8 @@ The endpoint accepts a list of MatchSalts objects, which contain the following f
 - `cluster_id`: The cluster ID
 - `metadata_salt`: The metadata salt
 - `replay_salt`: The replay salt
-- `username`: The username of the person who submitted the match (defaults to the request's `User-Agent`)
+- `username`: The username of the person who submitted the match (defaults to the request's `User-Agent`).
+  Usernames starting with `api-fetch:` or `salt-scraper:` are reserved and rejected.
 
     ",
         DOCUMENTED_DEFAULT,
@@ -72,6 +81,23 @@ pub(super) async fn ingest_salts(
         .and_then(|v| v.to_str().ok())
         .map(str::trim)
         .filter(|ua| !ua.is_empty());
+
+    let claims_reserved = match_salts.iter().any(|salt| {
+        salt.username
+            .as_deref()
+            .filter(|u| !u.trim().is_empty())
+            .or(user_agent)
+            .is_some_and(is_reserved_username)
+    });
+    if claims_reserved {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "Usernames starting with {} are reserved",
+                RESERVED_USERNAME_PREFIXES.join(" or ")
+            ),
+        ));
+    }
 
     let match_ids: Vec<u64> = match_salts.iter().map(|s| s.match_id).collect();
     let existing: HashMap<u64, (bool, bool)> = state
@@ -121,4 +147,20 @@ pub(super) async fn ingest_salts(
     Ok(Json(
         json!({ "status": "success", "salts_ingested": count }),
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn reserved_usernames_are_recognized() {
+        assert!(is_reserved_username("api-fetch:bot1"));
+        assert!(is_reserved_username("salt-scraper:bot1"));
+        assert!(is_reserved_username("  Salt-Scraper:bot1"));
+        assert!(is_reserved_username("API-FETCH:"));
+        assert!(!is_reserved_username("Mod Manager"));
+        assert!(!is_reserved_username("my-salt-scraper:bot1"));
+        assert!(!is_reserved_username("api-fetch"));
+    }
 }
