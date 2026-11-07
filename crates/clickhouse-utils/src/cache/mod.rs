@@ -12,14 +12,13 @@
 //! expires when the query result it holds would have expired.
 //!
 //! Errors are not cached, except that a query which ran into the timeout fails fast with the same
-//! error for a cooldown ([`QueryCache::DEFAULT_TIMEOUT_COOLDOWN`]) instead of running again.
-//! Clients retry timed-out queries, and every retry burns the same CPU and times out again under
-//! the load it adds to. Both the timeout and the fail-fast answers carry the time left until the
+//! error for a cooldown ([`TimeoutCooldown`]) instead of running again. Both the timeout and the fail-fast answers carry the time left until the
 //! query runs again ([`QueryError::TimedOut`]).
 //!
 //! Every answer records its entry's deadline for [`expiry::track_expiry`], so an HTTP cache in
 //! front can keep a response until the results behind it expire.
 
+mod cooldown;
 mod disk;
 pub mod expiry;
 mod memory;
@@ -28,8 +27,9 @@ use core::any::TypeId;
 use core::marker::PhantomData;
 use core::time::Duration;
 use std::sync::{Arc, OnceLock};
-use std::time::{Instant, SystemTime};
+use std::time::SystemTime;
 
+pub use cooldown::TimeoutCooldown;
 pub use disk::DiskTier;
 use memory::Entry;
 pub use memory::MemoryTier;
@@ -39,9 +39,6 @@ use tracing::warn;
 
 use crate::admission::QueryError;
 use crate::is_query_timeout;
-
-/// At most this many timed-out queries are remembered per cache.
-const TIMEOUT_COOLDOWN_ENTRIES: u64 = 10_000;
 
 /// The process-wide tiers, see [`Tiers::install`].
 static GLOBAL: OnceLock<Tiers> = OnceLock::new();
@@ -78,9 +75,7 @@ pub struct QueryCache<T> {
     /// `None` for the process-wide tiers, looked up on each query so a cache built before
     /// [`Tiers::install`] still uses them.
     tiers: Option<Tiers>,
-    timeout_cooldown: Duration,
-    /// The timeout errors of recently timed-out queries and when their cooldown ends.
-    timed_out: moka::future::Cache<u128, (Arc<clickhouse::error::Error>, Instant)>,
+    timed_out: TimeoutCooldown,
     row: PhantomData<fn() -> T>,
 }
 
@@ -89,7 +84,7 @@ impl<T> core::fmt::Debug for QueryCache<T> {
         f.debug_struct("QueryCache")
             .field("name", &self.name)
             .field("ttl", &self.ttl)
-            .field("timeout_cooldown", &self.timeout_cooldown)
+            .field("timeout_cooldown", &self.timed_out.cooldown())
             .finish_non_exhaustive()
     }
 }
@@ -98,11 +93,8 @@ impl<T> QueryCache<T>
 where
     T: Serialize + DeserializeOwned + Send + Sync + 'static,
 {
-    /// How long a query that ran into the timeout fails fast instead of running again. Replayed
-    /// on 24 h of the API's production queries (2026-10-26): 10 minutes answers 42% of the
-    /// timeouts at once instead of after 20 s and saves 5% of `ClickHouse` CPU; 724 of the 3,447
-    /// fail-fast answers (21%) would have succeeded on the rerun.
-    pub const DEFAULT_TIMEOUT_COOLDOWN: Duration = Duration::from_mins(10);
+    /// How long a query that ran into the timeout fails fast instead of running again.
+    pub const DEFAULT_TIMEOUT_COOLDOWN: Duration = TimeoutCooldown::DEFAULT;
 
     /// A cache keeping results for `ttl` in the process-wide [`Tiers`]. `name` (a path like
     /// `module_path!()`) must be unique per cache and stable across releases: it names the
@@ -115,8 +107,7 @@ where
             name,
             ttl,
             tiers: None,
-            timeout_cooldown: Self::DEFAULT_TIMEOUT_COOLDOWN,
-            timed_out: timed_out_cache(Self::DEFAULT_TIMEOUT_COOLDOWN),
+            timed_out: TimeoutCooldown::default(),
             row: PhantomData,
         }
     }
@@ -132,8 +123,7 @@ where
     /// [`Self::DEFAULT_TIMEOUT_COOLDOWN`].
     #[must_use]
     pub fn with_timeout_cooldown(mut self, cooldown: Duration) -> Self {
-        self.timeout_cooldown = cooldown;
-        self.timed_out = timed_out_cache(cooldown);
+        self.timed_out = TimeoutCooldown::new(cooldown);
         self
     }
 
@@ -167,13 +157,9 @@ where
         let query_key = query_key(query);
         let key = (TypeId::of::<T>(), self.id, query_key);
         if !tiers.memory.entries.contains_key(&key)
-            && let Some((error, until)) = self.timed_out.get(&query_key).await
+            && let Some((error, retry_after)) = self.timed_out.check(query_key).await
         {
-            metrics::counter!("ch_cache_timeout_fail_fast").increment(1);
-            return Err(QueryError::TimedOut {
-                error,
-                retry_after: until.saturating_duration_since(Instant::now()),
-            });
+            return Err(QueryError::TimedOut { error, retry_after });
         }
         let disk = tiers.disk.as_deref();
         let result = tiers
@@ -215,30 +201,12 @@ where
             });
         match result {
             Err(QueryError::Clickhouse(error)) if is_query_timeout(&error) => {
-                // A cooldown past `Instant`'s range (absurd) ends right away, like the moka TTL.
-                let until = Instant::now()
-                    .checked_add(self.timeout_cooldown)
-                    .unwrap_or_else(Instant::now);
-                self.timed_out
-                    .insert(query_key, (Arc::clone(&error), until))
-                    .await;
-                Err(QueryError::TimedOut {
-                    error,
-                    retry_after: self.timeout_cooldown,
-                })
+                let retry_after = self.timed_out.start(query_key, Arc::clone(&error)).await;
+                Err(QueryError::TimedOut { error, retry_after })
             }
             result => result,
         }
     }
-}
-
-fn timed_out_cache(
-    cooldown: Duration,
-) -> moka::future::Cache<u128, (Arc<clickhouse::error::Error>, Instant)> {
-    moka::future::Cache::builder()
-        .max_capacity(TIMEOUT_COOLDOWN_ENTRIES)
-        .time_to_live(cooldown)
-        .build()
 }
 
 /// Cache key of a query string: its 128-bit xxh3 hash.
