@@ -34,7 +34,7 @@ use crate::routes::v1::analytics::common_filters::is_non_empty;
 use crate::routes::v1::analytics::rollup_window::{
     Coverage, DaySplit, EdgeRows, Rollup, RollupFilters,
 };
-use crate::services::cohort_agg_refresh::HORIZON_DAYS;
+use crate::services::cohort_agg_refresh::{HORIZON_DAYS, Slice};
 use crate::utils::match_modes::{GameMode, MatchMode};
 
 /// Which of the three rollups.
@@ -155,6 +155,16 @@ impl Agg {
                 "default.item_flow_brawl_totals_inc_agg"
             }
         }
+    }
+
+    /// Whether the refresh job builds a day in slices of `include_item_id` (see
+    /// `cohort_agg_refresh::FAN_OUT_BUILD_SLICES`): the normal-mode include edges, ~14M rows a day,
+    /// spilled every build. The other include rollups never did.
+    pub(crate) const fn sliced_build(self) -> bool {
+        matches!(
+            (self.kind, self.scope),
+            (Kind::Edges, Scope::Include(Stages::Normal))
+        )
     }
 
     pub(crate) const fn staging(self) -> &'static str {
@@ -313,9 +323,10 @@ impl Agg {
 /// of `grain_select`/`group_by`: a window's partial days, the matches ingested after their day was
 /// built, or a whole rollup day.
 ///
-/// `join_includes` builds an include rollup's day: each player row once per upgrade it bought,
-/// as `include_item_id`. A request's own rows instead come from the item's buyers alone, which
-/// its `where_clause` selects, and carry the item as a constant `include_item_id` expression.
+/// `join_includes` builds an include rollup's day, or the given [`Slice`] of it: each player row
+/// once per upgrade it bought, as `include_item_id`. A request's own rows (`None`) instead come
+/// from the item's buyers alone, which its `where_clause` selects, and carry the item as a
+/// constant `include_item_id` expression.
 #[expect(
     clippy::too_many_lines,
     reason = "one SQL template per rollup and stages; helpers would pass the same fragments around"
@@ -327,7 +338,7 @@ fn agg_rows(
         grain_select,
         group_by,
     }: &EdgeRows,
-    join_includes: bool,
+    join_includes: Option<Slice>,
 ) -> String {
     let stages = agg.stages();
     let parts = query_parts(&stages.query());
@@ -350,16 +361,17 @@ fn agg_rows(
         "match_mode IN ('Ranked', 'Unranked') AND game_mode = {} AND account_id != 0 AND {where_clause}",
         stages.game_mode()
     );
-    let (owned, join_owned, join_distinct) =
-        if join_includes && matches!(agg.scope, Scope::Include(_)) {
-            (
-                ", arrayDistinct(upgrade_item_ids) AS owned",
-                format!("\nARRAY JOIN owned AS {INCLUDE}"),
-                format!("\nARRAY JOIN arrayDistinct(upgrade_item_ids) AS {INCLUDE}"),
-            )
-        } else {
-            ("", String::new(), String::new())
-        };
+    let (owned, join_owned, join_distinct) = match join_includes {
+        Some(slice) if matches!(agg.scope, Scope::Include(_)) => (
+            ", arrayDistinct(upgrade_item_ids) AS owned",
+            format!("\nARRAY JOIN {} AS {INCLUDE}", slice.of("owned")),
+            format!(
+                "\nARRAY JOIN {} AS {INCLUDE}",
+                slice.of("arrayDistinct(upgrade_item_ids)")
+            ),
+        ),
+        _ => ("", String::new(), String::new()),
+    };
     // Street brawl stages are rounds, see `BrawlParts`.
     if let Some(brawl) = &parts.brawl {
         let round_ends_select = &brawl.round_ends_select;
@@ -471,8 +483,9 @@ PREWHERE {prewhere}{group_by}"
 }
 
 /// The rows of rollup `agg` for the matches selected by `since_clause`, at the full grain and in
-/// the table's column order. The refresh job builds the rollup's days with it.
-pub(crate) fn agg_select_body(agg: Agg, since_clause: &str) -> String {
+/// the table's column order, restricted to `slice` of an include rollup's items. The refresh job
+/// builds the rollup's days with it.
+pub(crate) fn agg_select_body(agg: Agg, since_clause: &str, slice: Slice) -> String {
     agg_rows(
         agg,
         &EdgeRows {
@@ -490,7 +503,7 @@ pub(crate) fn agg_select_body(agg: Agg, since_clause: &str) -> String {
                 .collect::<Vec<_>>()
                 .join(", "),
         },
-        true,
+        Some(slice),
     )
 }
 
@@ -612,7 +625,7 @@ pub(super) fn sources(
             (Kind::Totals, _) => "",
         };
         agg.rollup(&grain, &measures)
-            .source(&split, &filters, outer, |edge| agg_rows(agg, edge, false))
+            .source(&split, &filters, outer, |edge| agg_rows(agg, edge, None))
     });
     Some((stages, sources))
 }
@@ -625,7 +638,7 @@ mod tests {
     #[test]
     fn rollup_rows_have_the_table_column_order() {
         for agg in Agg::ALL {
-            let body = agg_select_body(agg, "TRUE");
+            let body = agg_select_body(agg, "TRUE", Slice::ALL);
             assert_parses(&body);
             let outer = body
                 .split("\nFROM ")
@@ -660,7 +673,8 @@ mod tests {
                 max_average_badge: q.max_average_badge,
                 ..normal()
             };
-            let builds = Kind::ALL.map(|kind| agg_select_body(Agg::new(kind, Scope::All), "TRUE"));
+            let builds = Kind::ALL
+                .map(|kind| agg_select_body(Agg::new(kind, Scope::All), "TRUE", Slice::ALL));
             let sources = sources(&query, None)
                 .map_or_else(|| "-- not served".to_owned(), |(_, s)| s.join("\n"));
             format!("{}\n{sources}", builds.join("\n"))
@@ -743,7 +757,7 @@ mod tests {
     #[test]
     fn include_builds_count_each_owned_upgrade() {
         for agg in Agg::ALL {
-            let body = agg_select_body(agg, "TRUE");
+            let body = agg_select_body(agg, "TRUE", Slice::ALL);
             match agg.scope {
                 Scope::All => assert!(!body.contains("include_item_id"), "{agg:?}"),
                 Scope::Include(stages) => {
@@ -765,7 +779,7 @@ mod tests {
 
     #[test]
     fn edges_rows_define_the_upgrade_positions() {
-        let body = agg_select_body(Agg::new(Kind::Edges, Scope::All), "TRUE");
+        let body = agg_select_body(Agg::new(Kind::Edges, Scope::All), "TRUE", Slice::ALL);
         assert!(body.starts_with("WITH (SELECT arraySort(groupArray(id))"));
         assert!(body.contains(") AS u_ids\nSELECT"));
         assert!(body.contains("toUInt32(u_ids[from_pos]) AS from_item_id"));

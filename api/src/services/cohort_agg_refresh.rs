@@ -49,6 +49,46 @@ const PER_DAY_MAX_MEMORY_BYTES: u64 = 15_032_385_536;
 /// the other rollups' instead of holding them stale for ~5 h.
 const INCLUDE_ROLLUP_DAYS_PER_RUN: usize = 6;
 
+/// Slices a day of the cohort rollups and the normal-mode include edges rollup is built in. One
+/// INSERT expands each player row by every item it owns (cohort) or bought (include): ~930M rows
+/// into ~5.4M groups for a cohort day. Each of the 8 threads then holds its own table for nearly
+/// every group: ~31 GiB of arena, ~10 GiB spilled past [`GROUP_BY_SPILL_BYTES`]. Measured on prod
+/// 2026-11-08, building a day in 4 slices of the fanned-out ids (`id % 4`) never spilled, with the
+/// same rows: CPU 1,103 -> 651 s (time cohort), 994 -> 668 s (net-worth cohort), 1,403 -> 926 s
+/// (include edges), and peak memory 7.5 -> 4.4 GiB. 2 slices still spilled (982 CPU-s), 8 were no
+/// cheaper than 4.
+const FAN_OUT_BUILD_SLICES: u32 = 4;
+
+/// One of `count` disjoint shares of a build's fanned-out item ids, those with `id % count =
+/// index`. The sliced id is a grain column, so the slices' rows are disjoint and together are the
+/// unsliced build's.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) struct Slice {
+    count: u32,
+    index: u32,
+}
+
+impl Slice {
+    /// Every id: the unsliced expression.
+    pub(crate) const ALL: Self = Self { count: 1, index: 0 };
+
+    fn all_of(count: u32) -> impl Iterator<Item = Self> {
+        (0..count.max(1)).map(move |index| Self { count, index })
+    }
+
+    /// The array expression `ids` restricted to this slice.
+    pub(crate) fn of(self, ids: &str) -> String {
+        if self.count <= 1 {
+            ids.to_owned()
+        } else {
+            format!(
+                "arrayFilter(slice_id -> slice_id % {} = {}, {ids})",
+                self.count, self.index
+            )
+        }
+    }
+}
+
 /// Floor on the per-day rebuild threshold, so sparse horizon-edge days still build.
 const MIN_NEW_MATCHES: u64 = 10;
 
@@ -240,7 +280,7 @@ pub(crate) const ITEM_ROLLUP_MEASURES: &str = "count() AS n_matches,
 /// The purchase side reads `upgrades.*`, which excludes corrupted purchases (migration 42);
 /// the cohort side keeps the raw `items.item_id` so it matches the `hasAll(items.item_id, ...)`
 /// presence filter of the base query.
-fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
+fn select_body(spec: &CohortSpec, since_clause: &str, slice: Slice) -> String {
     let (bucket_select, bucket_col, extra_array_join) = match spec.source {
         Source::Cohort {
             bucket_select,
@@ -254,8 +294,11 @@ fn select_body(spec: &CohortSpec, since_clause: &str) -> String {
         Source::ItemStats => return item_stats::item_stats_agg_select_body(since_clause),
         Source::GameStats => return game_stats::agg_select_body(since_clause),
         Source::HeroPairs => return hero_pair_agg::agg_select_body(since_clause),
-        Source::ItemFlow(agg) => return item_flow_agg::agg_select_body(agg, since_clause),
+        Source::ItemFlow(agg) => {
+            return item_flow_agg::agg_select_body(agg, since_clause, slice);
+        }
     };
+    let cohort_item_ids = slice.of("arrayDistinct(items.item_id)");
     format!(
         "SELECT
     game_mode,
@@ -270,7 +313,7 @@ ARRAY JOIN
     `upgrades.item_id` AS item_id,
     `upgrades.game_time_s` AS buy_time,
     `upgrades.sold_time_s` AS sold_time{extra_array_join}
-ARRAY JOIN arrayDistinct(items.item_id) AS cohort_item_id
+ARRAY JOIN {cohort_item_ids} AS cohort_item_id
 WHERE match_mode IN ('Ranked', 'Unranked')
     AND {since_clause}
     AND duration_s > 0
@@ -286,7 +329,7 @@ pub(crate) fn cohort_rollup_rows(table: &str) -> Option<impl Fn(&str) -> String>
     let spec = cohort_specs()
         .into_iter()
         .find(|spec| spec.table == table && matches!(spec.source, Source::Cohort { .. }))?;
-    Some(move |since_clause: &str| select_body(&spec, since_clause))
+    Some(move |since_clause: &str| select_body(&spec, since_clause, Slice::ALL))
 }
 
 pub(crate) fn enemy_hero_select_body(since_clause: &str, enemy_hero_id: Option<u32>) -> String {
@@ -466,14 +509,17 @@ async fn rebuild_day(
         .query(&format!("TRUNCATE TABLE {}", spec.staging))
         .execute()
         .await?;
-    let body = select_body(spec, &day_window_clause(day, built_through));
-    let insert = format!(
-        "INSERT INTO {staging} SELECT *, toDateTime({built_through}) AS {BUILT_THROUGH} FROM ({body}) SETTINGS max_bytes_before_external_group_by = \
-         {GROUP_BY_SPILL_BYTES}, max_threads = 8, max_memory_usage = {PER_DAY_MAX_MEMORY_BYTES}, \
-         log_comment = '{log_comment}'",
-        staging = spec.staging,
-    );
-    ch_client.query(&insert).execute().await?;
+    let window = day_window_clause(day, built_through);
+    for slice in Slice::all_of(spec.build_slices()) {
+        let body = select_body(spec, &window, slice);
+        let insert = format!(
+            "INSERT INTO {staging} SELECT *, toDateTime({built_through}) AS {BUILT_THROUGH} FROM ({body}) SETTINGS max_bytes_before_external_group_by = \
+             {GROUP_BY_SPILL_BYTES}, max_threads = 8, max_memory_usage = {PER_DAY_MAX_MEMORY_BYTES}, \
+             log_comment = '{log_comment}'",
+            staging = spec.staging,
+        );
+        ch_client.query(&insert).execute().await?;
+    }
     for staged_day in distinct_days(ch_client, spec.staging).await? {
         ch_client
             .query(&format!(
@@ -572,6 +618,15 @@ fn history_due(
 }
 
 impl CohortSpec {
+    /// The [`Slice`]s a day is built in.
+    const fn build_slices(&self) -> u32 {
+        match self.source {
+            Source::Cohort { .. } => FAN_OUT_BUILD_SLICES,
+            Source::ItemFlow(agg) if agg.sliced_build() => FAN_OUT_BUILD_SLICES,
+            _ => 1,
+        }
+    }
+
     /// Whether this is an include item-flow rollup (see [`include_rollup_due`]).
     const fn is_include_rollup(&self) -> bool {
         matches!(
@@ -745,6 +800,41 @@ mod tests {
     use super::*;
 
     const DAY: u32 = 86_400;
+
+    #[test]
+    fn sliced_builds_partition_the_fanned_out_ids() {
+        for spec in cohort_specs() {
+            let whole = select_body(&spec, "TRUE", Slice::ALL);
+            let slices = spec.build_slices();
+            assert!(!whole.contains("slice_id"), "{}", spec.table);
+            for slice in Slice::all_of(slices) {
+                let body = select_body(&spec, "TRUE", slice);
+                crate::utils::proptest_utils::assert_parses(&body);
+                if slices > 1 {
+                    assert!(
+                        body.contains(&format!("slice_id % {slices} = {}", slice.index)),
+                        "{}",
+                        spec.table
+                    );
+                } else {
+                    assert_eq!(body, whole, "{}", spec.table);
+                }
+            }
+        }
+        let sliced: Vec<_> = cohort_specs()
+            .into_iter()
+            .filter(|spec| spec.build_slices() > 1)
+            .map(|spec| spec.table)
+            .collect();
+        assert_eq!(
+            sliced,
+            [
+                "default.item_cohort_stats_time_agg_v2",
+                "default.item_cohort_stats_net_worth_agg_v2",
+                "default.item_flow_edges_inc_agg",
+            ]
+        );
+    }
 
     fn days(names: &[&str]) -> Vec<String> {
         names.iter().map(|&d| d.to_owned()).collect()
