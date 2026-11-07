@@ -1,8 +1,8 @@
 use axum::body::{Body, Bytes};
-use clickhouse::query::BytesCursor;
 use serde::{Deserialize, Serialize};
-use tokio::io::Lines;
 use utoipa::ToSchema;
+
+use crate::services::ch_cost::TrackedLines;
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Deserialize, Serialize, ToSchema)]
 #[serde(rename_all = "lowercase")]
@@ -34,7 +34,7 @@ fn chunk(prefix: Option<u8>, line: &str, suffix: Option<u8>) -> Bytes {
 /// Streams `lines` as a JSON array or NDJSON body; `None` if there are no rows. `hold` is kept
 /// alive until the body is fully sent or dropped (e.g. a `ClickHouse` admission permit).
 pub(crate) async fn stream_rows(
-    mut lines: Lines<BytesCursor>,
+    mut lines: TrackedLines,
     format: ResponseFormat,
     hold: impl Send + 'static,
 ) -> std::io::Result<Option<Body>> {

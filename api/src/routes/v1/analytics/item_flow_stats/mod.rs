@@ -18,6 +18,7 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{and_all, cached_ch_query, impl_match_info};
@@ -1025,7 +1026,7 @@ async fn upgrade_item_ids(
 ) -> clickhouse::error::Result<Arc<HashSet<u32>>> {
     let ids = ch_client
         .query("SELECT DISTINCT toUInt32(id) FROM items WHERE type = 'upgrade' SETTINGS log_comment = 'item_flow_stats_upgrade_ids'")
-        .fetch_all::<u32>()
+        .fetch_all_tracked::<u32>()
         .await?;
     Ok(Arc::new(ids.into_iter().collect()))
 }
@@ -1076,7 +1077,7 @@ async fn fetch_totals(
 ) -> clickhouse::error::Result<ItemFlowTotalsRow> {
     Ok(ch_client
         .query(query_str)
-        .fetch_all::<ItemFlowTotalsRow>()
+        .fetch_all_tracked::<ItemFlowTotalsRow>()
         .await?
         .into_iter()
         .next()

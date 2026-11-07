@@ -1,4 +1,5 @@
 use crate::services::ch_admission;
+use crate::services::ch_cost::{TrackedLines, TrackedQuery as _};
 use crate::utils::sql::{
     DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, id_list, where_clause,
 };
@@ -11,13 +12,11 @@ use axum::http::{StatusCode, header};
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use cached::macros::cached;
-use clickhouse::query::BytesCursor;
 use clickhouse_utils::cache::{TimeoutCooldown, query_key};
 use clickhouse_utils::is_query_timeout;
 use itertools::Itertools as _;
 use serde::Deserialize;
 use strum::Display;
-use tokio::io::Lines;
 use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
@@ -419,7 +418,7 @@ async fn match_player_columns(
         .query(
             "SELECT name FROM system.columns WHERE database = currentDatabase() AND table = 'match_player'",
         )
-        .fetch_all::<String>()
+        .fetch_all_tracked::<String>()
         .await
         .map(with_nested_parents)
 }
@@ -454,7 +453,7 @@ async fn players_tuple_type(
         .join(", ");
     let rows: Vec<Vec<String>> = ch_client
         .query(&format!("SELECT [{type_exprs}] FROM match_player LIMIT 1"))
-        .fetch_all()
+        .fetch_all_tracked()
         .await
         .inspect_err(|error| warn!(?error, "failed to resolve player column types"))
         .ok()?;
@@ -836,11 +835,8 @@ fn build_query(
 fn fetch_lines(
     ch_client: &clickhouse::Client,
     query: &str,
-) -> clickhouse::error::Result<Lines<BytesCursor>> {
-    ch_client
-        .query(query)
-        .fetch_bytes("JSONEachRow")
-        .map(tokio::io::AsyncBufReadExt::lines)
+) -> clickhouse::error::Result<TrackedLines> {
+    ch_client.query(query).fetch_lines_tracked("JSONEachRow")
 }
 
 /// `e`, the error reading the first row, as an API error, starting the cooldown of the query with

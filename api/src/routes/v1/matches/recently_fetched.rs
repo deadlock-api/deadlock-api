@@ -10,6 +10,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 
 #[derive(Debug, Clone, Row, Deserialize)]
@@ -92,7 +93,7 @@ async fn get_recently_fetched_matches(
     ORDER BY max(match_player.created_at) DESC
     SETTINGS log_comment = 'recently_fetched', apply_patch_parts = 0, optimize_aggregation_in_order = 1
     ";
-    let rows: Vec<ClickhouseMatchInfoRow> = ch_client.query(query).fetch_all().await?;
+    let rows: Vec<ClickhouseMatchInfoRow> = ch_client.query(query).fetch_all_tracked().await?;
     Ok(Arc::new(rows.into_iter().map(Into::into).collect()))
 }
 

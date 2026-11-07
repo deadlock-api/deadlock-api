@@ -15,7 +15,6 @@ use async_graphql::{
 use game_assets::versions::heroes::Hero;
 use game_assets::versions::items::Item as AssetItem;
 use game_assets::versions::ranks::Rank;
-use tokio::io::AsyncBufReadExt as _;
 use tracing::{Instrument as _, debug, info_span};
 
 use crate::context::AppState;
@@ -37,6 +36,7 @@ use crate::routes::v1::graphql::sql::{
     build_match_players_query, build_matches_query,
 };
 use crate::routes::v1::graphql::types::{Match, MatchHistoryEntry, MatchPlayer};
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::services::protected_accounts;
 
 pub(super) fn app_state<'a>(ctx: &'a Context<'_>) -> GqlResult<&'a AppState> {
@@ -413,11 +413,10 @@ where
     if let Some(query_id) = query_id {
         query = query.with_setting("query_id", query_id);
     }
-    let cursor = query
-        .fetch_bytes("JSONEachRow")
+    let mut lines = query
+        .fetch_lines_tracked("JSONEachRow")
         .inspect_err(|e| permit.observe(e))
         .map_err(|e| async_graphql::Error::new(format!("ClickHouse error: {e}")))?;
-    let mut lines = cursor.lines();
     let mut out: Vec<T> = Vec::new();
     while let Some(line) = lines
         .next_line()

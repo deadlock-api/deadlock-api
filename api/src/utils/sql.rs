@@ -128,6 +128,9 @@ impl MatchInfoFilters {
 /// cache is named after the function's path, which keeps its disk entries across
 /// releases; renaming or moving the function starts it empty.
 ///
+/// Misses record their cost for the response headers ([`crate::services::ch_cost`]); a `= fetch`
+/// function has to use [`TrackedQuery`](crate::services::ch_cost::TrackedQuery) itself.
+///
 /// `fn name(ttl_secs) -> Vec<Row>;` fetches all rows and returns them in an `Arc`, so a
 /// hit costs no deep clone. `fn name(ttl_secs) -> T = fetch;` caches whatever
 /// `fetch(ch_client, query_str)` returns and returns a clone of it.
@@ -150,10 +153,11 @@ macro_rules! cached_ch_query {
                 });
             CACHE
                 .get_or_fetch(query_str, async {
+                    use crate::services::ch_cost::TrackedQuery as _;
                     let permit = crate::services::ch_admission::acquire().await?;
                     Ok(ch_client
                         .query(query_str)
-                        .fetch_all()
+                        .fetch_all_tracked()
                         .await
                         .inspect_err(|e| permit.observe(e))?)
                 })

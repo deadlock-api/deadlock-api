@@ -11,6 +11,7 @@ use tracing::{instrument, warn};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope};
 
@@ -328,7 +329,7 @@ async fn stored_friends(
              SETTINGS log_comment = 'steam_refresh_stored_friends'",
         )
         .bind(account_ids)
-        .fetch_all()
+        .fetch_all_tracked()
         .await
 }
 

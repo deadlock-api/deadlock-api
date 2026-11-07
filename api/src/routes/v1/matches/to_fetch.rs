@@ -15,6 +15,7 @@ use uuid::Uuid;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::services::pending_matches::{MIN_AGE_SECS, MIN_MATCH_ID};
 use crate::utils::request::header_str;
 use crate::utils::sql::id_list;
@@ -167,7 +168,7 @@ async fn pending_pool(
                   match_id DESC
          SETTINGS log_comment = 'matches_to_fetch_pool'"
     );
-    let ids: Vec<u64> = ch_client.query(&query).fetch_all().await?;
+    let ids: Vec<u64> = ch_client.query(&query).fetch_all_tracked().await?;
     Ok(Arc::new(ids))
 }
 
@@ -191,7 +192,7 @@ async fn pending_pool_for_account(
          ORDER BY match_id DESC LIMIT {BATCH_SIZE} \
          SETTINGS log_comment = 'matches_to_fetch_pool_account', use_statistics = 0"
     );
-    let ids: Vec<u64> = ch_client.query(&query).fetch_all().await?;
+    let ids: Vec<u64> = ch_client.query(&query).fetch_all_tracked().await?;
     Ok(Arc::new(ids))
 }
 

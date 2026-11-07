@@ -24,6 +24,7 @@ use crate::routes::v1::players::match_history::{
     PlayerMatchHistoryEntry, fetch_steam_match_history,
 };
 use crate::routes::v1::players::rank::fetch_last_ranked_match;
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::services::leaderboard::fetch_leaderboard_raw;
 use crate::services::leaderboard::types::{Leaderboard, LeaderboardEntry, LeaderboardRegion};
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -750,7 +751,7 @@ impl Variable {
             )
             .bind(ability_id)
             .bind(steam_id)
-            .fetch_one()
+            .fetch_one_tracked()
             .await?;
         Ok(max.to_string())
     }

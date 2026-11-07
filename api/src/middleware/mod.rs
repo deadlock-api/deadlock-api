@@ -2,6 +2,7 @@ pub(super) mod api_key;
 pub(super) mod cache;
 pub(super) mod cache_bust;
 pub(super) mod ch_caller;
+pub(super) mod ch_cost;
 pub(super) mod cors;
 pub(super) mod feature_flags;
 pub(super) mod rate_limit;

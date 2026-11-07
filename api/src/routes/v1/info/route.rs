@@ -11,6 +11,7 @@ use tracing::warn;
 use utoipa::ToSchema;
 
 use crate::context::AppState;
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
 
 const TABLE_SIZES_QUERY: &str = "
@@ -102,7 +103,7 @@ async fn fetch_fetched_matches_last_24h(
 ) -> clickhouse::error::Result<u64> {
     ch_client
         .query(FETCHED_MATCHES_LAST_24H_QUERY)
-        .fetch_one::<u64>()
+        .fetch_one_tracked::<u64>()
         .await
 }
 
@@ -110,7 +111,7 @@ async fn fetch_ch_info(ch_client: &clickhouse::Client) -> APIInfo {
     let (table_sizes, fetched_matches_per_day) = join(
         ch_client
             .query(TABLE_SIZES_QUERY)
-            .fetch_all::<TableSizeRow>(),
+            .fetch_all_tracked::<TableSizeRow>(),
         fetch_fetched_matches_last_24h(ch_client),
     )
     .await;

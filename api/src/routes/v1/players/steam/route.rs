@@ -18,6 +18,7 @@ use crate::error::{APIError, APIResult};
 use crate::routes::v1::players::steam::update::{
     MAX_REFRESH_ACCOUNT_IDS, SteamProfileInsertRow, refresh_steam_profiles,
 };
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::services::protected_accounts::{
     ensure_not_protected, protected_accounts, without_protected,
 };
@@ -472,7 +473,7 @@ async fn fetch_matches_played_last_30d(
     );
     match ch_client
         .query(&query)
-        .fetch_all::<MatchesPlayed30dRow>()
+        .fetch_all_tracked::<MatchesPlayed30dRow>()
         .await
     {
         Ok(rows) => Ok(rows

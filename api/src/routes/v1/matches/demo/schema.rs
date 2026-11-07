@@ -16,6 +16,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::demo::download::http_client;
 use crate::routes::v1::matches::salts::fetch_match_salts;
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::utils::valve_replay::ZSTD_MAGIC;
 use crate::utils::valve_replay::replay_file_url;
@@ -129,7 +130,7 @@ pub(super) async fn schema(
                  ORDER BY match_id DESC LIMIT 1 \
                  SETTINGS log_comment = 'demo_schema_last_match'",
             )
-            .fetch_optional::<LastDemoSalts>()
+            .fetch_optional_tracked::<LastDemoSalts>()
             .await?
             .ok_or_else(|| APIError::status_msg(StatusCode::NOT_FOUND, "No demo available"))?;
         (row.match_id, row.cluster_id, row.replay_salt)

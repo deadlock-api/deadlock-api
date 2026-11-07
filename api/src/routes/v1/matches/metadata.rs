@@ -32,6 +32,7 @@ use valveprotos::deadlock::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::{self, fetch_match_salts};
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::utils::sql::POINT_LOOKUP_MAX_THREADS;
@@ -134,7 +135,7 @@ async fn min_cache_match_id(ch_client: &clickhouse::Client) -> &u64 {
     MIN_MATCH_ID_IN_CACHE
         .get_or_init(|| async { ch_client
             .query("SELECT min(match_id) FROM match_player WHERE start_time > now() - INTERVAL 2 WEEK SETTINGS log_comment = 'metadata_min_cache_match_id', apply_patch_parts = 0")
-            .fetch_one()
+            .fetch_one_tracked()
             .await
             .unwrap_or_default() })
         .await

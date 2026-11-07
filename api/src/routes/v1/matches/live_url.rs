@@ -22,6 +22,7 @@ use valveprotos::gcsdk::EgcPlatform;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::services::pending_matches::queue_live_match;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
@@ -222,7 +223,7 @@ async fn oldest_possibly_live_match_id(
 ) -> clickhouse::error::Result<u64> {
     ch_client
         .query("SELECT min(match_id) FROM match_player WHERE start_time >= now() - INTERVAL 4 HOUR SETTINGS log_comment = 'live_url', apply_patch_parts = 0, optimize_use_projections = 0")
-        .fetch_one::<u64>()
+        .fetch_one_tracked::<u64>()
         .await
 }
 

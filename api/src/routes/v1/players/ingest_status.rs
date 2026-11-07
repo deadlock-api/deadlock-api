@@ -6,6 +6,7 @@ use utoipa::ToSchema;
 
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::services::protected_accounts::ensure_not_protected;
 use crate::utils::types::AccountIdQuery;
 
@@ -62,7 +63,7 @@ async fn fetch_last_upload_at(
         )
         .bind(INGEST_ACTIVE_WINDOW_DAYS)
         .bind(username)
-        .fetch_one::<u32>()
+        .fetch_one_tracked::<u32>()
         .await
 }
 

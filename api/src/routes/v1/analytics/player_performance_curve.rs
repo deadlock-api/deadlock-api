@@ -18,6 +18,7 @@ use super::player_performance_curve_agg;
 use super::power_up_buffs::PERMANENT_BUFF_TIMES;
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{cached_ch_query, impl_match_info};
@@ -534,7 +535,7 @@ async fn agg_days_built(
     }
     let built: u64 = ch_client
         .query(&player_performance_curve_agg::built_days_query(from, to))
-        .fetch_one()
+        .fetch_one_tracked()
         .await?;
     Ok(i64::try_from(built).is_ok_and(|built| built == to.saturating_sub(from) / 86_400))
 }

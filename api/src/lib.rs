@@ -63,6 +63,7 @@ use crate::middleware::api_key::write_api_key_to_header;
 use crate::middleware::cache::CacheControlLayer;
 use crate::middleware::cache_bust::reject_cache_busts;
 use crate::middleware::ch_caller::scope_ch_caller;
+use crate::middleware::ch_cost::ch_cost_headers;
 use crate::middleware::cors;
 use crate::middleware::feature_flags::feature_flags;
 use crate::middleware::request_id::request_id;
@@ -171,6 +172,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .layer(from_fn_with_state(state.clone(), feature_flags))
         .layer(from_fn(reject_cache_busts))
         .layer(from_fn_with_state(state.clone(), scope_ch_caller))
+        .layer(from_fn(ch_cost_headers))
         .layer(from_fn_with_state(state.clone(), track_requests))
         .layer(
             CacheControlLayer::new(Duration::from_secs(DEFAULT_CACHE_TIME))

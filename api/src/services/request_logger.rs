@@ -58,4 +58,15 @@ pub(crate) struct RequestLog {
     pub graphql_query: Option<String>,
     /// GraphQL variables as a JSON object, truncated to 64 KiB
     pub graphql_variables: Option<String>,
+    /// `ClickHouse` queries the request ran, from their summaries (see `services::ch_cost`); all
+    /// 0 for requests that ran none
+    pub ch_queries: u64,
+    /// Summed `ClickHouse` query time in nanoseconds
+    pub ch_elapsed_ns: u64,
+    /// Summed rows read by the `ClickHouse` queries
+    pub ch_read_rows: u64,
+    /// Summed bytes read by the `ClickHouse` queries
+    pub ch_read_bytes: u64,
+    /// Highest peak memory of any one `ClickHouse` query, in bytes
+    pub ch_peak_memory_bytes: u64,
 }

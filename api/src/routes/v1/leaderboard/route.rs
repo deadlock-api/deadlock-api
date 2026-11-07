@@ -21,6 +21,7 @@ use valveprotos::deadlock::CMsgClientToGcGetLeaderboardResponse;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::services::leaderboard::fetch_leaderboard_raw;
 use crate::services::leaderboard::types::{Leaderboard, LeaderboardRegion};
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
@@ -77,7 +78,7 @@ async fn fetch_all_steam_names(
                 SETTINGS log_comment = 'leaderboard'
             ",
             )
-            .fetch_all::<CHResponse>()
+            .fetch_all_tracked::<CHResponse>()
             .await?
             .into_iter()
             .map(|row| (row.name, row.account_id))

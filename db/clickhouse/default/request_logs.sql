@@ -23,6 +23,11 @@ CREATE TABLE default.request_logs
     `graphql_variables` Nullable(String) DEFAULT NULL CODEC(ZSTD(3)),
     `graphql_request_id` Nullable(UUID) DEFAULT NULL,
     `request_id` String DEFAULT '',
+    `ch_queries` UInt64 DEFAULT 0,
+    `ch_elapsed_ns` UInt64 DEFAULT 0,
+    `ch_read_rows` UInt64 DEFAULT 0,
+    `ch_read_bytes` UInt64 DEFAULT 0,
+    `ch_peak_memory_bytes` UInt64 DEFAULT 0,
     INDEX idx_path path TYPE bloom_filter GRANULARITY 4,
     INDEX idx_api_key api_key TYPE bloom_filter GRANULARITY 4,
     INDEX idx_request_id request_id TYPE bloom_filter GRANULARITY 4

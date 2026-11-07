@@ -19,6 +19,7 @@ use super::common_filters::{
 };
 use crate::context::AppState;
 use crate::error::APIResult;
+use crate::services::ch_cost::TrackedQuery as _;
 use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{cached_ch_query, impl_match_info};
@@ -628,7 +629,7 @@ async fn fetch_one(
     ch_client: &clickhouse::Client,
     query_str: &str,
 ) -> clickhouse::error::Result<AnalyticsPlayerStatsMetricsRow> {
-    ch_client.query(query_str).fetch_one().await
+    ch_client.query(query_str).fetch_one_tracked().await
 }
 
 async fn get_player_stats_metrics(

@@ -11,6 +11,7 @@ use axum::response::IntoResponse;
 use crate::context::AppState;
 use crate::middleware::request_id::RequestId;
 use crate::routes::v1::graphql::GraphQLRequestLog;
+use crate::services::ch_cost::ChCost;
 use crate::services::feature_flags::REQUEST_LOGGING;
 use crate::services::request_logger::RequestLog;
 use crate::utils::request::{client_ip, header_str, parse_api_key};
@@ -63,6 +64,10 @@ pub(crate) async fn track_requests(
     let duration = start.elapsed();
 
     let graphql = response.extensions_mut().remove::<GraphQLRequestLog>();
+    let ch_cost = response
+        .extensions_mut()
+        .remove::<ChCost>()
+        .unwrap_or_default();
     let status_code = response.status().as_u16();
     let headers = response.headers();
     let content_type = get_header(headers, header::CONTENT_TYPE);
@@ -119,6 +124,11 @@ pub(crate) async fn track_requests(
             graphql_depth: graphql.as_ref().and_then(|g| g.depth),
             graphql_variables: graphql.as_ref().and_then(|g| g.variables.clone()),
             graphql_query: graphql.map(|g| g.query),
+            ch_queries: ch_cost.queries,
+            ch_elapsed_ns: ch_cost.elapsed_ns,
+            ch_read_rows: ch_cost.read_rows,
+            ch_read_bytes: ch_cost.read_bytes,
+            ch_peak_memory_bytes: ch_cost.peak_memory_bytes,
         };
         state.request_logger.try_insert(vec![log]);
     }

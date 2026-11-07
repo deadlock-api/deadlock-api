@@ -1,6 +1,7 @@
 pub(crate) mod bot_friends;
 pub(crate) mod ch_admission;
 pub(crate) mod ch_cache;
+pub(crate) mod ch_cost;
 pub(crate) mod cohort_agg_refresh;
 pub(crate) mod data_dump;
 pub(crate) mod data_lake;
