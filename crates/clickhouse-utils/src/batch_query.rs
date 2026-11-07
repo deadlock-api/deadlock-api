@@ -3,11 +3,13 @@
 use core::fmt;
 use core::hash::Hash;
 use core::marker::PhantomData;
+use core::sync::atomic::{AtomicU64, Ordering};
 use core::time::Duration;
 use std::collections::HashMap;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 
-use clickhouse::{RowOwned, RowRead};
+use clickhouse::query::Query;
+use clickhouse::{QuerySummary, RowOwned, RowRead};
 use metrics::{counter, gauge, histogram};
 use tokio::sync::{Semaphore, mpsc, oneshot};
 use tracing::{debug, warn};
@@ -39,6 +41,119 @@ pub enum BatchError {
 }
 
 type BatchResult<T> = Result<T, BatchError>;
+
+/// What a batch query cost `ClickHouse`, or the share of it one lookup is charged.
+#[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
+pub struct BatchCost {
+    /// The batch queries the lookups ran in.
+    pub queries: u64,
+    pub elapsed_ns: u64,
+    pub read_rows: u64,
+    pub read_bytes: u64,
+    /// The highest peak memory of the batch queries, unsplit: it can't be divided among the
+    /// lookups a query served.
+    pub peak_memory_bytes: u64,
+}
+
+impl BatchCost {
+    fn from_summary(summary: Option<&QuerySummary>) -> Self {
+        let value = |get: fn(&QuerySummary) -> Option<u64>| summary.and_then(get).unwrap_or(0);
+        Self {
+            queries: 1,
+            elapsed_ns: value(QuerySummary::elapsed_ns),
+            read_rows: value(QuerySummary::read_rows),
+            read_bytes: value(QuerySummary::read_bytes),
+            peak_memory_bytes: value(QuerySummary::memory_usage),
+        }
+    }
+
+    /// The share of waiter `index` of `waiters`: the summed costs split evenly, the remainders
+    /// going one unit each to the first waiters, so the shares add up to the whole.
+    fn share(self, index: u64, waiters: u64) -> Self {
+        let split = |total: u64| {
+            let quotient = total.checked_div(waiters).unwrap_or(total);
+            let remainder = total.checked_rem(waiters).unwrap_or(0);
+            quotient.saturating_add(u64::from(index < remainder))
+        };
+        Self {
+            queries: self.queries,
+            elapsed_ns: split(self.elapsed_ns),
+            read_rows: split(self.read_rows),
+            read_bytes: split(self.read_bytes),
+            peak_memory_bytes: self.peak_memory_bytes,
+        }
+    }
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            queries: self.queries.saturating_add(other.queries),
+            elapsed_ns: self.elapsed_ns.saturating_add(other.elapsed_ns),
+            read_rows: self.read_rows.saturating_add(other.read_rows),
+            read_bytes: self.read_bytes.saturating_add(other.read_bytes),
+            peak_memory_bytes: self.peak_memory_bytes.max(other.peak_memory_bytes),
+        }
+    }
+}
+
+static COST_HOOK: OnceLock<fn(BatchCost)> = OnceLock::new();
+
+/// Registers `hook` to receive each load's share of its batch queries' cost.
+///
+/// It runs in the task that called the load, after the rows came back, so it can record into the
+/// caller's task-locals. The first registration wins; later ones are ignored.
+pub fn set_batch_cost_hook(hook: fn(BatchCost)) {
+    _ = COST_HOOK.set(hook);
+}
+
+/// Hands the cost of one load to the hook. Shares from the same batch query count it once.
+fn report_cost(shares: &[Share]) {
+    let Some(hook) = COST_HOOK.get() else {
+        return;
+    };
+    let mut batches: Vec<u64> = Vec::with_capacity(shares.len());
+    let mut cost = BatchCost::default();
+    for share in shares {
+        let mut share_cost = share.cost;
+        if batches.contains(&share.batch) {
+            share_cost.queries = 0;
+        } else {
+            batches.push(share.batch);
+        }
+        cost = cost.add(share_cost);
+    }
+    if cost.queries > 0 {
+        hook(cost);
+    }
+}
+
+/// One waiter's share of the batch query that served it.
+#[derive(Debug, Clone, Copy)]
+struct Share {
+    /// Tells apart the batch queries of a [`ClickhouseBatcher::load_many`].
+    batch: u64,
+    cost: BatchCost,
+}
+
+/// The rows of one key, and the waiter's share of the query's cost.
+struct Served<V> {
+    rows: Vec<V>,
+    share: Share,
+}
+
+static NEXT_BATCH: AtomicU64 = AtomicU64::new(0);
+
+/// Runs `query` to the end, so its summary covers the whole query rather than the progress up to
+/// the first output block: `ClickHouse` sends the summary header before the body.
+async fn fetch_all_with_cost<T: RowOwned + RowRead>(
+    query: Query,
+) -> clickhouse::error::Result<(Vec<T>, BatchCost)> {
+    let mut cursor = query.with_setting("wait_end_of_query", "1").fetch::<T>()?;
+    let mut rows = Vec::new();
+    while let Some(row) = cursor.next().await? {
+        rows.push(row);
+    }
+    Ok((rows, BatchCost::from_summary(cursor.summary())))
+}
 
 pub trait BatchQuery: Send + Sync + 'static {
     type Key: Hash + Eq + Clone + Send + Sync + 'static;
@@ -194,7 +309,7 @@ impl<T: BatchQueryGrouped> BatcherInner for GroupedBridge<T> {
 struct EngineRequest<I: BatcherInner> {
     key: I::Key,
     group: I::Group,
-    response_tx: oneshot::Sender<BatchResult<Vec<I::Value>>>,
+    response_tx: oneshot::Sender<BatchResult<Served<I::Value>>>,
 }
 
 struct BatchEngine<I: BatcherInner> {
@@ -220,7 +335,7 @@ impl<I: BatcherInner> BatchEngine<I> {
         &self,
         group: I::Group,
         key: I::Key,
-    ) -> BatchResult<oneshot::Receiver<BatchResult<Vec<I::Value>>>> {
+    ) -> BatchResult<oneshot::Receiver<BatchResult<Served<I::Value>>>> {
         let (response_tx, response_rx) = oneshot::channel();
         self.tx
             .send(EngineRequest {
@@ -234,7 +349,9 @@ impl<I: BatcherInner> BatchEngine<I> {
     }
 }
 
-async fn await_response<V>(rx: oneshot::Receiver<BatchResult<Vec<V>>>) -> BatchResult<Vec<V>> {
+async fn await_response<V>(
+    rx: oneshot::Receiver<BatchResult<Served<V>>>,
+) -> BatchResult<Served<V>> {
     rx.await.map_err(|_closed| BatchError::Unavailable)?
 }
 
@@ -345,7 +462,7 @@ async fn execute_batch<I: BatcherInner>(
 ) {
     type SenderMap<I> = HashMap<
         <I as BatcherInner>::Key,
-        Vec<oneshot::Sender<BatchResult<Vec<<I as BatcherInner>::Value>>>>,
+        Vec<oneshot::Sender<BatchResult<Served<<I as BatcherInner>::Value>>>>,
     >;
 
     let batch_size = pending.len();
@@ -364,11 +481,11 @@ async fn execute_batch<I: BatcherInner>(
     let query = I::build_query(group, &keys);
 
     let start = tokio::time::Instant::now();
-    let result = ch_client.query(&query).fetch_all::<I::Value>().await;
+    let result = fetch_all_with_cost::<I::Value>(ch_client.query(&query)).await;
     histogram!(metrics.query_duration_seconds).record(start.elapsed().as_secs_f64());
 
-    let rows = match result {
-        Ok(rows) => rows,
+    let (rows, cost) = match result {
+        Ok(result) => result,
         Err(e) => {
             counter!(metrics.errors).increment(1);
             warn!("Batch query failed: {e}");
@@ -388,18 +505,31 @@ async fn execute_batch<I: BatcherInner>(
         grouped.entry(I::key_of(&row)).or_default().push(row);
     }
 
+    // Every waiter is charged an equal share, duplicate keys included: each stands for a lookup
+    // some request made.
+    let batch = NEXT_BATCH.fetch_add(1, Ordering::Relaxed);
+    let waiters = u64::try_from(batch_size).unwrap_or(u64::MAX);
+    let mut waiter: u64 = 0;
+    let mut serve = |rows| {
+        let share = Share {
+            batch,
+            cost: cost.share(waiter, waiters),
+        };
+        waiter = waiter.saturating_add(1);
+        Ok(Served { rows, share })
+    };
     for (key, txs) in senders {
         let values = grouped.remove(&key).unwrap_or_default();
         // Clone for all but the last waiter, which takes the rows.
         let mut txs = txs.into_iter();
         let last = txs.next_back();
         for tx in txs {
-            if tx.send(Ok(values.clone())).is_err() {
+            if tx.send(serve(values.clone())).is_err() {
                 debug!("Batch waiter went away before its rows");
             }
         }
         if let Some(tx) = last
-            && tx.send(Ok(values)).is_err()
+            && tx.send(serve(values)).is_err()
         {
             debug!("Batch waiter went away before its rows");
         }
@@ -437,8 +567,9 @@ impl<T: BatchQuery> ClickhouseBatcher<T> {
     pub async fn load(&self, key: T::Key) -> BatchResult<T::Value> {
         let rx = self.engine.enqueue((), key).await?;
         counter!("clickhouse_batcher.requests").increment(1);
-        let rows = await_response(rx).await?;
-        rows.into_iter().next().ok_or_else(|| {
+        let served = await_response(rx).await?;
+        report_cost(&[served.share]);
+        served.rows.into_iter().next().ok_or_else(|| {
             counter!("clickhouse_batcher.not_found").increment(1);
             BatchError::NotFound
         })
@@ -452,14 +583,18 @@ impl<T: BatchQuery> ClickhouseBatcher<T> {
         counter!("clickhouse_batcher.requests").increment(keys.len() as u64);
 
         let mut results = Vec::with_capacity(receivers.len());
+        let mut shares = Vec::with_capacity(receivers.len());
         let mut not_found: u64 = 0;
         for rx in receivers {
-            if let Some(row) = await_response(rx).await?.into_iter().next() {
+            let served = await_response(rx).await?;
+            shares.push(served.share);
+            if let Some(row) = served.rows.into_iter().next() {
                 results.push(row);
             } else {
                 not_found = not_found.saturating_add(1);
             }
         }
+        report_cost(&shares);
         if not_found > 0 {
             counter!("clickhouse_batcher.not_found").increment(not_found);
         }
@@ -497,7 +632,9 @@ impl<T: BatchQueryMulti> ClickhouseBatcherMulti<T> {
     pub async fn load(&self, key: T::Key) -> BatchResult<Vec<T::Value>> {
         let rx = self.engine.enqueue((), key).await?;
         counter!("clickhouse_batcher_multi.requests").increment(1);
-        await_response(rx).await
+        let served = await_response(rx).await?;
+        report_cost(&[served.share]);
+        Ok(served.rows)
     }
 }
 
@@ -536,9 +673,169 @@ impl<T: BatchQueryGrouped> ClickhouseBatcherGrouped<T> {
         counter!("clickhouse_batcher_grouped.requests").increment(keys.len() as u64);
 
         let mut results = Vec::new();
+        let mut shares = Vec::with_capacity(receivers.len());
         for rx in receivers {
-            results.extend(await_response(rx).await?);
+            let served = await_response(rx).await?;
+            shares.push(served.share);
+            results.extend(served.rows);
         }
+        report_cost(&shares);
         Ok(results)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use core::cell::Cell;
+
+    use clickhouse::Row;
+    use clickhouse::test::{Mock, handlers};
+    use serde::{Deserialize, Serialize};
+
+    use super::*;
+
+    tokio::task_local! {
+        static RECORDED: Cell<BatchCost>;
+    }
+
+    fn record(cost: BatchCost) {
+        _ = RECORDED.try_with(|recorded| recorded.set(recorded.get().add(cost)));
+    }
+
+    /// Runs `future` with the hook recording into a fresh task-local.
+    async fn recorded<F: Future>(future: F) -> (F::Output, BatchCost) {
+        set_batch_cost_hook(record);
+        RECORDED
+            .scope(Cell::new(BatchCost::default()), async move {
+                let output = future.await;
+                (output, RECORDED.with(Cell::get))
+            })
+            .await
+    }
+
+    #[derive(Debug, Clone, Row, Serialize, Deserialize, PartialEq, Eq)]
+    struct Item {
+        id: u32,
+    }
+
+    /// Lingers so concurrent loads land in one batch.
+    struct Items;
+
+    impl BatchQuery for Items {
+        type Key = u32;
+        type Value = Item;
+
+        fn build_query(keys: &[u32]) -> String {
+            format!("SELECT id FROM items WHERE id IN ({})", in_clause(keys))
+        }
+        fn key_of(value: &Item) -> u32 {
+            value.id
+        }
+        fn linger_ms() -> u64 {
+            50
+        }
+    }
+
+    impl BatchQueryMulti for Items {
+        type Key = u32;
+        type Value = Item;
+
+        fn build_query(keys: &[u32]) -> String {
+            <Self as BatchQuery>::build_query(keys)
+        }
+        fn key_of(value: &Item) -> u32 {
+            value.id
+        }
+        fn linger_ms() -> u64 {
+            50
+        }
+    }
+
+    const SUMMARY: &str =
+        r#"{"read_rows":"5","read_bytes":"41","elapsed_ns":"1001","memory_usage":"4096"}"#;
+
+    fn client(mock: &Mock) -> clickhouse::Client {
+        clickhouse::Client::default()
+            .with_url(mock.url())
+            .with_validation(false)
+    }
+
+    #[test]
+    fn shares_add_up_to_the_whole() {
+        let cost = BatchCost {
+            queries: 1,
+            elapsed_ns: 1001,
+            read_rows: 5,
+            read_bytes: 41,
+            peak_memory_bytes: 4096,
+        };
+        let shares: Vec<_> = (0..3).map(|i| cost.share(i, 3)).collect();
+        let total = shares
+            .iter()
+            .fold(BatchCost::default(), |sum, s| sum.add(*s));
+        assert_eq!(shares[0].read_rows, 2);
+        assert_eq!(shares[2].read_rows, 1);
+        assert!(shares.iter().all(|s| s.peak_memory_bytes == 4096));
+        assert_eq!(total, BatchCost { queries: 3, ..cost });
+    }
+
+    #[tokio::test]
+    async fn concurrent_loads_split_the_batch() {
+        let mock = Mock::new();
+        mock.add(handlers::provide_with_summary(
+            [Item { id: 1 }, Item { id: 2 }],
+            SUMMARY,
+        ));
+        let batcher = ClickhouseBatcherMulti::<Items>::new(client(&mock));
+
+        let ((one, one_cost), (two, two_cost)) =
+            tokio::join!(recorded(batcher.load(1)), recorded(batcher.load(2)),);
+
+        assert_eq!(one.unwrap(), [Item { id: 1 }]);
+        assert_eq!(two.unwrap(), [Item { id: 2 }]);
+        assert_eq!(one_cost.queries, 1);
+        assert_eq!(two_cost.queries, 1);
+        assert_eq!(one_cost.read_rows + two_cost.read_rows, 5);
+        assert_eq!(one_cost.read_bytes + two_cost.read_bytes, 41);
+        assert_eq!(one_cost.elapsed_ns + two_cost.elapsed_ns, 1001);
+        assert_eq!(one_cost.peak_memory_bytes, 4096);
+    }
+
+    #[tokio::test]
+    async fn load_many_counts_one_query_per_batch() {
+        let mock = Mock::new();
+        mock.add(handlers::provide_with_summary(
+            [Item { id: 1 }, Item { id: 2 }],
+            SUMMARY,
+        ));
+        let batcher = ClickhouseBatcher::<Items>::new(client(&mock));
+
+        let (items, cost) = recorded(batcher.load_many(&[1, 2, 3])).await;
+
+        assert_eq!(items.unwrap().len(), 2);
+        assert_eq!(
+            cost,
+            BatchCost {
+                queries: 1,
+                elapsed_ns: 1001,
+                read_rows: 5,
+                read_bytes: 41,
+                peak_memory_bytes: 4096,
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn failed_batches_record_nothing() {
+        let mock = Mock::new();
+        mock.add(handlers::failure(
+            clickhouse::test::status::INTERNAL_SERVER_ERROR,
+        ));
+        let batcher = ClickhouseBatcherMulti::<Items>::new(client(&mock));
+
+        let (result, cost) = recorded(batcher.load(1)).await;
+
+        assert_eq!(result.unwrap_err(), BatchError::QueryFailed);
+        assert_eq!(cost, BatchCost::default());
     }
 }

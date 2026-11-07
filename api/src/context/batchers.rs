@@ -36,6 +36,7 @@ pub(crate) struct Batchers {
 
 impl Batchers {
     pub(crate) fn new(ch_client: &clickhouse::Client, ch_client_ro: &clickhouse::Client) -> Self {
+        clickhouse_utils::set_batch_cost_hook(crate::services::ch_cost::record_batch);
         Self {
             match_history_read: MatchHistoryReadBatcher::new(ch_client_ro.clone()),
             match_history_insert: insert_batcher(ch_client, "player_match_history"),

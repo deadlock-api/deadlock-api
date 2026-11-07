@@ -7,8 +7,11 @@
 //! `ClickHouse` sends the summary before the body, so without it the summary only covers the
 //! work done until the first output block.
 //!
-//! Not seen: queries run from other tasks (e.g. the `BatchQuery` loops), and cache hits, which
-//! cost `ClickHouse` nothing. Concurrent misses of one cached query share a single run, whose cost
+//! Batched lookups (`clickhouse_utils` batchers) run their query in the batcher's task; each
+//! lookup is charged an even share of it through [`record_batch`], counted as one query.
+//!
+//! Not seen: queries run from other tasks (e.g. `tokio::spawn`), and cache hits, which cost
+//! `ClickHouse` nothing. Concurrent misses of one cached query share a single run, whose cost
 //! goes to the request that ran it.
 
 use core::cell::Cell;
@@ -16,6 +19,7 @@ use core::cell::Cell;
 use axum::http::{HeaderMap, HeaderName, HeaderValue};
 use clickhouse::query::{BytesCursor, Query};
 use clickhouse::{QuerySummary, RowOwned, RowRead};
+use clickhouse_utils::BatchCost;
 use tokio::io::{AsyncBufReadExt as _, Lines};
 
 tokio::task_local! {
@@ -53,6 +57,16 @@ impl ChCost {
         self
     }
 
+    fn add_batch(self, share: BatchCost) -> Self {
+        Self {
+            queries: self.queries.saturating_add(share.queries),
+            elapsed_ns: self.elapsed_ns.saturating_add(share.elapsed_ns),
+            read_rows: self.read_rows.saturating_add(share.read_rows),
+            read_bytes: self.read_bytes.saturating_add(share.read_bytes),
+            peak_memory_bytes: self.peak_memory_bytes.max(share.peak_memory_bytes),
+        }
+    }
+
     /// Writes the cost as `X-CH-*` headers.
     pub(crate) fn insert_headers(&self, headers: &mut HeaderMap) {
         let elapsed_ms = format!(
@@ -85,6 +99,12 @@ pub(crate) async fn track<F: Future>(future: F) -> (F::Output, ChCost) {
 /// Records one query with its summary, if `ClickHouse` sent one; a no-op outside [`track`].
 pub(crate) fn record(summary: Option<&QuerySummary>) {
     _ = COST.try_with(|cost| cost.set(cost.get().add(summary)));
+}
+
+/// Records a batched lookup's share of its batch queries; the hook passed to
+/// [`clickhouse_utils::set_batch_cost_hook`]. A no-op outside [`track`].
+pub(crate) fn record_batch(share: BatchCost) {
+    _ = COST.try_with(|cost| cost.set(cost.get().add_batch(share)));
 }
 
 /// The fetches of [`Query`], recording their cost (see the [module docs](self)).
