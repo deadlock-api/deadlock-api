@@ -201,6 +201,12 @@ type InflightSet = Arc<Mutex<HashSet<Path>>>;
 /// Rough number of players per match, to size row batches from the match-count settings.
 const ROWS_PER_MATCH: usize = 12;
 
+/// `match_player` is partitioned by `intDiv(match_id, 1000000)`, and salt uploads backfill
+/// matches of every age, so one batch spans nearly every partition: 134 at match id 133M,
+/// one more every ~1.3 days. `ClickHouse`'s default of 100 rejected whole batches; the
+/// rejected keys stay in `ingest/` and join the next, larger batch, which fails again.
+const MAX_PARTITIONS_PER_INSERT_BLOCK: &str = "1000";
+
 /// Batch inserters for the two tables every match is written to.
 struct Inserters {
     players: BatchInserter<ClickhouseMatchPlayer>,
@@ -214,6 +220,11 @@ impl Inserters {
         flush_interval: Option<Duration>,
         workers: usize,
     ) -> Self {
+        let client = client.clone().with_setting(
+            "max_partitions_per_insert_block",
+            MAX_PARTITIONS_PER_INSERT_BLOCK,
+        );
+        let client = &client;
         let config = |table: &str| BatchInserterConfig {
             table: table.to_owned(),
             metrics_prefix: "ingest_worker".to_owned(),
