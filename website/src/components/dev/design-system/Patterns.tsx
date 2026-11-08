@@ -23,7 +23,7 @@ import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { DateRangePicker } from "~/components/patterns/filter-bar/DateRangePicker";
 import { FilterBar } from "~/components/patterns/filter-bar/FilterBar";
 import { FilterCell, FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
-import { NumberSelector } from "~/components/patterns/filter-bar/NumberSelector";
+import { NumberSelector, ThresholdMenu } from "~/components/patterns/filter-bar/NumberSelector";
 import { StringOption, StringOptionGroup, StringSelector } from "~/components/patterns/filter-bar/StringSelector";
 import { type TriState, TriStateItem, TriStateSelector } from "~/components/patterns/filter-bar/TriStateSelector";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
@@ -201,6 +201,7 @@ export function Patterns() {
   const [density, setDensity] = useState<"default" | "compact" | "dense">("compact");
   const [tableWidth, setTableWidth] = useState<"full" | "narrow">("full");
   const [heroQuery, setHeroQuery] = useState("");
+  const [minPickRate, setMinPickRate] = useState(0);
   const [page, setPage] = useState(1);
   const [jumped, setJumped] = useState<number | null>(null);
   const [perPage, setPerPage] = useState(25);
@@ -217,7 +218,9 @@ export function Patterns() {
     const order = a[sortKey] < b[sortKey] ? -1 : a[sortKey] > b[sortKey] ? 1 : 0;
     return sortDir === "desc" ? -order : order;
   });
-  const visible = sorted.filter((row) => row.hero.toLowerCase().includes(search.toLowerCase()));
+  const visible = sorted.filter(
+    (row) => row.hero.toLowerCase().includes(search.toLowerCase()) && row.pickRate * 100 >= minPickRate,
+  );
 
   return (
     <Chapter
@@ -453,7 +456,7 @@ export function Patterns() {
       <Specimen
         name="Data table"
         source="ui/table · patterns/data-table/*"
-        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, the button is named by its visible label (aria-sort on the cell gives the state), label takes a node, and description explains the column behind a focusable info button ("About Win rate"). data-pinned pins the identity column while the rest scrolls; a table wider than its container fades the edge with more columns past it (only the end edge with a pinned column), and a pinned table is the "table" container, so its pinned cell can shrink with @md/table: variants. A ColumnFilter in a head (filter on SortableHeader) narrows the rows of that column from a popover: a name search, a few toggles; its funnel turns solid red while set. Tones come from toneOf(). The sort is useSort: a press on the active column flips it, another column starts in its first direction.'
+        note='SortableHeader carries aria-sort; size="sm" drops the idle arrows for dense tables, the button is named by its visible label (aria-sort on the cell gives the state), label takes a node, and description explains the column behind a focusable info button ("About Win rate"). data-pinned pins the identity column while the rest scrolls; a table wider than its container fades the edge with more columns past it (only the end edge with a pinned column), and a pinned table is the "table" container, so its pinned cell can shrink with @md/table: variants. A ColumnFilter in a head (filter on SortableHeader) narrows the rows of that column from a popover: a name search, a few toggles, or a ThresholdMenu minimum (Pick rate here, whose Any row clears it); its funnel turns solid red while set. Tones come from toneOf(). The sort is useSort: a press on the active column flips it, another column starts in its first direction.'
       >
         <Inline gap={2}>
           <Segmented size="sm" width="hug" aria-label="Density" value={density} onValueChange={setDensity}>
@@ -508,6 +511,18 @@ export function Patterns() {
                   activeSortKey={sortKey}
                   sortDir={sortDir}
                   onSortChange={onSort}
+                  filter={
+                    <ColumnFilter label="Pick rate" active={minPickRate > 0}>
+                      <ThresholdMenu
+                        label="Min pick rate"
+                        presets={[0, 5, 10]}
+                        max={100}
+                        format={(value) => `${value}%`}
+                        value={minPickRate}
+                        onValueChange={setMinPickRate}
+                      />
+                    </ColumnFilter>
+                  }
                 />
                 <SortableHeader
                   label={
