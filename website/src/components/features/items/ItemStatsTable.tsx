@@ -34,6 +34,7 @@ import {
 import {
   useItemLists,
   useItemMinPickRate,
+  useItemMinWinRate,
   useItemNameQuery,
   useItemSlots,
   useItemTiers,
@@ -104,6 +105,8 @@ const CORRUPTED_COLOR = CHART_COLOR.comparison;
 
 /** The Pick Rate column's filter: round thresholds of the normalized pick rate, in percent. */
 const PICK_RATE_PRESETS = [0, 5, 10, 20, 30, 50] as const;
+/** The Win Rate column's filter: round thresholds around even, in percent. */
+const WIN_RATE_PRESETS = [0, 45, 48, 50, 52, 55] as const;
 
 /** An item's pick rate as its column shows it: whole percent of the most bought item's matches. */
 function normalizedPickPercent(matches: number, maxUsage: number) {
@@ -592,6 +595,7 @@ export function ItemStatsTable({
   const { includeItems, setIncludeItems, excludeItems, setExcludeItems } = useItemLists();
   const [nameQuery, setNameQuery] = useItemNameQuery();
   const [minPickRate, setMinPickRate] = useItemMinPickRate();
+  const [winRateFloor, setWinRateFloor] = useItemMinWinRate();
   const [corruptedMode] = useCorruptedItemMode();
 
   // Functional updates keep both callbacks stable, so a click re-renders one memoized row instead of the whole table.
@@ -628,12 +632,14 @@ export function ItemStatsTable({
   const rowTiers = useDeferredValue(itemTiers);
   const rowSlots = useDeferredValue(itemSlots);
   const rowMinPickRate = useDeferredValue(minPickRate);
+  const rowWinRateFloor = useDeferredValue(winRateFloor);
   const rowsCatchingUp =
     rowSortKey !== sort.sortKey ||
     rowSortDir !== sort.dir ||
     rowTiers !== itemTiers ||
     rowSlots !== itemSlots ||
-    rowMinPickRate !== minPickRate;
+    rowMinPickRate !== minPickRate ||
+    rowWinRateFloor !== winRateFloor;
 
   const processedData = useMemo(() => {
     if (!data) return [];
@@ -684,6 +690,8 @@ export function ItemStatsTable({
     (row) =>
       shownTiers.includes(row.itemTier) &&
       normalizedPickPercent(row.matches, maxUsage) >= rowMinPickRate &&
+      // As the column reads it, to a tenth of a percent.
+      Math.round(row.winRate * 1000) / 10 >= rowWinRateFloor &&
       (rowSlots.length === 0 || !row.item || rowSlots.includes(row.item.item_slot_type)) &&
       (!nameTerm || (row.item?.name ?? "").toLowerCase().includes(nameTerm)),
   );
@@ -809,6 +817,20 @@ export function ItemStatsTable({
                     sortDir={sort.dir}
                     onSortChange={toggleSort}
                     className="w-1/4 text-start"
+                    filter={
+                      <ColumnFilter label="Win Rate" active={winRateFloor > 0}>
+                        <ThresholdMenu
+                          label="Min win rate"
+                          presets={WIN_RATE_PRESETS}
+                          max={100}
+                          format={(value) => `${value}%`}
+                          value={winRateFloor}
+                          onValueChange={(next) =>
+                            startTransition(() => void setWinRateFloor(next > 0 ? next : null, together))
+                          }
+                        />
+                      </ColumnFilter>
+                    }
                   />
                   <SortableHeader
                     // Both differences to the tier read "vs Tier" beside their rate; the hidden part tells them apart
