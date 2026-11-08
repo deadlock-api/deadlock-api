@@ -7,6 +7,7 @@ import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { ColumnFilter } from "~/components/patterns/data-table/ColumnFilter";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
+import { ThresholdMenu } from "~/components/patterns/filter-bar/NumberSelector";
 import { Panel, PanelHeader } from "~/components/patterns/panel/Panel";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
@@ -33,6 +34,9 @@ import {
   useHeroStatsTable,
 } from "./useHeroStatsTable";
 
+/** The pick rate column's filter: round thresholds of the metric it shows, in percent. */
+const PICK_RATE_PRESETS = [0, 5, 10, 20, 30, 50] as const;
+
 const COMPACT_MATCHES = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 
 const HERO_TYPE_CONFIG: Record<HeroType, { label: string; color: string; icon: LucideIcon }> = {
@@ -46,13 +50,31 @@ const HERO_TYPE_CONFIG: Record<HeroType, { label: string; color: string; icon: L
 export function HeroStatsTable({
   onClearNameQuery,
   onNameQueryChange,
+  onMinPickRateChange,
   ...filters
 }: HeroStatsTableFilters & {
   onClearNameQuery?: () => void;
   /** Puts a name search in the Hero column's head (a `ColumnFilter`). */
   onNameQueryChange?: (query: string) => void;
+  /** Puts a minimum in the pick rate column's head (a `ColumnFilter`), of the metric the column shows. */
+  onMinPickRateChange?: (percent: number) => void;
 }) {
   const table = useHeroStatsTable(filters);
+  const minPickRate = filters.minPickRate ?? 0;
+  const metricLabel =
+    table.pickRateMode === "presence" ? "Presence" : table.pickRateMode === "banRate" ? "Ban Rate" : "Pick Rate";
+  const rateFilter = onMinPickRateChange && (
+    <ColumnFilter label={metricLabel} active={minPickRate > 0}>
+      <ThresholdMenu
+        label={`Min ${metricLabel.toLowerCase()}`}
+        presets={PICK_RATE_PRESETS}
+        max={100}
+        format={(value) => `${value}%`}
+        value={minPickRate}
+        onValueChange={onMinPickRateChange}
+      />
+    </ColumnFilter>
+  );
   const nameFilter = onNameQueryChange && (
     <ColumnFilter label="Hero" active={!!filters.nameQuery?.trim()} onReset={() => onNameQueryChange("")}>
       <SearchInput
@@ -81,21 +103,43 @@ export function HeroStatsTable({
   }
 
   if (table.rows.length === 0) {
+    // The table's head, and its column filters, go with the rows: the empty state offers their way back.
+    const byRate = minPickRate > 0 && onMinPickRateChange;
     return (
       <EmptyState
-        title={table.hasData ? "No heroes match your search" : "No hero stats for these filters"}
+        title={
+          !table.hasData
+            ? "No hero stats for these filters"
+            : byRate
+              ? "No heroes match these filters"
+              : "No heroes match your search"
+        }
         description={
-          table.hasData
-            ? "Try another hero name or clear your search."
-            : "Try a wider date range, more ranks, or lower match requirements."
+          !table.hasData
+            ? "Try a wider date range, more ranks, or lower match requirements."
+            : byRate
+              ? undefined
+              : "Try another hero name or clear your search."
         }
         action={
           table.hasData &&
-          onClearNameQuery && (
-            <Button variant="outline" onClick={onClearNameQuery}>
-              Clear search
+          (byRate ? (
+            <Button
+              variant="outline"
+              onClick={() => {
+                onMinPickRateChange(0);
+                onClearNameQuery?.();
+              }}
+            >
+              Clear filters
             </Button>
-          )
+          ) : (
+            onClearNameQuery && (
+              <Button variant="outline" onClick={onClearNameQuery}>
+                Clear search
+              </Button>
+            )
+          ))
         }
       />
     );
@@ -107,7 +151,13 @@ export function HeroStatsTable({
         {table.groups.map(
           (group) =>
             group.visible.length > 0 && (
-              <HeroTypeGroup key={group.type} group={group} table={table} nameFilter={nameFilter} />
+              <HeroTypeGroup
+                key={group.type}
+                group={group}
+                table={table}
+                nameFilter={nameFilter}
+                rateFilter={rateFilter}
+              />
             ),
         )}
       </StaleOverlay>
@@ -117,7 +167,7 @@ export function HeroStatsTable({
   return (
     <StaleOverlay active={table.isStale} label="hero stats" className="flex flex-col gap-3">
       <Table aria-label="Hero stats" density="compact" className="tabular-nums">
-        <HeroStatsHeader table={table} nameFilter={nameFilter} />
+        <HeroStatsHeader table={table} nameFilter={nameFilter} rateFilter={rateFilter} />
         <TableBody>
           {table.rows.map(({ rank, hero }) => (
             <HeroStatsRow key={hero.row.hero_id} rank={rank} hero={hero} table={table} />
@@ -156,10 +206,12 @@ function HeroTypeGroup({
   group,
   table,
   nameFilter,
+  rateFilter,
 }: {
   group: HeroTypeGroupData;
   table: HeroStatsTableState;
   nameFilter?: React.ReactNode;
+  rateFilter?: React.ReactNode;
 }) {
   const config = HERO_TYPE_CONFIG[group.type];
   return (
@@ -188,7 +240,7 @@ function HeroTypeGroup({
         </div>
       </PanelHeader>
       <Table aria-label={`${config.label} hero stats`} density="compact" className="tabular-nums">
-        <HeroStatsHeader table={table} nameFilter={nameFilter} />
+        <HeroStatsHeader table={table} nameFilter={nameFilter} rateFilter={rateFilter} />
         <TableBody>
           {group.visible.map(({ rank, hero }) => (
             <HeroStatsRow key={hero.row.hero_id} rank={rank} hero={hero} table={table} />
@@ -199,7 +251,16 @@ function HeroTypeGroup({
   );
 }
 
-function HeroStatsHeader({ table, nameFilter }: { table: HeroStatsTableState; nameFilter?: React.ReactNode }) {
+function HeroStatsHeader({
+  table,
+  nameFilter,
+  rateFilter,
+}: {
+  table: HeroStatsTableState;
+  nameFilter?: React.ReactNode;
+  /** The pick rate column's filter, after its sort button. */
+  rateFilter?: React.ReactNode;
+}) {
   const { sortKey, sortDir, onSort, pickRateMode, normalized } = table;
   // "desc" is the default direction of every column; for names it means A to Z, so the arrow and aria-sort both say
   // ascending.
@@ -264,6 +325,7 @@ function HeroStatsHeader({ table, nameFilter }: { table: HeroStatsTableState; na
               onClick={() => onSort("pickRate")}
               aria-label={`Sort by ${pickRateMode === "presence" ? "presence" : pickRateMode === "banRate" ? "ban rate" : "pick rate"}`}
             />
+            {rateFilter}
           </Inline>
         </TableHead>
         <SortableHeader

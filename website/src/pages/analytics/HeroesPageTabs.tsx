@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { HeroScoreboardSortByEnum } from "deadlock_api_client";
-import { parseAsBoolean, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
-import { Suspense } from "react";
+import { parseAsBoolean, parseAsInteger, parseAsString, parseAsStringLiteral, useQueryState } from "nuqs";
+import { startTransition, Suspense } from "react";
 
 import { SortBySelector } from "~/components/domain/player-scoreboard/SortBySelector";
 import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
@@ -52,6 +52,11 @@ function useGroupByType() {
 /** The overall table's name search; replace, so each keystroke is not a history entry. */
 function useHeroNameQuery() {
   return useQueryState("hero_q", parseAsString.withDefault("").withOptions({ history: "replace" }));
+}
+
+/** The overall table's minimum of its pick rate column, in percent. */
+function useHeroMinPickRate() {
+  return useQueryState("min_pick_rate", parseAsInteger.withDefault(0));
 }
 
 /**
@@ -235,6 +240,7 @@ function LazyTab({ children }: { children: React.ReactNode }) {
 export function HeroOverallStatsTab({ filters }: { filters: HeroFilters }) {
   const [groupByType] = useGroupByType();
   const [heroNameQuery, setHeroNameQuery] = useHeroNameQuery();
+  const [minPickRate, setMinPickRate] = useHeroMinPickRate();
   // Half the page's search clicks ask for pick rates: the test variant opens the table on pick rate.
   const sortExperiment = useExperiment("exp-heroes-pickrate-default");
   return (
@@ -244,6 +250,8 @@ export function HeroOverallStatsTab({ filters }: { filters: HeroFilters }) {
         nameQuery={heroNameQuery}
         onClearNameQuery={() => void setHeroNameQuery(null)}
         onNameQueryChange={(query) => void setHeroNameQuery(query || null)}
+        minPickRate={minPickRate}
+        onMinPickRateChange={(percent) => startTransition(() => void setMinPickRate(percent > 0 ? percent : null))}
         minRankId={filters.effectiveMinRankId}
         maxRankId={filters.effectiveMaxRankId}
         minHeroMatches={filters.minHeroMatches}

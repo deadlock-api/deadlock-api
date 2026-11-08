@@ -44,6 +44,9 @@ export interface HeroStatsTableFilters {
   matchMode?: MatchMode;
   /** Shows only the heroes whose name contains it. */
   nameQuery?: string;
+  /** Shows only the heroes at or above it, in percent, in the pick rate column's metric (pick rate, ban rate or
+   * presence, as the column shows it). */
+  minPickRate?: number;
   groupByType?: boolean;
   /** The column the table opens sorted by while the URL names none; "pickRate" also opens the pick rate column on
    * plain pick rate instead of presence. */
@@ -73,7 +76,7 @@ export interface HeroStatsRowData {
   swap?: HeroSwapRates;
 }
 
-/** A hero and its position in the sorted table (or group), counted before the name filter. */
+/** A hero and its position in the sorted table (or group), counted before the name and pick rate filters. */
 export interface RankedHero {
   rank: number;
   hero: HeroStatsRowData;
@@ -86,7 +89,7 @@ function ranked(heroes: HeroStatsRowData[]): RankedHero[] {
 export interface HeroTypeGroupData {
   type: HeroType;
   matches: number;
-  /** Every hero of the type, sorted; `visible` are those the name filter keeps. */
+  /** Every hero of the type, sorted; `visible` are those the name and pick rate filters keep. */
   heroes: RankedHero[];
   visible: RankedHero[];
   winRate: number;
@@ -139,6 +142,7 @@ export function useHeroStatsTable({
   gameMode,
   matchMode,
   nameQuery,
+  minPickRate = 0,
   groupByType = false,
   defaultSortKey = "winrate",
 }: HeroStatsTableFilters) {
@@ -348,10 +352,23 @@ export function useHeroStatsTable({
   }, [heroRows, sortKey, sortDir, shownPickRateMode]);
 
   const normalizedNameQuery = nameQuery?.trim().toLowerCase() ?? "";
-  const matchesName = (d: Pick<HeroStatsRowData, "heroName">) =>
-    normalizedNameQuery === "" || (d.heroName ?? "").toLowerCase().includes(normalizedNameQuery);
+  // The column's value as it reads, to a tenth of a percent, so a row showing the threshold is kept.
+  const shownPickPercent = (d: HeroStatsRowData) => {
+    const value =
+      shownPickRateMode === "presence"
+        ? d.presence
+        : shownPickRateMode === "banRate"
+          ? d.banRate
+          : normalized
+            ? d.normalizedPickRate
+            : d.pickRate;
+    return Math.round(value * 1000) / 10;
+  };
+  const matchesFilters = (d: HeroStatsRowData) =>
+    (normalizedNameQuery === "" || (d.heroName ?? "").toLowerCase().includes(normalizedNameQuery)) &&
+    (minPickRate <= 0 || shownPickPercent(d) >= minPickRate);
 
-  const visibleRows = ranked(sortedRows).filter(({ hero }) => matchesName(hero));
+  const visibleRows = ranked(sortedRows).filter(({ hero }) => matchesFilters(hero));
 
   const allGroups = useMemo((): Omit<HeroTypeGroupData, "visible">[] | undefined => {
     if (!groupByType || !heroData) return undefined;
@@ -431,7 +448,7 @@ export function useHeroStatsTable({
     banMatches,
   ]);
   const groups = allGroups?.map((group): HeroTypeGroupData =>
-    Object.assign({}, group, { visible: group.heroes.filter(({ hero }) => matchesName(hero)) }),
+    Object.assign({}, group, { visible: group.heroes.filter(({ hero }) => matchesFilters(hero)) }),
   );
 
   return {
