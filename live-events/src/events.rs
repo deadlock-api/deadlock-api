@@ -99,12 +99,19 @@ async fn demo_event_stream(
 
     // Async streaming mode has no seeking, so pump broadcast fragments into the parser via a
     // bounded channel. The bound provides backpressure; dropping the parser closes the channel
-    // and stops the pump.
+    // and stops the pump, also while it waits for the next fragment.
     let (packet_tx, packet_rx) = tokio::sync::mpsc::channel::<Bytes>(32);
     let pump = tokio::spawn(async move {
         loop {
             debug!("Waiting for next packet in broadcast stream");
-            match broadcast.next_packet().await {
+            let next = tokio::select! {
+                next = broadcast.next_packet() => next,
+                () = packet_tx.closed() => {
+                    debug!("Packet receiver dropped, stopping broadcast pump");
+                    return Ok(());
+                }
+            };
+            match next {
                 Some(Ok(packet)) => {
                     if packet_tx.send(packet).await.is_err() {
                         debug!("Packet receiver dropped, stopping broadcast pump");
@@ -123,9 +130,13 @@ async fn demo_event_stream(
     let demo_stream = PacketChannelBroadcastStream::new(packet_rx);
     let mut parser = AsyncStreamingParser::from_stream_with_visitor(demo_stream, visitor)?;
     tokio::spawn(async move {
-        // The parser only sees the closed channel, so a broadcast fetch failure has to be read
-        // back from the pump to tell a relay outage apart from the match actually ending.
-        let error = match parser.run_to_end().await {
+        // The parser ends cleanly on the broadcast's `DemStop` or on the closed channel. Only in
+        // the latter case can a broadcast fetch have failed, so that is read back from the pump to
+        // tell a relay outage apart from the match actually ending. Dropping the parser first
+        // stops a pump that is still polling for fragments after `DemStop`.
+        let result = parser.run_to_end().await;
+        drop(parser);
+        let error = match result {
             Err(e) => Some(e.to_string()),
             Ok(()) => match pump.await {
                 Ok(result) => result.err().map(|e| e.to_string()),

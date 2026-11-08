@@ -14,6 +14,7 @@
 use std::io;
 
 use bytes::Bytes;
+use valveprotos::common::EDemoCommands;
 
 use crate::async_demostream::AsyncDemoStream;
 use crate::demostream::{
@@ -34,7 +35,15 @@ pub struct PacketChannelBroadcastStream<P: PacketSource> {
     current: Bytes,
     /// Read position within current packet.
     offset: usize,
+    /// Set once the broadcast's `DemStop` was read; the stream has ended then, even though
+    /// the source may still be open.
+    stopped: bool,
 }
+
+/// Size of the header that ends a broadcast: the cmd byte, the tick and the unknown byte, but no
+/// body size. Valve sends it as the tail of a match's last `/delta` fragment.
+const STOP_CMD_HEADER_SIZE: usize = STOP_CMD_HEADER_SIZE_U8 as usize;
+const STOP_CMD_HEADER_SIZE_U8: u8 = 6;
 
 impl<P: PacketSource> PacketChannelBroadcastStream<P> {
     /// Create a new stream that receives packets from the given source.
@@ -46,6 +55,7 @@ impl<P: PacketSource> PacketChannelBroadcastStream<P> {
             source,
             current: Bytes::new(),
             offset: 0,
+            stopped: false,
         }
     }
 
@@ -58,6 +68,7 @@ impl<P: PacketSource> PacketChannelBroadcastStream<P> {
             source,
             current: initial,
             offset: 0,
+            stopped: false,
         }
     }
 
@@ -94,16 +105,37 @@ impl<P: PacketSource> AsyncDemoStream for PacketChannelBroadcastStream<P> {
     const CMD_FORMAT: CmdFormat = CmdFormat::Broadcast;
 
     async fn read_cmd_header(&mut self) -> Result<CmdHeader, ReadCmdHeaderError> {
+        if self.stopped {
+            return Err(ReadCmdHeaderError::IoError(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "broadcast stopped",
+            )));
+        }
         self.ensure_data().await?;
+
+        let rest = self.current.get(self.offset..).unwrap_or_default();
+
+        // NOTE: the broadcast ends with a `DemStop` that has no body size, so its header is
+        // shorter than the others. same as demofile-net, which stops at the cmd byte 0. see
+        // <https://github.com/saul/demofile-net/blob/7d3d59e478dbd2b000f4efa2dac70ed1bf2e2b7f/src/DemoFile/HttpBroadcastReader.cs#L165>
+        if let Some(&[cmd, t0, t1, t2, t3, _unknown]) = rest.first_chunk::<STOP_CMD_HEADER_SIZE>()
+            && i32::from(cmd) == EDemoCommands::DemStop as i32
+        {
+            self.offset = self.offset.saturating_add(STOP_CMD_HEADER_SIZE);
+            self.stopped = true;
+            return Ok(CmdHeader {
+                cmd: EDemoCommands::DemStop,
+                body_compressed: false,
+                tick: i32::from_le_bytes([t0, t1, t2, t3]),
+                body_size: 0,
+                size: STOP_CMD_HEADER_SIZE_U8,
+            });
+        }
 
         // NOTE: commands don't span packets, so a packet that stops inside a header is broken.
         // this must not be `UnexpectedEof`: the parser takes that as the end of the stream while
         // the source is still open.
-        let Some(&header) = self
-            .current
-            .get(self.offset..)
-            .and_then(<[u8]>::first_chunk)
-        else {
+        let Some(&header) = rest.first_chunk() else {
             return Err(ReadCmdHeaderError::IoError(io::Error::new(
                 io::ErrorKind::InvalidData,
                 "incomplete command header in packet",
@@ -136,8 +168,6 @@ mod tests {
     use core::pin::pin;
     use core::task::{Context, Poll, Waker};
     use std::collections::VecDeque;
-
-    use valveprotos::common::EDemoCommands;
 
     use super::*;
 
@@ -191,6 +221,38 @@ mod tests {
         // the empty packet is skipped, then the closed source ends the stream.
         let err = block_on(s.read_cmd_header()).unwrap_err();
         assert_eq!(header_err_kind(&err), Some(io::ErrorKind::UnexpectedEof));
+    }
+
+    /// the tail of a match's last `/delta` fragment, captured from a live broadcast: `DemStop`
+    /// at tick 133490 without a body size.
+    const STOP_TAIL: [u8; STOP_CMD_HEADER_SIZE] = [0x00, 0x72, 0x09, 0x02, 0x00, 0x00];
+
+    #[test]
+    fn short_dem_stop_ends_stream() {
+        let mut last = cmd(133_489);
+        last.extend_from_slice(&STOP_TAIL);
+        // the next packet must not be read: the stream ends at `DemStop`.
+        let mut s = stream(&[&last, &cmd(133_491)]);
+        let header = block_on(s.read_cmd_header()).unwrap();
+        assert_eq!(block_on(s.read_cmd(&header)).unwrap(), &[0xaa]);
+
+        let stop = block_on(s.read_cmd_header()).unwrap();
+        assert_eq!(stop.cmd, EDemoCommands::DemStop);
+        assert_eq!(stop.tick, 133_490);
+        assert_eq!(stop.body_size, 0);
+        assert_eq!(block_on(s.read_cmd(&stop)).unwrap(), &[] as &[u8]);
+
+        let err = block_on(s.read_cmd_header()).unwrap_err();
+        assert_eq!(header_err_kind(&err), Some(io::ErrorKind::UnexpectedEof));
+    }
+
+    #[test]
+    fn short_tail_other_than_dem_stop_is_invalid_data() {
+        let mut tail = STOP_TAIL;
+        tail[0] = EDemoCommands::DemPacket as u8;
+        let mut s = stream(&[&tail, &cmd(2)]);
+        let err = block_on(s.read_cmd_header()).unwrap_err();
+        assert_eq!(header_err_kind(&err), Some(io::ErrorKind::InvalidData));
     }
 
     #[test]
