@@ -72,4 +72,5 @@ export const TRACKER_SITES: readonly TrackerSite[] = [
   { name: "Randomlock", icon: "/tracker-sites/randomlock.webp" },
   { name: "DeadlockBuild", icon: "/tracker-sites/deadlockbuild.webp" },
   { name: "LOCKSTAT", icon: "/tracker-sites/lockstat.webp" },
+  { name: "Counterlock", icon: "/tracker-sites/counterlock.webp" },
 ];
