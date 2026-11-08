@@ -36,6 +36,8 @@ import {
 
 /** The pick rate column's filter: round thresholds of the metric it shows, in percent. */
 const PICK_RATE_PRESETS = [0, 5, 10, 20, 30, 50] as const;
+/** The win rate column's filter: round thresholds around even, in percent. */
+const WIN_RATE_PRESETS = [0, 45, 48, 50, 52, 55] as const;
 
 const COMPACT_MATCHES = new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 });
 
@@ -51,6 +53,7 @@ export function HeroStatsTable({
   onClearNameQuery,
   onNameQueryChange,
   onMinPickRateChange,
+  onMinWinRateChange,
   ...filters
 }: HeroStatsTableFilters & {
   onClearNameQuery?: () => void;
@@ -58,6 +61,8 @@ export function HeroStatsTable({
   onNameQueryChange?: (query: string) => void;
   /** Puts a minimum in the pick rate column's head (a `ColumnFilter`), of the metric the column shows. */
   onMinPickRateChange?: (percent: number) => void;
+  /** Puts a minimum in the Win Rate column's head (a `ColumnFilter`). */
+  onMinWinRateChange?: (percent: number) => void;
 }) {
   const table = useHeroStatsTable(filters);
   const minPickRate = filters.minPickRate ?? 0;
@@ -72,6 +77,19 @@ export function HeroStatsTable({
         format={(value) => `${value}%`}
         value={minPickRate}
         onValueChange={onMinPickRateChange}
+      />
+    </ColumnFilter>
+  );
+  const minWinRate = filters.minWinRate ?? 0;
+  const winRateFilter = onMinWinRateChange && (
+    <ColumnFilter label="Win Rate" active={minWinRate > 0}>
+      <ThresholdMenu
+        label="Min win rate"
+        presets={WIN_RATE_PRESETS}
+        max={100}
+        format={(value) => `${value}%`}
+        value={minWinRate}
+        onValueChange={onMinWinRateChange}
       />
     </ColumnFilter>
   );
@@ -104,7 +122,7 @@ export function HeroStatsTable({
 
   if (table.rows.length === 0) {
     // The table's head, and its column filters, go with the rows: the empty state offers their way back.
-    const byRate = minPickRate > 0 && onMinPickRateChange;
+    const byRate = (minPickRate > 0 && onMinPickRateChange) || (minWinRate > 0 && onMinWinRateChange);
     return (
       <EmptyState
         title={
@@ -127,7 +145,8 @@ export function HeroStatsTable({
             <Button
               variant="outline"
               onClick={() => {
-                onMinPickRateChange(0);
+                onMinPickRateChange?.(0);
+                onMinWinRateChange?.(0);
                 onClearNameQuery?.();
               }}
             >
@@ -157,6 +176,7 @@ export function HeroStatsTable({
                 table={table}
                 nameFilter={nameFilter}
                 rateFilter={rateFilter}
+                winRateFilter={winRateFilter}
               />
             ),
         )}
@@ -167,7 +187,7 @@ export function HeroStatsTable({
   return (
     <StaleOverlay active={table.isStale} label="hero stats" className="flex flex-col gap-3">
       <Table aria-label="Hero stats" density="compact" className="tabular-nums">
-        <HeroStatsHeader table={table} nameFilter={nameFilter} rateFilter={rateFilter} />
+        <HeroStatsHeader table={table} nameFilter={nameFilter} rateFilter={rateFilter} winRateFilter={winRateFilter} />
         <TableBody>
           {table.rows.map(({ rank, hero }) => (
             <HeroStatsRow key={hero.row.hero_id} rank={rank} hero={hero} table={table} />
@@ -207,11 +227,13 @@ function HeroTypeGroup({
   table,
   nameFilter,
   rateFilter,
+  winRateFilter,
 }: {
   group: HeroTypeGroupData;
   table: HeroStatsTableState;
   nameFilter?: React.ReactNode;
   rateFilter?: React.ReactNode;
+  winRateFilter?: React.ReactNode;
 }) {
   const config = HERO_TYPE_CONFIG[group.type];
   return (
@@ -240,7 +262,7 @@ function HeroTypeGroup({
         </div>
       </PanelHeader>
       <Table aria-label={`${config.label} hero stats`} density="compact" className="tabular-nums">
-        <HeroStatsHeader table={table} nameFilter={nameFilter} rateFilter={rateFilter} />
+        <HeroStatsHeader table={table} nameFilter={nameFilter} rateFilter={rateFilter} winRateFilter={winRateFilter} />
         <TableBody>
           {group.visible.map(({ rank, hero }) => (
             <HeroStatsRow key={hero.row.hero_id} rank={rank} hero={hero} table={table} />
@@ -255,11 +277,13 @@ function HeroStatsHeader({
   table,
   nameFilter,
   rateFilter,
+  winRateFilter,
 }: {
   table: HeroStatsTableState;
   nameFilter?: React.ReactNode;
   /** The pick rate column's filter, after its sort button. */
   rateFilter?: React.ReactNode;
+  winRateFilter?: React.ReactNode;
 }) {
   const { sortKey, sortDir, onSort, pickRateMode, normalized } = table;
   // "desc" is the default direction of every column; for names it means A to Z, so the arrow and aria-sort both say
@@ -289,6 +313,7 @@ function HeroStatsHeader({
           sortDir={sortDir}
           onSortChange={onSort}
           className="w-19/100 text-center"
+          filter={winRateFilter}
         />
         <TableHead aria-sort={ariaSort(sortKey === "pickRate", sortDir)} className="w-19/100 text-center">
           <Inline justify="center" wrap="nowrap" className="inline-flex">

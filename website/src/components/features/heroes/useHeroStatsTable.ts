@@ -47,6 +47,8 @@ export interface HeroStatsTableFilters {
   /** Shows only the heroes at or above it, in percent, in the pick rate column's metric (pick rate, ban rate or
    * presence, as the column shows it). */
   minPickRate?: number;
+  /** Shows only the heroes whose win rate is at or above it, in percent. */
+  minWinRate?: number;
   groupByType?: boolean;
   /** The column the table opens sorted by while the URL names none; "pickRate" also opens the pick rate column on
    * plain pick rate instead of presence. */
@@ -76,7 +78,7 @@ export interface HeroStatsRowData {
   swap?: HeroSwapRates;
 }
 
-/** A hero and its position in the sorted table (or group), counted before the name and pick rate filters. */
+/** A hero and its position in the sorted table (or group), counted before the name, win rate and pick rate filters. */
 export interface RankedHero {
   rank: number;
   hero: HeroStatsRowData;
@@ -89,7 +91,7 @@ function ranked(heroes: HeroStatsRowData[]): RankedHero[] {
 export interface HeroTypeGroupData {
   type: HeroType;
   matches: number;
-  /** Every hero of the type, sorted; `visible` are those the name and pick rate filters keep. */
+  /** Every hero of the type, sorted; `visible` are those the name, win rate and pick rate filters keep. */
   heroes: RankedHero[];
   visible: RankedHero[];
   winRate: number;
@@ -143,6 +145,7 @@ export function useHeroStatsTable({
   matchMode,
   nameQuery,
   minPickRate = 0,
+  minWinRate = 0,
   groupByType = false,
   defaultSortKey = "winrate",
 }: HeroStatsTableFilters) {
@@ -366,7 +369,8 @@ export function useHeroStatsTable({
   };
   const matchesFilters = (d: HeroStatsRowData) =>
     (normalizedNameQuery === "" || (d.heroName ?? "").toLowerCase().includes(normalizedNameQuery)) &&
-    (minPickRate <= 0 || shownPickPercent(d) >= minPickRate);
+    (minPickRate <= 0 || shownPickPercent(d) >= minPickRate) &&
+    (minWinRate <= 0 || Math.round(d.winRate * 1000) / 10 >= minWinRate);
 
   const visibleRows = ranked(sortedRows).filter(({ hero }) => matchesFilters(hero));
 

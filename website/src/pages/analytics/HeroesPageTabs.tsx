@@ -59,6 +59,11 @@ function useHeroMinPickRate() {
   return useQueryState("min_pick_rate", parseAsInteger.withDefault(0));
 }
 
+/** The overall table's minimum win rate, in percent. */
+function useHeroMinWinRate() {
+  return useQueryState("min_win_rate", parseAsInteger.withDefault(0));
+}
+
 /**
  * The tier list's ranking metric. Street Brawl has neither bans nor a soul economy: those metrics leave the list, and
  * one chosen in another mode falls back to the tier score while the URL keeps it.
@@ -241,6 +246,7 @@ export function HeroOverallStatsTab({ filters }: { filters: HeroFilters }) {
   const [groupByType] = useGroupByType();
   const [heroNameQuery, setHeroNameQuery] = useHeroNameQuery();
   const [minPickRate, setMinPickRate] = useHeroMinPickRate();
+  const [minWinRate, setMinWinRate] = useHeroMinWinRate();
   // Half the page's search clicks ask for pick rates: the test variant opens the table on pick rate.
   const sortExperiment = useExperiment("exp-heroes-pickrate-default");
   return (
@@ -252,6 +258,8 @@ export function HeroOverallStatsTab({ filters }: { filters: HeroFilters }) {
         onNameQueryChange={(query) => void setHeroNameQuery(query || null)}
         minPickRate={minPickRate}
         onMinPickRateChange={(percent) => startTransition(() => void setMinPickRate(percent > 0 ? percent : null))}
+        minWinRate={minWinRate}
+        onMinWinRateChange={(percent) => startTransition(() => void setMinWinRate(percent > 0 ? percent : null))}
         minRankId={filters.effectiveMinRankId}
         maxRankId={filters.effectiveMaxRankId}
         minHeroMatches={filters.minHeroMatches}
