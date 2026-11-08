@@ -9,8 +9,10 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use base64::Engine as _;
 use base64::prelude::BASE64_STANDARD;
+use chrono::Utc;
 use clickhouse::{RowOwned, RowWrite};
 use clickhouse_utils::insert_rows;
+use game_assets::versions::ranked_seasons::{fetch_ranked_seasons, leaderboard_id_at};
 use moka::Expiry;
 use moka::future::Cache;
 use prost::Message as _;
@@ -22,6 +24,7 @@ use valveprotos::deadlock::{
 };
 
 use crate::context::AppState;
+use crate::routes::v1::assets::common::{Language, resolve_version};
 use crate::services::leaderboard::types::{
     HeroLeaderboardClickhouse, LeaderboardClickhouse, LeaderboardRegion,
 };
@@ -67,16 +70,34 @@ static LEADERBOARDS: LazyLock<Cache<LeaderboardKey, CachedLeaderboard>> = LazyLo
         .build()
 });
 
+/// The leaderboard of the ranked interval running now, from the ranked seasons of the latest
+/// game version; `None` when they can't be loaded or list no leaderboard for now.
+async fn current_leaderboard_id(state: &AppState) -> Option<u32> {
+    let version = resolve_version(state, None).await.ok()?;
+    let seasons = fetch_ranked_seasons(&state.r2_client, version, Language::default().as_str())
+        .await
+        .ok()?;
+    leaderboard_id_at(&seasons, Utc::now().timestamp())
+}
+
 /// Fetches a leaderboard from Steam, at most every ten minutes per variant, or every five
 /// minutes while it fails; concurrent misses on the same variant wait for one Steam call
 /// instead of each making their own. Each fetch of the current leaderboard is also snapshotted:
 /// here, not in the callers, so cache hits do not store the same entries again.
+///
+/// Without a `leaderboard_id` this asks for the current interval's leaderboard by its id: since
+/// 2026-11-06, a day into Beta Season 2, the Game Coordinator answers requests without one
+/// with `KEInternalError`. Only when the current id is unknown does it send none.
 pub(crate) async fn fetch_leaderboard_raw(
     state: &AppState,
     region: LeaderboardRegion,
     hero_id: Option<u32>,
     leaderboard_id: Option<u32>,
 ) -> Result<SteamProxyResponse, SteamProxyError> {
+    let current_id = current_leaderboard_id(state).await;
+    let leaderboard_id = leaderboard_id.or(current_id);
+    // Snapshots track the current leaderboard only; other leaderboards would mix seasons.
+    let is_current = leaderboard_id == current_id;
     LEADERBOARDS
         .get_with((region, hero_id, leaderboard_id), async {
             let response = fetch_leaderboard_uncached(state, region, hero_id, leaderboard_id).await;
@@ -91,9 +112,8 @@ pub(crate) async fn fetch_leaderboard_raw(
                 p.result
                     == Some(c_msg_client_to_gc_get_leaderboard_response::EResult::KESuccess as i32)
             });
-            // Snapshots track the current leaderboard only; other leaderboards would mix
-            // seasons. A failed or undecodable response is skipped here; the caller reports it.
-            if leaderboard_id.is_none()
+            // A failed or undecodable response is not snapshotted; the caller reports it.
+            if is_current
                 && succeeded
                 && let Some(proto) = proto
             {
@@ -216,6 +236,9 @@ async fn insert_snapshot<R: RowOwned + RowWrite + Sync>(
     rows: impl Iterator<Item = R>,
 ) {
     let rows: Vec<R> = rows.collect();
+    if rows.is_empty() {
+        return;
+    }
     if let Err(e) = insert_rows(ch_client, table, &rows).await {
         warn!("Failed to insert {table} to CH: {e}");
     }

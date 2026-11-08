@@ -4,7 +4,7 @@ use crate::context::AppState;
 use crate::middleware::cors;
 
 pub mod analytics;
-mod assets;
+pub(crate) mod assets;
 mod auth;
 pub mod builds;
 mod commands;

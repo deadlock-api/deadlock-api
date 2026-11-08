@@ -201,12 +201,25 @@ fn map_ranked_type(raw: &str) -> String {
 /// exactly when interval 2 starts), so the later-starting one wins there.
 #[must_use]
 pub fn interval_at(seasons: &[RankedSeason], now: i64) -> Option<u32> {
+    running_interval(seasons, now).map(|i| i.interval)
+}
+
+/// The leaderboard of the interval running at `now` (unix seconds).
+///
+/// As accepted by the `leaderboard_id` field of `CMsgClientToGCGetLeaderboard`. `None` when no
+/// interval is running or it lists no leaderboard (before build 6701).
+#[must_use]
+pub fn leaderboard_id_at(seasons: &[RankedSeason], now: i64) -> Option<u32> {
+    running_interval(seasons, now)?.leaderboard_id
+}
+
+/// The interval running at `now`; at a shared boundary the later-starting one.
+fn running_interval(seasons: &[RankedSeason], now: i64) -> Option<&SeasonInterval> {
     seasons
         .iter()
         .flat_map(|s| &s.intervals)
         .filter(|i| (i.start_timestamp..=i.end_timestamp).contains(&now))
         .max_by_key(|i| i.start_timestamp)
-        .map(|i| i.interval)
 }
 
 /// The season running at `now` (unix seconds) with the `(start, end)` span of
@@ -338,6 +351,9 @@ mod tests {
         // 2026-11-05 20:00 UTC: interval 1 (season 1) hands over to interval 2 (season 2).
         assert_eq!(interval_at(&out, 1_793_908_799), Some(1));
         assert_eq!(interval_at(&out, 1_793_908_800), Some(2));
+        assert_eq!(leaderboard_id_at(&out, 1_793_908_799), Some(1001));
+        assert_eq!(leaderboard_id_at(&out, 1_793_908_800), Some(1002));
+        assert_eq!(leaderboard_id_at(&out, 1_804_802_401), None);
         let (current, start, end) = season_at(&out, 1_793_908_800).expect("season running");
         assert_eq!(
             (current.class_name.as_str(), start, end),
