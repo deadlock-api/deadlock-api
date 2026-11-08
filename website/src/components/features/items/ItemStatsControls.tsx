@@ -31,6 +31,11 @@ export function useItemSlots() {
   return useQueryState("item_slots", parseAsArrayOf(parseAsStringLiteral(ITEM_SLOTS)).withDefault([...ITEM_SLOTS]));
 }
 
+/** The Pick Rate column's filter: rows below this normalized pick rate, in percent, are left out. */
+export function useItemMinPickRate() {
+  return useQueryState("min_pick_rate", parseAsInteger.withDefault(0));
+}
+
 /** The table's name search, in the URL like its other filters; replace, so each keystroke is not a history entry. */
 export function useItemNameQuery() {
   return useQueryState("item_q", parseAsString.withDefault("").withOptions({ history: "replace" }));
@@ -51,7 +56,7 @@ export function useItemLists() {
 
 /**
  * The item table's filters that change its query, for the page's filter row: items to include or leave out and which
- * purchases count. The name, slot and tier filters only narrow the rows shown and sit in the Item column's head.
+ * purchases count. The name, slot, tier and pick rate filters only narrow the rows shown and sit in their columns' heads.
  */
 export function ItemStatsControls() {
   const { includeItems, setIncludeItems, excludeItems, setExcludeItems } = useItemLists();

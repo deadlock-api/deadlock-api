@@ -33,6 +33,7 @@ import {
 } from "~/components/domain/selectors/ItemTierSelector";
 import {
   useItemLists,
+  useItemMinPickRate,
   useItemNameQuery,
   useItemSlots,
   useItemTiers,
@@ -44,6 +45,7 @@ import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { ColumnFilter } from "~/components/patterns/data-table/ColumnFilter";
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
 import { SortableHeader } from "~/components/patterns/data-table/SortableHeader";
+import { ThresholdMenu } from "~/components/patterns/filter-bar/NumberSelector";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
@@ -99,6 +101,14 @@ function KeyedHeaderLabel({ normalColor = NORMAL_COLOR, children }: { normalColo
 /** Normal purchases in the stacked cells and header keys; corrupted ones in the second color. */
 const NORMAL_COLOR = CHART_COLOR.pickRate;
 const CORRUPTED_COLOR = CHART_COLOR.comparison;
+
+/** The Pick Rate column's filter: round thresholds of the normalized pick rate, in percent. */
+const PICK_RATE_PRESETS = [0, 5, 10, 20, 30, 50] as const;
+
+/** An item's pick rate as its column shows it: whole percent of the most bought item's matches. */
+function normalizedPickPercent(matches: number, maxUsage: number) {
+  return maxUsage > 0 ? Math.round((matches / maxUsage) * 100) : 0;
+}
 
 /** Rows in the server-rendered HTML; a tall screen shows about 15. */
 const SERVER_ROWS = 30;
@@ -581,6 +591,7 @@ export function ItemStatsTable({
   const [itemSlots, setItemSlots] = useItemSlots();
   const { includeItems, setIncludeItems, excludeItems, setExcludeItems } = useItemLists();
   const [nameQuery, setNameQuery] = useItemNameQuery();
+  const [minPickRate, setMinPickRate] = useItemMinPickRate();
   const [corruptedMode] = useCorruptedItemMode();
 
   // Functional updates keep both callbacks stable, so a click re-renders one memoized row instead of the whole table.
@@ -616,8 +627,13 @@ export function ItemStatsTable({
   const rowSortDir = useDeferredValue(sort.dir);
   const rowTiers = useDeferredValue(itemTiers);
   const rowSlots = useDeferredValue(itemSlots);
+  const rowMinPickRate = useDeferredValue(minPickRate);
   const rowsCatchingUp =
-    rowSortKey !== sort.sortKey || rowSortDir !== sort.dir || rowTiers !== itemTiers || rowSlots !== itemSlots;
+    rowSortKey !== sort.sortKey ||
+    rowSortDir !== sort.dir ||
+    rowTiers !== itemTiers ||
+    rowSlots !== itemSlots ||
+    rowMinPickRate !== minPickRate;
 
   const processedData = useMemo(() => {
     if (!data) return [];
@@ -667,6 +683,7 @@ export function ItemStatsTable({
   const visibleData = processedData.filter(
     (row) =>
       shownTiers.includes(row.itemTier) &&
+      normalizedPickPercent(row.matches, maxUsage) >= rowMinPickRate &&
       (rowSlots.length === 0 || !row.item || rowSlots.includes(row.item.item_slot_type)) &&
       (!nameTerm || (row.item?.name ?? "").toLowerCase().includes(nameTerm)),
   );
@@ -823,6 +840,21 @@ export function ItemStatsTable({
                     onSortChange={toggleSort}
                     // Allowed onto two lines, so the long label does not set the bar's width.
                     className="w-1/4 text-start whitespace-normal"
+                    filter={
+                      <ColumnFilter label="Pick Rate" active={minPickRate > 0}>
+                        <ThresholdMenu
+                          label="Min pick rate"
+                          presets={PICK_RATE_PRESETS}
+                          step={5}
+                          max={100}
+                          format={(value) => `${value}%`}
+                          value={minPickRate}
+                          onValueChange={(next) =>
+                            startTransition(() => void setMinPickRate(next > 0 ? next : null, together))
+                          }
+                        />
+                      </ColumnFilter>
+                    }
                   />
                   <SortableHeader
                     label={
