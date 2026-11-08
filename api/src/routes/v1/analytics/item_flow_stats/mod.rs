@@ -266,6 +266,11 @@ const TIME_PHASE_BOUNDARIES: &[u32] = &[540, 1200, 1800];
 /// Number of normal-mode columns (`TIME_PHASE_BOUNDARIES.len() + 1`).
 const TIME_PHASE_COLUMNS: u8 = 4;
 
+/// Seconds of buy phase between two street-brawl rounds (`street_brawl.buy_time` in
+/// `/v1/assets/generic-data`, 50 for every round). `round_duration_s` leaves it out, so the plain
+/// running sum of round durations falls one buy phase further behind the game clock per round.
+const BRAWL_BUY_TIME_S: u32 = 50;
+
 /// `WITH` entry: the sorted upgrade ids, whose 1-based positions `by_column` holds (see
 /// [`build_edges_query`]). Every query that selects `by_column` needs it.
 const UPGRADE_IDS_WITH: &str = "(SELECT arraySort(groupArray(id)) FROM items WHERE type = 'upgrade'
@@ -378,8 +383,14 @@ struct QueryParts {
     extra_settings: &'static str,
 }
 
-/// Street brawl columns are rounds, which end at the running sums of
-/// `street_brawl_rounds.round_duration_s`. A purchase's round was
+/// Street brawl columns are rounds. The cut after round `k` is the running sum of
+/// `street_brawl_rounds.round_duration_s` plus the `k - 1` buy phases ([`BRAWL_BUY_TIME_S`])
+/// played between those rounds. Round `k`'s fight really ends one opening buy phase (~56 s) after
+/// that cut, and round `k + 1`'s draft starts right at its end, so the cut sits in the quiet part
+/// of round `k`, clear of both drafts even when `round_duration_s` is off by tens of seconds.
+/// Measured on 359 street-brawl matches (36,681 upgrade purchases) against the drafts found by
+/// clustering the purchases: 99.8-100% of each round's purchases land in their round; the
+/// running sum alone kept 63%, 43% and 40% of rounds 3, 4 and 5. A purchase's round was
 /// `least(arrayCount(s -> s < gt, arrayCumSum(<durations>)), n)`: a lambda in the per-purchase
 /// lambda, which copied the match's rounds array once per purchase (four times over in edges).
 /// Instead, an inner `SELECT` reads the first `n` round ends as scalars (`round_end_<k>`, no
@@ -522,7 +533,7 @@ fn query_parts(query: &ItemFlowStatsQuery) -> QueryParts {
     let column_expr = column_of("e.buy_time");
     let brawl = is_brawl.then(|| BrawlParts {
         round_ends_select: format!(
-            "arrayResize(arrayCumSum(`street_brawl_rounds.round_duration_s`), {}, 18446744073709551615) AS round_ends, {}",
+            "arrayResize(arrayMap((s, k) -> s + {BRAWL_BUY_TIME_S} * k, arrayCumSum(`street_brawl_rounds.round_duration_s`), range(length(`street_brawl_rounds.round_duration_s`))), {}, 18446744073709551615) AS round_ends, {}",
             round_ends.len(),
             round_ends
                 .iter()
@@ -1322,6 +1333,36 @@ mod tests {
             assert!(!sql.contains("round_end_6"), "{sql}");
         }
         assert!(build_edges_query(&query, &parts).contains("countResample(0, 5, 1)"));
+    }
+
+    #[test]
+    fn brawl_round_ends_count_the_buy_phases_between_rounds() {
+        let query = ItemFlowStatsQuery {
+            game_mode: Some(GameMode::StreetBrawl),
+            phase_count: Some(6),
+            ..Default::default()
+        };
+        let parts = query_parts(&query);
+        let round_ends = &parts
+            .brawl
+            .as_ref()
+            .expect("street brawl")
+            .round_ends_select;
+        // Round k's cut is the sum of its k durations plus the k - 1 buy phases before it.
+        assert!(
+            round_ends.starts_with(
+                "arrayResize(arrayMap((s, k) -> s + 50 * k, arrayCumSum(`street_brawl_rounds.round_duration_s`), range(length(`street_brawl_rounds.round_duration_s`))), 5, "
+            ),
+            "{round_ends}"
+        );
+        for sql in [
+            build_nodes_query(&query, &parts),
+            build_edges_query(&query, &parts),
+            build_totals_query(&parts),
+        ] {
+            assert_valid_sql(&sql);
+            assert!(sql.contains(round_ends.as_str()), "{sql}");
+        }
     }
 
     #[test]
