@@ -1,6 +1,6 @@
 //! Refreshes every day-partitioned analytics rollup every 30 minutes, not just the cohort ones
-//! the name comes from: `item_stats_agg_v2`, the cohort rollups by buy time and net worth, the
-//! enemy-hero rollup, `player_performance_curve_agg_v2`, the item-flow rollups (nodes, edges,
+//! the name comes from: `item_stats_agg_v2`, the hero-less and cohort rollups by buy time and net
+//! worth, the enemy-hero rollup, `player_performance_curve_agg_v2`, the item-flow rollups (nodes, edges,
 //! totals; of all players and per included upgrade), `game_stats_agg` and `hero_pair_stats_agg`.
 //! Each run rebuilds only the days whose source matches grew past [`rebuild_threshold`] since
 //! their last build, plus the days a [`History`] rollup has due by age, and the include item-flow
@@ -155,12 +155,24 @@ enum Source {
     PerformanceCurve,
     /// One row per purchase, at the `item_stats_agg_v2` grain.
     ItemStats,
+    /// One row per purchase, per item and buy minute or net worth step, without a hero.
+    ItemBuckets(item_stats::ItemBucketAgg),
     /// Sums every player row's stats per match-level grain (`game_stats_agg`).
     GameStats,
     /// Sums the stats of every pair of players per match-level grain (`hero_pair_stats_agg`).
     HeroPairs,
     /// One of the item build-flow rollups (`item_flow_*_agg`).
     ItemFlow(item_flow_agg::Agg),
+}
+
+const fn item_bucket_spec(agg: item_stats::ItemBucketAgg) -> CohortSpec {
+    CohortSpec {
+        table: agg.table(),
+        staging: agg.staging(),
+        source: Source::ItemBuckets(agg),
+        horizon_days: HORIZON_DAYS,
+        history: None,
+    }
 }
 
 // The _v2 tables carry uniqCombined(14) player states (migration 40); the plain uniq states
@@ -193,6 +205,8 @@ fn cohort_specs() -> Vec<CohortSpec> {
             horizon_days: HORIZON_DAYS,
             history: None,
         },
+        item_bucket_spec(item_stats::ItemBucketAgg::Time),
+        item_bucket_spec(item_stats::ItemBucketAgg::NetWorth),
         CohortSpec {
             table: "default.item_cohort_stats_time_agg_v2",
             staging: "default.item_cohort_stats_time_agg_v2_staging",
@@ -266,16 +280,32 @@ fn cohort_specs() -> Vec<CohortSpec> {
     ]
 }
 
-/// Measures of every item rollup (`item_stats_agg_v2`, the cohort and enemy rollups), over one
-/// purchase's `won`, `buy_time`, `sold_time`, `duration_s` and `account_id`.
-pub(crate) const ITEM_ROLLUP_MEASURES: &str = "count() AS n_matches,
+/// Measures of the item rollups over one purchase's `won`, `buy_time`, `sold_time`, `duration_s`
+/// and `account_id`, with `players_state` a `uniqCombined` state of the given precision.
+macro_rules! item_rollup_measures {
+    ($precision:literal) => {
+        concat!(
+            "count() AS n_matches,
     sum(won) AS n_wins,
     sum(buy_time) AS sum_buy_time,
     sum((buy_time / duration_s) * 100) AS sum_buy_rel,
     sum(if(sold_time > 0, sold_time, 0)) AS sum_sold_time,
     sum(toUInt64(sold_time > 0)) AS n_sold,
     sum(if(sold_time > 0, (sold_time / duration_s) * 100, 0)) AS sum_sold_rel,
-    uniqCombinedState(14)(account_id) AS players_state";
+    uniqCombinedState(",
+            $precision,
+            ")(account_id) AS players_state"
+        )
+    };
+}
+
+/// Measures of `item_stats_agg_v2` and the cohort and enemy rollups: `uniqCombined(14)` players.
+pub(crate) const ITEM_ROLLUP_MEASURES: &str = item_rollup_measures!("14");
+
+/// Measures of the hero-less buy-time and net-worth rollups (`item_stats_time_agg`,
+/// `item_stats_net_worth_agg`): `uniqCombined(12)` players. Their reads merge every item and
+/// bucket of a window, ~564k states for 30 days; at precision 14 that merge cost 2.7x the CPU.
+pub(crate) const ITEM_BUCKET_ROLLUP_MEASURES: &str = item_rollup_measures!("12");
 
 /// The purchase side reads `upgrades.*`, which excludes corrupted purchases (migration 42);
 /// the cohort side keeps the raw `items.item_id` so it matches the `hasAll(items.item_id, ...)`
@@ -292,6 +322,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str, slice: Slice) -> String {
             return player_performance_curve_agg::agg_select_body(since_clause);
         }
         Source::ItemStats => return item_stats::item_stats_agg_select_body(since_clause),
+        Source::ItemBuckets(agg) => return agg.select_body(since_clause),
         Source::GameStats => return game_stats::agg_select_body(since_clause),
         Source::HeroPairs => return hero_pair_agg::agg_select_body(since_clause),
         Source::ItemFlow(agg) => {
