@@ -74,6 +74,10 @@ pub(crate) const CACHE_CONTROL: CacheControlLayer = CacheControlLayer::new(Durat
     .with_stale_while_revalidate(Duration::from_mins(20))
     .until_cached_results_expire();
 
+#[expect(
+    deprecated,
+    reason = "registers the deprecated per-hero hero-build-stats route"
+)]
 pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
     let rate_limit_state = RateLimitState {
         client: state.rate_limit_client.clone(),
@@ -90,6 +94,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
             .routes(routes!(hero_stats::hero_stats))
             .routes(routes!(hero_ban_stats::hero_ban_stats))
             .routes(routes!(hero_swap_stats::hero_swap_stats))
+            .routes(routes!(hero_build_stats::hero_build_stats_by_heroes))
             .routes(routes!(hero_build_stats::hero_build_stats))
             .routes(routes!(item_stats::item_stats))
             .routes(routes!(item_permutation_stats::item_permutation_stats))
