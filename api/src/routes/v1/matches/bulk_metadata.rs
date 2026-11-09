@@ -48,6 +48,10 @@ const RATE_LIMIT: RateLimit = RateLimit::new(
 /// succeeded on the rerun. Like the caches' cooldowns, it is per API instance.
 static TIMEOUT_COOLDOWN: LazyLock<TimeoutCooldown> = LazyLock::new(TimeoutCooldown::default);
 
+/// Match-level column every request selects, appended after `players` as
+/// `any(banned_hero_ids) as banned_hero_ids`.
+const BANNED_HERO_IDS: &str = "banned_hero_ids";
+
 const fn default_limit() -> u32 {
     1000
 }
@@ -559,7 +563,7 @@ fn build_query(
         let mut selected_names: HashSet<String> = select_fields
             .iter()
             .filter_map(|field| field.rsplit_once(" as ").map(|(_, alias)| alias.to_owned()))
-            .chain(["match_id".to_owned(), "players".to_owned()])
+            .chain(["match_id", "players", BANNED_HERO_IDS].map(str::to_owned))
             .collect();
         for col in extra_match_columns {
             let alias = col.replace('.', "_");
@@ -580,6 +584,7 @@ fn build_query(
                 .rsplit_once(" as ")
                 .map(|(_, alias)| alias.trim_matches('`'))
         })
+        .chain([BANNED_HERO_IDS])
         .collect();
     let player_columns = player_columns(&query)
         .into_iter()
@@ -755,7 +760,7 @@ fn build_query(
     };
     let limit = format!(" LIMIT {} ", query.limit);
 
-    select_fields.push("any(banned_hero_ids) as banned_hero_ids".to_owned());
+    select_fields.push(format!("any({BANNED_HERO_IDS}) as {BANNED_HERO_IDS}"));
 
     let select = format!(
         "SELECT match_player.match_id as match_id, {}",
@@ -1098,6 +1103,7 @@ mod proptests {
                     "average_badge".to_owned(),
                     "team_score".to_owned(),
                     "team_score".to_owned(),
+                    "banned_hero_ids".to_owned(),
                 ]),
                 limit: 50,
                 ..BulkMatchMetadataQuery::default()
@@ -1108,12 +1114,13 @@ mod proptests {
         assert_valid_sql(&sql);
         assert!(!sql.contains("any(`match_id`)"));
         assert!(!sql.contains("any(`average_badge`)"));
+        assert!(!sql.contains("any(`banned_hero_ids`)"));
         assert_eq!(sql.matches("any(`team_score`) as `team_score`").count(), 1);
     }
 
     #[test]
     fn player_columns_named_like_match_aliases_are_qualified() {
-        // Both shapes failed in prod with ILLEGAL_AGGREGATION: the player column bound to the
+        // All three shapes failed in prod with ILLEGAL_AGGREGATION: the player column bound to the
         // match-level `any(...)` alias of the same name.
         let sql = build_query(
             BulkMatchMetadataQuery {
@@ -1124,6 +1131,7 @@ mod proptests {
                     "ranked_type".to_owned(),
                     "created_at".to_owned(),
                     "won".to_owned(),
+                    "banned_hero_ids".to_owned(),
                 ]),
                 limit: 50,
                 ..BulkMatchMetadataQuery::default()
@@ -1134,6 +1142,7 @@ mod proptests {
         assert_valid_sql(&sql);
         assert!(sql.contains("match_player.`ranked_type` AS `ranked_type`"));
         assert!(sql.contains("match_player.`created_at` AS `created_at`"));
+        assert!(sql.contains("match_player.`banned_hero_ids` AS `banned_hero_ids`"));
         assert!(sql.contains(", `won` AS `won`") || sql.contains(", `won`"));
         assert!(!sql.contains("match_player.`won`"));
         assert!(!sql.contains("match_player.account_id"));
