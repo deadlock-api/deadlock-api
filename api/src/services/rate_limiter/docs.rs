@@ -26,6 +26,7 @@ pub(crate) fn describe<'a>(description: &str, limits: impl Into<Limits<'a>>) -> 
 pub(crate) struct Limits<'a> {
     cases: Vec<(&'a str, &'a [Quota])>,
     note: Option<&'a str>,
+    unit: &'a str,
 }
 
 impl<'a> Limits<'a> {
@@ -35,6 +36,11 @@ impl<'a> Limits<'a> {
             note: Some(note),
             ..self
         }
+    }
+
+    /// What a quota counts, for policies charged per unit of cost (default `req`).
+    pub(crate) fn unit(self, unit: &'a str) -> Self {
+        Self { unit, ..self }
     }
 }
 
@@ -55,6 +61,7 @@ impl<'a, const N: usize> From<[(&'a str, &'a [Quota]); N]> for Limits<'a> {
         Self {
             cases: cases.into(),
             note: None,
+            unit: "req",
         }
     }
 }
@@ -83,7 +90,7 @@ impl Display for Limits<'_> {
                     if j > 0 {
                         f.write_str(", ")?;
                     }
-                    write!(f, "{}req/{}", quota.limit, Period(quota.period))?;
+                    write!(f, "{}{}/{}", quota.limit, self.unit, Period(quota.period))?;
                 }
             }
             writeln!(f, " |")?;
@@ -143,6 +150,14 @@ mod tests {
             "Text.\n\n### Rate Limits:\n| Type | Limit |\n| ---- | ----- |\n\
              | IP | 10req/min, 100req/h |\n| Key | - |\n| Global | 2000req/h |\n"
         );
+    }
+
+    #[test]
+    fn renders_a_cost_unit() {
+        let table = Limits::from(&[Quota::new(Scope::Ip, 10, Duration::from_mins(1))][..])
+            .unit(" accounts")
+            .to_string();
+        assert!(table.contains("| IP | 10 accounts/min |"));
     }
 
     #[test]

@@ -1,3 +1,4 @@
+use core::num::NonZeroU64;
 use core::time::Duration;
 
 use axum::Json;
@@ -18,22 +19,40 @@ use crate::error::{APIError, APIResult};
 use crate::services::protected_accounts::{ensure_not_protected, without_protected};
 use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
+use crate::services::rate_limiter::{Limits, Quota, RateLimit, Scope, describe};
 use crate::utils::badge::{
     badge_to_idx, idx_to_badge, rank_badge_sql, rank_subrank_progress_sql, rank_subrank_width_sql,
 };
 use crate::utils::sql::POINT_LOOKUP_MAX_THREADS;
 use crate::utils::types::AccountIdQuery;
 
+/// Shared by every rank endpoint and charged per requested account, since the `ClickHouse` work
+/// scales with accounts, not requests: a 1000-account batch costs a thousand single lookups.
 const RATE_LIMIT: RateLimit = RateLimit::new(
     "rank",
     &[
-        Quota::new(Scope::Ip, 20, Duration::from_mins(1)),
-        Quota::new(Scope::Key, 100, Duration::from_mins(1)),
-        Quota::new(Scope::Key, 2_000, Duration::from_hours(1)),
-        Quota::new(Scope::Global, 200, Duration::from_mins(1)),
+        Quota::new(Scope::Ip, 10_000, Duration::from_mins(1)),
+        Quota::new(Scope::Ip, 100_000, Duration::from_hours(1)),
+        Quota::new(Scope::Key, 50_000, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 500_000, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 60_000, Duration::from_mins(1)),
     ],
 );
+
+fn rate_limits() -> Limits<'static> {
+    Limits::from(RATE_LIMIT).unit(" accounts").note(
+        "Shared by all rank endpoints. Each requested account counts as one, so a batch of 100 \
+         accounts uses as much as 100 single lookups.",
+    )
+}
+
+/// The cost of a request for `accounts` distinct accounts: at least 1.
+fn account_cost(accounts: usize) -> NonZeroU64 {
+    u64::try_from(accounts)
+        .ok()
+        .and_then(NonZeroU64::new)
+        .unwrap_or(NonZeroU64::MIN)
+}
 
 #[derive(Debug, Serialize, ToSchema)]
 pub(crate) struct RankResponse {
@@ -253,7 +272,7 @@ pub(crate) async fn fetch_last_ranked_match(
     ),
     tags = ["Players"],
     summary = "Rank",
-    description = "
+    description = describe("
 Returns the player's rank at the end of their latest ranked match, i.e. the rank they entered that
 match with plus the progress the match awarded. Subranks span the points of the match's ranked
 interval (`sub_rank_xp` in `/v1/assets/ranked-seasons`: 1000 each in Beta Season 2, the last of
@@ -266,12 +285,17 @@ all `0`, which is the `Obscurus` (unranked) tier, and `last_match` is `null`.
 
 `last_match` carries the rank metadata Valve reported on that match, e.g. rank progress, remaining
 placement games and demotion protection.
-"
+", rate_limits())
 )]
 pub(super) async fn rank(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
+    rate_limit_key: RateLimitKey,
 ) -> APIResult<Json<RankResponse>> {
+    state
+        .rate_limit_client
+        .check(&rate_limit_key, RATE_LIMIT)
+        .await?;
     ensure_not_protected(&state, &[account_id]).await?;
 
     let last_match = fetch_last_ranked_match(&state.batchers.player_rank, account_id).await?;
@@ -326,7 +350,7 @@ ranked matches reports a rank get `badge`, `rank` and `subrank` of `0` and a `nu
 Protected accounts are left out.
 
     ",
-        RATE_LIMIT,
+        rate_limits(),
     )
 )]
 pub(super) async fn rank_batch(
@@ -335,12 +359,13 @@ pub(super) async fn rank_batch(
     rate_limit_key: RateLimitKey,
 ) -> APIResult<Json<Vec<AccountRank>>> {
     check_account_id_count(&account_ids, MAX_BATCH_ACCOUNT_IDS)?;
+    let account_ids: Vec<u32> = account_ids.into_iter().unique().collect();
     state
         .rate_limit_client
-        .check(&rate_limit_key, RATE_LIMIT)
+        .charge(&rate_limit_key, RATE_LIMIT, account_cost(account_ids.len()))
         .await?;
 
-    let account_ids = without_protected(&state, account_ids.into_iter().unique()).await?;
+    let account_ids = without_protected(&state, account_ids).await?;
 
     let batcher = &state.batchers.player_rank;
     let ranks = futures::future::try_join_all(account_ids.iter().map(|&account_id| async move {
@@ -371,13 +396,21 @@ pub(super) async fn rank_batch(
     ),
     tags = ["Players"],
     summary = "Rank Image",
-    description = "Returns the rank badge image directly (binary), not a URL, with the player's I-VI division numeral drawn on it. Players whose recent ranked matches carry no rank, and players still in placement, get the plain tier badge. Use `?format=webp` for WebP."
+    description = describe(
+        "Returns the rank badge image directly (binary), not a URL, with the player's I-VI division numeral drawn on it. Players whose recent ranked matches carry no rank, and players still in placement, get the plain tier badge. Use `?format=webp` for WebP.",
+        rate_limits(),
+    )
 )]
 pub(super) async fn rank_image(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     Query(query): Query<RankImageQuery>,
     State(state): State<AppState>,
+    rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
+    state
+        .rate_limit_client
+        .check(&rate_limit_key, RATE_LIMIT)
+        .await?;
     ensure_not_protected(&state, &[account_id]).await?;
 
     let badge = fetch_last_ranked_match(&state.batchers.player_rank, account_id)
@@ -444,7 +477,10 @@ pub(crate) struct RankAvgImageQuery {
     ),
     tags = ["Players"],
     summary = "Rank Avg Image",
-    description = "Returns the average rank badge image (binary) for a comma-separated list of account IDs. Accounts without a rank are left out of the average; if none of them has one, the `Obscurus` image is returned. Use `?format=webp` for WebP."
+    description = describe(
+        "Returns the average rank badge image (binary) for a comma-separated list of account IDs. Accounts without a rank are left out of the average; if none of them has one, the `Obscurus` image is returned. Use `?format=webp` for WebP.",
+        rate_limits(),
+    )
 )]
 pub(super) async fn rank_avg_image(
     Query(RankAvgImageQuery {
@@ -452,10 +488,15 @@ pub(super) async fn rank_avg_image(
         format,
     }): Query<RankAvgImageQuery>,
     State(state): State<AppState>,
+    rate_limit_key: RateLimitKey,
 ) -> APIResult<impl IntoResponse> {
     check_account_id_count(&account_ids, MAX_AVG_ACCOUNT_IDS)?;
 
     let unique_ids: Vec<u32> = account_ids.into_iter().unique().collect();
+    state
+        .rate_limit_client
+        .charge(&rate_limit_key, RATE_LIMIT, account_cost(unique_ids.len()))
+        .await?;
 
     ensure_not_protected(&state, &unique_ids).await?;
 
@@ -507,6 +548,20 @@ mod tests {
         assert_eq!(average_badge(&[0]), 0);
         assert_eq!(average_badge(&[]), 0);
         assert_eq!(average_badge(&[11, 21]), 14);
+    }
+
+    #[test]
+    fn test_account_cost_is_at_least_one() {
+        assert_eq!(account_cost(0).get(), 1);
+        assert_eq!(account_cost(1).get(), 1);
+        assert_eq!(account_cost(1_000).get(), 1_000);
+    }
+
+    #[test]
+    fn test_rank_docs_count_accounts() {
+        let docs = rate_limits().to_string();
+        assert!(docs.contains("| IP | 10000 accounts/min, 100000 accounts/h |"));
+        assert!(docs.contains("| Global | 60000 accounts/min |"));
     }
 
     #[test]
