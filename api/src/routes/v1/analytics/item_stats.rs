@@ -579,24 +579,7 @@ GROUP BY {group_by}"
 /// The `item_stats_agg_v2` rows of the matches selected by `since_clause`, at the full grain and
 /// in the table's column order. The refresh job builds the rollup's days with it.
 pub(crate) fn item_stats_agg_select_body(since_clause: &str) -> String {
-    item_stats_agg_rows(&full_grain_rows(ITEM_STATS_AGG.grain, since_clause))
-}
-
-/// The [`EdgeRows`] of every grain column, in order: the shape of a rollup's day partition.
-fn full_grain_rows(grain: &[(&str, &str)], since_clause: &str) -> EdgeRows {
-    EdgeRows {
-        where_clause: since_clause.to_owned(),
-        grain_select: grain
-            .iter()
-            .map(|(col, expr)| format!("{expr} AS {col},\n    "))
-            .collect::<Vec<_>>()
-            .concat(),
-        group_by: grain
-            .iter()
-            .map(|(col, _)| *col)
-            .collect::<Vec<_>>()
-            .join(", "),
-    }
+    item_stats_agg_rows(&EdgeRows::full_grain(ITEM_STATS_AGG.grain, since_clause))
 }
 
 /// The hero-less buy-time and net-worth rollups, rebuilt per day by
@@ -698,7 +681,7 @@ GROUP BY {group_by}"
     /// The rows of the matches selected by `since_clause`, at the full grain and in the table's
     /// column order. The refresh job builds the rollup's days with it.
     pub(crate) fn select_body(self, since_clause: &str) -> String {
-        self.rows(&full_grain_rows(self.rollup().grain, since_clause))
+        self.rows(&EdgeRows::full_grain(self.rollup().grain, since_clause))
     }
 }
 
@@ -1713,7 +1696,7 @@ cached_ch_query! {
 /// Whether a failed rollup query should be retried on the base table. Not after a timeout: the
 /// base table reads more than the rollup for the same request, so the retry would only time
 /// out as well, after spending another full query budget on a loaded server.
-fn retry_on_base_table(e: &ChQueryError) -> bool {
+pub(super) fn retry_on_base_table(e: &ChQueryError) -> bool {
     match e {
         ChQueryError::Busy(_) => true,
         ChQueryError::Clickhouse(e) => !is_query_timeout(e),

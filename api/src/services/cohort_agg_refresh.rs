@@ -1,7 +1,8 @@
 //! Refreshes every day-partitioned analytics rollup every 30 minutes, not just the cohort ones
 //! the name comes from: `item_stats_agg_v2`, the hero-less and cohort rollups by buy time and net
 //! worth, the enemy-hero rollup, `player_performance_curve_agg_v2`, the item-flow rollups (nodes, edges,
-//! totals; of all players and per included upgrade), `game_stats_agg` and `hero_pair_stats_agg`.
+//! totals; of all players and per included upgrade), the item pair rollup, `game_stats_agg` and
+//! `hero_pair_stats_agg`.
 //! Each run rebuilds only the days whose source matches grew past [`rebuild_threshold`] since
 //! their last build, plus the days a [`History`] rollup has due by age, and the include item-flow
 //! rollups a few days per run (see [`include_rollup_due`]).
@@ -18,7 +19,7 @@ use tracing::{debug, error, info};
 use crate::routes::v1::analytics::item_flow_stats::agg as item_flow_agg;
 use crate::routes::v1::analytics::rollup_window::BUILT_THROUGH;
 use crate::routes::v1::analytics::{
-    game_stats, hero_pair_agg, item_stats, player_performance_curve_agg,
+    game_stats, hero_pair_agg, item_permutation_stats, item_stats, player_performance_curve_agg,
 };
 use crate::services::feature_flags::{COHORT_AGG_REFRESH, FeatureFlags};
 
@@ -163,6 +164,8 @@ enum Source {
     HeroPairs,
     /// One of the item build-flow rollups (`item_flow_*_agg`).
     ItemFlow(item_flow_agg::Agg),
+    /// Every pair of upgrades each player owned (`item_permutation_pairs_agg`).
+    ItemPairs,
 }
 
 const fn item_bucket_spec(agg: item_stats::ItemBucketAgg) -> CohortSpec {
@@ -174,6 +177,15 @@ const fn item_bucket_spec(agg: item_stats::ItemBucketAgg) -> CohortSpec {
         history: None,
     }
 }
+
+/// The item pair rollup: ~22 CPU-s and ~550 MiB per day (2026-11-08 on prod).
+const ITEM_PAIRS_SPEC: CohortSpec = CohortSpec {
+    table: item_permutation_stats::PAIRS_AGG_TABLE,
+    staging: item_permutation_stats::PAIRS_AGG_STAGING,
+    source: Source::ItemPairs,
+    horizon_days: HORIZON_DAYS,
+    history: None,
+};
 
 // The _v2 tables carry uniqCombined(14) player states (migration 40); the plain uniq states
 // of the former v1 tables were ~90% of item_stats_cohort_mv's CPU.
@@ -207,6 +219,7 @@ fn cohort_specs() -> Vec<CohortSpec> {
         },
         item_bucket_spec(item_stats::ItemBucketAgg::Time),
         item_bucket_spec(item_stats::ItemBucketAgg::NetWorth),
+        ITEM_PAIRS_SPEC,
         CohortSpec {
             table: "default.item_cohort_stats_time_agg_v2",
             staging: "default.item_cohort_stats_time_agg_v2_staging",
@@ -328,6 +341,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str, slice: Slice) -> String {
         Source::ItemFlow(agg) => {
             return item_flow_agg::agg_select_body(agg, since_clause, slice);
         }
+        Source::ItemPairs => return item_permutation_stats::pairs_agg_select_body(since_clause),
     };
     let cohort_item_ids = slice.of("arrayDistinct(items.item_id)");
     format!(

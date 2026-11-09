@@ -14,7 +14,7 @@ pub mod hero_stats;
 pub mod hero_swap_stats;
 pub mod hero_synergies_stats;
 pub mod item_flow_stats;
-mod item_permutation_stats;
+pub(crate) mod item_permutation_stats;
 pub mod item_stats;
 mod kill_death_stats;
 mod lane_common;

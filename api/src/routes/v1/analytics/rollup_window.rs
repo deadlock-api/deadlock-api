@@ -149,6 +149,26 @@ pub(super) struct EdgeRows {
     pub(super) group_by: String,
 }
 
+impl EdgeRows {
+    /// The rows of every grain column, in order, of the matches `since_clause` selects: the shape
+    /// of a rollup's day partition, which the refresh job builds with it.
+    pub(super) fn full_grain(grain: &[(&str, &str)], since_clause: &str) -> Self {
+        Self {
+            where_clause: since_clause.to_owned(),
+            grain_select: grain
+                .iter()
+                .map(|(col, expr)| format!("{expr} AS {col},\n    "))
+                .collect::<Vec<_>>()
+                .concat(),
+            group_by: grain
+                .iter()
+                .map(|(col, _)| *col)
+                .collect::<Vec<_>>()
+                .join(", "),
+        }
+    }
+}
+
 impl Rollup<'_> {
     /// Whether the rollup should serve a window starting at `min_unix_timestamp` (`None`: the
     /// start of the data) rather than the caller's base-table query, given how far before its
