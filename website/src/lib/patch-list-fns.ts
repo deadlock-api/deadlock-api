@@ -14,7 +14,7 @@ import { mergePatchFeed, type PatchEntry, type PatchFeedItem, patchNotesContent,
 export const fetchPatchList = createServerFn({ method: "GET" }).handler(async (): Promise<PatchEntry[]> => {
   const curated = PATCHES.map(toPatchEntry);
   try {
-    const { data } = await api.patches_api.feed_1();
+    const { data } = await api.patches_api.feedV2();
     // The generated types leave out the `source` tag the API puts on every item.
     const feed = data.map((item): PatchFeedItem => ({
       source: (item as { source?: string }).source === "steam" ? "steam" : "forum",
@@ -33,7 +33,7 @@ export const fetchPatchList = createServerFn({ method: "GET" }).handler(async ()
 export const fetchPatchNotes = createServerFn({ method: "GET" })
   .validator((id: string) => id)
   .handler(async ({ data: id }): Promise<PatchNotes | undefined> => {
-    const { data } = await api.patches_api.feed_1();
+    const { data } = await api.patches_api.feedV2();
     const feed = data.map((item): PatchFeedItem => ({
       source: (item as { source?: string }).source === "steam" ? "steam" : "forum",
       title: item.title,

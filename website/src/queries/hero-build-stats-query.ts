@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query";
-import type { AnalyticsApiHeroBuildStatsRequest, AnalyticsApiItemStatsRequest } from "deadlock_api_client";
+import type { AnalyticsApiHeroBuildStatsByHeroesRequest, AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
@@ -12,11 +12,18 @@ import type { HeroBuild } from "~/lib/wasm/hero-build";
 
 import { queryKeys } from "./query-keys";
 
-export function heroBuildStatsQueryOptions(params: AnalyticsApiHeroBuildStatsRequest) {
+/** Hero build stats filters for one hero: the website always asks for a single hero. */
+export type HeroBuildStatsParams = Omit<AnalyticsApiHeroBuildStatsByHeroesRequest, "heroIds"> & { heroId: number };
+
+function heroBuildStats({ heroId, ...params }: HeroBuildStatsParams) {
+  return api.analytics_api.heroBuildStatsByHeroes({ ...params, heroIds: String(heroId) });
+}
+
+export function heroBuildStatsQueryOptions(params: HeroBuildStatsParams) {
   return queryOptions({
     queryKey: queryKeys.analytics.heroBuildStats(params),
     queryFn: async (): Promise<BuildStatRow[]> => {
-      const response = await api.analytics_api.heroBuildStats(params);
+      const response = await heroBuildStats(params);
       return response.data.map(({ hero_build_id, wins, losses, matches, players }) => ({
         hero_build_id,
         wins,
@@ -33,11 +40,11 @@ export function heroBuildStatsQueryOptions(params: AnalyticsApiHeroBuildStatsReq
  * The hero build stats with the performance totals of every build, by build id. A request of its own: the totals make
  * the query read about three times the data, so the page's list does not wait for them.
  */
-export function heroBuildPerformanceQueryOptions(params: AnalyticsApiHeroBuildStatsRequest) {
+export function heroBuildPerformanceQueryOptions(params: HeroBuildStatsParams) {
   return queryOptions({
     queryKey: queryKeys.analytics.heroBuildStats({ ...params, includePerformance: true }),
     queryFn: async (): Promise<Record<number, BuildPerformanceTotals>> => {
-      const response = await api.analytics_api.heroBuildStats({ ...params, includePerformance: true });
+      const response = await heroBuildStats({ ...params, includePerformance: true });
       const rows = response.data;
       // An API without the totals leaves them out: those builds have no performance rather than zeros.
       return Object.fromEntries(
@@ -61,13 +68,13 @@ export function heroBuildPerformanceQueryOptions(params: AnalyticsApiHeroBuildSt
  * unranked), `duration` in 10-minute steps of match length (the step's start in seconds).
  */
 export function buildBucketsQueryOptions(
-  params: Omit<AnalyticsApiHeroBuildStatsRequest, "bucket"> & { heroBuildId: number },
+  params: Omit<HeroBuildStatsParams, "bucket"> & { heroBuildId: number },
   bucket: "avg_badge" | "duration",
 ) {
   return queryOptions({
     queryKey: [...queryKeys.analytics.heroBuildStats(params), bucket] as const,
     queryFn: async (): Promise<{ bucket: number; wins: number; matches: number }[]> => {
-      const response = await api.analytics_api.heroBuildStats({ ...params, bucket });
+      const response = await heroBuildStats({ ...params, bucket });
       return response.data.map(({ bucket, wins, matches }) => ({ bucket, wins, matches }));
     },
     staleTime: CACHE_DURATIONS.ONE_HOUR,
