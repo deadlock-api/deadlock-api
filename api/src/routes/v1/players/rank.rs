@@ -20,9 +20,7 @@ use crate::services::protected_accounts::{ensure_not_protected, without_protecte
 use crate::services::rank_image::{self, RankImageFormat, RankImageQuery};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Limits, Quota, RateLimit, Scope, describe};
-use crate::utils::badge::{
-    badge_to_idx, idx_to_badge, rank_badge_sql, rank_subrank_progress_sql, rank_subrank_width_sql,
-};
+use crate::utils::badge::{LadderRank, badge_to_idx, idx_to_badge, ladder_rank};
 use crate::utils::sql::POINT_LOOKUP_MAX_THREADS;
 use crate::utils::types::AccountIdQuery;
 
@@ -155,13 +153,28 @@ pub(crate) struct LastRankedMatchRow {
     player_rank_consumed_demotion_protection: Option<bool>,
     player_rank_initial_win_streak: Option<u32>,
     rank_interval: Option<u32>,
-    badge: u32,
-    subrank_progress: Option<u32>,
-    subrank_width: Option<u32>,
+    /// The ladder of `rank_interval`, `rankSubrankXp(rank_interval)`.
+    sub_rank_xp: Vec<u32>,
 }
 
 impl From<LastRankedMatchRow> for LastRankedMatch {
     fn from(row: LastRankedMatchRow) -> Self {
+        // In placement (display rank 0) there is no badge; without final progress the badge is the
+        // one the player entered with.
+        let rank = match (
+            row.player_rank_initial_display_rank,
+            row.player_rank_final_flat_progress,
+        ) {
+            (0, _) => LadderRank {
+                badge: 0,
+                progress: None,
+            },
+            (display_rank, None) => LadderRank {
+                badge: display_rank,
+                progress: None,
+            },
+            (display_rank, Some(progress)) => ladder_rank(progress, display_rank, &row.sub_rank_xp),
+        };
         Self {
             match_id: row.match_id,
             start_time: row.start_time,
@@ -175,8 +188,8 @@ impl From<LastRankedMatchRow> for LastRankedMatch {
             player_rank_consumed_demotion_protection: row.player_rank_consumed_demotion_protection,
             player_rank_initial_win_streak: row.player_rank_initial_win_streak,
             rank_interval: row.rank_interval,
-            badge: row.badge,
-            progress: row.subrank_progress.zip(row.subrank_width),
+            badge: rank.badge,
+            progress: rank.progress,
         }
     }
 }
@@ -194,8 +207,9 @@ pub(crate) struct PlayerRankQuery;
 /// for every ranked match of the account (2026-11-09, paired replays of prod queries: 10–100
 /// accounts -34% CPU, 1000 accounts -42% CPU and -55% memory).
 ///
-/// The badge and the progress into it are read on the ladder of the row's `rank_interval` (see
-/// [`rank_badge_sql`]). Rows backfilled with `rank_interval` sit next to their older copy without
+/// The badge and the progress into it are computed in Rust by [`ladder_rank`] on the ladder of the
+/// row's `rank_interval`: the rank SQL functions cost ~30 ms of planning per query, a third of a
+/// single-account lookup (2026-11-09: -33% CPU, -31% wall). Rows backfilled with `rank_interval` sit next to their older copy without
 /// it until a merge drops that one, so the copy with an interval wins.
 impl BatchQuery for PlayerRankQuery {
     type Key = u32;
@@ -203,15 +217,6 @@ impl BatchQuery for PlayerRankQuery {
 
     fn build_query(keys: &[u32]) -> String {
         let ids = in_clause(keys);
-        let progress = "assumeNotNull(player_rank_final_flat_progress)";
-        let display_rank = "assumeNotNull(player_rank_initial_display_rank)";
-        let badge = rank_badge_sql(progress, display_rank, "rank_interval");
-        let width = rank_subrank_width_sql(progress, "rank_interval");
-        let subrank_progress = rank_subrank_progress_sql(progress, "rank_interval");
-        // In placement (display rank 0) there is no badge; without final progress the badge is the
-        // one the player entered with. Eternus has no subrank width, so no progress either.
-        let unranked =
-            "player_rank_initial_display_rank = 0 OR player_rank_final_flat_progress IS NULL";
         format!(
             "
             SELECT
@@ -227,10 +232,7 @@ impl BatchQuery for PlayerRankQuery {
                 player_rank_consumed_demotion_protection,
                 player_rank_initial_win_streak,
                 rank_interval,
-                toUInt32(if(player_rank_initial_display_rank = 0, 0,
-                    if(player_rank_final_flat_progress IS NULL, {display_rank}, {badge}))) AS badge,
-                if({unranked}, NULL, {width}) AS subrank_width,
-                if({unranked} OR subrank_width IS NULL, NULL, {subrank_progress}) AS subrank_progress
+                rankSubrankXp(rank_interval) AS sub_rank_xp
             FROM player_match_stats
             WHERE account_id IN ({ids}) AND match_mode = 'Ranked'
                 AND (account_id, match_id) IN (
@@ -580,10 +582,7 @@ mod tests {
         let sql = PlayerRankQuery::build_query(&[1, 2]);
         assert!(sql.contains("ORDER BY match_id DESC, rank_interval DESC NULLS LAST"));
         assert!(sql.contains("AND (account_id, match_id) IN ("));
-        assert!(sql.contains(
-            "rankBadge(assumeNotNull(player_rank_final_flat_progress), \
-             assumeNotNull(player_rank_initial_display_rank), rank_interval)"
-        ));
+        assert!(sql.contains("rankSubrankXp(rank_interval) AS sub_rank_xp"));
     }
 
     #[derive(Debug, Deserialize)]
