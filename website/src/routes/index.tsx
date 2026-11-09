@@ -122,8 +122,8 @@ const sponsors = [
     href: "https://statlocker.gg/?ref=deadlock-api.com",
     title: "Statlocker.GG",
     logo: "/logo/statlocker.png" as const,
-    width: 414,
-    height: 114,
+    width: 840,
+    height: 210,
   },
   {
     href: "https://blast.tv/?ref=deadlock-api.com",
