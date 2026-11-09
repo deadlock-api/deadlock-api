@@ -29,8 +29,9 @@ pub(crate) const MIN_AGE_SECS: u32 = 2 * 60 * 60;
 /// `pending` row from `player_match_history` (versioned by `start_time`) or a `done` row from
 /// salts or metadata.
 ///
-/// An invalid row is `done` for a match Steam says does not exist, so it leaves the to-fetch
-/// pool instead of staying pending forever.
+/// An invalid row is `done` for a match Steam says does not exist, or a requested match the
+/// to-fetch workers gave up on, so it leaves the to-fetch pool instead of staying pending
+/// forever.
 #[derive(Debug, Clone, Row, Serialize)]
 pub(crate) struct PendingMatchRow {
     match_id: u64,
@@ -206,6 +207,21 @@ pub(crate) async fn resolve_invalid_match(state: &AppState, match_id: u64) {
     if (MIN_MATCH_ID..u64::from(u32::MAX)).contains(&match_id) {
         let row = PendingMatchRow::invalid(match_id);
         state.batchers.pending_match_insert.try_insert(vec![row]);
+    }
+}
+
+/// Marks requested matches the to-fetch workers kept failing to fetch as done, taking them
+/// out of the to-fetch pool for good. Nothing proves a requested id is a public match, and the
+/// workers don't report why Steam refused it: most such ids are private or bot lobbies, or
+/// made up.
+pub(crate) fn abandon_requested_matches(state: &AppState, match_ids: &[u64]) {
+    let rows: Vec<PendingMatchRow> = match_ids
+        .iter()
+        .filter(|id| (MIN_MATCH_ID..u64::from(u32::MAX)).contains(id))
+        .map(|&id| PendingMatchRow::invalid(id))
+        .collect();
+    if !rows.is_empty() {
+        state.batchers.pending_match_insert.try_insert(rows);
     }
 }
 

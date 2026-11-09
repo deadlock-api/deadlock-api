@@ -7,6 +7,7 @@ use axum::http::{HeaderMap, HeaderValue, StatusCode};
 use axum::response::{IntoResponse, Response};
 use axum_extra::extract::Query;
 use cached::macros::cached;
+use clickhouse::Row;
 use db_clients::RELEASE_IF_OWNED;
 use serde::{Deserialize, Serialize};
 use sqlx::{Pool, Postgres};
@@ -16,14 +17,46 @@ use uuid::Uuid;
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::ch_cost::TrackedQuery as _;
-use crate::services::pending_matches::{MIN_AGE_SECS, MIN_MATCH_ID};
+use crate::services::pending_matches::{MIN_AGE_SECS, MIN_MATCH_ID, abandon_requested_matches};
 use crate::utils::request::header_str;
 use crate::utils::sql::id_list;
 
 const BATCH_SIZE: usize = 50;
-const CLAIM_TTL_SECS: u64 = 15 * 60;
+/// Covers a Mod Manager pass: up to 32 salt fetches 2 minutes apart. Workers release their
+/// list when done with it, so a long claim only delays the matches of a worker that died.
+const CLAIM_TTL_SECS: u64 = 75 * 60;
 const POOL_LIMIT: usize = 200_000;
+/// Pool entries the claim script walks per call.
+const CLAIM_SCAN_CHUNK: usize = 1_000;
 const CLAIM_PREFIX: &str = "matches_to_fetch:claimed:";
+/// How often a match was handed out while still pending, keyed by match id. A successful
+/// fetch takes it out of the pool within a minute, so a match handed out this often is one
+/// the workers can't fetch.
+const HANDOUT_PREFIX: &str = "matches_to_fetch:handouts:";
+const MAX_HANDOUTS: u32 = 5;
+/// A match that used up its handouts rests this long after its last one, then gets
+/// [`MAX_HANDOUTS`] more. Requested matches don't come back: they are marked done instead.
+const HANDOUT_TTL_SECS: u64 = 6 * 60 * 60;
+/// Walks `KEYS` as (claim key, handout key) pairs, claiming each match for the token `ARGV[1]`
+/// for `ARGV[2]` seconds unless another worker holds it or it was handed out `ARGV[3]` times
+/// already, until `ARGV[5]` are claimed. Counts every claim as a handout, kept for `ARGV[4]`
+/// seconds after the last. Returns (1-based pair index, handouts) per claimed match, flattened.
+const CLAIM_SCRIPT: &str = "
+local token, ttl, max_handouts, handout_ttl = ARGV[1], ARGV[2], tonumber(ARGV[3]), ARGV[4]
+local needed = tonumber(ARGV[5])
+local claimed = {}
+for i = 1, #KEYS - 1, 2 do
+    if needed <= 0 then break end
+    if tonumber(redis.call('get', KEYS[i + 1]) or '0') < max_handouts
+        and redis.call('set', KEYS[i], token, 'NX', 'EX', ttl) then
+        local handouts = redis.call('incr', KEYS[i + 1])
+        redis.call('expire', KEYS[i + 1], handout_ttl)
+        claimed[#claimed + 1] = (i + 1) / 2
+        claimed[#claimed + 1] = handouts
+        needed = needed - 1
+    end
+end
+return claimed";
 /// Set of the match ids one to-fetch response claimed, keyed by its claim token.
 const CLAIM_LIST_PREFIX: &str = "matches_to_fetch:claim_list:";
 /// Carries a response's claim token, so the worker can release the list it was handed.
@@ -116,6 +149,13 @@ async fn prioritized_account_ids(pg_client: &Pool<Postgres>) -> Arc<Vec<u32>> {
     )
 }
 
+#[derive(Debug, Clone, Row, Deserialize)]
+struct PoolEntry {
+    match_id: u64,
+    /// Only known because the API was asked for it; nothing proves it is a public match.
+    requested: bool,
+}
+
 /// Cache key of [`pending_pool`]: the pool depends on the prioritized accounts.
 fn pool_key(prioritized: &[u32]) -> u64 {
     use core::hash::{BuildHasher as _, BuildHasherDefault};
@@ -138,7 +178,7 @@ fn pool_key(prioritized: &[u32]) -> u64 {
 async fn pending_pool(
     ch_client: &clickhouse::Client,
     prioritized: &[u32],
-) -> clickhouse::error::Result<Arc<Vec<u64>>> {
+) -> clickhouse::error::Result<Arc<Vec<PoolEntry>>> {
     let prio = if prioritized.is_empty() {
         "SELECT toUInt64(0) AS match_id WHERE 0".to_owned()
     } else {
@@ -150,7 +190,7 @@ async fn pending_pool(
     };
     let query = format!(
         "WITH prio AS ({prio})
-         SELECT match_id FROM (
+         SELECT match_id, match_mode = 'Invalid' AS requested FROM (
              SELECT match_id, match_id IN prio AS is_prio, start_time, match_mode, game_mode, badge
              FROM pending_matches FINAL
              WHERE state = 'pending' AND match_id >= {MIN_MATCH_ID}
@@ -168,8 +208,8 @@ async fn pending_pool(
                   match_id DESC
          SETTINGS log_comment = 'matches_to_fetch_pool'"
     );
-    let ids: Vec<u64> = ch_client.query(&query).fetch_all_tracked().await?;
-    Ok(Arc::new(ids))
+    let entries: Vec<PoolEntry> = ch_client.query(&query).fetch_all_tracked().await?;
+    Ok(Arc::new(entries))
 }
 
 #[cached(
@@ -201,17 +241,58 @@ pub(super) struct ToFetchQuery {
     /// Filter for matches with a specific player account ID.
     #[serde(default, deserialize_with = "steam_id::de::account_id_option")]
     account_id: Option<u32>,
+    /// How many matches to hand out, at most [`BATCH_SIZE`]. A worker should ask for no more
+    /// than it fetches before the claims expire, so it doesn't hold matches others could fetch.
+    limit: Option<usize>,
+}
+
+/// Claims up to `needed` of `entries` for `token` in one script call, skipping matches another
+/// worker holds or that used up their handouts. Returns each claimed entry with its handout
+/// count, in pool order.
+async fn claim_chunk<'a>(
+    conn: &mut redis::aio::ConnectionManager,
+    entries: &'a [PoolEntry],
+    token: &str,
+    needed: usize,
+) -> redis::RedisResult<Vec<(&'a PoolEntry, u32)>> {
+    let mut cmd = redis::cmd("EVAL");
+    cmd.arg(CLAIM_SCRIPT).arg(entries.len().saturating_mul(2));
+    for entry in entries {
+        cmd.arg(format!("{CLAIM_PREFIX}{}", entry.match_id))
+            .arg(format!("{HANDOUT_PREFIX}{}", entry.match_id));
+    }
+    cmd.arg(token)
+        .arg(CLAIM_TTL_SECS)
+        .arg(MAX_HANDOUTS)
+        .arg(HANDOUT_TTL_SECS)
+        .arg(needed);
+    let flat: Vec<i64> = cmd.query_async(conn).await?;
+    Ok(flat
+        .as_chunks::<2>()
+        .0
+        .iter()
+        .filter_map(|&[index, handouts]| {
+            let entry = entries.get(usize::try_from(index).ok()?.checked_sub(1)?)?;
+            Some((entry, u32::try_from(handouts).unwrap_or(u32::MAX)))
+        })
+        .collect())
 }
 
 /// Hands out the next matches to fetch and claims them for [`CLAIM_TTL_SECS`], so other
 /// workers skip them. The response's [`CLAIM_COOKIE`] identifies the claimed list: sending it
 /// with the next to-fetch request, or to [`release_matches_to_fetch`], releases that list.
+///
+/// A match handed out [`MAX_HANDOUTS`] times is one the workers can't fetch, such as a private
+/// or bot lobby Steam won't show them, and they don't report refusals. It is left out for
+/// [`HANDOUT_TTL_SECS`], and a requested one, which nothing proves is a public match, is
+/// marked done.
 pub(super) async fn matches_to_fetch(
-    Query(ToFetchQuery { account_id }): Query<ToFetchQuery>,
+    Query(ToFetchQuery { account_id, limit }): Query<ToFetchQuery>,
     State(state): State<AppState>,
     headers: HeaderMap,
 ) -> APIResult<impl IntoResponse> {
-    debug!(?account_id, "matches_to_fetch request");
+    debug!(?account_id, ?limit, "matches_to_fetch request");
+    let limit = limit.unwrap_or(BATCH_SIZE).clamp(1, BATCH_SIZE);
 
     // A worker asking again is done with its previous list. Release it first, so the
     // matches it didn't get to are handed out again, possibly to this worker.
@@ -224,45 +305,38 @@ pub(super) async fn matches_to_fetch(
 
     if let Some(account_id) = account_id {
         let ids = pending_pool_for_account(&state.ch_client_ro, account_id).await?;
-        return Ok(worklist(ids));
+        return Ok(worklist(ids.iter().take(limit).collect::<Vec<_>>()));
     }
 
     let prioritized = prioritized_account_ids(&state.pg_client).await;
     let pool = pending_pool(&state.ch_client_ro, prioritized.as_slice()).await?;
-    let n = pool.len();
-    if n == 0 {
-        return Ok(worklist(Vec::<u64>::new()));
-    }
 
     // Walk the pool in priority order, skipping matches another worker has claimed.
     // The claims carry this request's token, so a failed chunk can release exactly its own.
     let token_id = Uuid::new_v4();
     let token = token_id.to_string();
-    let mut claimed: Vec<u64> = Vec::with_capacity(BATCH_SIZE);
-    let mut scanned = 0usize;
-    while claimed.len() < BATCH_SIZE && scanned < n {
-        let chunk = BATCH_SIZE
-            .saturating_sub(claimed.len())
-            .min(n.saturating_sub(scanned));
-        let Some(ids) = pool.get(scanned..scanned.saturating_add(chunk)) else {
+    let mut claimed: Vec<u64> = Vec::with_capacity(limit);
+    let mut abandoned: Vec<u64> = Vec::new();
+    for entries in pool.chunks(CLAIM_SCAN_CHUNK) {
+        let needed = limit.saturating_sub(claimed.len());
+        if needed == 0 {
             break;
-        };
-
-        let mut pipe = redis::pipe();
-        for id in ids {
-            pipe.cmd("SET")
-                .arg(format!("{CLAIM_PREFIX}{id}"))
-                .arg(&token)
-                .arg("NX")
-                .arg("EX")
-                .arg(CLAIM_TTL_SECS);
         }
-        let results: Vec<Option<String>> = match pipe.query_async(&mut conn).await {
-            Ok(results) => results,
+        match claim_chunk(&mut conn, entries, &token, needed).await {
+            Ok(chunk_claims) => {
+                for (entry, handouts) in chunk_claims {
+                    claimed.push(entry.match_id);
+                    // This is its last handout: the worker it goes to still tries it.
+                    if entry.requested && handouts >= MAX_HANDOUTS {
+                        abandoned.push(entry.match_id);
+                    }
+                }
+            }
             Err(e) => {
-                // Redis may have run some of the SETs before failing; claims nobody is handed
-                // would hide those matches from every worker for `CLAIM_TTL_SECS`.
-                release_claims(&mut conn, ids, &token).await;
+                // A script error doesn't undo the claims it made before; claims nobody is
+                // handed would hide those matches from every worker for `CLAIM_TTL_SECS`.
+                let ids: Vec<u64> = entries.iter().map(|e| e.match_id).collect();
+                release_claims(&mut conn, &ids, &token).await;
                 // The matches claimed so far are this worker's: hand them out.
                 if claimed.is_empty() {
                     return Err(e.into());
@@ -270,14 +344,11 @@ pub(super) async fn matches_to_fetch(
                 warn!("Failed to claim more matches to fetch: {e}");
                 break;
             }
-        };
-
-        for (id, res) in ids.iter().zip(results.iter()) {
-            if res.is_some() {
-                claimed.push(*id);
-            }
         }
-        scanned = scanned.saturating_add(chunk);
+    }
+    if !abandoned.is_empty() {
+        debug!(?abandoned, "giving up on requested matches");
+        abandon_requested_matches(&state, &abandoned);
     }
 
     if claimed.is_empty() {
@@ -356,7 +427,7 @@ mod tests {
         assert!(set.starts_with(&format!(
             "{CLAIM_COOKIE}={token}; Path=/v1/matches/to-fetch;"
         )));
-        assert!(set.contains("Max-Age=900"));
+        assert!(set.contains("Max-Age=4500"));
         let mut headers = HeaderMap::new();
         headers.insert(
             COOKIE,
@@ -372,6 +443,69 @@ mod tests {
                 .starts_with(&format!("{CLAIM_COOKIE}=; "))
         );
         assert!(clear.to_str().unwrap().contains("Max-Age=0"));
+    }
+
+    #[tokio::test]
+    #[ignore = "needs a throwaway Redis at TEST_REDIS_URL"]
+    async fn claim_chunk_skips_claimed_and_exhausted_matches() {
+        let url = std::env::var("TEST_REDIS_URL").expect("TEST_REDIS_URL");
+        let client = redis::Client::open(url).unwrap();
+        let mut conn = client.get_connection_manager().await.unwrap();
+        let base = u64::from(u32::MAX) + 1_000 + u64::from(rand_suffix());
+        let entries: Vec<PoolEntry> = (0..4)
+            .map(|i| PoolEntry {
+                match_id: base + i,
+                requested: i % 2 == 0,
+            })
+            .collect();
+        let ids = |claims: &[(&PoolEntry, u32)]| -> Vec<u64> {
+            claims.iter().map(|(e, _)| e.match_id).collect()
+        };
+        // Another worker holds the first match; the second used up its handouts.
+        let _: () = redis::cmd("SET")
+            .arg(format!("{CLAIM_PREFIX}{base}"))
+            .arg("theirs")
+            .query_async(&mut conn)
+            .await
+            .unwrap();
+        let _: () = redis::cmd("SET")
+            .arg(format!("{HANDOUT_PREFIX}{}", base + 1))
+            .arg(MAX_HANDOUTS)
+            .query_async(&mut conn)
+            .await
+            .unwrap();
+
+        // Stops once `needed` are claimed.
+        let first = claim_chunk(&mut conn, &entries, "a", 1).await.unwrap();
+        assert_eq!(ids(&first), [base + 2]);
+        assert_eq!(first[0].1, 1);
+        let rest = claim_chunk(&mut conn, &entries, "b", 10).await.unwrap();
+        assert_eq!(ids(&rest), [base + 3]);
+
+        // Released claims are handed out again, each time counted, until the handouts run out.
+        for handouts in 2..=MAX_HANDOUTS {
+            release_claims(&mut conn, &[base + 2], "a").await;
+            let again = claim_chunk(&mut conn, &entries, "a", 10).await.unwrap();
+            assert_eq!(ids(&again), [base + 2]);
+            assert_eq!(again[0].1, handouts);
+        }
+        release_claims(&mut conn, &[base + 2], "a").await;
+        assert!(
+            claim_chunk(&mut conn, &entries, "a", 10)
+                .await
+                .unwrap()
+                .is_empty()
+        );
+        let ttl: i64 = redis::cmd("TTL")
+            .arg(format!("{HANDOUT_PREFIX}{}", base + 2))
+            .query_async(&mut conn)
+            .await
+            .unwrap();
+        assert!(ttl > 0 && ttl <= i64::try_from(HANDOUT_TTL_SECS).unwrap());
+    }
+
+    fn rand_suffix() -> u32 {
+        u32::try_from(Uuid::new_v4().as_u128() % 100_000).unwrap() * 10
     }
 
     #[tokio::test]
