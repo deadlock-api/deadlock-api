@@ -1,4 +1,5 @@
 use core::time::Duration;
+use std::sync::LazyLock;
 
 use axum::Json;
 use axum::extract::{Path, State};
@@ -6,6 +7,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use chrono::{DateTime, NaiveDateTime};
+use moka::future::Cache;
 use serde::Deserialize;
 use sqlx::QueryBuilder;
 use steam_proxy::{SteamProxyError, SteamProxyOptions, SteamProxyReply};
@@ -33,6 +35,18 @@ const RATE_LIMIT: RateLimit = RateLimit::new(
         Quota::new(Scope::Global, 500, Duration::from_mins(1)),
     ],
 );
+
+/// How long a build fetched from the Game Coordinator is reused for `force_refetch` requests.
+const REFETCH_COOLDOWN: Duration = Duration::from_mins(10);
+
+/// Builds fetched from the Game Coordinator in the last [`REFETCH_COOLDOWN`], per replica.
+/// Clients polling the same builds with `force_refetch` otherwise ask the GC every few minutes.
+static RECENTLY_FETCHED: LazyLock<Cache<(u32, u32), Build>> = LazyLock::new(|| {
+    Cache::builder()
+        .max_capacity(10_000)
+        .time_to_live(REFETCH_COOLDOWN)
+        .build()
+});
 
 #[derive(Debug, Deserialize, IntoParams)]
 pub(super) struct LiveBuildPath {
@@ -181,7 +195,9 @@ fn to_build(result: &HeroBuildResult) -> APIResult<Build> {
 Returns a single build. If the build is already in our database it is served from there, otherwise it is
 fetched live from the Deadlock Game Coordinator and stored in the database.
 
-Set `force_refetch=true` to always fetch from the Game Coordinator, e.g. to pick up a newer version.
+Set `force_refetch=true` to fetch from the Game Coordinator even if the build is in our database, e.g. to
+pick up a newer version. A build fetched from the Game Coordinator in the last 10 minutes is returned from that
+fetch instead.
 
 Rate limits only apply when the build is fetched from the Game Coordinator.
 
@@ -206,6 +222,9 @@ pub(super) async fn fetch_build_live(
     {
         return Ok(Json(build));
     }
+    if let Some(build) = RECENTLY_FETCHED.get(&(hero_id, build_id)).await {
+        return Ok(Json(build));
+    }
 
     state
         .rate_limit_client
@@ -227,7 +246,11 @@ pub(super) async fn fetch_build_live(
             h.version
         })
         .ok_or_else(|| APIError::status_msg(StatusCode::NOT_FOUND, "Build not found"))?;
-    Ok(Json(to_build(build)?))
+    let build = to_build(build)?;
+    RECENTLY_FETCHED
+        .insert((hero_id, build_id), build.clone())
+        .await;
+    Ok(Json(build))
 }
 
 #[utoipa::path(
