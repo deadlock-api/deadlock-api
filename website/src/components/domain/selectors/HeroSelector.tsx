@@ -12,6 +12,8 @@ import { cn } from "~/lib/utils";
 type HeroSelectorProps = Omit<FilterCellPassthroughProps, "icon"> & {
   /** The cell's label: "Hero" for one hero, "Heroes" otherwise. */
   label?: string;
+  /** Hero ids the grid shows first, in this order (a player's most played); the rest follow by name. */
+  heroOrder?: readonly number[];
 } & (
     | (Extract<HeroSelectionProps, { selection?: "single" }> & {
         /** Adds "Any hero" above the grid: the value `null`. */
@@ -26,11 +28,20 @@ type HeroSelectorProps = Omit<FilterCellPassthroughProps, "icon"> & {
     | (Extract<HeroSelectionProps, { selection: "tri-state" }> & { allowNull?: never; emptyLabel?: never })
   );
 
+/** `heroes` with the ids of `order` first, in that order; the rest keep their order. */
+function orderHeroes<T extends { id: number }>(heroes: readonly T[], order: readonly number[]): T[] {
+  const rank = new Map(order.map((id, index) => [id, index]));
+  return heroes.toSorted(
+    (a, b) => (rank.get(a.id) ?? Number.MAX_SAFE_INTEGER) - (rank.get(b.id) ?? Number.MAX_SAFE_INTEGER),
+  );
+}
+
 /**
  * The one hero filter: a `FilterCell` whose popover holds a search box over the portrait grid (`HeroGrid`).
  * `selection` picks what it holds: `single` (one hero, closes on a pick; `allowNull` adds "Any hero"), `multiple`
  * (a list of heroes) or `tri-state` (each hero included, excluded or neither, as a map). A `defaultValue` is what the
- * reset returns to and what counts as inactive. In a filter bar use `Filter.Hero`; in a toolbar pass `size="sm"`.
+ * reset returns to and what counts as inactive. `heroOrder` puts
+ * some heroes first. In a filter bar use `Filter.Hero`; in a toolbar pass `size="sm"`.
  */
 export function HeroSelector(props: HeroSelectorProps) {
   const {
@@ -42,9 +53,11 @@ export function HeroSelector(props: HeroSelectorProps) {
     emptyLabel,
     label = selection === "single" ? "Hero" : "Heroes",
     contentClassName,
+    heroOrder,
     ...cellProps
   } = props;
-  const { heroes } = useHeroRoster();
+  const { heroes: roster } = useHeroRoster();
+  const heroes = heroOrder?.length ? orderHeroes(roster, heroOrder) : roster;
   const [open, setOpen] = useState(false);
   const picker = useHeroPicker({
     selection,

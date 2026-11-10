@@ -114,6 +114,12 @@ export function TrackerContent({
     }
     return badge;
   }, [historyQuery.data]);
+  // The hero filter lists the player's heroes by matches played, so their own sit at the top.
+  const heroOrder = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const entry of historyQuery.data ?? []) counts.set(entry.hero_id, (counts.get(entry.hero_id) ?? 0) + 1);
+    return [...counts].sort((a, b) => b[1] - a[1]).map(([id]) => id);
+  }, [historyQuery.data]);
   // Form and streaks need both outcomes, even when the match list is filtered to wins or losses.
   const formEntries = useMemo(
     () =>
@@ -161,6 +167,7 @@ export function TrackerContent({
           onModeChange={setMode}
           heroId={heroId}
           onHeroChange={setHeroId}
+          heroOrder={heroOrder}
           result={result}
           onResultChange={setResult}
           startDate={startDate}

@@ -21,6 +21,7 @@ export function TrackerFilterBar({
   onModeChange,
   heroId,
   onHeroChange,
+  heroOrder,
   result,
   onResultChange,
   startDate,
@@ -32,6 +33,8 @@ export function TrackerFilterBar({
   onModeChange: (mode: Mode) => void;
   heroId: number | null;
   onHeroChange: (heroId: number | null) => void;
+  /** The player's heroes, most played first: the hero filter lists them ahead of the rest. */
+  heroOrder?: readonly number[];
   result: ResultFilter;
   onResultChange: (result: ResultFilter) => void;
   startDate?: Dayjs;
@@ -86,7 +89,7 @@ export function TrackerFilterBar({
               onValueChange={(next) => onDateChange(next.startDate, next.endDate, next.action)}
               defaultValue={{ startDate: resetRange[0], endDate: resetRange[1] }}
             />
-            <Filter.Hero value={heroId} onValueChange={onHeroChange} allowNull />
+            <Filter.Hero value={heroId} onValueChange={onHeroChange} heroOrder={heroOrder} allowNull />
             <ModeSelector value={mode} onValueChange={onModeChange} defaultValue={TRACKER_DEFAULT_MODE} />
             <FilterToggleCell label="Result" value={result} defaultValue="all" onValueChange={onResultChange}>
               <SegmentedItem value="all">All</SegmentedItem>
