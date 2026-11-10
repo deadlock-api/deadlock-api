@@ -71,6 +71,8 @@ pub(crate) enum DumpError {
     ManifestFormat(u32),
     #[error("shutting down")]
     Shutdown,
+    #[error("catalog: {0} data files not under the public URL")]
+    CatalogPaths(i64),
 }
 
 pub(crate) struct DataDump {
@@ -83,6 +85,8 @@ pub(crate) struct DataDump {
     pub(crate) redis: ConnectionManager,
     pub(crate) feature_flags: FeatureFlags,
     pub(crate) store: Arc<dyn ObjectStore>,
+    /// The same bucket as `store`, for the catalog build's `DuckDB` reads.
+    pub(crate) footer_source: catalog::FooterSource,
     pub(crate) work_dir: PathBuf,
 }
 
@@ -759,7 +763,8 @@ impl DataDump {
         let built = tokio::task::spawn_blocking({
             let dir = dir.clone();
             let manifest = manifest.clone();
-            move || catalog::build(&dir, &manifest)
+            let source = self.footer_source.clone();
+            move || catalog::build(&dir, &manifest, &source)
         })
         .await?;
         let result = async {

@@ -17,6 +17,7 @@ use crate::context::config::Config;
 use crate::services::ch_admission;
 use crate::services::ch_cache;
 use crate::services::data_dump::DataDump;
+use crate::services::data_dump::catalog::FooterSource;
 use crate::services::data_lake::{CatalogError, SnapshotCatalog};
 use crate::services::feature_flags::FeatureFlags;
 use crate::services::rate_limiter::RateLimitClient;
@@ -396,6 +397,12 @@ fn spawn_data_dump(
         redis: redis_client.clone(),
         feature_flags: feature_flags.clone(),
         store: Arc::new(lake_store),
+        footer_source: FooterSource {
+            endpoint: config.r2.endpoint(),
+            bucket: config.data_dump.bucket.clone(),
+            access_key_id: config.data_dump.access_key_id.clone(),
+            secret_access_key: config.data_dump.secret_access_key.clone(),
+        },
         work_dir: std::env::temp_dir().join("deadlock-data-dump"),
     }
     .spawn();
