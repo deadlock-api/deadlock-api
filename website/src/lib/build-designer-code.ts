@@ -136,7 +136,8 @@ export function gameBuildFromDesigner({
   }));
 
   return {
-    hero_build_id: null,
+    // The game rejects a pasted code without a non-zero id; any id will do, it need not be a published build.
+    hero_build_id: 1,
     hero_id: heroId,
     author_account_id: null,
     last_updated_timestamp: Math.floor(now / 1000),

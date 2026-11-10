@@ -58,6 +58,8 @@ test("a designer build survives a trip through a game code", () => {
     skills: [683490631, 683490631, 267712790, 683490631, 683490631],
   };
   const game = gameBuildFromDesigner({ ...designer, abilities, stageNames: STAGES, now: 1_800_000_000_000 });
+  // The game only imports codes with a non-zero build id.
+  assert.ok(codec.decode(codec.encode(game)).hero_build_id);
   const changes = game.details?.ability_order?.currency_changes ?? [];
   // Every ability unlocked first, the upgraded ones in the order of their first upgrade; a fourth upgrade is dropped.
   assert.deepEqual(
