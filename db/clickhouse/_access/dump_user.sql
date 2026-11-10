@@ -5,6 +5,8 @@ GRANT SELECT ON default.hero_leaderboard TO dump_user;
 GRANT SELECT ON default.leaderboard TO dump_user;
 GRANT SELECT ON default.match_player TO dump_user;
 GRANT SELECT ON default.match_salts TO dump_user;
+GRANT SELECT ON default.player_cluster_matches TO dump_user;
+GRANT SELECT ON default.server_clusters TO dump_user;
 GRANT SELECT ON default.steam_profile_observed_names TO dump_user;
 GRANT SELECT ON default.steam_profiles TO dump_user;
 GRANT SELECT ON dump.* TO dump_user;

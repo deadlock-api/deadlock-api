@@ -22,8 +22,9 @@ pub(crate) struct TablePolicy {
     pub(crate) policy: Policy,
 }
 
-/// Every table published on the public data lake. Only root tables (the ones the ingest tools
-/// write to) are listed; materialized-view targets are derivable and stay private.
+/// Every table published on the public data lake. Mostly root tables (the ones the ingest tools
+/// write to); materialized-view targets stay private unless they are small and useful on their
+/// own, like `player_cluster_matches` (derivable from `match_player` and `match_salts` anyway).
 pub(crate) const TABLES: &[TablePolicy] = &[
     TablePolicy {
         name: "match_player",
@@ -51,6 +52,14 @@ pub(crate) const TABLES: &[TablePolicy] = &[
     },
     TablePolicy {
         name: "steam_profile_observed_names",
+        policy: Policy::Snapshot,
+    },
+    TablePolicy {
+        name: "server_clusters",
+        policy: Policy::Snapshot,
+    },
+    TablePolicy {
+        name: "player_cluster_matches",
         policy: Policy::Snapshot,
     },
 ];

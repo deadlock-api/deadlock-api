@@ -13,11 +13,14 @@ GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.items TO a
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.lane_matchups TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.match_player TO api_readonly_user;
 GRANT SHOW TABLES, SELECT(cluster_id, created_at, failed_at, `failed_at.null`, match_id, metadata_salt, replay_salt, `replay_salt.null`, verified_at, `verified_at.null`), SHOW COLUMNS(cluster_id, created_at, failed_at, match_id, metadata_salt, replay_salt, verified_at) ON default.match_salts TO api_readonly_user;
+GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.player_cluster_matches TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.player_match_history TO api_readonly_user;
 GRANT SELECT ON default.player_match_roster TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.player_match_stats TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.player_performance_curve_agg_v2 TO api_readonly_user;
 GRANT dictGet ON default.ranked_intervals_dict TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.ranked_season_intervals TO api_readonly_user;
+GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.server_clusters TO api_readonly_user;
+GRANT dictGet ON default.server_clusters_dict TO api_readonly_user;
 GRANT SELECT ON default.steam_profiles TO api_readonly_user;
 GRANT dictGet ON default.upgrade_items_dict TO api_readonly_user;

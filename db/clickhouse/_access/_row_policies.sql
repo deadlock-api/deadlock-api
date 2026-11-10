@@ -4,3 +4,4 @@ CREATE ROW POLICY gdpr_protection_pmr ON default.player_match_roster AS RESTRICT
 CREATE ROW POLICY gdpr_protection_pms ON default.player_match_stats AS RESTRICTIVE FOR SELECT USING (account_id NOT IN (/* postgres public.protected_user_accounts.steam_id */)) TO api_readonly_user, dump_user;
 CREATE ROW POLICY gdpr_protection_spon ON default.steam_profile_observed_names AS RESTRICTIVE FOR SELECT USING (account_id NOT IN (/* postgres public.protected_user_accounts.steam_id */)) TO api_readonly_user, dump_user;
 CREATE ROW POLICY gdpr_protection_sp ON default.steam_profiles AS RESTRICTIVE FOR SELECT USING (account_id NOT IN (/* postgres public.protected_user_accounts.steam_id */)) TO api_readonly_user, dump_user;
+CREATE ROW POLICY gdpr_protection_pcm ON default.player_cluster_matches AS RESTRICTIVE FOR SELECT USING ((account_id != 0) AND (account_id NOT IN (/* postgres public.protected_user_accounts.steam_id */))) TO api_readonly_user, dump_user;

@@ -45,6 +45,7 @@ Read-only SQL access to hourly parquet snapshots of the Deadlock API database (h
 - Heroes and items (abilities, weapons, shop upgrades) are stored as numeric ids. `list_heroes` and `list_items` map them to names; pass an `id` to get the full details of one hero or item.
 - `list_ranked_seasons` lists the ranked seasons with their intervals (unix seconds) and rules. The `rank_interval` column of the match tables is an interval's `interval`; rank badges are `tier * 10 + subrank`.
 - Players are stored by numeric `account_id`. To find one by name, search `steam_profiles` (Steam name and profile URL) or `steam_profile_observed_names` (in-game names).
+- Server regions: `player_cluster_matches` counts each player's matches per `month` and server `cluster_id`; join `server_clusters` on `cluster_id` for the `region` and `datacenter` (`match_salts.cluster_id` gives one match's cluster).
 - `list_patches` lists the patch notes of the official forum changelog and the Steam news feed (the REST `/v2/patches` feed). Pass a patch `link` to get its full notes.";
 
 pub(super) struct McpServer {
