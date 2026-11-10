@@ -14,6 +14,7 @@ use crate::routes::v1::players::match_history::{
     MatchHistoryInsertBatcher, MatchHistoryReadBatcher,
 };
 use crate::routes::v1::players::rank::PlayerRankBatcher;
+use crate::routes::v1::players::region::PlayerRegionBatcher;
 use crate::routes::v1::players::steam::route::{SteamProfileBatcher, SteamProfileGraphQlBatcher};
 use crate::services::pending_matches::{EstimatedStartTimeBatcher, PendingMatchInsertBatcher};
 
@@ -32,6 +33,7 @@ pub(crate) struct Batchers {
     pub(crate) steam_profile: SteamProfileBatcher,
     pub(crate) steam_profile_graphql: SteamProfileGraphQlBatcher,
     pub(crate) player_rank: PlayerRankBatcher,
+    pub(crate) player_region: PlayerRegionBatcher,
 }
 
 impl Batchers {
@@ -51,6 +53,7 @@ impl Batchers {
             steam_profile: SteamProfileBatcher::new(ch_client_ro.clone()),
             steam_profile_graphql: SteamProfileGraphQlBatcher::new(ch_client_ro.clone()),
             player_rank: PlayerRankBatcher::new(ch_client_ro.clone()),
+            player_region: PlayerRegionBatcher::new(ch_client_ro.clone()),
         }
     }
 }

@@ -5,7 +5,7 @@ pub(crate) mod match_history;
 pub mod mate_stats;
 pub(crate) mod rank;
 mod rank_distribution;
-mod region;
+pub(crate) mod region;
 mod roster_stats;
 pub mod steam;
 
@@ -38,6 +38,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(rank::rank_avg_image))
         .routes(routes!(rank_distribution::rank_distribution))
         .routes(routes!(region::region))
+        .routes(routes!(region::region_batch))
         .merge(steam::router())
         .layer(CACHE_CONTROL)
 }

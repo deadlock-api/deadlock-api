@@ -45,7 +45,7 @@ fn rate_limits() -> Limits<'static> {
 }
 
 /// The cost of a request for `accounts` distinct accounts: at least 1.
-fn account_cost(accounts: usize) -> NonZeroU64 {
+pub(super) fn account_cost(accounts: usize) -> NonZeroU64 {
     u64::try_from(accounts)
         .ok()
         .and_then(NonZeroU64::new)
@@ -318,7 +318,7 @@ pub(super) async fn rank(
 const MAX_BATCH_ACCOUNT_IDS: usize = 1_000;
 
 /// Rejects an empty account id list or one longer than `max`.
-fn check_account_id_count(account_ids: &[u32], max: usize) -> APIResult<()> {
+pub(super) fn check_account_id_count(account_ids: &[u32], max: usize) -> APIResult<()> {
     if account_ids.is_empty() {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,

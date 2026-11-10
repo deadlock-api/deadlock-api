@@ -1,20 +1,50 @@
+use core::time::Duration;
 use std::collections::HashMap;
 
 use axum::Json;
 use axum::extract::{Path, State};
+use axum_extra::extract::Query;
 use cached::macros::cached;
 use clickhouse::Row;
+use clickhouse_utils::{BatchQueryMulti, ClickhouseBatcherMulti, in_clause};
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
+use super::rank::{account_cost, check_account_id_count};
 use crate::context::AppState;
-use crate::error::APIResult;
-use crate::services::ch_cost::TrackedQuery as _;
-use crate::services::protected_accounts::ensure_not_protected;
+use crate::error::{APIError, APIResult};
+use crate::services::protected_accounts::{ensure_not_protected, without_protected};
+use crate::services::rate_limiter::extractor::RateLimitKey;
+use crate::services::rate_limiter::{Limits, Quota, RateLimit, Scope, describe};
+use crate::utils::sql::POINT_LOOKUP_MAX_THREADS;
 use crate::utils::types::AccountIdQuery;
 
+/// Shared by both region endpoints and charged per requested account, since the `ClickHouse`
+/// work scales with accounts, not requests: a 1000-account batch costs a thousand single lookups.
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    "region",
+    &[
+        Quota::new(Scope::Ip, 10_000, Duration::from_mins(1)),
+        Quota::new(Scope::Ip, 100_000, Duration::from_hours(1)),
+        Quota::new(Scope::Key, 50_000, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 500_000, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 60_000, Duration::from_mins(1)),
+    ],
+);
+
+fn rate_limits() -> Limits<'static> {
+    Limits::from(RATE_LIMIT).unit(" accounts").note(
+        "Shared by both region endpoints. Each requested account counts as one, so a batch of \
+         100 accounts uses as much as 100 single lookups.",
+    )
+}
+
+const MAX_BATCH_ACCOUNT_IDS: usize = 1_000;
+
 #[derive(Debug, Clone, Row, Deserialize)]
-struct ClusterMonthRow {
+pub(crate) struct ClusterMonthRow {
+    account_id: u32,
     month: u32,
     cluster_id: u32,
     region: String,
@@ -38,6 +68,18 @@ pub(crate) struct PlayerClusterMonth {
     matches: u64,
 }
 
+impl From<ClusterMonthRow> for PlayerClusterMonth {
+    fn from(row: ClusterMonthRow) -> Self {
+        Self {
+            month: row.month,
+            cluster_id: row.cluster_id,
+            region: (!row.region.is_empty()).then_some(row.region),
+            datacenter: (!row.datacenter.is_empty()).then_some(row.datacenter),
+            matches: row.matches,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Serialize, ToSchema)]
 pub(crate) struct PlayerRegionResponse {
     account_id: u32,
@@ -50,48 +92,77 @@ pub(crate) struct PlayerRegionResponse {
     history: Vec<PlayerClusterMonth>,
 }
 
-/// The player's matches per month and server cluster, with each cluster's region from the demo
-/// headers (`server_clusters_dict`). Reads only the player's rows (~1k rows, ~10 ms).
-#[cached(
-    max_size = 10_000,
-    ttl_secs = 600,
-    sync_writes = "by_key",
-    convert = "{ account_id }",
-    key = "u32"
-)]
-async fn fetch_cluster_months(
-    ch_client: &clickhouse::Client,
-    account_id: u32,
-) -> clickhouse::error::Result<Vec<PlayerClusterMonth>> {
-    let rows = ch_client
-        .query(
+impl PlayerRegionResponse {
+    fn new(account_id: u32, history: Vec<PlayerClusterMonth>) -> Self {
+        let current = current_region(&history);
+        Self {
+            account_id,
+            region_month: current.as_ref().map(|(_, month)| *month),
+            region: current.map(|(region, _)| region),
+            history,
+        }
+    }
+}
+
+pub(crate) struct PlayerRegionQuery;
+
+/// The players' matches per month and server cluster, with each cluster's region from the demo
+/// headers (`server_clusters_dict`). `player_cluster_matches` is sorted by `account_id`, so each
+/// account is a primary-key range of a few 256-row granules (~10 ms for one account).
+impl BatchQueryMulti for PlayerRegionQuery {
+    type Key = u32;
+    type Value = ClusterMonthRow;
+
+    fn build_query(keys: &[u32]) -> String {
+        let ids = in_clause(keys);
+        format!(
             "
             SELECT
+                account_id,
                 toUInt32(toUnixTimestamp(toDateTime(month, 'UTC'))) AS month,
                 cluster_id,
                 dictGet('default.server_clusters_dict', 'region', toUInt64(cluster_id)) AS region,
                 dictGet('default.server_clusters_dict', 'datacenter', toUInt64(cluster_id)) AS datacenter,
                 sum(matches) AS matches
             FROM player_cluster_matches
-            WHERE account_id = ?
-            GROUP BY month, cluster_id
-            ORDER BY month DESC, matches DESC, cluster_id
-            SETTINGS log_comment = 'player_region'
-            ",
+            WHERE account_id IN ({ids})
+            GROUP BY account_id, month, cluster_id
+            SETTINGS log_comment = 'player_region', max_threads = {POINT_LOOKUP_MAX_THREADS}
+            "
         )
-        .bind(account_id)
-        .fetch_all_tracked::<ClusterMonthRow>()
-        .await?;
-    Ok(rows
+    }
+
+    fn key_of(value: &ClusterMonthRow) -> u32 {
+        value.account_id
+    }
+}
+
+pub(crate) type PlayerRegionBatcher = ClickhouseBatcherMulti<PlayerRegionQuery>;
+
+/// The player's history, newest month first and most matches first within a month.
+#[cached(
+    max_size = 10_000,
+    ttl_secs = 600,
+    convert = "{ account_id }",
+    key = "u32"
+)]
+async fn fetch_history(
+    batcher: &PlayerRegionBatcher,
+    account_id: u32,
+) -> Result<Vec<PlayerClusterMonth>, APIError> {
+    let mut history: Vec<PlayerClusterMonth> = batcher
+        .load(account_id)
+        .await?
         .into_iter()
-        .map(|row| PlayerClusterMonth {
-            month: row.month,
-            cluster_id: row.cluster_id,
-            region: (!row.region.is_empty()).then_some(row.region),
-            datacenter: (!row.datacenter.is_empty()).then_some(row.datacenter),
-            matches: row.matches,
-        })
-        .collect())
+        .map(PlayerClusterMonth::from)
+        .collect();
+    history.sort_by(|a, b| {
+        b.month
+            .cmp(&a.month)
+            .then_with(|| b.matches.cmp(&a.matches))
+            .then_with(|| a.cluster_id.cmp(&b.cluster_id))
+    });
+    Ok(history)
 }
 
 /// The region with the most matches in the latest month that has any known region; ties go to
@@ -131,31 +202,88 @@ fn current_region(history: &[PlayerClusterMonth]) -> Option<(String, u32)> {
     ),
     tags = ["Players"],
     summary = "Region",
-    description = "
+    description = describe(
+        "
 The server region a player plays in, from the game servers of their matches.
 
 Each match's server cluster comes from its salts, and the cluster's region and datacenter from the
 server names in replays. `region` is the region with the most matches in the player's latest month
-with a known region; `history` lists their matches per month and cluster, so region changes show
-up month by month.
+with a known region; `history` lists their matches per month and cluster, newest month first, so
+region changes show up month by month.
 
-Only matches with known salts count. Clusters not yet seen in a replay have no region.
-"
+Only matches with known salts count. Clusters not yet seen in a replay have no region. Valve names
+some partner-hosted servers separately (e.g. `dpkt-frankfurt` or `helsinki` next to `eu_west`).
+",
+        rate_limits(),
+    )
 )]
 pub(super) async fn region(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
+    rate_limit_key: RateLimitKey,
 ) -> APIResult<Json<PlayerRegionResponse>> {
+    state
+        .rate_limit_client
+        .check(&rate_limit_key, RATE_LIMIT)
+        .await?;
     ensure_not_protected(&state, &[account_id]).await?;
 
-    let history = fetch_cluster_months(&state.ch_client_ro, account_id).await?;
-    let current = current_region(&history);
-    Ok(Json(PlayerRegionResponse {
-        account_id,
-        region_month: current.as_ref().map(|(_, month)| *month),
-        region: current.map(|(region, _)| region),
-        history,
+    let history = fetch_history(&state.batchers.player_region, account_id).await?;
+    Ok(Json(PlayerRegionResponse::new(account_id, history)))
+}
+
+#[derive(Debug, Deserialize, utoipa::IntoParams)]
+pub(crate) struct RegionBatchQuery {
+    /// Comma separated list of account ids, in `SteamID3` or `SteamID64` format.
+    #[param(inline, min_items = 1, max_items = 1_000)]
+    #[serde(deserialize_with = "steam_id::de::account_ids")]
+    account_ids: Vec<u32>,
+}
+
+#[utoipa::path(
+    get,
+    path = "/region",
+    params(RegionBatchQuery),
+    responses(
+        (status = OK, body = [PlayerRegionResponse]),
+        (status = BAD_REQUEST, description = "Invalid or missing account IDs"),
+        (status = INTERNAL_SERVER_ERROR, description = "Region lookup failed"),
+    ),
+    tags = ["Players"],
+    summary = "Batch Region",
+    description = describe(
+        "
+Returns the server region of each player, the batch form of `/v1/players/{account_id}/region`.
+See that endpoint for how the region is derived.
+
+Every requested account is returned once, in no particular order. Players without any match with a
+known region get a `null` `region`. Protected accounts are left out.
+",
+        rate_limits(),
+    )
+)]
+pub(super) async fn region_batch(
+    Query(RegionBatchQuery { account_ids }): Query<RegionBatchQuery>,
+    State(state): State<AppState>,
+    rate_limit_key: RateLimitKey,
+) -> APIResult<Json<Vec<PlayerRegionResponse>>> {
+    check_account_id_count(&account_ids, MAX_BATCH_ACCOUNT_IDS)?;
+    let account_ids: Vec<u32> = account_ids.into_iter().unique().collect();
+    state
+        .rate_limit_client
+        .charge(&rate_limit_key, RATE_LIMIT, account_cost(account_ids.len()))
+        .await?;
+
+    let account_ids = without_protected(&state, account_ids).await?;
+
+    let batcher = &state.batchers.player_region;
+    let regions = futures::future::try_join_all(account_ids.iter().map(|&account_id| async move {
+        fetch_history(batcher, account_id)
+            .await
+            .map(|history| PlayerRegionResponse::new(account_id, history))
     }))
+    .await?;
+    Ok(Json(regions))
 }
 
 #[cfg(test)]
@@ -201,5 +329,12 @@ mod tests {
         );
         assert_eq!(current_region(&[entry(200, 999, None, 5)]), None);
         assert_eq!(current_region(&[]), None);
+    }
+
+    #[test]
+    fn empty_history_has_no_region() {
+        let response = PlayerRegionResponse::new(7, vec![]);
+        assert_eq!(response.region, None);
+        assert_eq!(response.region_month, None);
     }
 }
