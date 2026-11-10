@@ -2,11 +2,13 @@ use core::future::ready;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex, MutexGuard};
 
+use haste::demostream::CmdHeader;
 use haste::entities::{DeltaHeader, Entity, ehandle_to_index};
 use haste::fxhash;
 use haste::parser::{AsyncVisitor, Context};
 use prost::Message as _;
 use tracing::debug;
+use valveprotos::common::{CDemoFileHeader, EDemoCommands};
 use valveprotos::deadlock::{CCitadelUserMsgBannedHeroes, CitadelUserMessageIds};
 
 use crate::hashes::{
@@ -49,6 +51,9 @@ pub(crate) struct SharedState {
     pub pawns: HashMap<i32, PawnData>,
     pub banned_hero_ids: Vec<u32>,
     pub bans_received: bool,
+    /// The demo header's server name, e.g. `Valve Deadlock eu_west Server (srcds1010-fra2.271.27)`.
+    /// The header is the demo's first command, so it is always read before the early exit.
+    pub server_name: Option<String>,
 }
 
 impl SharedState {
@@ -115,6 +120,15 @@ impl AsyncVisitor for DemoAnalyzerVisitor {
         entity: &Entity,
     ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
         ready(self.handle_entity(ctx, entity))
+    }
+
+    fn on_cmd(
+        &mut self,
+        _ctx: &Context,
+        cmd_header: &CmdHeader,
+        data: &[u8],
+    ) -> impl Future<Output = Result<(), Self::Error>> + Send + Sync {
+        ready(self.handle_cmd(cmd_header, data))
     }
 
     fn on_packet(
@@ -250,6 +264,15 @@ impl DemoAnalyzerVisitor {
         if complete {
             debug!(tick, "All data collected after bans, stopping parse early");
             return Err(VisitorError::AllDataCollected);
+        }
+        Ok(())
+    }
+
+    fn handle_cmd(&self, cmd_header: &CmdHeader, data: &[u8]) -> Result<(), VisitorError> {
+        if cmd_header.cmd == EDemoCommands::DemFileHeader {
+            let header = CDemoFileHeader::decode(data)?;
+            debug!(server_name = ?header.server_name, "Read demo file header");
+            self.lock_state()?.server_name = header.server_name;
         }
         Ok(())
     }

@@ -38,11 +38,14 @@ use tracing::{debug, error, info, warn};
 
 use crate::models::{
     DemoPlayer, MatchUpdate, MatchWithReplay, ObservedSteamName, ObservedSteamNameChange,
+    ServerClusterRow,
 };
+use crate::server::{ServerLocation, parse_server_name};
 use crate::visitor::{DemoAnalyzerVisitor, SharedState, VisitorError};
 
 mod hashes;
 mod models;
+mod server;
 mod visitor;
 
 const ZSTD_MAGIC: [u8; 4] = [0x28, 0xb5, 0x2f, 0xfd];
@@ -431,6 +434,7 @@ async fn process_demo(
 
     let update = correlate(
         match_info,
+        cluster_id,
         &*state
             .lock()
             .map_err(|e| DemoError::LockPoisoned(e.to_string()))?,
@@ -444,7 +448,7 @@ async fn process_demo(
     Ok(update)
 }
 
-fn correlate(match_info: &MatchWithReplay, state: &SharedState) -> MatchUpdate {
+fn correlate(match_info: &MatchWithReplay, cluster_id: u32, state: &SharedState) -> MatchUpdate {
     let mut players = Vec::new();
     for pawn in state.pawns.values() {
         let Some(ctrl_idx) = pawn.controller_index else {
@@ -469,11 +473,25 @@ fn correlate(match_info: &MatchWithReplay, state: &SharedState) -> MatchUpdate {
             observed_name: ctrl.steam_name.as_deref().and_then(normalize_observed_name),
         });
     }
+    let server = state.server_name.as_deref().and_then(|name| {
+        let server = parse_server_name(name);
+        if server.is_none() {
+            counter!("demo_analyzer.server_name_unparsed").increment(1);
+            debug!(
+                match_id = match_info.match_id,
+                server_name = name,
+                "Unrecognized demo server name"
+            );
+        }
+        server
+    });
     MatchUpdate {
         match_id: match_info.match_id,
         start_time: match_info.start_time,
         banned_hero_ids: state.banned_hero_ids.clone(),
         players,
+        cluster_id,
+        server,
     }
 }
 
@@ -501,6 +519,11 @@ async fn apply_updates(
         .filter_map(core::future::ready)
         .collect()
         .await;
+    // The server location of a demo is valid whether or not its match update went through.
+    if let Err(e) = insert_server_clusters(ch_client, updates).await {
+        warn!("Failed to insert server clusters: {e}");
+        counter!("demo_analyzer.server_clusters_insert.failure").increment(1);
+    }
     if failed.is_empty() {
         Ok(())
     } else {
@@ -606,6 +629,42 @@ async fn insert_observed_name_changes(
 
     counter!("demo_analyzer.observed_name_change_insert.success")
         .increment(name_changes.len() as u64);
+    Ok(())
+}
+
+/// Records which region and datacenter each cluster's servers are in, one row per
+/// (cluster, region, datacenter) of the batch. Joined on `match_salts.cluster_id`, this gives the
+/// server location of every match with salts, not only the ones whose demo was analyzed.
+async fn insert_server_clusters(
+    ch_client: &clickhouse::Client,
+    updates: &[MatchUpdate],
+) -> clickhouse::error::Result<()> {
+    let mut rows: HashMap<(u32, &ServerLocation), ServerClusterRow> = HashMap::new();
+    for update in updates {
+        let Some(server) = update.server.as_ref() else {
+            continue;
+        };
+        rows.entry((update.cluster_id, server))
+            .and_modify(|row| {
+                row.first_match_id = row.first_match_id.min(update.match_id);
+                row.last_match_id = row.last_match_id.max(update.match_id);
+                row.matches = row.matches.saturating_add(1);
+            })
+            .or_insert_with(|| ServerClusterRow {
+                cluster_id: update.cluster_id,
+                region: server.region.clone(),
+                datacenter: server.datacenter.clone(),
+                first_match_id: update.match_id,
+                last_match_id: update.match_id,
+                matches: 1,
+            });
+    }
+    if rows.is_empty() {
+        return Ok(());
+    }
+    let rows = rows.into_values().collect::<Vec<_>>();
+    clickhouse_utils::insert_rows(ch_client, "server_clusters", &rows).await?;
+    counter!("demo_analyzer.server_clusters_insert.success").increment(rows.len() as u64);
     Ok(())
 }
 
