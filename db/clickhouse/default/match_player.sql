@@ -563,4 +563,4 @@ CREATE TABLE default.match_player
 ENGINE = ReplacingMergeTree
 PARTITION BY intDiv(match_id, 1000000)
 ORDER BY (match_id, account_id)
-SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild', max_bytes_to_merge_at_max_space_in_pool = 274877906944, enable_block_number_column = 1, enable_block_offset_column = 1, number_of_free_entries_in_pool_to_execute_mutation = 16, auto_statistics_types = '', min_age_to_force_merge_seconds = 604800, min_age_to_force_merge_on_partition_only = 1, materialize_statistics_on_merge = 0;
+SETTINGS index_granularity = 8192, deduplicate_merge_projection_mode = 'rebuild', max_bytes_to_merge_at_max_space_in_pool = 274877906944, enable_block_number_column = 1, enable_block_offset_column = 1, number_of_free_entries_in_pool_to_execute_mutation = 16, auto_statistics_types = '', min_age_to_force_merge_seconds = 604800, min_age_to_force_merge_on_partition_only = 1, materialize_statistics_on_merge = 0, default_compression_codec = 'LZ4HC(6)', min_compress_block_size = 16384, max_compress_block_size = 131072;

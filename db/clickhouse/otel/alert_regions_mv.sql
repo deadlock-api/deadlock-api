@@ -84,7 +84,7 @@ AS WITH
                 toStartOfFifteenMinutes(event_time) AS t,
                 count() AS v
             FROM merge(system, '^query_log(_[0-9]+)?$')
-            WHERE (event_time >= (now() - toIntervalDay(30))) AND (type IN ('ExceptionBeforeStart', 'ExceptionWhileProcessing')) AND (http_user_agent LIKE 'clickhouse-rs%') AND (user != 'api_readonly_user') AND (exception_code NOT IN (394, 735, 236)) AND (exception_code != 159)
+            WHERE (event_time >= (now() - toIntervalDay(30))) AND (type IN ('ExceptionBeforeStart', 'ExceptionWhileProcessing')) AND (http_user_agent LIKE 'clickhouse-rs%') AND (user != 'api_readonly_user') AND (exception_code NOT IN (394, 735, 236, 785)) AND (exception_code != 159)
             GROUP BY t
             HAVING v >= 10
         )
@@ -100,7 +100,7 @@ AS WITH
                 toStartOfFifteenMinutes(event_time) AS t,
                 count() AS v
             FROM merge(system, '^query_log(_[0-9]+)?$')
-            WHERE (event_time >= (now() - toIntervalDay(30))) AND (type IN ('ExceptionBeforeStart', 'ExceptionWhileProcessing')) AND (http_user_agent LIKE 'clickhouse-rs%') AND (user != 'api_readonly_user') AND (exception_code NOT IN (394, 735, 236)) AND (exception_code = 159)
+            WHERE (event_time >= (now() - toIntervalDay(30))) AND (type IN ('ExceptionBeforeStart', 'ExceptionWhileProcessing')) AND (http_user_agent LIKE 'clickhouse-rs%') AND (user != 'api_readonly_user') AND (exception_code NOT IN (394, 735, 236, 785)) AND (exception_code = 159)
             GROUP BY t
             HAVING v >= 25
         )
