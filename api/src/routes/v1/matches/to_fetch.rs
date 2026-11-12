@@ -1,3 +1,4 @@
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use axum::Json;
@@ -57,8 +58,19 @@ for i = 1, #KEYS - 1, 2 do
     end
 end
 return claimed";
+/// Decrements each handout counter in `KEYS`, deleting it once nothing is left: the handouts
+/// of matches a worker gave back without Steam refusing them.
+const REFUND_SCRIPT: &str = "
+for i = 1, #KEYS do
+    if redis.call('decr', KEYS[i]) <= 0 then
+        redis.call('del', KEYS[i])
+    end
+end
+return 0";
 /// Set of the match ids one to-fetch response claimed, keyed by its claim token.
 const CLAIM_LIST_PREFIX: &str = "matches_to_fetch:claim_list:";
+/// The requested ones among them, kept apart so the set above keeps its shape.
+const CLAIM_REQUESTED_PREFIX: &str = "matches_to_fetch:claim_list_requested:";
 /// Carries a response's claim token, so the worker can release the list it was handed.
 const CLAIM_COOKIE: &str = "to_fetch_claim";
 
@@ -89,40 +101,68 @@ fn claim_cookie(token: Option<Uuid>) -> APIResult<HeaderValue> {
     .map_err(|e| APIError::internal(format!("Invalid claim cookie: {e}")))
 }
 
+/// The matches one to-fetch response claimed, as released.
+#[derive(Debug, Default)]
+struct ClaimList {
+    ids: Vec<u64>,
+    /// The ones that were requested from the API rather than proven public matches.
+    requested: HashSet<u64>,
+    /// The ones whose claim this list still held: claims that expired meanwhile may belong
+    /// to other workers now.
+    released: HashSet<u64>,
+}
+
 /// Releases the claims of the list handed out with `token`, leaving matches other workers
 /// have claimed since alone.
 async fn release_claim_list(
     conn: &mut redis::aio::ConnectionManager,
     token: Uuid,
-) -> redis::RedisResult<()> {
+) -> redis::RedisResult<ClaimList> {
     let list_key = format!("{CLAIM_LIST_PREFIX}{token}");
-    let (ids,): (Vec<u64>,) = redis::pipe()
+    let requested_key = format!("{CLAIM_REQUESTED_PREFIX}{token}");
+    let (ids, requested): (Vec<u64>, Vec<u64>) = redis::pipe()
         .atomic()
         .smembers(&list_key)
-        .del(&list_key)
+        .smembers(&requested_key)
+        .del(&[&list_key, &requested_key])
         .ignore()
         .query_async(conn)
         .await?;
-    if !ids.is_empty() {
-        release_claims(conn, &ids, &token.to_string()).await;
-    }
-    Ok(())
+    let released = if ids.is_empty() {
+        HashSet::new()
+    } else {
+        release_claims(conn, &ids, &token.to_string()).await
+    };
+    Ok(ClaimList {
+        ids,
+        requested: requested.into_iter().collect(),
+        released,
+    })
 }
 
-/// Remembers which matches `token` claimed, so [`release_claim_list`] can release them.
+/// Remembers which matches `token` claimed, and which of them are requested ones, so
+/// [`release_claim_list`] can release them.
 async fn store_claim_list(
     conn: &mut redis::aio::ConnectionManager,
     token: Uuid,
     ids: &[u64],
+    requested: &[u64],
 ) -> redis::RedisResult<()> {
+    let ttl = i64::try_from(CLAIM_TTL_SECS).unwrap_or(i64::MAX);
     let list_key = format!("{CLAIM_LIST_PREFIX}{token}");
-    redis::pipe()
-        .sadd(&list_key, ids)
+    let mut pipe = redis::pipe();
+    pipe.sadd(&list_key, ids)
         .ignore()
-        .expire(&list_key, i64::try_from(CLAIM_TTL_SECS).unwrap_or(i64::MAX))
-        .ignore()
-        .query_async(conn)
-        .await
+        .expire(&list_key, ttl)
+        .ignore();
+    if !requested.is_empty() {
+        let requested_key = format!("{CLAIM_REQUESTED_PREFIX}{token}");
+        pipe.sadd(&requested_key, requested)
+            .ignore()
+            .expire(&requested_key, ttl)
+            .ignore();
+    }
+    pipe.query_async(conn).await
 }
 
 /// The prioritized accounts, or none if Postgres fails. That fallback is cached too, so an
@@ -316,6 +356,7 @@ pub(super) async fn matches_to_fetch(
     let token_id = Uuid::new_v4();
     let token = token_id.to_string();
     let mut claimed: Vec<u64> = Vec::with_capacity(limit);
+    let mut claimed_requested: Vec<u64> = Vec::new();
     let mut abandoned: Vec<u64> = Vec::new();
     for entries in pool.chunks(CLAIM_SCAN_CHUNK) {
         let needed = limit.saturating_sub(claimed.len());
@@ -326,6 +367,9 @@ pub(super) async fn matches_to_fetch(
             Ok(chunk_claims) => {
                 for (entry, handouts) in chunk_claims {
                     claimed.push(entry.match_id);
+                    if entry.requested {
+                        claimed_requested.push(entry.match_id);
+                    }
                     // This is its last handout: the worker it goes to still tries it.
                     if entry.requested && handouts >= MAX_HANDOUTS {
                         abandoned.push(entry.match_id);
@@ -336,7 +380,7 @@ pub(super) async fn matches_to_fetch(
                 // A script error doesn't undo the claims it made before; claims nobody is
                 // handed would hide those matches from every worker for `CLAIM_TTL_SECS`.
                 let ids: Vec<u64> = entries.iter().map(|e| e.match_id).collect();
-                release_claims(&mut conn, &ids, &token).await;
+                let _released = release_claims(&mut conn, &ids, &token).await;
                 // The matches claimed so far are this worker's: hand them out.
                 if claimed.is_empty() {
                     return Err(e.into());
@@ -355,7 +399,7 @@ pub(super) async fn matches_to_fetch(
         return Ok(worklist(claimed));
     }
     // Without the list the claims can't be released early, but they still expire.
-    if let Err(e) = store_claim_list(&mut conn, token_id, &claimed).await {
+    if let Err(e) = store_claim_list(&mut conn, token_id, &claimed, &claimed_requested).await {
         warn!("Failed to store the claim list of matches to fetch: {e}");
     }
     let mut response = worklist(claimed);
@@ -365,32 +409,160 @@ pub(super) async fn matches_to_fetch(
     Ok(response)
 }
 
+/// How a worker's attempt at a match it was handed ended.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum AttemptResult {
+    /// Steam answered with the salts, and the worker uploaded them.
+    Fetched,
+    /// Steam doesn't know the match.
+    Invalid,
+    /// Steam won't show the match to the worker's account, e.g. a private or bot lobby.
+    NoPermission,
+    /// Steam says the match is still being played or processed.
+    InFlight,
+    /// No answer about the match: a timeout, a rate limit, a lost connection. Also what a
+    /// result this API doesn't know yet reads as.
+    #[serde(other)]
+    Failed,
+}
+
+impl AttemptResult {
+    /// Whether Steam turned the match down, so the handout counts against it.
+    const fn is_refusal(self) -> bool {
+        matches!(self, Self::Invalid | Self::NoPermission)
+    }
+
+    const fn label(result: Option<Self>) -> &'static str {
+        match result {
+            None => "untried",
+            Some(Self::Fetched) => "fetched",
+            Some(Self::Invalid) => "invalid",
+            Some(Self::NoPermission) => "no_permission",
+            Some(Self::InFlight) => "in_flight",
+            Some(Self::Failed) => "failed",
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+pub(super) struct Attempt {
+    match_id: u64,
+    result: AttemptResult,
+}
+
+/// What a worker did with the list it releases. A match of the list that isn't in `attempts`
+/// was not tried.
+#[derive(Debug, Default, Deserialize)]
+pub(super) struct ReleaseReport {
+    #[serde(default)]
+    attempts: Vec<Attempt>,
+}
+
+/// What a report means for each match of the released list: the handouts to give back, and
+/// the requested matches to give up on.
+#[derive(Debug, Default, PartialEq, Eq)]
+struct ReportOutcome {
+    refunds: Vec<u64>,
+    abandoned: Vec<u64>,
+}
+
+/// Only a refusal from Steam counts as a handout: a match the worker didn't try, fetched, or
+/// got no answer for gets its handout back. Steam not knowing a requested match is enough to
+/// give up on it. A proven match isn't given up on a worker's word, only rested once its
+/// refusals use up its handouts. Reports about matches outside the list are ignored.
+fn report_outcome(list: &ClaimList, report: &ReleaseReport) -> ReportOutcome {
+    let results: HashMap<u64, AttemptResult> = report
+        .attempts
+        .iter()
+        .map(|a| (a.match_id, a.result))
+        .collect();
+    let mut outcome = ReportOutcome::default();
+    for &id in &list.ids {
+        let result = results.get(&id).copied();
+        metrics::counter!("matches_to_fetch_attempts", "result" => AttemptResult::label(result))
+            .increment(1);
+        match result {
+            Some(AttemptResult::Invalid) if list.requested.contains(&id) => {
+                outcome.abandoned.push(id);
+            }
+            Some(r) if r.is_refusal() => {}
+            _ if list.released.contains(&id) => outcome.refunds.push(id),
+            _ => {}
+        }
+    }
+    outcome
+}
+
+/// Best effort: gives back one handout of each of `ids`.
+async fn refund_handouts(conn: &mut redis::aio::ConnectionManager, ids: &[u64]) {
+    if ids.is_empty() {
+        return;
+    }
+    let mut cmd = redis::cmd("EVAL");
+    cmd.arg(REFUND_SCRIPT).arg(ids.len());
+    for id in ids {
+        cmd.arg(format!("{HANDOUT_PREFIX}{id}"));
+    }
+    if let Err(e) = cmd.query_async::<()>(conn).await {
+        warn!("Failed to refund handouts of matches to fetch: {e}");
+    }
+}
+
 /// Releases the matches handed out with the request's [`CLAIM_COOKIE`], for a worker that
 /// won't fetch the rest of its list. Matches it did fetch leave the pool on their own.
+///
+/// The worker can report how its attempts ended in a JSON [`ReleaseReport`] body. Without one,
+/// every match of the list keeps its handout; with one, only Steam's refusals do (see
+/// [`report_outcome`]).
 pub(super) async fn release_matches_to_fetch(
     State(state): State<AppState>,
     headers: HeaderMap,
+    report: Option<Json<ReleaseReport>>,
 ) -> APIResult<impl IntoResponse> {
     if let Some(token) = claim_token(&headers) {
         let mut conn = state.redis_client.clone();
-        release_claim_list(&mut conn, token).await?;
+        let list = release_claim_list(&mut conn, token).await?;
+        if let Some(Json(report)) = report {
+            let ReportOutcome { refunds, abandoned } = report_outcome(&list, &report);
+            refund_handouts(&mut conn, &refunds).await;
+            if !abandoned.is_empty() {
+                debug!(
+                    ?abandoned,
+                    "giving up on requested matches Steam doesn't know"
+                );
+                abandon_requested_matches(&state, &abandoned);
+            }
+        }
     }
     Ok((StatusCode::NO_CONTENT, [(SET_COOKIE, claim_cookie(None)?)]))
 }
 
 /// Best effort: releases the claims of `ids` that hold `token`, leaving other workers' alone.
-async fn release_claims(conn: &mut redis::aio::ConnectionManager, ids: &[u64], token: &str) {
+/// Returns the ids whose claim it released.
+async fn release_claims(
+    conn: &mut redis::aio::ConnectionManager,
+    ids: &[u64],
+    token: &str,
+) -> HashSet<u64> {
     let mut pipe = redis::pipe();
     for id in ids {
         pipe.cmd("EVAL")
             .arg(RELEASE_IF_OWNED)
             .arg(1)
             .arg(format!("{CLAIM_PREFIX}{id}"))
-            .arg(token)
-            .ignore();
+            .arg(token);
     }
-    if let Err(e) = pipe.query_async::<()>(conn).await {
-        warn!("Failed to release claims of matches to fetch: {e}");
+    match pipe.query_async::<Vec<i64>>(conn).await {
+        Ok(released) => ids
+            .iter()
+            .zip(released)
+            .filter_map(|(&id, deleted)| (deleted > 0).then_some(id))
+            .collect(),
+        Err(e) => {
+            warn!("Failed to release claims of matches to fetch: {e}");
+            HashSet::new()
+        }
     }
 }
 
@@ -524,7 +696,9 @@ mod tests {
                 .await
                 .unwrap();
         }
-        store_claim_list(&mut conn, mine, &ids).await.unwrap();
+        store_claim_list(&mut conn, mine, &ids, &ids[..1])
+            .await
+            .unwrap();
         // The claim on the second match expired and another worker took it.
         let _: () = redis::cmd("SET")
             .arg(format!("{CLAIM_PREFIX}{}", ids[1]))
@@ -533,7 +707,10 @@ mod tests {
             .await
             .unwrap();
 
-        release_claim_list(&mut conn, mine).await.unwrap();
+        let list = release_claim_list(&mut conn, mine).await.unwrap();
+        assert_eq!(list.ids.len(), 3);
+        assert_eq!(list.requested, HashSet::from([ids[0]]));
+        assert_eq!(list.released, HashSet::from([ids[0], ids[2]]));
 
         let claims: Vec<Option<String>> = redis::cmd("MGET")
             .arg(ids.map(|id| format!("{CLAIM_PREFIX}{id}")).to_vec())
@@ -548,6 +725,110 @@ mod tests {
             .unwrap();
         assert!(!list_exists);
         // Releasing again is a no-op.
-        release_claim_list(&mut conn, mine).await.unwrap();
+        let again = release_claim_list(&mut conn, mine).await.unwrap();
+        assert_eq!(again.ids, Vec::<u64>::new());
+    }
+
+    #[tokio::test]
+    #[ignore = "needs a throwaway Redis at TEST_REDIS_URL"]
+    async fn refund_handouts_gives_back_one_and_deletes_spent_counters() {
+        let url = std::env::var("TEST_REDIS_URL").expect("TEST_REDIS_URL");
+        let client = redis::Client::open(url).unwrap();
+        let mut conn = client.get_connection_manager().await.unwrap();
+        let base = u64::from(u32::MAX) + 2_000_000 + u64::from(rand_suffix());
+        let key = |id: u64| format!("{HANDOUT_PREFIX}{id}");
+        let _: () = redis::cmd("SET")
+            .arg(key(base))
+            .arg(3)
+            .arg("EX")
+            .arg(100)
+            .query_async(&mut conn)
+            .await
+            .unwrap();
+        let _: () = redis::cmd("SET")
+            .arg(key(base + 1))
+            .arg(1)
+            .query_async(&mut conn)
+            .await
+            .unwrap();
+
+        refund_handouts(&mut conn, &[base, base + 1, base + 2]).await;
+
+        let counts: Vec<Option<u32>> = redis::cmd("MGET")
+            .arg([key(base), key(base + 1), key(base + 2)].to_vec())
+            .query_async(&mut conn)
+            .await
+            .unwrap();
+        assert_eq!(counts, [Some(2), None, None]);
+        let ttl: i64 = redis::cmd("TTL")
+            .arg(key(base))
+            .query_async(&mut conn)
+            .await
+            .unwrap();
+        assert!(ttl > 0, "a refund keeps the counter's expiry");
+    }
+
+    fn report(attempts: &[(u64, AttemptResult)]) -> ReleaseReport {
+        ReleaseReport {
+            attempts: attempts
+                .iter()
+                .map(|&(match_id, result)| Attempt { match_id, result })
+                .collect(),
+        }
+    }
+
+    #[test]
+    fn only_refusals_keep_their_handout() {
+        let list = ClaimList {
+            ids: vec![1, 2, 3, 4, 5, 6, 7],
+            requested: HashSet::from([2, 3]),
+            released: HashSet::from([1, 2, 3, 4, 5, 6]),
+        };
+        let outcome = report_outcome(
+            &list,
+            &report(&[
+                (1, AttemptResult::Fetched),
+                // Steam doesn't know a requested match: given up on.
+                (2, AttemptResult::Invalid),
+                // Refused: the handouts stay, the match isn't given up on.
+                (3, AttemptResult::NoPermission),
+                (4, AttemptResult::Invalid),
+                (5, AttemptResult::InFlight),
+                // 6 wasn't tried. 7's claim expired, so its handout may be another worker's.
+                (7, AttemptResult::Failed),
+                // Not on the list.
+                (99, AttemptResult::Invalid),
+            ]),
+        );
+        assert_eq!(
+            outcome,
+            ReportOutcome {
+                refunds: vec![1, 5, 6],
+                abandoned: vec![2],
+            }
+        );
+    }
+
+    #[test]
+    fn unknown_attempt_results_read_as_failed() {
+        let report: ReleaseReport = serde_json::from_str(
+            r#"{"attempts": [
+                {"match_id": 1, "result": "no_permission"},
+                {"match_id": 2, "result": "in_flight"},
+                {"match_id": 3, "result": "something_new"}
+            ]}"#,
+        )
+        .unwrap();
+        let results: Vec<AttemptResult> = report.attempts.iter().map(|a| a.result).collect();
+        assert_eq!(
+            results,
+            [
+                AttemptResult::NoPermission,
+                AttemptResult::InFlight,
+                AttemptResult::Failed
+            ]
+        );
+        let empty: ReleaseReport = serde_json::from_str("{}").unwrap();
+        assert_eq!(empty.attempts.len(), 0);
     }
 }
