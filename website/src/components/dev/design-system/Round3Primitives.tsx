@@ -468,7 +468,7 @@ export function Round3Primitives() {
         </Variants>
         <Variants label="color">
           <span className="flex items-center gap-1.5 text-xs">
-            <StatusDot color="var(--lane-purple)" /> Purple lane
+            <StatusDot color="var(--lane-green)" /> Green lane
           </span>
         </Variants>
       </Specimen>

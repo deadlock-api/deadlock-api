@@ -13,7 +13,7 @@ export interface LaneInfo {
 export const LANES: readonly LaneInfo[] = [
   { id: 1, name: "Yellow", color: "var(--lane-yellow)", textClass: "text-lane-yellow" },
   { id: 4, name: "Blue", color: "var(--lane-blue)", textClass: "text-lane-blue" },
-  { id: 6, name: "Purple", color: "var(--lane-purple)", textClass: "text-lane-purple" },
+  { id: 6, name: "Green", color: "var(--lane-green)", textClass: "text-lane-green" },
 ];
 
 const SLOTS_PER_LANE = 2;

@@ -154,10 +154,10 @@
   --item-weapon: rgb(229 138 0);
   --item-vitality: rgb(0 255 153);
   --item-spirit: rgb(0 221 255);
-  /* Game identity: the three lanes, named after their colors in the client */
+  /* Game identity: the three lanes, named after their colors in the client (lane 6 is green even though its css class is purpleLane) */
   --lane-yellow: #facc15;
   --lane-blue: #22d3ee;
-  --lane-purple: #a78bfa;
+  --lane-green: #4ade80;
   /* Tier lists: S to D, warm to cool. The letter names the tier; the color only repeats it. */
   --tier-s: var(--amber-400);
   --tier-a: var(--series-orange);
@@ -301,7 +301,7 @@
   --color-tier-d: var(--tier-d);
   --color-lane-yellow: var(--lane-yellow);
   --color-lane-blue: var(--lane-blue);
-  --color-lane-purple: var(--lane-purple);
+  --color-lane-green: var(--lane-green);
   --color-stage-neutral: var(--stage-neutral);
   --color-stage-light: var(--stage-light);
   --color-stage-dark: var(--stage-dark);

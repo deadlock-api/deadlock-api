@@ -333,7 +333,7 @@ export function Round4Requests2() {
           <HeroImage heroId={HERO_IDS[0]} shape="circle" className="size-12" ring="positive" />
           <HeroImage heroId={HERO_IDS[1]} shape="circle" className="size-12" ringColor="var(--lane-yellow)" />
           <HeroImage heroId={HERO_IDS[2]} shape="circle" className="size-12" ringColor="var(--lane-blue)" />
-          <HeroImage heroId={HERO_IDS[3]} shape="circle" className="size-12" ringColor="var(--lane-purple)" />
+          <HeroImage heroId={HERO_IDS[3]} shape="circle" className="size-12" ringColor="var(--lane-green)" />
         </Variants>
       </Specimen>
 
