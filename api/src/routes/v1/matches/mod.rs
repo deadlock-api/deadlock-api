@@ -36,6 +36,7 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(live_url::url))
         .routes(routes!(live_url::urls, live_url::ingest_urls))
         .routes(routes!(salts::salts))
+        .route("/salts/stored", axum::routing::get(salts::stored_salts))
         .route("/to-fetch", axum::routing::get(to_fetch::matches_to_fetch))
         .route(
             "/to-fetch/release",

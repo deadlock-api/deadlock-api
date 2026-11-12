@@ -1,4 +1,5 @@
 use core::time::Duration;
+use std::collections::HashSet;
 
 use axum::Json;
 use axum::extract::{Path, State};
@@ -8,6 +9,7 @@ use axum_extra::extract::Query;
 use cached::macros::cached;
 use clickhouse::Row;
 use clickhouse_utils::{BatchQuery, ClickhouseBatcher, in_clause};
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use steam_proxy::{SteamProxyError, SteamProxyOptions, SteamProxyReply};
 use tracing::{debug, warn};
@@ -448,4 +450,51 @@ pub(super) async fn salts(
             Json(MatchSaltsResponse::from((match_id, salts.salts))),
         )
     })
+}
+
+/// Most match ids one stored-salts check takes.
+const MAX_STORED_CHECK_IDS: usize = 1000;
+
+#[derive(Deserialize)]
+pub(super) struct StoredSaltsQuery {
+    /// Comma separated match ids, at most [`MAX_STORED_CHECK_IDS`].
+    #[serde(deserialize_with = "crate::utils::parse::comma_separated_deserialize")]
+    match_ids: Vec<u64>,
+}
+
+/// Of the given match ids, the ones whose salts are stored, in request order: the batch form
+/// of `/v1/matches/{match_id}/salts?disable_steam=true`. Never asks Steam and doesn't queue the
+/// missing matches for fetching, so tools that fetch salts from Steam themselves (Mod Manager's
+/// match sync) can skip matches already stored. Not in the `OpenAPI` docs.
+pub(super) async fn stored_salts(
+    Query(StoredSaltsQuery { match_ids }): Query<StoredSaltsQuery>,
+    State(state): State<AppState>,
+) -> APIResult<Json<Vec<u64>>> {
+    if match_ids.len() > MAX_STORED_CHECK_IDS {
+        return Err(APIError::status_msg(
+            StatusCode::BAD_REQUEST,
+            format!(
+                "Too many match ids (max {MAX_STORED_CHECK_IDS}, got {})",
+                match_ids.len()
+            ),
+        ));
+    }
+    let match_ids: Vec<u64> = match_ids.into_iter().unique().collect();
+    if match_ids.is_empty() {
+        return Ok(Json(match_ids));
+    }
+    let stored: HashSet<u64> = state
+        .batchers
+        .match_salts_read
+        .load_many(&match_ids)
+        .await?
+        .into_iter()
+        .map(|row| row.match_id)
+        .collect();
+    Ok(Json(
+        match_ids
+            .into_iter()
+            .filter(|id| stored.contains(id))
+            .collect(),
+    ))
 }
