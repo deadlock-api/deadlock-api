@@ -13,6 +13,8 @@ base64.workspace = true
 crosshair.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+# Only the wasm32 build exports the ABI (`mod ffi`).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-abi.workspace = true
 
 [lints]

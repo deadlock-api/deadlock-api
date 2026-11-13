@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 ARG EXE_NAME=deadlock-api
 
-FROM rust:1.99-slim-trixie AS builder
+FROM rust:1.100-slim-trixie AS builder
 ARG EXE_NAME
 RUN apt-get update \
     && apt-get install -y --no-install-recommends protobuf-compiler libprotobuf-dev ca-certificates gcc libssl-dev pkg-config cmake build-essential clang curl mold git \

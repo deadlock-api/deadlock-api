@@ -18,7 +18,7 @@ tower-http = { version = "0.7.1", features = ["cors", "normalize-path", "trace",
 tracing = "0.1.44"
 futures = "0.3.34"
 valveprotos = { workspace = true, features = ["serde", "user-msgs", "game-msgs"] }
-prost = "0.14.4"
+prost = "0.14.6"
 tryhard = "0.5.2"
 strum = { version = "0.28.0", features = ["derive"] }
 haste = { workspace = true, features = ["async"] }

@@ -48,8 +48,7 @@ pub(crate) async fn track_requests(
     let request_id = req
         .extensions()
         .get::<RequestId>()
-        .map(|id| id.0.clone())
-        .unwrap_or_default();
+        .map_or_default(|id| id.0.clone());
     let headers = req.headers();
     let user_agent = get_header(headers, header::USER_AGENT);
     let api_key = parse_api_key(headers);

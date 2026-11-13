@@ -73,7 +73,6 @@ interface SuggestionListProps {
  * field keeps the focus and the keyboard cursor; a row takes the cursor only when the pointer really moves over it.
  */
 export function SuggestionList({ id, suggestions, getOptionProps, onPick }: SuggestionListProps) {
-  let index = 0;
   return (
     <div
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the popup list of a custom combobox; a native select or datalist cannot carry it
@@ -82,20 +81,21 @@ export function SuggestionList({ id, suggestions, getOptionProps, onPick }: Sugg
       aria-label="Suggestions"
       className="flex max-h-96 min-h-0 flex-col gap-1 overflow-y-auto"
     >
-      {GROUPS.map((group) => {
+      {GROUPS.map((group, groupIndex) => {
         const rows = suggestions[group.key];
+        // `suggestions.all` lists the groups in this order, so a row's index there starts after the earlier groups.
+        const start = GROUPS.slice(0, groupIndex).reduce((n, g) => n + suggestions[g.key].length, 0);
         // The page waits on the model: a row of the same size holds its place, so nothing below jumps when it answers.
         const placeholder = group.key === "page" && rows.length === 0 && suggestions.pagePending;
         if (rows.length === 0 && !placeholder) return null;
         return (
           <OptionGroup key={group.key} label={group.label} aria-busy={placeholder || undefined}>
             {placeholder && <SuggestionSkeleton />}
-            {rows.map((row) => {
-              const at = index++;
+            {rows.map((row, rowIndex) => {
               return (
                 <OptionRow
                   key={row.key}
-                  {...getOptionProps(at)}
+                  {...getOptionProps(start + rowIndex)}
                   leading={leadingOf(row)}
                   description={descriptionOf(row)}
                   hint={row.kind === "player" ? row.accountId : undefined}

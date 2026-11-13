@@ -16,7 +16,7 @@ redis = { workspace = true }
 clickhouse = { version = "0.15.3", features = ["chrono", "uuid", "zstd"] }
 clickhouse-utils = { workspace = true, features = ["admission", "cache"] }
 sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "sqlx-toml", "uuid"] }
-uuid = { version = "1.29.0", features = ["serde", "v4", "v7"] }
+uuid = { version = "1.29.2", features = ["serde", "v4", "v7"] }
 cached = { workspace = true, features = ["async"] }
 axum = "0.8.9"
 utoipa-axum = "0.3.0"
@@ -43,7 +43,7 @@ player-match-history = { workspace = true, features = ["utoipa"] }
 crosshair = { workspace = true, features = ["utoipa"] }
 valveprotos = { workspace = true, features = ["gc-client", "serde"] }
 demofusion = { workspace = true }
-prost = "0.14.4"
+prost = "0.14.6"
 base64 = "0.23.1"
 tryhard = "0.5.2"
 async-compression = { version = "0.4.52", features = ["bzip2", "zstd", "tokio"] }
@@ -70,7 +70,7 @@ md5 = { package = "md-5", version = "0.11" }
 jsonwebtoken = { version = "11", features = ["aws_lc_rs"] }
 async-trait = "0.1.92"
 tantivy = { version = "0.27.0", features = ["zstd-compression"] }
-arc-swap = "1.9.3"
+arc-swap = "1.9.5"
 datafusion = { version = "55", default-features = false, features = [
     "sql",
     "parquet",
@@ -86,7 +86,7 @@ datafusion = { version = "55", default-features = false, features = [
 tokio-util = { version = "0.7.20", features = ["io", "rt"] }
 image = { version = "0.25.10", default-features = false, features = ["png", "webp"] }
 ab_glyph = "0.2.32"
-rmcp = { version = "3.8.0", default-features = false, features = ["macros", "server", "transport-streamable-http-server"] }
+rmcp = { version = "3.10.0", default-features = false, features = ["macros", "server", "transport-streamable-http-server"] }
 schemars = "1.2.3"
 duckdb = { version = "1.20000.1", features = ["bundled", "parquet", "json"] }
 # DuckDB pins arrow 60; enables the JSON writer on that version for MCP result formatting.

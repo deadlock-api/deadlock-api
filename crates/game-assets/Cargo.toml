@@ -10,7 +10,7 @@ graphql = ["dep:async-graphql"]
 schemars = ["dep:schemars"]
 
 [dependencies]
-arc-swap = "1.9.3"
+arc-swap = "1.9.5"
 async-graphql = { version = "7", optional = true }
 bytes = { workspace = true }
 cached = { workspace = true, features = ["async"] }

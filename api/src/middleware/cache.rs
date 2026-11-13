@@ -77,12 +77,10 @@ impl CacheControlLayer {
         let visibility = if self.is_private { "private" } else { "public" };
         let stale_while_revalidate = self
             .stale_while_revalidate
-            .map(|d| format!(", stale-while-revalidate={}", d.as_secs()))
-            .unwrap_or_default();
+            .map_or_default(|d| format!(", stale-while-revalidate={}", d.as_secs()));
         let stale_if_error = self
             .stale_if_error
-            .map(|d| format!(", stale-if-error={}", d.as_secs()))
-            .unwrap_or_default();
+            .map_or_default(|d| format!(", stale-if-error={}", d.as_secs()));
         HeaderValue::from_str(&format!(
             "{visibility}, max-age={}{stale_while_revalidate}{stale_if_error}",
             max_age.as_secs()

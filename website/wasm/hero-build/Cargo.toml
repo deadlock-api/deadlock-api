@@ -15,6 +15,8 @@ ruzstd = "0.9.1"
 serde_json.workspace = true
 thiserror.workspace = true
 valveprotos = { workspace = true, features = ["gc-common", "serde"] }
+# Only the wasm32 build exports the ABI (`mod ffi`).
+[target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-abi.workspace = true
 
 [lints]

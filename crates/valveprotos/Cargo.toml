@@ -14,15 +14,15 @@ path = "lib.rs"
 ignored = ["prost"]
 
 [dependencies]
-prost = "0.14.4"
+prost = "0.14.6"
 prost-reflect = { version = "0.16", features = ["derive"], optional = true }
 serde = { version = "1.0.229", optional = true, features = ["derive"] }
 ureq = { version = "3.5", features = ["json"], optional = true }
 
 [build-dependencies]
 heck = "0.5"
-prost-build = "0.14.4"
-prost-types = "0.14.4"
+prost-build = "0.14.6"
+prost-types = "0.14.6"
 prost-reflect-build = { version = "0.16", optional = true }
 
 [features]

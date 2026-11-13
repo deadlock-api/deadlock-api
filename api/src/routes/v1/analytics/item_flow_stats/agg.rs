@@ -590,9 +590,7 @@ pub(super) fn sources(
     );
     // The base-table rows of the window's partial days and of what the rollup lacks come from
     // the item's buyers alone, the base query's filter for an upgrade.
-    let include_expr = include
-        .map(|id| format!("toUInt32({id})"))
-        .unwrap_or_default();
+    let include_expr = include.map_or_default(|id| format!("toUInt32({id})"));
     if let Some(id) = include {
         filters.rollup.push(format!("{INCLUDE} = {id}"));
         filters.base.push(format!("has(upgrades.item_id, {id})"));

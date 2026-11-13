@@ -200,17 +200,13 @@ fn agg_filters(query: &PlayerPerformanceCurveQuery) -> String {
     ));
     let min_filter = query
         .min_duration_s
-        .map(|min| format!(" AND duration_bucket >= {}", min / DURATION_BUCKET_S))
-        .unwrap_or_default();
-    let max_filter = query
-        .max_duration_s
-        .map(|max| {
-            let bucket = max / DURATION_BUCKET_S;
-            format!(
-                " AND (duration_bucket < {bucket} OR (duration_bucket = {bucket} AND duration_on_edge))"
-            )
-        })
-        .unwrap_or_default();
+        .map_or_default(|min| format!(" AND duration_bucket >= {}", min / DURATION_BUCKET_S));
+    let max_filter = query.max_duration_s.map_or_default(|max| {
+        let bucket = max / DURATION_BUCKET_S;
+        format!(
+            " AND (duration_bucket < {bucket} OR (duration_bucket = {bucket} AND duration_on_edge))"
+        )
+    });
     format!("{badge_filters}{min_filter}{max_filter}")
 }
 
