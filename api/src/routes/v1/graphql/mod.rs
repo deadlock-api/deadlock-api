@@ -2,6 +2,7 @@ mod assets;
 mod builds;
 mod cost;
 mod filters;
+mod http;
 mod metrics_ext;
 mod projection;
 pub(crate) mod salts;
@@ -11,12 +12,13 @@ mod types;
 
 use core::sync::atomic::{AtomicU32, Ordering};
 use core::time::Duration;
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 
 use async_graphql::dataloader::DataLoader;
 use async_graphql::http::GraphiQLSource;
-use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+use async_graphql_axum::GraphQLRequest;
 use axum::extract::State;
+use axum::http::HeaderMap;
 use axum::response::{Html, IntoResponse, Response};
 use utoipa::OpenApi;
 use utoipa_axum::router::OpenApiRouter;
@@ -29,6 +31,7 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Limits, Quota, RateLimit, Scope, describe};
 
 use builds::HeroBuildLoader;
+use http::RequestState;
 use schema::{GraphQLSchema, build_schema};
 
 pub(super) const RATE_LIMIT_KEY: &str = "graphql_match_player";
@@ -129,6 +132,11 @@ Interactive GraphiQL playground for exploring the GraphQL API.
 
 Open this endpoint in a browser to access the playground. Send GraphQL queries via `POST /v1/graphql` with a JSON body of the form `{ \"query\": \"...\", \"variables\": {...} }`.
 
+Clients explicitly accepting `application/graphql-response+json` receive 400 for
+query syntax errors and 422 for validation, depth and complexity rejections, with
+`data` omitted. Other clients retain 200 and `data: null` for those errors.
+Successful execution and execution errors (including partial results) return 200.
+
     ",
         Limits::from(RATE_LIMIT).note("They apply to `POST /v1/graphql`."),
     )
@@ -140,6 +148,7 @@ async fn playground() -> impl IntoResponse {
 async fn graphql_handler(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
+    headers: HeaderMap,
     req: GraphQLRequest,
 ) -> Result<Response, APIError> {
     state
@@ -151,7 +160,9 @@ async fn graphql_handler(
         DataLoader::new(HeroBuildLoader::new(state.pg_client.clone()), tokio::spawn);
     let request = req.into_inner();
     let mut log = GraphQLRequestLog::new(&request);
+    let http_state = Arc::new(RequestState::new(&headers));
     let request = request
+        .data(Arc::clone(&http_state))
         .data(state)
         .data(rate_limit_key)
         .data(hero_build_loader)
@@ -161,7 +172,7 @@ async fn graphql_handler(
         });
     let resp = shared_schema().execute(request).await;
     log.set_cost(&resp);
-    let mut response = GraphQLResponse::from(resp).into_response();
+    let mut response = http_state.build_response(resp);
     response.extensions_mut().insert(log);
     Ok(response)
 }
