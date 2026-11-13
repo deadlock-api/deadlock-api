@@ -187,8 +187,9 @@ const ITEM_PAIRS_SPEC: CohortSpec = CohortSpec {
     history: None,
 };
 
-// The _v2 tables carry uniqCombined(14) player states (migration 40); the plain uniq states
-// of the former v1 tables were ~90% of item_stats_cohort_mv's CPU.
+// The cohort tables carry uniqCombined(12) player states (v3, 2026-11-13): at precision 14 (v2)
+// they were 275 GiB, ~31% more. The plain uniq states of the former v1 tables were ~90% of
+// item_stats_cohort_mv's CPU.
 fn cohort_specs() -> Vec<CohortSpec> {
     let item_flow = |agg: item_flow_agg::Agg| CohortSpec {
         table: agg.table(),
@@ -221,8 +222,8 @@ fn cohort_specs() -> Vec<CohortSpec> {
         item_bucket_spec(item_stats::ItemBucketAgg::NetWorth),
         ITEM_PAIRS_SPEC,
         CohortSpec {
-            table: "default.item_cohort_stats_time_agg_v2",
-            staging: "default.item_cohort_stats_time_agg_v2_staging",
+            table: "default.item_cohort_stats_time_agg_v3",
+            staging: "default.item_cohort_stats_time_agg_v3_staging",
             source: Source::Cohort {
                 bucket_select: "toUInt32(floor(buy_time / 60)) AS bucket_minute",
                 bucket_col: "bucket_minute",
@@ -232,8 +233,8 @@ fn cohort_specs() -> Vec<CohortSpec> {
             history: None,
         },
         CohortSpec {
-            table: "default.item_cohort_stats_net_worth_agg_v2",
-            staging: "default.item_cohort_stats_net_worth_agg_v2_staging",
+            table: "default.item_cohort_stats_net_worth_agg_v3",
+            staging: "default.item_cohort_stats_net_worth_agg_v3_staging",
             source: Source::Cohort {
                 bucket_select: "toUInt32(floor(net_worth_at_buy / 1000) * 1000) AS bucket_net_worth",
                 bucket_col: "bucket_net_worth",
@@ -312,8 +313,17 @@ macro_rules! item_rollup_measures {
     };
 }
 
-/// Measures of `item_stats_agg_v2` and the cohort and enemy rollups: `uniqCombined(14)` players.
+/// Measures of `item_stats_agg_v2` and the enemy rollup: `uniqCombined(14)` players.
 pub(crate) const ITEM_ROLLUP_MEASURES: &str = item_rollup_measures!("14");
+
+/// Measures of the cohort rollups (`item_cohort_stats_*_agg_v3`): `uniqCombined(12)` players.
+/// Their tables were ~37% smaller on disk at 12 than at 14 (275 GiB of states). Against precision
+/// 14 over 7 days (2026-11-13), groups of 1000+ players differ by p50 0.5-0.8%, p99 1.8-2.9%; the
+/// states are exact up to 256 players at both precisions.
+const COHORT_ROLLUP_MEASURES: &str = item_rollup_measures!("12");
+
+/// `players_state` precision of the cohort rollups ([`COHORT_ROLLUP_MEASURES`]).
+pub(crate) const COHORT_PLAYERS_PRECISION: u8 = 12;
 
 /// Measures of the hero-less buy-time and net-worth rollups (`item_stats_time_agg`,
 /// `item_stats_net_worth_agg`): `uniqCombined(12)` players. Their reads merge every item and
@@ -352,7 +362,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str, slice: Slice) -> String {
     cohort_item_id,
     item_id,
     {bucket_select},
-    {ITEM_ROLLUP_MEASURES}
+    {COHORT_ROLLUP_MEASURES}
 FROM default.match_player
 ARRAY JOIN
     `upgrades.item_id` AS item_id,
@@ -874,8 +884,8 @@ mod tests {
         assert_eq!(
             sliced,
             [
-                "default.item_cohort_stats_time_agg_v2",
-                "default.item_cohort_stats_net_worth_agg_v2",
+                "default.item_cohort_stats_time_agg_v3",
+                "default.item_cohort_stats_net_worth_agg_v3",
                 "default.item_flow_edges_inc_agg",
             ]
         );

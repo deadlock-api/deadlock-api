@@ -6,7 +6,9 @@ GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.hero_stats
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.hero_stats_agg_v2 TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.heroes TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.item_cohort_stats_net_worth_agg_v2 TO api_readonly_user;
+GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.item_cohort_stats_net_worth_agg_v3 TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.item_cohort_stats_time_agg_v2 TO api_readonly_user;
+GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.item_cohort_stats_time_agg_v3 TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.item_enemy_stats_agg TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.item_stats_agg_v2 TO api_readonly_user;
 GRANT SHOW TABLES, SHOW COLUMNS, SHOW DICTIONARIES, SELECT ON default.items TO api_readonly_user;

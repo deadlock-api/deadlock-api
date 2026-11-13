@@ -24,8 +24,8 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::ch_admission::ChQueryError;
 use crate::services::cohort_agg_refresh::{
-    HORIZON_DAYS, ITEM_BUCKET_ROLLUP_MEASURES, ITEM_ROLLUP_MEASURES, cohort_rollup_rows,
-    enemy_hero_select_body,
+    COHORT_PLAYERS_PRECISION, HORIZON_DAYS, ITEM_BUCKET_ROLLUP_MEASURES, ITEM_ROLLUP_MEASURES,
+    cohort_rollup_rows, enemy_hero_select_body,
 };
 use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{
@@ -474,7 +474,7 @@ pub struct ItemStats {
     pub sold: u64,
 }
 
-// All rollups below (`item_stats_agg_v2`, `item_cohort_stats_*_agg_v2`, `item_enemy_stats_agg`)
+// All rollups below (`item_stats_agg_v2`, `item_cohort_stats_*_agg_v3`, `item_enemy_stats_agg`)
 // are built from the `upgrades.*` arrays, which exclude corrupted purchases (migration 42),
 // and keep no per-purchase corruption or enhanced dimension: `corrupted_items` `include`/`only`
 // and `enhanced_items` `exclude`/`only` requests always go to the base table.
@@ -497,11 +497,11 @@ const HERO_FILTERED_REACH: Reach = Reach::Days(10);
 /// Measure columns every item rollup shares, after its grain columns.
 const ROLLUP_MEASURES: &str = "n_matches, n_wins, sum_buy_time, sum_buy_rel, sum_sold_time, n_sold, sum_sold_rel, players_state";
 
-/// The `SELECT` over an item rollup source (`item_stats_agg_v2`, `item_cohort_stats_*_agg_v2` and
+/// The `SELECT` over an item rollup source (`item_stats_agg_v2`, `item_cohort_stats_*_agg_v3` and
 /// `item_enemy_stats_agg` share their measures), from [`Rollup::source`]. The per-row averages
 /// equal the base query's `avg()`/`avgIf()`: the denominators (`matches`, `n_sold`) are the same
 /// counts. `players_state` is a `uniqCombined` state of `players_precision`, 14 for all but the
-/// hero-less bucket rollups (migration 39): merging plain uniq states was ~99% of this query's CPU.
+/// hero-less bucket and cohort rollups (12; migration 39): merging plain uniq states was ~99% of this query's CPU.
 fn rollup_query(
     source: &str,
     bucket_expr: &str,
@@ -849,9 +849,9 @@ fn build_mv_query(query: &ItemStatsQuery) -> Option<String> {
     ))
 }
 
-/// `item_cohort_stats_time_agg_v2`: per day, mode, cohort item, item and buy minute.
+/// `item_cohort_stats_time_agg_v3`: per day, mode, cohort item, item and buy minute.
 const COHORT_TIME_AGG: Rollup<'static> = Rollup {
-    table: "default.item_cohort_stats_time_agg_v2",
+    table: "default.item_cohort_stats_time_agg_v3",
     grain: &[
         ("game_mode", "game_mode"),
         ("match_mode", "match_mode"),
@@ -864,9 +864,9 @@ const COHORT_TIME_AGG: Rollup<'static> = Rollup {
     coverage: ITEM_ROLLUP_COVERAGE,
 };
 
-/// `item_cohort_stats_net_worth_agg_v2`: per day, mode, cohort item, item and net worth step.
+/// `item_cohort_stats_net_worth_agg_v3`: per day, mode, cohort item, item and net worth step.
 const COHORT_NW_AGG: Rollup<'static> = Rollup {
-    table: "default.item_cohort_stats_net_worth_agg_v2",
+    table: "default.item_cohort_stats_net_worth_agg_v3",
     grain: &[
         ("game_mode", "game_mode"),
         ("match_mode", "match_mode"),
@@ -1017,7 +1017,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
         &bucket_expr,
         &query.matches_having_clause(),
         "item_stats_cohort_mv",
-        14,
+        COHORT_PLAYERS_PRECISION,
     ))
 }
 
