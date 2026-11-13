@@ -325,26 +325,6 @@ CREATE TABLE default.match_player
     INDEX idx_created_at created_at TYPE minmax GRANULARITY 1,
     INDEX idx_demo_processed demo_processed TYPE set(2) GRANULARITY 4,
     INDEX bf_items_item_id items.item_id TYPE bloom_filter GRANULARITY 1,
-    PROJECTION ability_order_by_hero
-    (
-        SELECT
-            hero_id,
-            abilities,
-            won,
-            kills,
-            deaths,
-            assists,
-            account_id,
-            start_time,
-            average_badge_team0,
-            average_badge_team1,
-            average_badge,
-            duration_s,
-            net_worth,
-            match_mode,
-            game_mode
-        ORDER BY hero_id
-    ),
     PROJECTION hero_stats_by_hero
     (
         SELECT
