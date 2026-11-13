@@ -22,6 +22,7 @@ import { CurrentPatchLink } from "~/components/domain/navigation/CurrentPatchLin
 import { HeroMatchupDetailsStatsTable } from "~/components/features/heroes/HeroMatchupDetailsStatsTable";
 import { HeroMatchupSummary } from "~/components/features/heroes/HeroMatchupSummary";
 import { HeroPreRelease } from "~/components/features/heroes/HeroPreRelease";
+import { HeroTopBuilds, TOP_BUILDS_MIN_MATCHES, topBuildIds } from "~/components/features/heroes/HeroTopBuilds";
 import { HeroTopItems } from "~/components/features/heroes/HeroTopItems";
 import { ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { LinkCard } from "~/components/patterns/content/LinkCard";
@@ -69,6 +70,11 @@ import {
   loadSeasons,
 } from "~/queries/asset-queries";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
+import {
+  type HeroBuildStatsParams,
+  heroBuildMetaQueryOptions,
+  heroBuildStatsQueryOptions,
+} from "~/queries/hero-build-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { heroSwapStatsQueryOptions } from "~/queries/hero-swap-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
@@ -122,6 +128,21 @@ function currentAbilityOrderParams(
   preference: DateFilterPreference = DEFAULT_DATE_FILTER,
 ) {
   return { minMatches: Math.max(20, skillPathMinMatches(heroMatches)), ...currentStatsParams(seasons, preference) };
+}
+
+/** The hero's published builds as the Build Stats page counts them by default, so both read one cache entry. */
+function currentBuildParams(
+  heroId: number,
+  seasons: readonly SeasonInfo[],
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
+): HeroBuildStatsParams {
+  return {
+    heroId,
+    matchMode: DEFAULT_MATCH_MODE,
+    ...DEFAULT_BADGES,
+    ...defaultUnixRange(seasons, preference),
+    minMatches: TOP_BUILDS_MIN_MATCHES,
+  };
 }
 
 function currentBanParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
@@ -232,6 +253,14 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
         ),
       ]);
     });
+    // The build names are what a build search looks for: the server waits for the top builds' names too.
+    const buildsPrefetch = prefetchCached(
+      queryClient,
+      heroBuildStatsQueryOptions(currentBuildParams(hero.id, seasons, preferences.dateFilter)),
+    ).then((rows) => {
+      const ids = rows ? topBuildIds(rows) : [];
+      return ids.length > 0 ? prefetchCached(queryClient, heroBuildMetaQueryOptions(hero.id, ids)) : undefined;
+    });
     const [stats, ranks, , , , matchups] = await Promise.all([
       statsPrefetch,
       prefetchCached(queryClient, ranksQueryOptions),
@@ -245,6 +274,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       // Swaps come from the same demos as bans, so they take the ban filters.
       prefetchCached(queryClient, heroSwapStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
       skillOrderPrefetch,
+      buildsPrefetch,
     ]);
     const cardImage = hero.images.hero_card_critical_webp ?? hero.images.icon_hero_card_webp ?? null;
     const summary = summarizeHeroStats(requireOnServer(stats, "Hero stats"), hero.id);
@@ -490,13 +520,23 @@ function HeroDetailPage() {
       {summary && (
         <Section title={`${heroName} Builds`}>
           <div className="grid gap-4">
-            <HeroTopItems
-              heroId={heroId}
-              heroName={heroName}
-              heroMatches={summary.matches}
-              rankRange={rankRange}
-              request={currentItemStatsParams(seasons, preferences.dateFilter)}
-            />
+            {/* Side by side from a wide section, one height: the builds table stretches to the item list. */}
+            <div className="@container">
+              <div className="grid gap-4 @3xl:grid-cols-2">
+                <HeroTopBuilds
+                  heroName={heroName}
+                  request={currentBuildParams(heroId, seasons, preferences.dateFilter)}
+                  rankRange={rankRange}
+                />
+                <HeroTopItems
+                  heroId={heroId}
+                  heroName={heroName}
+                  heroMatches={summary.matches}
+                  rankRange={rankRange}
+                  request={currentItemStatsParams(seasons, preferences.dateFilter)}
+                />
+              </div>
+            </div>
             <HeroSkillOrder
               heroId={heroId}
               heroName={heroName}
