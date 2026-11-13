@@ -8,7 +8,7 @@
 
 use std::sync::Arc;
 
-use async_graphql::extensions::{Analyzer, Tracing};
+use async_graphql::extensions::Analyzer;
 use async_graphql::{
     Context, EmptyMutation, EmptySubscription, Enum, Object, Result as GqlResult, Schema,
 };
@@ -52,7 +52,8 @@ pub(crate) fn build_schema() -> GraphQLSchema {
         // Enforces `cost::COMPLEXITY_LIMIT` itself (instead of `limit_complexity`), so rejected
         // queries still report their complexity; registered first so it wraps `Analyzer`.
         .extension(MetricsExtension)
-        .extension(Tracing)
+        // No `async_graphql::extensions::Tracing`: its per-field spans were ~7M/h, 99.9% of the
+        // GraphQL spans and most of otel_traces. Resolver and dataloader spans stay.
         .extension(Analyzer)
         .finish()
 }
