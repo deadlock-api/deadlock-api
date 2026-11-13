@@ -350,7 +350,7 @@ export const NAV: readonly NavChapter[] = [
       { title: "Graphs", items: ["GraphNodeCard", "BuildFlow", "HeroSkillOrder"] },
       { title: "Draft", items: ["DraftSlot"] },
       { title: "Brand", items: ["BrandIcons and SocialLinks"] },
-      { title: "Navigation", items: ["SmartLink"] },
+      { title: "Navigation", items: ["SmartLink", "CurrentPatchLink"] },
       { title: "Feedback", items: ["FeedbackNoticeDialog"] },
       { title: "Ingest", items: ["InstallButton"] },
       {

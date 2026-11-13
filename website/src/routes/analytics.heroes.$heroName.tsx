@@ -18,6 +18,7 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import { EntityNotFound } from "~/components/app/EntityNotFound";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroSkillOrder, skillPathMinMatches } from "~/components/domain/graph/HeroSkillOrder";
+import { CurrentPatchLink } from "~/components/domain/navigation/CurrentPatchLink";
 import { HeroMatchupDetailsStatsTable } from "~/components/features/heroes/HeroMatchupDetailsStatsTable";
 import { HeroMatchupSummary } from "~/components/features/heroes/HeroMatchupSummary";
 import { HeroPreRelease } from "~/components/features/heroes/HeroPreRelease";
@@ -409,7 +410,7 @@ function HeroDetailPage() {
               </Inline>
             )}
             <span>
-              {rankRange} · {period}
+              {rankRange} · {period === "the current patch" ? <CurrentPatchLink /> : period}
             </span>
           </>
         }

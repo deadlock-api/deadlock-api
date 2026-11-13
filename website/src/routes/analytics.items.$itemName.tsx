@@ -7,6 +7,7 @@ import { lazy, Suspense, useMemo } from "react";
 import { EntityNotFound } from "~/components/app/EntityNotFound";
 import { ITEM_SLOT_COLOR } from "~/components/domain/assets/item-slot-color";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
+import { CurrentPatchLink } from "~/components/domain/navigation/CurrentPatchLink";
 import { ItemCorruption } from "~/components/features/items/ItemCorruption";
 import { ItemEffectCard } from "~/components/features/items/ItemEffectCard";
 import { ItemBestHeroes, ItemPairings } from "~/components/features/items/ItemHeroBreakdown";
@@ -274,7 +275,7 @@ function ItemDetailPage() {
             <Badge variant="outline">Tier {tier}</Badge>
             {cost !== null && <span className="tabular-nums">{cost.toLocaleString("en-US")} souls</span>}
             <span>
-              {rankRange} · {period}
+              {rankRange} · {period === "the current patch" ? <CurrentPatchLink /> : period}
             </span>
           </>
         }

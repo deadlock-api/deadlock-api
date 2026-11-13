@@ -3,6 +3,7 @@ import { useState } from "react";
 import type { DateRange } from "react-day-picker";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
+import { CurrentPatchLink } from "~/components/domain/navigation/CurrentPatchLink";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { Button } from "~/components/ui/button";
 import { Calendar } from "~/components/ui/calendar";
@@ -171,6 +172,20 @@ export function PrimitivesMore() {
               External: new tab <ExternalLink />
             </SmartLink>
           </Button>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="CurrentPatchLink"
+        source="domain/navigation/CurrentPatchLink"
+        note="The patch the default date range covers, named as titles name it (Oct 30 Patch) and linked to its patch page: the period line of a hero or item header. It keeps the color of the text around it and is always underlined, so it reads as a link by more than color. A season is plain text, so the caller renders it only for the current patch. children replace the label; TextLink props pass through."
+      >
+        <Variants label="default · in a muted line · tone primary, underline hover">
+          <CurrentPatchLink />
+          <span className="text-xs text-muted-foreground">
+            Phantom 1+ · <CurrentPatchLink />
+          </span>
+          <CurrentPatchLink tone="primary" underline="hover" />
         </Variants>
       </Specimen>
 
