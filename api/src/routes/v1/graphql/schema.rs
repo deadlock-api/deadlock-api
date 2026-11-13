@@ -26,7 +26,6 @@ use crate::routes::v1::graphql::assets::{load_heroes, load_items, load_ranks};
 use crate::routes::v1::graphql::builds::{HeroBuildWhere, HeroBuildsArgs, load_hero_builds};
 use crate::routes::v1::graphql::cost::{self, DEPTH_LIMIT, MAX_LIMIT};
 use crate::routes::v1::graphql::filters::{MatchHistoryWhere, MatchPlayerWhere};
-use crate::routes::v1::graphql::http::HttpExtension;
 use crate::routes::v1::graphql::metrics_ext::MetricsExtension;
 use crate::routes::v1::graphql::projection::{
     project_match_history, project_match_players, project_matches,
@@ -50,9 +49,8 @@ pub(crate) type GraphQLSchema = Schema<QueryRoot, EmptyMutation, EmptySubscripti
 pub(crate) fn build_schema() -> GraphQLSchema {
     Schema::build(QueryRoot, EmptyMutation, EmptySubscription)
         .limit_depth(DEPTH_LIMIT)
-        .extension(HttpExtension)
         // Enforces `cost::COMPLEXITY_LIMIT` itself (instead of `limit_complexity`), so rejected
-        // queries still report their complexity; registered before `Analyzer` so it wraps it.
+        // queries still report their complexity; registered first so it wraps `Analyzer`.
         .extension(MetricsExtension)
         // No `async_graphql::extensions::Tracing`: its per-field spans were ~7M/h, 99.9% of the
         // GraphQL spans and most of otel_traces. Resolver and dataloader spans stay.
