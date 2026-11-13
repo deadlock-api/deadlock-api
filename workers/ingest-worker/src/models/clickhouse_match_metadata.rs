@@ -227,34 +227,25 @@ pub(crate) struct ClickhouseMatchPlayer {
     /// Per custom stat, its value at every stats tick as deltas: the first element is the
     /// value itself, each later one the change since the previous tick.
     pub custom_user_stats_values: Vec<Vec<i32>>,
+    // The gold_source players/lane creeps/neutrals/bosses `damage` columns and the lane creeps
+    // `gold`/`gold_orbs` and neutrals `gold` columns are not written: they always equalled
+    // `stats.player_damage`, `creep_damage`, `neutral_damage`, `boss_damage`,
+    // `gold_lane_creep`, `gold_lane_creep_orbs` and `gold_neutral_creep`, and were dropped from
+    // match_player on 2026-11-13. The API serves them from those columns.
     #[serde(rename = "stats.gold_source_players_kills")]
     pub stats_gold_source_players_kills: Vec<u32>,
-    #[serde(rename = "stats.gold_source_players_damage")]
-    pub stats_gold_source_players_damage: Vec<u32>,
     #[serde(rename = "stats.gold_source_players_gold")]
     pub stats_gold_source_players_gold: Vec<u32>,
     #[serde(rename = "stats.gold_source_players_gold_orbs")]
     pub stats_gold_source_players_gold_orbs: Vec<u32>,
     #[serde(rename = "stats.gold_source_lane_creeps_kills")]
     pub stats_gold_source_lane_creeps_kills: Vec<u32>,
-    #[serde(rename = "stats.gold_source_lane_creeps_damage")]
-    pub stats_gold_source_lane_creeps_damage: Vec<u32>,
-    #[serde(rename = "stats.gold_source_lane_creeps_gold")]
-    pub stats_gold_source_lane_creeps_gold: Vec<u32>,
-    #[serde(rename = "stats.gold_source_lane_creeps_gold_orbs")]
-    pub stats_gold_source_lane_creeps_gold_orbs: Vec<u32>,
     #[serde(rename = "stats.gold_source_neutrals_kills")]
     pub stats_gold_source_neutrals_kills: Vec<u32>,
-    #[serde(rename = "stats.gold_source_neutrals_damage")]
-    pub stats_gold_source_neutrals_damage: Vec<u32>,
-    #[serde(rename = "stats.gold_source_neutrals_gold")]
-    pub stats_gold_source_neutrals_gold: Vec<u32>,
     #[serde(rename = "stats.gold_source_neutrals_gold_orbs")]
     pub stats_gold_source_neutrals_gold_orbs: Vec<u32>,
     #[serde(rename = "stats.gold_source_bosses_kills")]
     pub stats_gold_source_bosses_kills: Vec<u32>,
-    #[serde(rename = "stats.gold_source_bosses_damage")]
-    pub stats_gold_source_bosses_damage: Vec<u32>,
     #[serde(rename = "stats.gold_source_bosses_gold")]
     pub stats_gold_source_bosses_gold: Vec<u32>,
     #[serde(rename = "stats.gold_source_bosses_gold_orbs")]
@@ -774,31 +765,18 @@ impl From<(&MatchShared<'_>, bool, &Players)> for ClickhouseMatchPlayer {
             custom_user_stats_keys,
             custom_user_stats_values,
             stats_gold_source_players_kills: gold(EGoldSource::KEPlayers, GoldSource::kills),
-            stats_gold_source_players_damage: gold(EGoldSource::KEPlayers, GoldSource::damage),
             stats_gold_source_players_gold: gold(EGoldSource::KEPlayers, GoldSource::gold),
             stats_gold_source_players_gold_orbs: gold(
                 EGoldSource::KEPlayers,
                 GoldSource::gold_orbs,
             ),
             stats_gold_source_lane_creeps_kills: gold(EGoldSource::KELaneCreeps, GoldSource::kills),
-            stats_gold_source_lane_creeps_damage: gold(
-                EGoldSource::KELaneCreeps,
-                GoldSource::damage,
-            ),
-            stats_gold_source_lane_creeps_gold: gold(EGoldSource::KELaneCreeps, GoldSource::gold),
-            stats_gold_source_lane_creeps_gold_orbs: gold(
-                EGoldSource::KELaneCreeps,
-                GoldSource::gold_orbs,
-            ),
             stats_gold_source_neutrals_kills: gold(EGoldSource::KENeutrals, GoldSource::kills),
-            stats_gold_source_neutrals_damage: gold(EGoldSource::KENeutrals, GoldSource::damage),
-            stats_gold_source_neutrals_gold: gold(EGoldSource::KENeutrals, GoldSource::gold),
             stats_gold_source_neutrals_gold_orbs: gold(
                 EGoldSource::KENeutrals,
                 GoldSource::gold_orbs,
             ),
             stats_gold_source_bosses_kills: gold(EGoldSource::KEBosses, GoldSource::kills),
-            stats_gold_source_bosses_damage: gold(EGoldSource::KEBosses, GoldSource::damage),
             stats_gold_source_bosses_gold: gold(EGoldSource::KEBosses, GoldSource::gold),
             stats_gold_source_bosses_gold_orbs: gold(EGoldSource::KEBosses, GoldSource::gold_orbs),
             stats_gold_source_treasure_kills: gold(EGoldSource::KETreasure, GoldSource::kills),

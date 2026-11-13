@@ -7,6 +7,7 @@ use crate::routes::v1::graphql::filters::MatchHistorySqlFilters;
 use crate::routes::v1::graphql::projection::{Column, MATCH_HISTORY_COLUMNS, Projection};
 use crate::routes::v1::graphql::schema::OrderDirection;
 use crate::routes::v1::players::match_history::{COALESCED_COLUMNS, ETERNUS_MAX_BADGE};
+use crate::utils::match_player_stats::stored_stat;
 use crate::utils::sql::{id_list, where_clause};
 
 #[derive(Clone, Copy, Debug)]
@@ -52,13 +53,16 @@ fn nested_array_expr(parent: &str, subfields: &[&str]) -> String {
 /// The array a `Nested` subfield is read from. `stats.custom_user_stats` is stored transposed
 /// and delta-encoded in `custom_user_stats_keys` (stat names) and `custom_user_stats_values`
 /// (deltas per stats tick, one array per name); it is rebuilt into one map per tick, the shape
-/// the API serves.
+/// the API serves. The dropped duplicate `stats.gold_source_*` columns read their original.
 fn nested_subfield_source(parent: &str, subfield: &str) -> String {
     if parent == "stats" && subfield == "custom_user_stats" {
         return "arrayMap(i -> mapFromArrays(custom_user_stats_keys, \
                 arrayMap(v -> toUInt32(arrayCumSum(v)[i]), custom_user_stats_values)), \
                 arrayEnumerate(stats.time_stamp_s))"
             .to_owned();
+    }
+    if parent == "stats" {
+        return format!("stats.{}", stored_stat(subfield));
     }
     format!("{parent}.{subfield}")
 }
@@ -566,6 +570,34 @@ mod tests {
         .unwrap();
         assert!(sql.contains(
             "arrayMap((time_stamp_s, custom_user_stats) -> tuple(time_stamp_s, custom_user_stats), stats.time_stamp_s, arrayMap(i -> mapFromArrays(custom_user_stats_keys, arrayMap(v -> toUInt32(arrayCumSum(v)[i]), custom_user_stats_values)), arrayEnumerate(stats.time_stamp_s))) AS stats"
+        ));
+        crate::utils::proptest_utils::assert_valid_sql(&sql);
+    }
+
+    #[test]
+    fn dropped_duplicate_stats_read_their_original() {
+        let projection = Projection {
+            player_columns: PLAYER_COLUMNS
+                .iter()
+                .filter(|c| matches!(c.gql, "match_id" | "account_id"))
+                .copied()
+                .collect(),
+            stats_subfields: vec!["creep_damage", "gold_source_lane_creeps_damage"],
+            ..Default::default()
+        };
+        let sql = build_match_players_query(&BuildArgs {
+            projection: &projection,
+            filters: &[],
+            order_by: OrderKey::MatchId,
+            order_dir: OrderDirection::Desc,
+            limit: 1,
+            offset: 0,
+            via_player_match_stats: false,
+            excluded_accounts: &[],
+        })
+        .unwrap();
+        assert!(sql.contains(
+            "arrayMap((creep_damage, gold_source_lane_creeps_damage) -> tuple(creep_damage, gold_source_lane_creeps_damage), stats.creep_damage, stats.creep_damage) AS stats"
         ));
         crate::utils::proptest_utils::assert_valid_sql(&sql);
     }

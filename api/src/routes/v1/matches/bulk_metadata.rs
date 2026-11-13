@@ -28,6 +28,7 @@ use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
 use crate::utils::json_stream::{ResponseFormat, stream_rows};
 use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
+use crate::utils::match_player_stats::{DUPLICATE_STATS, stats_array_expr, stored_stat};
 use crate::utils::parse::{comma_separated_deserialize_option, default_true};
 use crate::utils::types::SortDirectionAsc;
 
@@ -61,6 +62,11 @@ const fn default_limit() -> u32 {
 /// identifiers. Input is assumed to have passed `is_valid_extra_column`, so
 /// it cannot contain backticks.
 fn quote_extra_column(col: &str) -> String {
+    // The dropped duplicate `stats.gold_source_*` columns read the column they copied.
+    let col = match col.split_once('.') {
+        Some(("stats", subfield)) => format!("stats.{}", stored_stat(subfield)),
+        _ => col.to_owned(),
+    };
     col.split('.')
         .map(|seg| format!("`{seg}`"))
         .collect::<Vec<_>>()
@@ -353,7 +359,16 @@ fn player_columns(query: &BulkMatchMetadataQuery) -> Vec<(String, String)> {
     // (or one listed twice) is dropped rather than failing the whole query.
     names
         .into_iter()
-        .map(|name| (name.to_owned(), name.to_owned()))
+        .map(|name| {
+            // Built per sub-field so the dropped duplicate `stats.gold_source_*` columns are
+            // still served.
+            let expr = if name == "stats" {
+                stats_array_expr()
+            } else {
+                name.to_owned()
+            };
+            (expr, name.to_owned())
+        })
         .chain(extra_player_columns)
         .unique_by(|(_, alias)| alias.clone())
         .collect()
@@ -424,7 +439,10 @@ async fn match_player_columns(
         )
         .fetch_all_tracked::<String>()
         .await
-        .map(with_nested_parents)
+        .map(|names| {
+            let duplicates = DUPLICATE_STATS.iter().map(|(served, _)| format!("stats.{served}"));
+            with_nested_parents(names.into_iter().chain(duplicates).collect())
+        })
 }
 
 /// `system.columns` lists a `Nested` column only by its flattened subcolumns (`mid_boss.team_killed`),
@@ -1091,6 +1109,33 @@ mod proptests {
         assert_valid_sql(&sql);
         assert_eq!(sql.matches("player_rank_initial_display_rank").count(), 1);
         assert_eq!(sql.matches("`stats`.`player_damage`").count(), 1);
+    }
+
+    #[test]
+    fn dropped_duplicate_stats_read_their_original() {
+        let query = BulkMatchMetadataQuery {
+            include_player_stats: true,
+            extra_player_columns: Some(vec!["stats.gold_source_lane_creeps_damage".to_owned()]),
+            limit: 50,
+            ..BulkMatchMetadataQuery::default()
+        };
+        let columns = player_columns(&query);
+        let stats = columns.iter().find(|(_, alias)| alias == "stats");
+        assert_eq!(
+            stats.map(|(expr, _)| expr.clone()),
+            Some(stats_array_expr())
+        );
+        let extra = columns
+            .iter()
+            .find(|(_, alias)| alias == "stats_gold_source_lane_creeps_damage");
+        assert_eq!(
+            extra.map(|(expr, _)| expr.as_str()),
+            Some("`stats`.`creep_damage`")
+        );
+
+        let sql = build_query(query, None).expect("query should build");
+        assert_valid_sql(&sql);
+        assert!(!sql.contains("stats.gold_source_lane_creeps_damage"));
     }
 
     #[test]
