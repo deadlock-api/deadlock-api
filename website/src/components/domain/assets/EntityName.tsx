@@ -18,7 +18,7 @@ export type EntityNameProps = Omit<React.ComponentPropsWithoutRef<"span">, "chil
 /** The name of a hero, item or ability: one truncating line, a link when `link` is given. */
 export function EntityName({ name, loading = false, link, size = "sm", className, ...props }: EntityNameProps) {
   if (loading) {
-    return <Skeleton className={cn("inline-block h-4", size === "sm" ? "w-20" : "w-24", className)} />;
+    return <Skeleton className={cn("inline-block h-lh align-middle", size === "sm" ? "w-20" : "w-24", className)} />;
   }
   if (link) {
     return (
