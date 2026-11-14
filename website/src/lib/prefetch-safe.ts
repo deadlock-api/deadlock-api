@@ -22,9 +22,10 @@ export function prefetchSafe<T>(p: Promise<T>): Promise<T | undefined> {
 }
 
 /**
- * A query's data through the cache: any cached answer is used however old it is, and only a missing one is fetched.
- * Loaders read the shared catalogs and the page's own data this way; the components' `useQuery` refetches by their
- * factory's `staleTime`.
+ * A query's data through the cache: any cached answer is used however old it is, and only a missing or invalidated one
+ * is fetched (joining a fetch already running). Invalidated covers a `prefetchSeed` seed, which is only part of the
+ * answer. Loaders read the shared catalogs and the page's own data this way; the components' `useQuery` refetches by
+ * their factory's `staleTime`.
  */
 export function ensureCached<
   TQueryFnData,
@@ -36,7 +37,7 @@ export function ensureCached<
   queryClient: QueryClient,
   options: QueryExecuteOptions<TQueryFnData, TError, TData, TQueryData, TQueryKey>,
 ): Promise<TData> {
-  return queryClient.query({ ...options, staleTime: "static" });
+  return queryClient.query({ ...options, staleTime: (query) => (query.state.isInvalidated ? 0 : "static") });
 }
 
 /** `prefetchSafe` of `ensureCached`: what a loader prefetches for its page. */
