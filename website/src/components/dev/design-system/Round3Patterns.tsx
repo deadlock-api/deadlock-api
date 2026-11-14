@@ -592,7 +592,11 @@ function ContentSpecimens() {
           {["One", "Two", "Three"].map((name) => (
             <li key={name}>
               <LogoWallItem href="#logowall" title={`Sponsor ${name}`}>
-                <img src="/logo/hexe.svg" alt={`Sponsor ${name} logo`} className="max-h-9 w-full object-contain" />
+                <img
+                  src="/logo/hexe.svg"
+                  alt={`Sponsor ${name} logo`}
+                  className="mx-auto max-h-9 w-full max-w-36 object-contain"
+                />
               </LogoWallItem>
             </li>
           ))}

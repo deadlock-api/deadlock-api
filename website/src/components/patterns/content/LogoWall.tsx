@@ -53,11 +53,13 @@ const logoWallVariants = cva("grid", {
   variants: {
     /**
      * `icons`: square site icons in equal cells as many a row as fit, so a long wall lines up. `row`: up to three
-     * wordmarks on one row that share it equally, shrinking in a narrow container rather than wrapping 2 + 1.
+     * wordmarks on one row that share it equally, shrinking in a narrow container rather than wrapping 2 + 1. Its cells
+     * stretch to their column, so a `w-full` image reserves its height before it loads; center a narrower image with
+     * `mx-auto`.
      */
     layout: {
       icons: "grid-cols-[repeat(auto-fill,minmax(2rem,1fr))] justify-items-center gap-1.5",
-      row: "grid-cols-3 items-center justify-items-center gap-4",
+      row: "grid-cols-3 items-center gap-4",
     },
   },
   defaultVariants: { layout: "icons" },

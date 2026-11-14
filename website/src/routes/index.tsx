@@ -283,9 +283,7 @@ function IndexRoute() {
                           alt={sponsor.title}
                           width={sponsor.width}
                           height={sponsor.height}
-                          loading="lazy"
-                          fetchPriority="low"
-                          className="max-h-9 w-full max-w-36 object-contain"
+                          className="mx-auto max-h-9 w-full max-w-36 object-contain"
                         />
                       </LogoWallItem>
                     </li>
