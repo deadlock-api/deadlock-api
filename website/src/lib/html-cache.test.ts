@@ -60,11 +60,12 @@ function html(body: string, status = 200, headers: Record<string, string> = {}) 
 const page = (path = "/analytics/heroes", headers: Record<string, string> = {}) =>
   new Request(`https://deadlock-api.com${path}`, { headers });
 
-test("only GET requests for analytics and community pages are cached", () => {
+test("only GET requests for the home, analytics and community pages are cached", () => {
   assert.ok(isCacheableRequest(page("/analytics")));
   assert.ok(isCacheableRequest(page("/analytics/heroes/haze?min_rank=91")));
   assert.ok(isCacheableRequest(page("/community/leaderboard")));
-  assert.ok(!isCacheableRequest(page("/")));
+  assert.ok(isCacheableRequest(page("/")));
+  assert.ok(!isCacheableRequest(page("/blog")));
   assert.ok(!isCacheableRequest(page("/analyticsx")));
   assert.ok(!isCacheableRequest(page("/tracker")));
   assert.ok(!isCacheableRequest(page("/players/123")));

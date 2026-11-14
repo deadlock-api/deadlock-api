@@ -17,7 +17,11 @@ import { useInstallCtaTracking } from "~/components/domain/ingest/analytics";
 import { WINDOWS_SETUP_URL } from "~/components/domain/ingest/links";
 import { SmartLink } from "~/components/domain/navigation/SmartLink";
 import { AiSearch } from "~/components/features/ai-search/AiSearch";
-import { HeroWinRateLeaders, heroWinRateLeadersQueries } from "~/components/features/heroes/HeroWinRateLeaders";
+import {
+  HeroWinRateLeaders,
+  heroWinRateLeadersQueries,
+  shownLeaders,
+} from "~/components/features/heroes/HeroWinRateLeaders";
 import { LogoWall, LogoWallItem } from "~/components/patterns/content/LogoWall";
 import { Prose } from "~/components/patterns/content/Prose";
 import { SideNav, SideNavGroup, SideNavItem } from "~/components/patterns/navigation/SideNav";
@@ -33,12 +37,12 @@ import { useIsWindows } from "~/hooks/useIsWindows";
 import { formatBlogDate } from "~/lib/blog-date";
 import { fetchBlogPosts } from "~/lib/blog-fns";
 import { API_ORIGIN } from "~/lib/constants";
-import { prefetchCached } from "~/lib/prefetch-safe";
+import { prefetchCached, prefetchSeed } from "~/lib/prefetch-safe";
 import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange } from "~/lib/seasons";
 import { ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { navGroups } from "~/lib/site-nav";
 import { TRACKER_SITES } from "~/lib/tracker-sites";
-import { loadSeasons } from "~/queries/asset-queries";
+import { heroesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/")({
   head: () =>
@@ -87,12 +91,19 @@ export const Route = createFileRoute("/")({
     const range = defaultUnixRange(seasons, preferences.dateFilter);
     const prevRange = defaultPrevUnixRange(seasons, preferences.dateFilter);
     const leaders = heroWinRateLeadersQueries(range, prevRange);
+    const current = prefetchCached(queryClient, leaders.current);
+    const previous = prefetchCached(queryClient, leaders.previous);
+    // The names and portraits of the listed heroes only, so they render with the page instead of as skeletons; the
+    // browser loads the full catalog after hydration.
+    const heroes = prefetchSeed(queryClient, heroesQueryOptions, async (all) => {
+      const stats = await current;
+      if (!stats) return [];
+      const { highest, lowest } = shownLeaders(stats, await previous);
+      const shown = new Set([...highest, ...lowest].map((leader) => leader.heroId));
+      return all.filter((hero) => shown.has(hero.id));
+    });
     // The newest posts as metadata (title, summary, date, reading time): the markdown stays on the server.
-    const [posts] = await Promise.all([
-      fetchBlogPosts(),
-      prefetchCached(queryClient, leaders.current),
-      prefetchCached(queryClient, leaders.previous),
-    ]);
+    const [posts] = await Promise.all([fetchBlogPosts(), current, previous, heroes]);
     return {
       posts: posts.slice(0, 4),
       range,

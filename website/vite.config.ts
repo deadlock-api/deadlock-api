@@ -59,8 +59,10 @@ export default defineConfig({
           !/^\/dev(\/|$)/.test(path) &&
           // Filtered pages need request-specific server rendering; tracker pages are also patron-gated and per-user.
           !/^\/(analytics|community|tracker)(\/|$)/.test(path) &&
-          // Patch pages compare live match data; a build-time copy would freeze the newest patch's numbers.
+          // Patch pages compare live match data; a build-time copy would freeze the newest patch's numbers. The home
+          // page's hero win rates are live too and follow the preferred period (served by src/lib/html-cache.ts).
           !/^\/patches(\/|$)/.test(path) &&
+          path !== "/" &&
           // Legacy paths only redirect (src/lib/site-route-migration.ts). The prerenderer follows a redirect and saves
           // the destination's HTML under the old path, which would then be served there instead of the 301.
           !/^\/(heroes|items|abilities|players|team-builder|leaderboard|badge-distribution|heatmap)(\/|$)/.test(path) &&
@@ -78,7 +80,7 @@ export default defineConfig({
           path !== "/auth" &&
           path !== "/auth/patreon",
       },
-      pages: [{ path: "/" }, { path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
+      pages: [{ path: "/blog" }, { path: "/sitemap.xml" }, { path: "/sitemap_index.xml" }],
     }),
     annotation.vitePlugin,
     viteReact({ compiler: true }),

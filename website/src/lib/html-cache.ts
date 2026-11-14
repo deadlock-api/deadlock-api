@@ -1,7 +1,7 @@
 /**
- * Edge cache for the server-rendered HTML of the analytics and community pages. They used to be prerendered; since
- * they render per request (URL filters, the preferences cookie, fresh numbers), every visit waited for the Worker to
- * run the route loaders against the API before the first byte. This keeps each rendered page in the Worker's Cache API
+ * Edge cache for the server-rendered HTML of the home page and the analytics and community pages. They used to be
+ * prerendered; since they render per request (URL filters, the preferences cookie, fresh numbers), every visit waited
+ * for the Worker to run the route loaders against the API before the first byte. This keeps each rendered page in the Worker's Cache API
  * and answers from it: fresh for `FRESH_SECONDS`, then served stale while one background render replaces it, up to
  * `STALE_SECONDS`.
  *
@@ -29,7 +29,8 @@ export const CACHE_STATUS_HEADER = "x-html-cache";
 const STORED_AT_HEADER = "x-html-cache-stored-at";
 const BUILD_HEADER = "x-html-cache-build";
 
-const CACHEABLE_PATH = /^\/(analytics|community)(\/|$)/;
+// The home page too: its hero win rates panel shows live numbers in the preferred period.
+const CACHEABLE_PATH = /^\/((analytics|community)(\/|$)|$)/;
 const REGION_PATH = /^\/community\/leaderboard(\/|$)/;
 
 export type CacheStatus = "HIT" | "STALE" | "MISS";

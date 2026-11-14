@@ -78,6 +78,15 @@ function rankByWinRate(stats: readonly AnalyticsHeroStats[], previous: readonly 
     .sort((a, b) => b.winRate - a.winRate);
 }
 
+/** The heroes the panel lists: the `SHOWN` highest win rates, best first, and the `SHOWN` lowest, worst first. */
+export function shownLeaders(
+  stats: readonly AnalyticsHeroStats[],
+  previous: readonly AnalyticsHeroStats[] | undefined,
+) {
+  const ranked = rankByWinRate(stats, previous);
+  return { highest: ranked.slice(0, SHOWN), lowest: ranked.slice(-SHOWN).reverse() };
+}
+
 function LeaderTable({ label, leaders, maxPickRate }: { label: string; leaders: Leader[]; maxPickRate: number }) {
   return (
     // A size container of its own, so the pick rate shows wherever this half has room for it.
@@ -152,10 +161,9 @@ export function HeroWinRateLeaders({
   const queries = heroWinRateLeadersQueries(range, prevRange);
   const { data: stats } = useQuery(queries.current);
   const { data: previous } = useQuery(queries.previous);
-  const ranked = stats ? rankByWinRate(stats, previous) : [];
-  if (ranked.length === 0) return null;
-  const highest = ranked.slice(0, SHOWN);
-  const lowest = ranked.slice(-SHOWN).reverse();
+  if (!stats) return null;
+  const { highest, lowest } = shownLeaders(stats, previous);
+  if (highest.length === 0) return null;
   // One scale for both tables, so their bars compare.
   const maxPickRate = Math.max(...highest.map((l) => l.pickRate), ...lowest.map((l) => l.pickRate));
   return (
