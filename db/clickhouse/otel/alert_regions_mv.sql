@@ -115,7 +115,7 @@ AS WITH
             SELECT
                 toStartOfInterval(event_time, toIntervalMinute(30)) AS t,
                 sum(ProfileEvent_FailedInsertQuery) AS v
-            FROM merge(system, '^metric_log(_[0-9]+)?$')
+            FROM system.all_metric_log
             WHERE event_time >= (now() - toIntervalDay(30))
             GROUP BY t
             HAVING v > 5
@@ -131,7 +131,7 @@ AS WITH
             SELECT
                 toStartOfFiveMinutes(event_time) AS t,
                 avg(CurrentMetric_MemoryTracking) AS v
-            FROM merge(system, '^metric_log(_[0-9]+)?$')
+            FROM system.all_metric_log
             WHERE event_time >= (now() - toIntervalDay(30))
             GROUP BY t
             HAVING v > 65000000000.
