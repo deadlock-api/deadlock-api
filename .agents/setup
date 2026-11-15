@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
+echo '==> Installing native build prerequisites'
+packages=(build-essential pkg-config libssl-dev protobuf-compiler libprotobuf-dev clang mold)
+missing=()
+for package in "${packages[@]}"; do
+  if ! dpkg-query -W -f='${Status}' "$package" 2>/dev/null | grep -qx 'install ok installed'; then
+    missing+=("$package")
+  fi
+done
+if ((${#missing[@]})); then
+  sudo apt-get update -qq
+  sudo apt-get install -y --no-install-recommends "${missing[@]}"
+fi
+
+echo '==> Installing the repository Rust toolchain and WASM target'
+export PATH="$HOME/.cargo/bin:$PATH"
+if ! command -v rustup >/dev/null; then
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs |
+    sh -s -- -y --profile minimal --default-toolchain none --no-modify-path
+fi
+# rust-toolchain.toml selects the channel, just as it does for normal cargo builds.
+rustup show active-toolchain >/dev/null
+rustup component add rustfmt clippy
+rustup target add wasm32-unknown-unknown
+
+# Setup's PATH does not reach later agent commands or supervised login shells.
+profile_line='export PATH="$HOME/.cargo/bin:$PATH"'
+if ! grep -Fqx "$profile_line" "$HOME/.bash_profile" 2>/dev/null; then
+  printf '\n%s\n' "$profile_line" >> "$HOME/.bash_profile"
+fi
+
+echo '==> Installing locked website dependencies'
+# Node and pnpm are supplied by the orb image; package.json pins pnpm's version.
+node --input-type=module -e 'if (Number(process.versions.node.split(".")[0]) < 26) throw new Error("Node >=26 is required")'
+pnpm_version=$(node -p 'require("./website/package.json").packageManager.replace("pnpm@", "")')
+if ! command -v pnpm >/dev/null || [[ "$(pnpm --version)" != "$pnpm_version" ]]; then
+  npm install --global "pnpm@$pnpm_version"
+fi
+pnpm --dir website install --frozen-lockfile
+
+echo '==> Building website WASM assets (also warms the Cargo cache)'
+# Bound compilation on small orbs without changing developer or CI concurrency.
+CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-2}" pnpm --dir website build:wasm
