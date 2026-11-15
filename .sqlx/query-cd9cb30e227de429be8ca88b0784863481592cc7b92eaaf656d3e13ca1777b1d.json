@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT custom_limits_only FROM api_keys WHERE key = $1 AND disabled IS false",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "custom_limits_only",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "api_keys",
+            "name": "custom_limits_only"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "cd9cb30e227de429be8ca88b0784863481592cc7b92eaaf656d3e13ca1777b1d"
+}

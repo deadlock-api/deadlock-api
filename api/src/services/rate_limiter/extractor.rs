@@ -29,6 +29,14 @@ impl RateLimitKey {
         self.api_key
             .map_or_else(|| self.client.to_string(), |k| k.to_string())
     }
+
+    /// The same client, counted as if it had sent no API key.
+    pub(crate) fn without_api_key(&self) -> Self {
+        Self {
+            api_key: None,
+            client: self.client.clone(),
+        }
+    }
 }
 
 impl<S> FromRequestParts<S> for RateLimitKey

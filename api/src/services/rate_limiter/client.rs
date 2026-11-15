@@ -1,6 +1,5 @@
 use core::num::NonZeroU64;
 use core::time::Duration;
-use std::borrow::Cow;
 
 use axum::http::StatusCode;
 use cached::macros::cached;
@@ -15,6 +14,18 @@ use crate::error::{APIError, APIResult};
 use crate::services::feature_flags::{EMERGENCY_MODE, FeatureFlags};
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, Status};
+
+/// What an API key lifts (`api_keys`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum ApiKeyStatus {
+    /// Unknown or disabled.
+    Invalid,
+    /// Lifts every policy: key quotas replace IP quotas, and its custom quotas replace both.
+    Valid,
+    /// Only its custom quotas apply (`custom_limits_only`). Everywhere else the key is treated
+    /// like a client without one.
+    CustomLimitsOnly,
+}
 
 /// Applies [`RateLimit`] policies to API clients, shared across replicas through Redis.
 #[derive(Clone)]
@@ -49,8 +60,9 @@ impl RateLimitClient {
     /// Charges a request by `client` costing `cost` against `limit`.
     ///
     /// An API key must be valid, and its custom quotas for the bucket (`api_key_limits`) replace
-    /// the policy's. Clients without a key are turned away from key-only policies and while the
-    /// service is in emergency mode.
+    /// the policy's. Keys limited to their custom quotas ([`ApiKeyStatus::CustomLimitsOnly`]) are
+    /// charged like a client without a key in every other bucket. Clients without a key are
+    /// turned away from key-only policies and while the service is in emergency mode.
     ///
     /// Returns the status of the tightest quota, `None` when no limits were applied.
     pub(crate) async fn charge(
@@ -59,56 +71,77 @@ impl RateLimitClient {
         limit: RateLimit<'_>,
         cost: NonZeroU64,
     ) -> APIResult<Option<Status>> {
-        let quotas: Cow<'_, [Quota]> = match client.api_key {
-            Some(api_key) => {
-                self.validate_api_key(api_key).await?;
-                let custom = self
-                    .get_custom_quotas(api_key, limit.bucket)
-                    .await
-                    .unwrap_or_else(|e| {
-                        warn!("Failed to fetch custom quotas due to DB error: {e}, using defaults");
-                        Vec::new()
-                    });
-                if custom.is_empty() {
-                    keyed_client_quotas(limit.quotas).collect()
-                } else {
-                    custom.into()
-                }
-            }
-            None if requires_key(limit.quotas) => {
-                count_denial("key_required");
+        let Some(api_key) = client.api_key else {
+            return self.charge_keyless(client, limit, cost).await;
+        };
+        let status = self.validate_api_key(api_key).await?;
+        let custom = self
+            .get_custom_quotas(api_key, limit.bucket)
+            .await
+            .unwrap_or_else(|e| {
+                warn!("Failed to fetch custom quotas due to DB error: {e}, using defaults");
+                Vec::new()
+            });
+        let quotas: Vec<Quota> = if !custom.is_empty() {
+            custom
+        } else if status == ApiKeyStatus::CustomLimitsOnly {
+            if requires_key(limit.quotas) {
+                count_denial("key_not_enabled");
                 return Err(APIError::status_msg(
                     StatusCode::FORBIDDEN,
-                    "API key is required for this endpoint",
+                    "API key is not enabled for this endpoint",
                 ));
             }
-            None if self.feature_flags.is_enabled(&EMERGENCY_MODE) => {
-                count_denial("emergency_mode");
-                return Err(APIError::status_msg(
-                    StatusCode::SERVICE_UNAVAILABLE,
-                    "Service is in emergency mode",
-                ));
-            }
-            None => limit.quotas.into(),
+            return self
+                .charge_keyless(&client.without_api_key(), limit, cost)
+                .await;
+        } else {
+            keyed_client_quotas(limit.quotas).collect()
         };
 
         let limit = RateLimit::new(limit.bucket, &quotas);
         Ok(self.limiter.charge(client, limit, cost).await?)
     }
 
-    async fn validate_api_key(&self, api_key: Uuid) -> APIResult<()> {
-        match self.is_api_key_valid(api_key).await {
-            Ok(true) => Ok(()),
-            Ok(false) => {
+    /// Charges a client without an API key.
+    async fn charge_keyless(
+        &self,
+        client: &RateLimitKey,
+        limit: RateLimit<'_>,
+        cost: NonZeroU64,
+    ) -> APIResult<Option<Status>> {
+        if requires_key(limit.quotas) {
+            count_denial("key_required");
+            return Err(APIError::status_msg(
+                StatusCode::FORBIDDEN,
+                "API key is required for this endpoint",
+            ));
+        }
+        if self.feature_flags.is_enabled(&EMERGENCY_MODE) {
+            count_denial("emergency_mode");
+            return Err(APIError::status_msg(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "Service is in emergency mode",
+            ));
+        }
+        Ok(self.limiter.charge(client, limit, cost).await?)
+    }
+
+    /// The key's status, rejecting invalid keys. A key that can't be checked is let through as
+    /// [`ApiKeyStatus::Valid`].
+    async fn validate_api_key(&self, api_key: Uuid) -> APIResult<ApiKeyStatus> {
+        match self.api_key_status(api_key).await {
+            Ok(ApiKeyStatus::Invalid) => {
                 count_denial("invalid_key");
                 Err(APIError::status_msg(
                     StatusCode::FORBIDDEN,
                     "Invalid API key",
                 ))
             }
+            Ok(status) => Ok(status),
             Err(e) => {
                 warn!("Failed to validate API key due to DB error: {e}, failing open");
-                Ok(())
+                Ok(ApiKeyStatus::Valid)
             }
         }
     }
@@ -120,14 +153,18 @@ impl RateLimitClient {
         key = "Uuid",
         in_impl = true
     )]
-    pub(crate) async fn is_api_key_valid(&self, api_key: Uuid) -> Result<bool, sqlx::Error> {
+    pub(crate) async fn api_key_status(&self, api_key: Uuid) -> Result<ApiKeyStatus, sqlx::Error> {
         let row = sqlx::query!(
-            "SELECT COUNT(*) FROM api_keys WHERE key = $1 AND disabled IS false",
+            "SELECT custom_limits_only FROM api_keys WHERE key = $1 AND disabled IS false",
             api_key
         )
-        .fetch_one(&self.pg_client)
+        .fetch_optional(&self.pg_client)
         .await?;
-        Ok(row.count.is_some_and(|c| c > 0))
+        Ok(match row {
+            None => ApiKeyStatus::Invalid,
+            Some(row) if row.custom_limits_only => ApiKeyStatus::CustomLimitsOnly,
+            Some(_) => ApiKeyStatus::Valid,
+        })
     }
 
     #[cached(

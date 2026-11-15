@@ -10,6 +10,7 @@ use uuid::Uuid;
 use crate::context::AppState;
 use crate::error::APIError;
 use crate::services::ch_admission::{CH_CALLER, Caller};
+use crate::services::rate_limiter::ApiKeyStatus;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 
 /// Runs the request with its caller in [`CH_CALLER`], so the `ClickHouse` admission limiter can
@@ -26,14 +27,14 @@ pub(crate) async fn scope_ch_caller(
 ) -> Response {
     if let Some(api_key) = key.api_key {
         match validate_api_key(&state, api_key).await {
-            Some(true) => {}
-            Some(false) => {
+            Some(ApiKeyStatus::Valid) => {}
+            Some(ApiKeyStatus::Invalid) => {
                 return APIError::status_msg(StatusCode::FORBIDDEN, "Invalid API key")
                     .into_response();
             }
             // A key that can't be checked keeps the cap: the request still runs, only with a
-            // client's share.
-            None => key.api_key = None,
+            // client's share. Keys limited to their custom quotas don't lift it either.
+            Some(ApiKeyStatus::CustomLimitsOnly) | None => key.api_key = None,
         }
     }
     let caller = Caller::new(key.client_id(), key.api_key.is_none());
@@ -44,11 +45,11 @@ pub(crate) async fn scope_ch_caller(
 /// routes that never touch it.
 const KEY_VALIDATION_TIMEOUT: Duration = Duration::from_millis(500);
 
-/// Whether the key is valid, or `None` if it couldn't be checked.
-async fn validate_api_key(state: &AppState, api_key: Uuid) -> Option<bool> {
-    let validation = state.rate_limit_client.is_api_key_valid(api_key);
+/// The key's status, or `None` if it couldn't be checked.
+async fn validate_api_key(state: &AppState, api_key: Uuid) -> Option<ApiKeyStatus> {
+    let validation = state.rate_limit_client.api_key_status(api_key);
     match tokio::time::timeout(KEY_VALIDATION_TIMEOUT, validation).await {
-        Ok(Ok(valid)) => Some(valid),
+        Ok(Ok(status)) => Some(status),
         Ok(Err(e)) => {
             warn!("Failed to validate API key: {e}, capping the client");
             None

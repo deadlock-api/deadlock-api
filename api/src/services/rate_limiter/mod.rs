@@ -10,7 +10,7 @@ mod docs;
 pub(crate) mod extractor;
 mod headers;
 
-pub(crate) use client::RateLimitClient;
+pub(crate) use client::{ApiKeyStatus, RateLimitClient};
 pub(crate) use docs::{DOCUMENTED_DEFAULT, Limits, describe};
 use extractor::RateLimitKey;
 pub(crate) use headers::RateLimitHeaders;
