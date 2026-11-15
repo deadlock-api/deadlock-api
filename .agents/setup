@@ -42,6 +42,10 @@ if ! command -v pnpm >/dev/null || [[ "$(pnpm --version)" != "$pnpm_version" ]];
 fi
 pnpm --dir website install --frozen-lockfile
 
+echo '==> Installing the Playwright Chromium browser'
+# Use the browser revision required by the locked Playwright version, not the orb's system Chrome.
+pnpm --dir website exec playwright install chromium
+
 echo '==> Building website WASM assets (also warms the Cargo cache)'
 # Bound compilation on small orbs without changing developer or CI concurrency.
 CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-2}" pnpm --dir website build:wasm
