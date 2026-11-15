@@ -7,7 +7,7 @@
 
 use std::collections::BTreeMap;
 
-use super::manifest::{FileKind, TableState};
+use super::manifest::{FileEntry, FileKind, TableState};
 
 /// The zone's plan (Pro) edge-caches objects up to 512 MB; bigger ones bypass the cache, so
 /// every ranged read of them is an R2 Class B operation. A base file over this is split again.
@@ -215,6 +215,114 @@ pub(crate) fn plan_fold(table: &TableState, generation: u32, before: i64) -> Opt
     })
 }
 
+/// Residual bytes a repack must free before it is worth a re-export.
+pub(crate) const REPACK_MIN_DEAD_BYTES: u64 = 1_000_000_000;
+
+/// Consecutive residuals of one generation re-exported as one residual over the union of
+/// their windows, with the current base cutoffs, so that only rows no base covers remain.
+#[derive(Debug, PartialEq, Eq)]
+pub(crate) struct Repack {
+    pub(crate) lo: i64,
+    pub(crate) hi: i64,
+    pub(crate) keys: Vec<String>,
+    /// Estimated bytes the repack frees.
+    pub(crate) dead_bytes: u64,
+}
+
+/// Residual rows a base of `generation` now covers, as `(live, dead)` bytes estimated from the
+/// residual's average bytes per row. Rows of a partition whose base ends inside the residual's
+/// window count as live: the per-partition counts can't tell which side of the cutoff they are.
+fn residual_bytes(table: &TableState, generation: u32, f: &FileEntry) -> Option<(u64, u64)> {
+    let hi = f.hi?;
+    let live_rows: u64 = f
+        .rows_by_partition
+        .iter()
+        .filter(|&(&p, _)| {
+            table
+                .base(generation, p)
+                .and_then(|b| b.hi)
+                .is_none_or(|base_hi| base_hi < hi)
+        })
+        .map(|(_, &rows)| rows)
+        .sum();
+    let live = u128::from(f.bytes)
+        .saturating_mul(u128::from(live_rows.min(f.rows)))
+        .checked_div(u128::from(f.rows))
+        .and_then(|b| u64::try_from(b).ok())
+        .unwrap_or(f.bytes);
+    Some((live, f.bytes.saturating_sub(live)))
+}
+
+/// Picks the run of consecutive residuals that frees the most bytes when repacked, if that is
+/// at least `min_dead_bytes`.
+///
+/// A residual only goes once every partition it touches has a newer base, and old partitions
+/// that receive a dozen rows a day only rebuild with the rolling refresh. Without repacks a
+/// day's residual stays published at full size although the bases hold ~99% of its rows.
+///
+/// Every residual in the run is at least half dead, the run's live bytes stay within
+/// `max_live_bytes` (a single residual may exceed it: repacking still shrinks it), and no delta
+/// of the generation overlaps the union window, which the new residual covers entirely.
+pub(crate) fn plan_repack(
+    table: &TableState,
+    generation: u32,
+    min_dead_bytes: u64,
+    max_live_bytes: u64,
+) -> Option<Repack> {
+    let mut residuals: Vec<(&FileEntry, i64, i64, u64, u64)> = table
+        .files_of(generation, FileKind::Residual)
+        .filter_map(|f| {
+            let (live, dead) = residual_bytes(table, generation, f)?;
+            Some((f, f.lo?, f.hi?, live, dead))
+        })
+        .collect();
+    residuals.sort_by_key(|r| r.1);
+    let deltas: Vec<(i64, i64)> = table
+        .files_of(generation, FileKind::Delta)
+        .filter_map(|f| Some((f.lo?, f.hi?)))
+        .collect();
+
+    let mut best: Option<Repack> = None;
+    let mut run: Option<(Repack, u64)> = None;
+    let mut finish = |run: &mut Option<(Repack, u64)>| {
+        if let Some((r, _)) = run.take()
+            && r.dead_bytes >= min_dead_bytes
+            && deltas.iter().all(|&(lo, hi)| hi <= r.lo || lo >= r.hi)
+            && best.as_ref().is_none_or(|b| r.dead_bytes > b.dead_bytes)
+        {
+            best = Some(r);
+        }
+    };
+    for (f, lo, hi, live, dead) in residuals {
+        if dead < live {
+            finish(&mut run);
+            continue;
+        }
+        if let Some((r, run_live)) = &mut run {
+            let total = run_live.saturating_add(live);
+            if total <= max_live_bytes {
+                r.hi = r.hi.max(hi);
+                r.keys.push(f.key.clone());
+                r.dead_bytes = r.dead_bytes.saturating_add(dead);
+                *run_live = total;
+                continue;
+            }
+            finish(&mut run);
+        }
+        run = Some((
+            Repack {
+                lo,
+                hi,
+                keys: vec![f.key.clone()],
+                dead_bytes: dead,
+            },
+            live,
+        ));
+    }
+    finish(&mut run);
+    best
+}
+
 /// Per-partition cutoff for a residual export: rows of partition `p` must be newer than the
 /// base of `p` (or than `lo` when there is no base). Partitions whose base already reaches
 /// `hi` are excluded entirely by the caller's `watermark <= hi` bound.
@@ -247,7 +355,7 @@ mod tests {
     use chrono::Utc;
 
     use super::*;
-    use crate::services::data_dump::manifest::{FileEntry, PolicyKind};
+    use crate::services::data_dump::manifest::PolicyKind;
 
     fn params() -> Params {
         Params {
@@ -477,10 +585,48 @@ mod tests {
         assert_eq!(residual_cutoffs(&t, 1, 100), BTreeMap::from([(1, 150)]));
     }
 
+    #[test]
+    fn repack_takes_mostly_covered_runs_without_deltas() {
+        let residual = |lo: i64, hi: i64, by_p: &[(u64, u64)]| {
+            let mut f = file(FileKind::Residual, None, lo, hi, 0);
+            f.rows_by_partition = by_p.iter().copied().collect();
+            f.rows = by_p.iter().map(|(_, r)| r).sum();
+            f.bytes = f.rows * 10;
+            f
+        };
+        let mut t = table(vec![
+            // Partition 1 rebuilt through 300, partition 2 (tiny, old) never.
+            file(FileKind::Base, Some(1), 0, 300, 1_000),
+            file(FileKind::Base, Some(2), 0, 50, 10),
+            residual(100, 200, &[(1, 90), (2, 1)]),
+            residual(200, 300, &[(1, 80), (2, 2)]),
+            // Mostly live: ends the run.
+            residual(300, 400, &[(1, 50), (2, 1)]),
+            residual(400, 500, &[(2, 1)]),
+        ]);
+        // Covered files keep all four: partition 2 has no base newer than any of them.
+        assert_eq!(covered_files(&t, 1), Vec::<String>::new());
+        let repack = plan_repack(&t, 1, 1, 1_000).unwrap();
+        assert_eq!((repack.lo, repack.hi, repack.keys.len()), (100, 300, 2));
+        assert_eq!(repack.dead_bytes, 1_700);
+        // Below the minimum, nothing.
+        assert!(plan_repack(&t, 1, 1_701, 1_000).is_none());
+        // The live cap splits the run; the bigger half wins.
+        let repack = plan_repack(&t, 1, 1, 15).unwrap();
+        assert_eq!((repack.lo, repack.hi, repack.dead_bytes), (100, 200, 900));
+        // A delta inside the union window blocks it (the new residual would hold its rows too).
+        t.files.push(file(FileKind::Delta, Some(1), 150, 160, 1));
+        assert!(plan_repack(&t, 1, 1, 1_000).is_none());
+    }
+
     /// Random histories: rows land at random watermarks in random partitions; ticks export
     /// deltas, rebuild bases, fold and drop. The union of published files must contain every
     /// row exactly once per (partition, watermark) once duplicates from bases are resolved.
     #[test]
+    #[expect(
+        clippy::too_many_lines,
+        reason = "one simulated history with every step inline"
+    )]
     fn coverage_invariant_holds_under_random_histories() {
         use std::collections::HashSet;
         let mut seed: u64 = 0x9E37_79B9_7F4A_7C15;
@@ -490,6 +636,7 @@ mod tests {
             seed ^= seed << 17;
             seed
         };
+        let mut repacks = 0;
         for _ in 0..40 {
             let mut t = table(vec![]);
             // (partition, watermark) of every row inserted so far.
@@ -531,22 +678,35 @@ mod tests {
                         u64::try_from(count).unwrap(),
                     ));
                 }
-                // Fold deltas older than 4 ticks into a residual.
-                if let Some(fold) = plan_fold(&t, 1, watermark - 4 * 3600) {
-                    let cutoffs = residual_cutoffs(&t, 1, fold.lo);
+                // A residual over (lo, hi] with the current base cutoffs, like the export.
+                let residual = |t: &TableState, lo: i64, hi: i64| {
+                    let cutoffs = residual_cutoffs(t, 1, lo);
                     let mut by_p: BTreeMap<u64, u64> = BTreeMap::new();
                     for (p, wm) in &rows {
-                        let cutoff = cutoffs.get(p).copied().unwrap_or(fold.lo);
-                        if *wm > cutoff && *wm > fold.lo && *wm <= fold.hi {
+                        let cutoff = cutoffs.get(p).copied().unwrap_or(lo);
+                        if *wm > cutoff && *wm > lo && *wm <= hi {
                             *by_p.entry(*p).or_default() += 1;
                         }
                     }
-                    t.files.retain(|f| !fold.keys.contains(&f.key));
-                    if !by_p.is_empty() {
-                        let mut f = file(FileKind::Residual, None, fold.lo, fold.hi, 0);
+                    (!by_p.is_empty()).then(|| {
+                        let mut f =
+                            file(FileKind::Residual, None, lo, hi, by_p.values().sum::<u64>());
                         f.rows_by_partition = by_p;
-                        t.files.push(f);
-                    }
+                        f
+                    })
+                };
+                // Fold deltas older than 4 ticks into a residual.
+                if let Some(fold) = plan_fold(&t, 1, watermark - 4 * 3600) {
+                    let f = residual(&t, fold.lo, fold.hi);
+                    t.files.retain(|f| !fold.keys.contains(&f.key));
+                    t.files.extend(f);
+                }
+                // Repack residuals that bases mostly cover.
+                if let Some(repack) = plan_repack(&t, 1, 1, 6) {
+                    let f = residual(&t, repack.lo, repack.hi);
+                    t.files.retain(|f| !repack.keys.contains(&f.key));
+                    t.files.extend(f);
+                    repacks += 1;
                 }
                 for key in covered_files(&t, 1) {
                     t.files.retain(|f| f.key != key);
@@ -580,5 +740,6 @@ mod tests {
                 assert_eq!(keys.len(), t.files.len());
             }
         }
+        assert!(repacks > 0, "the random histories never repacked");
     }
 }

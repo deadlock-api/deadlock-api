@@ -638,6 +638,56 @@ impl DataDump {
         state.files.retain(|f| {
             f.kind != FileKind::Base || f.partition.is_some_and(|p| actual.contains_key(&p))
         });
+
+        // Re-export residuals that bases now mostly cover with only their uncovered rows.
+        for &generation in &generations {
+            let Some(repack) = compaction::plan_repack(
+                state,
+                generation,
+                compaction::REPACK_MIN_DEAD_BYTES,
+                compaction::TARGET_FILE_BYTES,
+            ) else {
+                continue;
+            };
+            shutdown_check()?;
+            let cutoffs = compaction::residual_cutoffs(state, generation, repack.lo);
+            let key = self.key(&format!(
+                "tables/{name}/g{generation}/residual/{}-{}-{}.parquet",
+                ts(repack.lo),
+                ts(repack.hi),
+                exporter.run_id
+            ));
+            let sql = sql::residual_export(
+                nc,
+                name,
+                &key,
+                &sql::Residual {
+                    partition_expr,
+                    watermark,
+                    lo: repack.lo,
+                    hi: repack.hi,
+                    cutoffs: &cutoffs,
+                },
+            );
+            let step = format!("{name}-g{generation}-repack");
+            let increment = Increment {
+                kind: FileKind::Residual,
+                generation,
+                lo: repack.lo,
+                hi: repack.hi,
+            };
+            let entry = exporter
+                .export_increment(&sql, key, &step, partition_expr, increment)
+                .await?;
+            state.files.retain(|f| !repack.keys.contains(&f.key));
+            state.files.extend(entry);
+            info!(
+                "data dump: {name} g{generation} repacked {} residuals, ~{} MB covered by bases",
+                repack.keys.len(),
+                repack.dead_bytes / 1_000_000
+            );
+            self.checkpoint(manifest, name, state).await;
+        }
         Ok(())
     }
 

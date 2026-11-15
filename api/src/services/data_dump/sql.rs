@@ -14,13 +14,19 @@ pub(crate) const LOG_COMMENT: &str = "data_dump";
 /// Class B operation. `match_player` rows are wide, so the default 512 MiB (uncompressed) row
 /// group held only ~66k rows; 2 GiB cuts those GETs ~4x. Writer memory grows with the row group
 /// (~8 GB per export at 4 threads, ~11 GB at 12), so 4 GiB would not fit `dump_user`'s 16 GiB.
+///
+/// 8 MiB pages give zstd more context (−1.2%), and 5 bits per bloom filter value (~10% false
+/// positives instead of ~1%) still prunes `account_id` lookups (−1.9%); writer memory +2%.
+/// Higher zstd levels shrink files only 1–3% more at 4–7x the writer CPU.
 const EXPORT_SETTINGS: &str = "s3_truncate_on_insert = 1, \
     s3_min_upload_part_size = 67108864, \
     s3_upload_part_size_multiply_parts_count_threshold = 100000, \
     output_format_parquet_compression_method = 'zstd', \
     output_format_compression_level = 9, \
+    output_format_parquet_data_page_size = 8388608, \
     output_format_parquet_write_page_index = 1, \
     output_format_parquet_write_bloom_filter = 1, \
+    output_format_parquet_bloom_filter_bits_per_value = 5, \
     output_format_parquet_string_as_string = 1, \
     output_format_parquet_row_group_size_bytes = 2147483648";
 
