@@ -2,6 +2,8 @@ import { throttle } from "nuqs";
 import { startTransition } from "react";
 
 import { Filter } from "~/components/domain/filters";
+import { Disclosure } from "~/components/patterns/content/Disclosure";
+import { Inline } from "~/components/ui/stack";
 import { DEFAULT_MIN_MATCHES, STATS_TABS, type useHeroFilters } from "~/hooks/useHeroFilters";
 import { DEFAULT_MODE } from "~/lib/game-mode";
 import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
@@ -26,8 +28,9 @@ type HeroFiltersProps = Pick<
   | "handleDateChange"
   | "defaultRange"
 > & {
-  /** The open tab's own controls, after the page's filters in the same row. */
+  /** View controls that remain visible beside the primary filters. */
   children?: React.ReactNode;
+  advancedControls?: React.ReactNode;
 };
 
 const together = { limitUrlUpdates: throttle(50) };
@@ -51,6 +54,7 @@ export function HeroFiltersSection({
   handleDateChange,
   defaultRange,
   children,
+  advancedControls,
 }: HeroFiltersProps) {
   const statsTab = STATS_TABS.includes(tab);
   // By Experience buckets heroes by a player's own match count, which replaces the total threshold.
@@ -77,37 +81,40 @@ export function HeroFiltersSection({
         onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
         defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
       />
-      <>
-        {statsTab ? (
-          <>
-            <Filter.MinMatches
-              value={minHeroMatches}
-              onValueChange={(next) => startTransition(() => void setMinHeroMatches(next, together))}
-              label="Matches (range)"
-              step={10}
-              defaultValue={0}
-            />
-            {showTotal && (
+      {children}
+      <Disclosure title="Advanced" variant="inline" className="w-full">
+        <Inline>
+          {statsTab ? (
+            <>
               <Filter.MinMatches
-                value={minHeroMatchesTotal}
-                onValueChange={(next) => startTransition(() => void setMinHeroMatchesTotal(next, together))}
-                label="Matches (total)"
+                value={minHeroMatches}
+                onValueChange={(next) => startTransition(() => void setMinHeroMatches(next, together))}
+                label="Matches (range)"
                 step={10}
                 defaultValue={0}
               />
-            )}
-          </>
-        ) : (
-          <Filter.MinMatches
-            value={minMatches}
-            onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
-            label="Matches"
-            step={10}
-            defaultValue={DEFAULT_MIN_MATCHES}
-          />
-        )}
-      </>
-      {children}
+              {showTotal && (
+                <Filter.MinMatches
+                  value={minHeroMatchesTotal}
+                  onValueChange={(next) => startTransition(() => void setMinHeroMatchesTotal(next, together))}
+                  label="Matches (total)"
+                  step={10}
+                  defaultValue={0}
+                />
+              )}
+            </>
+          ) : (
+            <Filter.MinMatches
+              value={minMatches}
+              onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
+              label="Matches"
+              step={10}
+              defaultValue={DEFAULT_MIN_MATCHES}
+            />
+          )}
+          {advancedControls}
+        </Inline>
+      </Disclosure>
     </Filter.Root>
   );
 }

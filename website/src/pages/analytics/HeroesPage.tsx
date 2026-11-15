@@ -8,6 +8,7 @@ import { type AnalyticsTab, analyticsTabPath, ANALYTICS_VIEWS } from "~/lib/anal
 
 import { preloadHeroView } from "./heroes-views";
 import {
+  HeroAdvancedTabControls,
   HeroByDurationTab,
   HeroByExperienceTab,
   HeroByRankTab,
@@ -114,7 +115,7 @@ export function HeroesPage() {
           </ResponsiveTab>
         </ResponsiveTabsList>
 
-        <HeroFiltersSection {...filters}>
+        <HeroFiltersSection {...filters} advancedControls={<HeroAdvancedTabControls filters={filters} />}>
           <HeroTabControls filters={filters} />
         </HeroFiltersSection>
 

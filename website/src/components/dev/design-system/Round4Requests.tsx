@@ -137,6 +137,24 @@ export function Round4Requests() {
         source="ui/table"
         note={`\`width="fill"\` (default) spreads the columns over the container. \`width="hug"\` sizes them to their content, so a table of two or three columns keeps its values next to their labels in a wide panel; it still scrolls sideways when the container is narrower. \`height="fill"\` grows a table to a stretched panel (a flex column), its rows sharing the extra height, so a panel beside taller ones ends level without empty space under the table.`}
       >
+        <Variants label='overflowIndicator="none"' className="items-stretch">
+          <Table overflowIndicator="none" className="min-w-3xl">
+            <TableHeader tone="muted">
+              <TableRow>
+                <TableHead data-pinned>Rank and hero</TableHead>
+                <TableHead>Matches</TableHead>
+                <TableHead>Win rate</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow>
+                <TableCell data-pinned>1 · Infernus</TableCell>
+                <TableCell>12,400</TableCell>
+                <TableCell>51.2%</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </Variants>
         <Variants label='width="fill"' className="items-stretch">
           <Table density="dense">
             <TableHeader tone="muted">

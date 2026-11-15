@@ -45,10 +45,13 @@ function Table({
   density = "compact",
   width = "fill",
   height = "auto",
+  overflowIndicator = "fade",
   ...props
 }: React.ComponentProps<"table"> & {
   density?: TableDensity;
   width?: "fill" | "hug";
+  /** `none` keeps clipped data crisp; horizontal scrolling remains available. */
+  overflowIndicator?: "fade" | "none";
   /**
    * `fill` grows the table to the height of a flex-column parent (a stretched panel), its rows sharing the extra.
    * `scroll` takes the room left in a flex-column parent of fixed height (a panel in a `PanelRow`) and scrolls inside
@@ -60,11 +63,13 @@ function Table({
     <TableDensityContext value={density}>
       <div
         data-slot="table-container"
+        data-overflow-indicator={overflowIndicator}
         // A size container has no width of its own, so a hugging table cannot be one: its pinned column stays sticky
         // but the `@md/table:` variants do not apply.
         className={cn(
           SCROLLBAR_THIN,
-          "relative w-full scroll-fade-x overflow-x-auto",
+          "relative w-full overflow-x-auto",
+          overflowIndicator === "fade" && "scroll-fade-x",
           STICKY_SCROLL_PADDING[density],
           width === "fill" && "has-data-pinned:@container/table",
           height === "fill" && "flex-1",

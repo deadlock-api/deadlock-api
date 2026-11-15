@@ -186,7 +186,7 @@ export function HeroStatsTable({
 
   return (
     <StaleOverlay active={table.isStale} label="hero stats" className="flex flex-col gap-3">
-      <Table aria-label="Hero stats" density="compact" className="tabular-nums">
+      <Table aria-label="Hero stats" density="compact" overflowIndicator="none" className="tabular-nums">
         <HeroStatsHeader table={table} nameFilter={nameFilter} rateFilter={rateFilter} winRateFilter={winRateFilter} />
         <TableBody>
           {table.rows.map(({ rank, hero }) => (
@@ -261,7 +261,12 @@ function HeroTypeGroup({
           )}
         </div>
       </PanelHeader>
-      <Table aria-label={`${config.label} hero stats`} density="compact" className="tabular-nums">
+      <Table
+        aria-label={`${config.label} hero stats`}
+        density="compact"
+        overflowIndicator="none"
+        className="tabular-nums"
+      >
         <HeroStatsHeader table={table} nameFilter={nameFilter} rateFilter={rateFilter} winRateFilter={winRateFilter} />
         <TableBody>
           {group.visible.map(({ rank, hero }) => (
@@ -292,7 +297,6 @@ function HeroStatsHeader({
   return (
     <TableHeader tone="muted">
       <TableRow>
-        <TableHead className="w-1/100 text-center">#</TableHead>
         <TableHead
           aria-sort={ariaSort(sortKey === "hero", heroSortDir)}
           // A phone keeps the pinned column to the hero itself, so a swipe shows more than one stat column.
@@ -300,6 +304,7 @@ function HeroStatsHeader({
           data-pinned
         >
           <span className="inline-flex items-center gap-1">
+            <span aria-label="Rank">#</span>
             <SortButton active={sortKey === "hero"} sortDir={heroSortDir} align="start" onClick={() => onSort("hero")}>
               <span>Hero</span>
             </SortButton>
@@ -400,23 +405,25 @@ function HeroStatsRow({ rank, hero, table }: { rank: number; hero: HeroStatsRowD
   };
   return (
     <TableRow data-find={findKey.hero(row.hero_id)}>
-      <TableCell className="text-center font-semibold">{rank}</TableCell>
       <TableCell data-pinned>
-        {/* The sample size under the name, as in the item table. In a narrow table it stays, shortened ("19K"):
+        <Inline wrap="nowrap">
+          <span className="min-w-4 text-center font-semibold">{rank}</span>
+          {/* The sample size under the name, as in the item table. In a narrow table it stays, shortened ("19K"):
             without it a phone lost how much a win rate rests on. The short form is generated content with empty alt
             text, so the page text (crawlers, screen readers, copy) holds the count once. */}
-        <HeroCell
-          heroId={row.hero_id}
-          linkToDetail
-          meta={
-            <span
-              data-compact={COMPACT_MATCHES.format(row.matches)}
-              className="before:content-[attr(data-compact)_/_''] @md/table:before:content-none"
-            >
-              <span className="@max-md/table:sr-only">{row.matches.toLocaleString("en-US")} matches</span>
-            </span>
-          }
-        />
+          <HeroCell
+            heroId={row.hero_id}
+            linkToDetail
+            meta={
+              <span
+                data-compact={COMPACT_MATCHES.format(row.matches)}
+                className="before:content-[attr(data-compact)_/_''] @md/table:before:content-none"
+              >
+                <span className="@max-md/table:sr-only">{row.matches.toLocaleString("en-US")} matches</span>
+              </span>
+            }
+          />
+        </Inline>
       </TableCell>
       <TableCell>
         <HeroStatTrend

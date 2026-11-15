@@ -15,6 +15,17 @@ const sectionTitleVariants = cva("font-semibold tracking-tight", {
   defaultVariants: { size: "default" },
 });
 
+const sectionWidthVariants = cva("", {
+  variants: {
+    width: {
+      full: "",
+      "bleed-mobile":
+        "max-md:relative max-sm:-inset-s-4 max-sm:w-[calc(var(--spacing)*8+100%)] sm:max-md:-inset-s-8 sm:max-md:w-[calc(var(--spacing)*16+100%)]",
+    },
+  },
+  defaultVariants: { width: "full" },
+});
+
 interface SectionProps
   extends Omit<React.ComponentProps<"section">, "title">, VariantProps<typeof sectionTitleVariants> {
   title: ReactNode;
@@ -33,6 +44,8 @@ interface SectionProps
    * much.
    */
   header?: "static" | "sticky";
+  /** Extend data to the AppFrame's edges below md, while surrounding headings and controls retain their gutters. */
+  width?: VariantProps<typeof sectionWidthVariants>["width"];
 }
 
 /** A titled region of a page. Every block under a PageHeader that has a name is one of these. */
@@ -45,6 +58,7 @@ export function Section({
   align = "start",
   action,
   header = "static",
+  width = "full",
   className,
   children,
   ...props
@@ -67,7 +81,12 @@ export function Section({
     </div>
   );
   return (
-    <section data-slot="section" className={cn("flex min-w-0 flex-col gap-4", className)} {...props}>
+    <section
+      data-slot="section"
+      data-width={width}
+      className={cn("flex min-w-0 flex-col gap-4", sectionWidthVariants({ width }), className)}
+      {...props}
+    >
       {titleDisplay === "hidden" ? (
         <Heading className="sr-only">{title}</Heading>
       ) : header === "sticky" ? (

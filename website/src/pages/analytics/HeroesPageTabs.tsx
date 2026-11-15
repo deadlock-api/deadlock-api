@@ -93,8 +93,9 @@ function useScoreboardSortBy(filters: HeroFilters) {
   return { sortBy: sortByIn(chosenSortBy, filters.gameMode, "winrate"), setSortBy };
 }
 
-function GroupByTypeSwitch() {
+export function HeroAdvancedTabControls({ filters }: { filters: HeroFilters }) {
   const [groupByType, setGroupByType] = useGroupByType();
+  if (filters.tab !== "stats" && filters.tab !== "tier-list") return null;
   return (
     <FilterToggleCell
       label="Group by"
@@ -131,7 +132,6 @@ function TierListControls({ filters }: { filters: HeroFilters }) {
           </StringOptionGroup>
         ))}
       </StringSelector>
-      <GroupByTypeSwitch />
     </>
   );
 }
@@ -157,7 +157,7 @@ function ScoreboardControls({ filters }: { filters: HeroFilters }) {
 export function HeroTabControls({ filters }: { filters: HeroFilters }) {
   switch (filters.tab) {
     case "stats":
-      return <GroupByTypeSwitch />;
+      return null;
     case "tier-list":
       return <TierListControls filters={filters} />;
     case "stats-over-time":
@@ -250,7 +250,7 @@ export function HeroOverallStatsTab({ filters }: { filters: HeroFilters }) {
   // Half the page's search clicks ask for pick rates: the test variant opens the table on pick rate.
   const sortExperiment = useExperiment("exp-heroes-pickrate-default");
   return (
-    <Section titleDisplay="hidden" title="Overall Hero Stats">
+    <Section titleDisplay="hidden" title="Overall Hero Stats" width="bleed-mobile">
       <HeroStatsTable
         groupByType={groupByType}
         nameQuery={heroNameQuery}

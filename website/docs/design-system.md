@@ -320,6 +320,20 @@ holds. See `docs/compact-data-ui.md` for data-view rules.
 
 ## Responsive rules
 
+### Hero Stats layout
+
+Hero Stats keeps Mode, Rank and Date visible in its `FilterBar`. Match thresholds and Group by live in an inline
+`Disclosure` titled Advanced (closed initially), not an overlay; view-specific metrics remain visible. Closing it
+does not reset its URL-backed selections.
+
+| Component      | Additional layout option                                                                                                                          |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `page/Section` | `width`: full (default), bleed-mobile (extends through the `AppFrame` gutters below md; use for full-width data rather than surrounding controls) |
+| `ui/Table`     | `overflowIndicator`: fade (default), none (no mask at either edge; retains horizontal scrolling and sticky cells)                                 |
+
+The Hero Stats table uses `overflowIndicator="none"` and keeps the row number and hero in one pinned cell, so they
+stay together throughout a horizontal scroll. Other tables retain their existing fade and sizing.
+
 - Every component works from 320px. Rows of controls wrap (`flex-wrap`); grids step down (`grid-cols-2 sm:grid-cols-4`).
 - Components that live in panels of varying width use container queries (`@container` + `@md:`), not viewport
   breakpoints. Page-level layout uses viewport breakpoints.

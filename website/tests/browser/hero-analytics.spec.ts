@@ -83,3 +83,63 @@ test("overview search and recovery fit a narrow mobile viewport", async ({ page 
   await expect(search).toHaveValue("");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
 });
+
+test("advanced hero filters preserve their selections when collapsed", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 740 });
+  await page.goto(overviewUrl);
+  await page.waitForLoadState("networkidle");
+  const advanced = page.locator("summary").filter({ hasText: "Advanced" });
+  const range = page.getByRole("button", { name: "Matches (range) Any", exact: true });
+  await expect(page.getByRole("button", { name: /Mode Ranked/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Date / })).toBeVisible();
+  await expect(range).not.toBeVisible();
+  await advanced.focus();
+  await advanced.press("Enter");
+  await expect(range).toBeVisible();
+  await expect(page.getByRole("button", { name: "Matches (total) Any", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Group by None", exact: true }).click();
+  await page.getByRole("button", { name: "Hero type", exact: true }).click();
+  await expect(page).toHaveURL(/group_by_type=true/);
+  await advanced.focus();
+  await advanced.press("Space");
+  await expect(page.getByRole("button", { name: "Group by Hero type", exact: true })).not.toBeVisible();
+  await advanced.press("Enter");
+  await expect(page.getByRole("button", { name: "Group by Hero type", exact: true })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
+test("hero rank and identity stay together while the crisp table scrolls", async ({ page }) => {
+  await page.goto(overviewUrl);
+  const table = page.getByRole("table", { name: "Hero stats", exact: true });
+  await expect(table.locator("tbody tr")).toHaveCount(2);
+  for (const width of [320, 390, 700, 1440]) {
+    await page.setViewportSize({ width, height: 1000 });
+    const result = await table.evaluate((element) => {
+      const container = element.parentElement!;
+      container.scrollLeft = 0;
+      const identity = element.querySelector("tbody tr td")!;
+      const before = identity.getBoundingClientRect().left;
+      container.scrollLeft = 200;
+      return {
+        before,
+        after: identity.getBoundingClientRect().left,
+        text: identity.textContent,
+        scroll: container.scrollLeft,
+        mask: getComputedStyle(container).maskImage,
+        left: container.getBoundingClientRect().left,
+        right: container.getBoundingClientRect().right,
+        pageWidth: document.body.getBoundingClientRect().right,
+        overflow: document.documentElement.scrollWidth > innerWidth,
+      };
+    });
+    expect(result.text).toBe("1Dynamo100 matches");
+    expect(result.after).toBeCloseTo(result.before);
+    expect(result.mask).toBe("none");
+    expect(result.overflow).toBe(false);
+    if (width < 768) {
+      expect(result.scroll).toBeGreaterThan(0);
+      expect(result.left).toBeCloseTo(0);
+      expect(result.right).toBeCloseTo(result.pageWidth);
+    }
+  }
+});

@@ -352,6 +352,9 @@ export function Patterns() {
             Section content
           </div>
         </Section>
+        <Section title="Mobile edge-to-edge data" width="bleed-mobile">
+          <div className="bg-muted p-4 text-sm">Extends through the AppFrame gutters below md.</div>
+        </Section>
       </Specimen>
 
       <Specimen
