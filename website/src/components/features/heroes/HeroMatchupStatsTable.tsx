@@ -226,8 +226,8 @@ function MatchupCell({
   const prevRelWinrate = prevRelWinrates?.[partnerId];
   return (
     <TableCell>
-      <Inline wrap="nowrap">
-        <HeroImage heroId={partnerId} />
+      <Inline wrap="nowrap" className="min-w-max">
+        <HeroImage heroId={partnerId} className="shrink-0" />
         <Tooltip
           content={
             <MatchupTooltip
@@ -241,7 +241,7 @@ function MatchupCell({
             />
           }
         >
-          <TooltipTarget display="block" className="w-full">
+          <TooltipTarget display="block" className="flex-1">
             <ProgressBarWithLabel
               min={0}
               max={maxMagnitude}
