@@ -4,12 +4,14 @@ import { lazy, startTransition, Suspense } from "react";
 import { Filter } from "~/components/domain/filters";
 import { ItemCombFilters } from "~/components/features/items/ItemCombFilters";
 import { ItemStatsControls, ItemTopBuildsToggle } from "~/components/features/items/ItemStatsControls";
+import { Disclosure } from "~/components/patterns/content/Disclosure";
 import { ResponsiveTab, ResponsiveTabsList } from "~/components/patterns/navigation/ResponsiveTabsList";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PageShell } from "~/components/patterns/page/PageShell";
 import { Section } from "~/components/patterns/page/Section";
 import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBoundary";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
+import { Inline } from "~/components/ui/stack";
 import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { useAnalyticsTab } from "~/hooks/useAnalyticsTab";
 import { useKnownHeroId } from "~/hooks/useAssetById";
@@ -91,16 +93,6 @@ export function ItemsPage() {
             onValueChange={(next) => startTransition(() => void setHero(next, together))}
             allowNull
           />
-          {/* Only these two views read the item win rates the enemy filter narrows; elsewhere it would do nothing. */}
-          {(tab === "item-stats" || tab === "item-purchase-analysis") && (
-            <Filter.Hero
-              selection="multiple"
-              label="Against"
-              emptyLabel="Any"
-              value={enemies}
-              onValueChange={(next) => startTransition(() => void setEnemies(next.length > 0 ? next : null, together))}
-            />
-          )}
           <Filter.ModeWithRank
             value={{ mode, rank: [minRankId, maxRankId] }}
             defaultValue={{ mode: DEFAULT_MODE, rank: [DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max] }}
@@ -120,32 +112,46 @@ export function ItemsPage() {
             defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
           />
           {tab === "item-combos" && <ItemCombFilters />}
-          <>
-            <Filter.MinMatches
-              value={minMatches}
-              onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
-              defaultValue={DEFAULT_MIN_MATCHES}
-            />
-            {purchaseWindowTab && (
-              <Filter.TimeRange
-                value={[minBoughtAtS ?? undefined, maxBoughtAtS ?? undefined]}
-                onValueChange={([min, max]) =>
-                  startTransition(() => {
-                    void setMinBoughtAtS(min ?? null, together);
-                    void setMaxBoughtAtS(max ?? null, together);
-                  })
-                }
-                label="Time"
-                title="Purchase Time Window"
-              />
-            )}
-          </>
           {tab === "item-stats" && (
             <>
               <ItemStatsControls />
               <ItemTopBuildsToggle hero={hero} />
             </>
           )}
+          <Disclosure title="Advanced" variant="inline" className="w-full">
+            <Inline>
+              {/* Only these two views read the item win rates the enemy filter narrows. */}
+              {purchaseWindowTab && (
+                <Filter.Hero
+                  selection="multiple"
+                  label="Against"
+                  emptyLabel="Any"
+                  value={enemies}
+                  onValueChange={(next) =>
+                    startTransition(() => void setEnemies(next.length > 0 ? next : null, together))
+                  }
+                />
+              )}
+              {purchaseWindowTab && (
+                <Filter.TimeRange
+                  value={[minBoughtAtS ?? undefined, maxBoughtAtS ?? undefined]}
+                  onValueChange={([min, max]) =>
+                    startTransition(() => {
+                      void setMinBoughtAtS(min ?? null, together);
+                      void setMaxBoughtAtS(max ?? null, together);
+                    })
+                  }
+                  label="Time"
+                  title="Purchase Time Window"
+                />
+              )}
+              <Filter.MinMatches
+                value={minMatches}
+                onValueChange={(next) => startTransition(() => void setMinMatches(next, together))}
+                defaultValue={DEFAULT_MIN_MATCHES}
+              />
+            </Inline>
+          </Disclosure>
         </Filter.Root>
         <TabsContent value="item-stats">
           <Section titleDisplay="hidden" title="Overall Item Stats">

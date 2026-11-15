@@ -11,7 +11,6 @@ import { startTransition, useMemo } from "react";
 
 import { ItemSelector } from "~/components/domain/selectors/ItemSelector";
 import { ITEM_SLOTS } from "~/components/domain/selectors/ItemSlotSelector";
-import { useCorruptedItemMode } from "~/components/features/items/useCorruptedItemMode";
 import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import type { TriState } from "~/components/patterns/filter-bar/TriStateSelector";
 import { SegmentedItem } from "~/components/ui/segmented";
@@ -60,12 +59,11 @@ export function useItemLists() {
 }
 
 /**
- * The item table's filters that change its query, for the page's filter row: items to include or leave out and which
- * purchases count. The name, slot, tier, win rate and pick rate filters only narrow the rows shown and sit in their columns' heads.
+ * The item table's query filter, for the page's filter row: items to include or leave out.
+ * The name, slot, tier, win rate and pick rate filters only narrow the rows shown and sit in their columns' heads.
  */
 export function ItemStatsControls() {
   const { includeItems, setIncludeItems, excludeItems, setExcludeItems } = useItemLists();
-  const [corruptedMode, setCorruptedMode] = useCorruptedItemMode();
   // The item filter holds both lists as one include / exclude map.
   const itemStates = useMemo(
     () =>
@@ -83,27 +81,13 @@ export function ItemStatsControls() {
     });
   };
   return (
-    <>
-      <ItemSelector
-        data-item-filter=""
-        selection="tri-state"
-        size="sm"
-        value={itemStates}
-        onValueChange={setItemStates}
-      />
-      <FilterToggleCell
-        label="Purchases"
-        value={corruptedMode}
-        defaultValue="exclude"
-        onValueChange={(mode) =>
-          startTransition(() => void setCorruptedMode(mode === "exclude" ? null : mode, together))
-        }
-      >
-        <SegmentedItem value="exclude">Normal</SegmentedItem>
-        <SegmentedItem value="only">Corrupted</SegmentedItem>
-        <SegmentedItem value="include">Both</SegmentedItem>
-      </FilterToggleCell>
-    </>
+    <ItemSelector
+      data-item-filter=""
+      selection="tri-state"
+      size="sm"
+      value={itemStates}
+      onValueChange={setItemStates}
+    />
   );
 }
 
