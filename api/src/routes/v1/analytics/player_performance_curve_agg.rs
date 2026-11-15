@@ -13,7 +13,7 @@ use itertools::Itertools as _;
 
 use super::common_filters::{MatchInfoFilters, is_non_empty, join_filters, rollup_badge_filters};
 use super::player_performance_curve::{PlayerPerformanceCurveQuery, curve_metrics};
-use super::power_up_buffs::PERMANENT_BUFF_TIMES;
+use super::power_up_buffs::{PERMANENT_BUFF_TIMES, PERMANENT_BUFFS_AT_TICKS};
 use super::rollup_window::{DAY_S, DaySplit};
 use crate::utils::match_modes::{GameMode, MatchMode};
 
@@ -56,7 +56,7 @@ fn tick_arrays(extra: &str) -> String {
     format!(
         "{extra}{arrays},
         {PERMANENT_BUFF_TIMES} AS buff_times, notEmpty(buff_times) AS has_buff_timings,
-        arrayMap(ts -> toUInt32(arrayCount(t -> t <= ts, buff_times)), stats.time_stamp_s) AS permanent_buffs_arr"
+        {PERMANENT_BUFFS_AT_TICKS} AS permanent_buffs_arr"
     )
 }
 

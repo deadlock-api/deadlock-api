@@ -15,7 +15,7 @@ use super::common_filters::{
     PlayerFilters, filter_protected_accounts, id_list, join_filters, round_timestamps,
 };
 use super::player_performance_curve_agg;
-use super::power_up_buffs::PERMANENT_BUFF_TIMES;
+use super::power_up_buffs::{PERMANENT_BUFF_TIMES, PERMANENT_BUFFS_AT_TICKS};
 use crate::context::AppState;
 use crate::error::APIResult;
 use crate::services::ch_cost::TrackedQuery as _;
@@ -473,9 +473,8 @@ fn build_query(query: &PlayerPerformanceCurveQuery) -> String {
     // only one UInt32 per tick is replicated (not the pickup-time array). Rows without pickup
     // timings (pre-6712 matches) are left out of the average via `has_buff_timings`.
     let players_buffs = format!(
-        ", {PERMANENT_BUFF_TIMES} AS buff_times, \
-         arrayMap(ts -> toUInt32(arrayCount(t -> t <= ts, buff_times)), stats.time_stamp_s) AS \
-         permanent_buffs_arr, notEmpty(buff_times) AS has_buff_timings"
+        ", {PERMANENT_BUFF_TIMES} AS buff_times, {PERMANENT_BUFFS_AT_TICKS} AS permanent_buffs_arr, \
+         notEmpty(buff_times) AS has_buff_timings"
     );
     let projection_setting = projection_setting(query);
     format!(
