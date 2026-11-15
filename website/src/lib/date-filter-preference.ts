@@ -7,7 +7,7 @@ export type DateRange = [Dayjs | undefined, Dayjs | undefined];
 
 /**
  * The period every date filter starts at for someone who has not picked one (a pick is kept in the preferences
- * cookie): the latest patch. The one switch for the site's default; set it to "season" when the current season is the
- * better starting point, such as right after a new season begins.
+ * cookie): the current season. The one switch for the site's default; set it to "patch" when the latest patch is the
+ * better starting point.
  */
-export const DEFAULT_DATE_FILTER: DateFilterPreference = "patch";
+export const DEFAULT_DATE_FILTER: DateFilterPreference = "season";
