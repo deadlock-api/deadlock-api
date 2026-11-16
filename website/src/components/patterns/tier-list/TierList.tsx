@@ -34,6 +34,7 @@ const tierContentVariants = cva("grid min-w-0 gap-x-3 gap-y-2 p-1.5", {
       2: "@2xl/tier-list:grid-cols-2",
       3: "@3xl/tier-list:grid-cols-3",
       4: "@4xl/tier-list:grid-cols-4",
+      5: "@5xl/tier-list:grid-cols-5",
     },
   },
   defaultVariants: { columns: 1 },
@@ -47,11 +48,13 @@ const WIDE_LABEL = {
   2: "@2xl/tier-list:sr-only",
   3: "@3xl/tier-list:sr-only",
   4: "@4xl/tier-list:sr-only",
+  5: "@5xl/tier-list:sr-only",
 } as const satisfies Record<TierColumns, string>;
 const WIDE_HEAD = {
   2: "@2xl/tier-list:grid",
   3: "@3xl/tier-list:grid",
   4: "@4xl/tier-list:grid",
+  5: "@5xl/tier-list:grid",
 } as const;
 /** An empty group only keeps its cell where groups line up in columns; stacked, it would be a label over nothing. */
 const WIDE_ONLY = {
@@ -59,8 +62,9 @@ const WIDE_ONLY = {
   2: "hidden @2xl/tier-list:flex",
   3: "hidden @3xl/tier-list:flex",
   4: "hidden @4xl/tier-list:flex",
+  5: "hidden @5xl/tier-list:flex",
 } as const satisfies Record<TierColumns, string>;
-const HEAD_COLUMNS = { 2: "grid-cols-2", 3: "grid-cols-3", 4: "grid-cols-4" } as const;
+const HEAD_COLUMNS = { 2: "grid-cols-2", 3: "grid-cols-3", 4: "grid-cols-4", 5: "grid-cols-5" } as const;
 
 /** Which entry of a list is highlighted, so every tile of it lights up wherever it appears. */
 const TierHighlightContext = createContext<{

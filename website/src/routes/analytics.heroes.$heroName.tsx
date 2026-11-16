@@ -367,7 +367,13 @@ function HeroLinkCard({
   );
 }
 
-const HERO_TYPE_LABEL = { assassin: "Assassin", brawler: "Brawler", marksman: "Marksman", mystic: "Mystic" } as const;
+const HERO_TYPE_LABEL = {
+  assassin: "Assassin",
+  brawler: "Brawler",
+  healer: "Healer",
+  marksman: "Marksman",
+  mystic: "Mystic",
+} as const;
 const MAX_COMPLEXITY = 3;
 
 function HeroPage() {

@@ -17,7 +17,7 @@ import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { heroSwapStatsQueryOptions } from "~/queries/hero-swap-stats-query";
 
-export const HERO_TYPE_ORDER = ["assassin", "brawler", "marksman", "mystic"] as const;
+export const HERO_TYPE_ORDER = ["assassin", "brawler", "healer", "marksman", "mystic"] as const;
 export type HeroType = (typeof HERO_TYPE_ORDER)[number];
 
 const PICK_RATE_MODES = ["pickRate", "banRate", "presence"] as const;

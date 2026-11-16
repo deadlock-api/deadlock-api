@@ -25,7 +25,7 @@ type AbilityWithHero = {
   heroName: string;
 };
 
-const HERO_TYPES = ["Assassin", "Brawler", "Marksman", "Mystic"] as const;
+const HERO_TYPES = ["Assassin", "Brawler", "Healer", "Marksman", "Mystic"] as const;
 const ITEM_TIERS = ["Tier 1", "Tier 2", "Tier 3", "Tier 4"] as const;
 const ITEM_SLOTS = ["Weapon", "Spirit", "Vitality"] as const;
 const ABILITY_TYPES = ["Signature", "Ultimate", "Innate"] as const;
@@ -180,8 +180,13 @@ const heroTypeQuestion: QuestionGenerator = (heroes, _items, _npcs, _abilities, 
   const hero = seededPick(heroesWithType, rng);
   if (!hero.hero_type) return null;
   const correctLabel = capitalize(hero.hero_type);
-  const wrong = HERO_TYPES.filter((t) => t !== correctLabel);
-  const { options, correctIndex } = buildOptions(correctLabel, [...wrong], rng);
+  // Four options, as every other question has.
+  const wrong = seededPickN(
+    HERO_TYPES.filter((t) => t !== correctLabel),
+    3,
+    rng,
+  );
+  const { options, correctIndex } = buildOptions(correctLabel, wrong, rng);
 
   return { question: `What type is ${hero.name}?`, options, correctIndex, category: "Hero" };
 };

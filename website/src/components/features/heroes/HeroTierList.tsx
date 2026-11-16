@@ -7,7 +7,14 @@ import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
-import { TierGroup, TierItem, TierList, TierListHead, TierRow } from "~/components/patterns/tier-list/TierList";
+import {
+  type TierColumns,
+  TierGroup,
+  TierItem,
+  TierList,
+  TierListHead,
+  TierRow,
+} from "~/components/patterns/tier-list/TierList";
 import { Tooltip, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import type { Dayjs } from "~/dayjs";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
@@ -77,6 +84,9 @@ function HeroTile({ hero, ranked, metric }: { hero: SlimHero; ranked: RankedHero
     </Tooltip>
   );
 }
+
+/** The most groups a `TierRow` lays side by side; the game has five hero types since the 2026-10-30 update. */
+const MAX_TYPE_COLUMNS = 5;
 
 const capitalize = (text: string) => text.charAt(0).toUpperCase() + text.slice(1);
 
@@ -162,9 +172,9 @@ export function HeroTierList({
   const types = groupByType
     ? [...new Set(shown.map((entry) => heroById.get(entry.heroId)?.hero_type).filter((type) => type != null))]
         .sort()
-        .slice(0, 4)
+        .slice(0, MAX_TYPE_COLUMNS)
     : [];
-  const columnCount = Math.min(4, Math.max(2, types.length)) as 2 | 3 | 4;
+  const columnCount = Math.min(MAX_TYPE_COLUMNS, Math.max(2, types.length)) as Exclude<TierColumns, 1>;
   const tile = (entry: RankedHero) => (
     <HeroTile key={entry.heroId} hero={heroById.get(entry.heroId)!} ranked={entry} metric={metric} />
   );

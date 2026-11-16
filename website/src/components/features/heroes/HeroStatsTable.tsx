@@ -1,4 +1,4 @@
-import { Crosshair, Skull, Sparkles, Swords, type LucideIcon } from "lucide-react";
+import { Crosshair, HeartPulse, Skull, Sparkles, Swords, type LucideIcon } from "lucide-react";
 
 import { HeroCell } from "~/components/domain/assets/HeroCell";
 import { HeroDetailsTooltip } from "~/components/features/heroes/HeroDetailsTooltip";
@@ -44,6 +44,7 @@ const COMPACT_MATCHES = new Intl.NumberFormat("en-US", { notation: "compact", ma
 const HERO_TYPE_CONFIG: Record<HeroType, { label: string; color: string; icon: LucideIcon }> = {
   assassin: { label: "Assassin", color: SERIES_COLORS[5], icon: Skull },
   brawler: { label: "Brawler", color: SERIES_COLORS[0], icon: Swords },
+  healer: { label: "Healer", color: SERIES_COLORS[7], icon: HeartPulse },
   marksman: { label: "Marksman", color: SERIES_COLORS[1], icon: Crosshair },
   mystic: { label: "Mystic", color: SERIES_COLORS[3], icon: Sparkles },
 };
