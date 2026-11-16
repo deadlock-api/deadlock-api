@@ -129,9 +129,17 @@ const RETRY_MAX_INTERVAL: Duration = Duration::from_hours(24);
 /// indefinitely — and a failure alone stamps no verdict, so they would stay in the
 /// pending set forever. Retrying them without limit would burn most of the
 /// download capacity on matches that will never arrive, so they are parked after
-/// this many attempts, which the backoff spreads over roughly four days. A
-/// restart re-examines them, a slow enough cadence to still catch late arrivals.
+/// this many attempts, which the backoff spreads over roughly four days. The count
+/// lives in memory, so [`GIVE_UP_AGE`] is what actually ends retries across restarts.
 const MAX_ATTEMPTS: u32 = 12;
+/// A match whose newest salt is older than this is written off on its next failed attempt,
+/// whatever its attempt count. Deploys restart the worker more often than [`MAX_ATTEMPTS`]
+/// takes to run out (it ran out once between 2026-10-27 and 2026-11-16), and each restart
+/// forgot every count: dead matches piled up (27k to 443k pending in 30 days) and all of them
+/// were retried after every restart (~450k failed fetches a day). Of 3.75M matches verified in
+/// the week to 2026-11-16, 99.99% succeeded within 6 h of their salt and 8 after 4-7 days,
+/// none later.
+const GIVE_UP_AGE: Duration = Duration::from_hours(7 * 24);
 /// A DELETE is a mutation that rewrites every part of `match_salts` (~80) whether or not it
 /// holds a superseded candidate: hourly, that was ~1 800 part rewrites and 11 GiB a day. Readers
 /// never depend on the losers being gone, so once a day is plenty.
@@ -455,7 +463,11 @@ async fn run_iteration(
     );
 
     let results = process_batch(store.as_ref(), cache_store.as_ref(), &to_fetch).await;
-    stamp(ch_client, &handle_results(state, &to_fetch, results)).await?;
+    stamp(
+        ch_client,
+        &handle_results(state, &to_fetch, results, unix_now()),
+    )
+    .await?;
     Ok(())
 }
 
@@ -554,28 +566,45 @@ struct Verdicts {
     failed: Vec<MatchSalts>,
 }
 
-/// A failure proves nothing until the attempt budget is spent, at which point every candidate
-/// is written off: each was tried on every attempt.
+fn unix_now() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_or(0, |d| d.as_secs())
+}
+
+/// Seconds since the newest candidate of `m` arrived; a new salt restarts the clock.
+fn salt_age_s(m: &MatchCandidates, now_unix: u64) -> u64 {
+    let newest = m.candidates.iter().map(|c| c.created_at).max().unwrap_or(0);
+    now_unix.saturating_sub(u64::from(newest))
+}
+
+/// A failure proves nothing until the attempt budget is spent or the salts are older than
+/// [`GIVE_UP_AGE`], at which point every candidate is written off: each was tried on every
+/// attempt.
 fn handle_results(
     state: &State,
     batch: &[MatchCandidates],
     results: Vec<(u64, Result<Option<MatchSalts>, DownloadError>)>,
+    now_unix: u64,
 ) -> Verdicts {
     let by_id: HashMap<u64, &MatchCandidates> = batch.iter().map(|m| (m.match_id, m)).collect();
     let mut verdicts = Verdicts::default();
     for (match_id, result) in results {
-        match result {
-            Ok(winner) => {
-                state.mark_uploaded(match_id);
-                verdicts.verified.extend(winner);
-            }
-            Err(_) => {
-                if state.back_off(match_id) == GaveUp::Yes
-                    && let Some(m) = by_id.get(&match_id)
-                {
-                    verdicts.failed.extend(m.candidates.iter().cloned());
-                }
-            }
+        if let Ok(winner) = result {
+            state.mark_uploaded(match_id);
+            verdicts.verified.extend(winner);
+            continue;
+        }
+        let spent = state.back_off(match_id) == GaveUp::Yes;
+        let Some(m) = by_id.get(&match_id) else {
+            continue;
+        };
+        let too_old = salt_age_s(m, now_unix) >= GIVE_UP_AGE.as_secs();
+        if too_old && !spent {
+            counter!("matchdata_downloader.match.given_up", "reason" => "age").increment(1);
+        }
+        if spent || too_old {
+            verdicts.failed.extend(m.candidates.iter().cloned());
         }
     }
     verdicts
@@ -647,7 +676,7 @@ impl State {
         );
         if count == MAX_ATTEMPTS {
             debug!("Giving up on match {id} after {MAX_ATTEMPTS} attempts");
-            counter!("matchdata_downloader.match.given_up").increment(1);
+            counter!("matchdata_downloader.match.given_up", "reason" => "attempts").increment(1);
             return GaveUp::Yes;
         }
         GaveUp::No
@@ -930,17 +959,40 @@ mod tests {
 
         for _ in 1..MAX_ATTEMPTS {
             assert_eq!(
-                handle_results(&state, &batch, fail()).failed,
+                handle_results(&state, &batch, fail(), 0).failed,
                 Vec::<MatchSalts>::new()
             );
         }
-        let verdicts = handle_results(&state, &batch, fail());
+        let verdicts = handle_results(&state, &batch, fail(), 0);
 
         assert_eq!(
             verdicts.failed,
             vec![candidate(1, 187), candidate(1, 390)],
             "every candidate was tried on every attempt, so all of them are written off"
         );
+    }
+
+    /// The attempt count is lost on every restart, so age alone must end the retries.
+    #[tokio::test]
+    async fn a_failure_after_the_give_up_age_writes_the_match_off_without_the_attempt_budget() {
+        let state = State::new();
+        let mut newer = candidate(1, 390);
+        newer.created_at = 1_000;
+        let batch = [MatchCandidates {
+            match_id: 1,
+            candidates: vec![newer.clone(), candidate(1, 187)],
+        }];
+        let age = GIVE_UP_AGE.as_secs();
+
+        let young = handle_results(&state, &batch, vec![(1, Err(failure(1)))], 1_000 + age - 1);
+        assert_eq!(
+            young.failed,
+            Vec::<MatchSalts>::new(),
+            "the newest salt sets the age"
+        );
+
+        let old = handle_results(&state, &batch, vec![(1, Err(failure(1)))], 1_000 + age);
+        assert_eq!(old.failed, vec![newer, candidate(1, 187)]);
     }
 
     #[tokio::test]
@@ -951,7 +1003,7 @@ mod tests {
             candidates: vec![candidate(1, 187), candidate(1, 390)],
         }];
 
-        let verdicts = handle_results(&state, &batch, vec![(1, Ok(Some(candidate(1, 390))))]);
+        let verdicts = handle_results(&state, &batch, vec![(1, Ok(Some(candidate(1, 390))))], 0);
 
         assert_eq!(verdicts.verified, vec![candidate(1, 390)]);
         assert_eq!(verdicts.failed, Vec::<MatchSalts>::new());
@@ -1056,6 +1108,7 @@ mod tests {
                 (10, Ok(Some(candidate(10, 1)))),
                 (20, Err(failure(20))),
             ],
+            0,
         );
 
         assert_eq!(
