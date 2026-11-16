@@ -52,7 +52,9 @@ const loadDuckDb = sharedUntilRejected(async (): Promise<DuckDbHandle> => {
     const conn = await db.connect();
     try {
       await conn.query(
-        "INSTALL httpfs; LOAD httpfs; SET enable_http_metadata_cache=true; SET enable_object_cache=true;",
+        // icu provides the TIMESTAMP WITH TIME ZONE arithmetic (`now() - INTERVAL 20 DAY`) that the lake's
+        // timestamps need, as on the API's DuckDB.
+        "INSTALL httpfs; LOAD httpfs; INSTALL icu; LOAD icu; SET enable_http_metadata_cache=true; SET enable_object_cache=true;",
       );
     } finally {
       await conn.close();
