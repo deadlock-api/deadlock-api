@@ -130,6 +130,21 @@
   --chart-share: var(--sky-600);
   --chart-grid: var(--ink-700);
   --chart-axis: var(--ink-400);
+  /* The live request map, drawn on a canvas that reads these: the land, a request on its way in, its response by
+     status class, a Cloudflare data center and our server; then what Cloudflare answers itself: API cache hits,
+     the website, the asset bucket, the other subdomains and the data lake. */
+  --live-map-land: var(--ink-500);
+  --live-map-edge: var(--ink-400);
+  --live-map-request: var(--ink-200);
+  --live-map-response: var(--positive);
+  --live-map-client-error: var(--warning);
+  --live-map-server-error: var(--negative);
+  --live-map-origin: var(--primary);
+  --live-map-api-cache: var(--chart-4);
+  --live-map-website: var(--chart-6);
+  --live-map-assets: var(--chart-8);
+  --live-map-other: var(--series-steel);
+  --live-map-lake: var(--chart-2);
   /* The uncertainty band of a value (a 95% range) on a bar's muted track: 3:1 against the track and the card. */
   --chart-interval: var(--ink-500);
   /* The empty marks of a meter (Pips): 3:1 against the card, so "2 of 5" still shows its five. */

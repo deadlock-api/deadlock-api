@@ -182,6 +182,7 @@ const NOTHING_TO_FIND: Record<string, string> = {
   leaderboard: "rows are players, a hero is a filter",
   rank_distribution: "a chart",
   heatmap: "a map",
+  live_api_traffic: "a live map of requests",
   patch_notes: "notes, not stats",
   voice_lines: "opens on the hero's lines",
   hero_conversations: "filtered to the hero",

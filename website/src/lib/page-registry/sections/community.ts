@@ -73,6 +73,14 @@ export const COMMUNITY_PAGES: RegisteredPage[] = [
     path: "/data-dumps",
   },
   {
+    id: "live_api_traffic",
+    title: "Live API Traffic",
+    description:
+      "a live map of the requests hitting the API right now, how busy the server is and its request queue, " +
+      "the busiest endpoints and Cloudflare data centers",
+    path: "/live",
+  },
+  {
     id: "ingest_cache",
     title: "Send In Your Matches",
     description:

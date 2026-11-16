@@ -25,6 +25,7 @@ import { Route as HeroesRouteImport } from './routes/heroes'
 import { Route as IngestCacheRouteImport } from './routes/ingest-cache'
 import { Route as ItemsRouteImport } from './routes/items'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
+import { Route as LiveRouteImport } from './routes/live'
 import { Route as PatchesRouteImport } from './routes/patches'
 import { Route as PatronRouteImport } from './routes/patron'
 import { Route as PlayersRouteImport } from './routes/players'
@@ -200,6 +201,11 @@ const ItemsRoute = ItemsRouteImport.update({
 const LeaderboardRoute = LeaderboardRouteImport.update({
   id: '/leaderboard',
   path: '/leaderboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LiveRoute = LiveRouteImport.update({
+  id: '/live',
+  path: '/live',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PatchesRoute = PatchesRouteImport.update({
@@ -718,6 +724,7 @@ export interface FileRoutesByFullPath {
   '/ingest-cache': typeof IngestCacheRoute
   '/items': typeof ItemsRouteWithChildren
   '/leaderboard': typeof LeaderboardRoute
+  '/live': typeof LiveRoute
   '/patches': typeof PatchesRouteWithChildren
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
@@ -828,6 +835,7 @@ export interface FileRoutesByTo {
   '/heatmap': typeof HeatmapRoute
   '/ingest-cache': typeof IngestCacheRoute
   '/leaderboard': typeof LeaderboardRoute
+  '/live': typeof LiveRoute
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
@@ -936,6 +944,7 @@ export interface FileRoutesById {
   '/ingest-cache': typeof IngestCacheRoute
   '/items': typeof ItemsRouteWithChildren
   '/leaderboard': typeof LeaderboardRoute
+  '/live': typeof LiveRoute
   '/patches': typeof PatchesRouteWithChildren
   '/patron': typeof PatronRoute
   '/players': typeof PlayersRoute
@@ -1052,6 +1061,7 @@ export interface FileRouteTypes {
     | '/ingest-cache'
     | '/items'
     | '/leaderboard'
+    | '/live'
     | '/patches'
     | '/patron'
     | '/players'
@@ -1162,6 +1172,7 @@ export interface FileRouteTypes {
     | '/heatmap'
     | '/ingest-cache'
     | '/leaderboard'
+    | '/live'
     | '/patron'
     | '/players'
     | '/sitemap.xml'
@@ -1269,6 +1280,7 @@ export interface FileRouteTypes {
     | '/ingest-cache'
     | '/items'
     | '/leaderboard'
+    | '/live'
     | '/patches'
     | '/patron'
     | '/players'
@@ -1384,6 +1396,7 @@ export interface RootRouteChildren {
   IngestCacheRoute: typeof IngestCacheRoute
   ItemsRoute: typeof ItemsRouteWithChildren
   LeaderboardRoute: typeof LeaderboardRoute
+  LiveRoute: typeof LiveRoute
   PatchesRoute: typeof PatchesRouteWithChildren
   PatronRoute: typeof PatronRoute
   PlayersRoute: typeof PlayersRoute
@@ -1538,6 +1551,13 @@ declare module '@tanstack/react-router' {
       path: '/leaderboard'
       fullPath: '/leaderboard'
       preLoaderRoute: typeof LeaderboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/live': {
+      id: '/live'
+      path: '/live'
+      fullPath: '/live'
+      preLoaderRoute: typeof LiveRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/patches': {
@@ -2449,6 +2469,7 @@ const rootRouteChildren: RootRouteChildren = {
   IngestCacheRoute: IngestCacheRoute,
   ItemsRoute: ItemsRouteWithChildren,
   LeaderboardRoute: LeaderboardRoute,
+  LiveRoute: LiveRoute,
   PatchesRoute: PatchesRouteWithChildren,
   PatronRoute: PatronRoute,
   PlayersRoute: PlayersRoute,

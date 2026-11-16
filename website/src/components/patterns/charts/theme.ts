@@ -148,6 +148,39 @@ export const CHART_COLOR = {
 } as const;
 
 /**
+ * The live request map: the land, a request on its way in, its response by status class, a Cloudflare data center, our
+ * server, and the four kinds of request Cloudflare answers itself (API cache hits, website, assets, other, data lake). The legend takes them as CSS; the canvas resolves them with `resolveChartColors`.
+ */
+export const LIVE_MAP_COLOR = {
+  land: "var(--live-map-land)",
+  edge: "var(--live-map-edge)",
+  request: "var(--live-map-request)",
+  ok: "var(--live-map-response)",
+  clientError: "var(--live-map-client-error)",
+  serverError: "var(--live-map-server-error)",
+  origin: "var(--live-map-origin)",
+  apiCache: "var(--live-map-api-cache)",
+  website: "var(--live-map-website)",
+  assets: "var(--live-map-assets)",
+  other: "var(--live-map-other)",
+  lake: "var(--live-map-lake)",
+} as const;
+
+/**
+ * The values of `var(--token)` colors as `element` sees them, for a canvas, which cannot read CSS variables. Read
+ * again when the theme changes.
+ */
+export function resolveChartColors<K extends string>(element: Element, colors: Record<K, string>): Record<K, string> {
+  const style = getComputedStyle(element);
+  const resolved = {} as Record<K, string>;
+  for (const key of Object.keys(colors) as K[]) {
+    const token = /^var\((--[\w-]+)\)$/.exec(colors[key])?.[1];
+    resolved[key] = token ? style.getPropertyValue(token).trim() : colors[key];
+  }
+  return resolved;
+}
+
+/**
  * A data-driven mark color (a rank's or a hero's color from the assets API) lifted to the lightness floor
  * `--chart-mark-floor-l`, so a dark entity color still stands 3:1 off the plot surface (WCAG 1.4.11). Hue and chroma
  * stay; a color already lighter is unchanged. A missing color is `CHART_COLOR.fallback`.

@@ -1,12 +1,13 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   BarChart3,
   BookOpen,
+  Clapperboard,
   Crosshair,
   Database,
   Gamepad2,
   GitCompareArrows,
-  Clapperboard,
   GraduationCap,
   Hammer,
   HardDrive,
@@ -20,10 +21,10 @@ import {
   ShoppingBag,
   Swords,
   Trophy,
-  Users,
-  Volume2,
   UserSearch,
+  Users,
   UsersRound,
+  Volume2,
   Zap,
 } from "lucide-react";
 
@@ -75,6 +76,7 @@ export const navGroups: NavGroup[] = [
     links: [
       { to: "/streamkit", label: "Stream Kit", icon: Radio },
       { to: "/data-dumps", label: "MCP & Data Dumps", icon: HardDrive },
+      { to: "/live", label: "Live API Traffic", icon: Activity },
       { to: "/crosshair", label: "Crosshair Editor", icon: Crosshair },
       { to: "/sounds", label: "Sounds", icon: Volume2 },
       { to: "/blog", label: "Blog", icon: BookOpen },
