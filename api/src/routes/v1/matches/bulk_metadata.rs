@@ -827,11 +827,30 @@ fn build_query(
                     conds.join(" AND ")
                 )
             }
-            _ if info_filters.is_empty() => format!("match_player{join_clause}"),
-            _ => format!(
-                "match_player{join_clause} WHERE {}",
-                info_filters.join(" AND ")
-            ),
+            _ => {
+                let source = if info_filters.is_empty() {
+                    format!("match_player{join_clause}")
+                } else {
+                    format!(
+                        "match_player{join_clause} WHERE {}",
+                        info_filters.join(" AND ")
+                    )
+                };
+                match query.order_by {
+                    // With a player filter the probe would repeat the join, computing its
+                    // right side (all of player_match_history for a hero) a second time.
+                    SortKey::StartTime if player_filter_subquery.is_none() => {
+                        let bound = start_time_bound(&source, query.order_direction, query.limit);
+                        let joiner = if info_filters.is_empty() {
+                            " WHERE "
+                        } else {
+                            " AND "
+                        };
+                        format!("{source}{joiner}{bound}")
+                    }
+                    SortKey::StartTime | SortKey::MatchId | SortKey::AverageBadge => source,
+                }
+            }
         };
         // In `match_id` order `DISTINCT` reads match_player in key order and stops at the
         // `LIMIT`; `GROUP BY` aggregates every matching row first (an unbounded
@@ -853,6 +872,30 @@ fn build_query(
     };
     debug!(?query);
     Ok(query)
+}
+
+/// A filter on `start_time` that lets a `start_time`-ordered page of `source` prune
+/// `match_player` without changing the page.
+///
+/// Take the `limit` matches of `source` with the highest match ids (`desc`) and the earliest
+/// `start_time` among them (`asc`: lowest ids, latest `start_time`). Those `limit` matches all
+/// pass the filter, so every match of the page does too, however loosely `start_time` follows
+/// the match id. In practice it follows closely (above match id 60M a match starts at most
+/// 29 s before one with a lower id), so the filter keeps little more than the page. The probe
+/// reads `match_player` in key order and stops at the limit, like the `match_id` order.
+/// The server evaluates the scalar subquery before index analysis, so the `start_time` minmax
+/// indexes prune by its value. Without the filter an unbounded page grouped every match first,
+/// which timed out in prod: on a local 549M-row copy 11.6 CPU-s and 11 GiB, with it
+/// 0.1–0.3 CPU-s and ~60 MiB.
+fn start_time_bound(source: &str, direction: SortDirectionAsc, limit: u32) -> String {
+    let (op, agg) = match direction {
+        SortDirectionAsc::Desc => (">=", "min"),
+        SortDirectionAsc::Asc => ("<=", "max"),
+    };
+    format!(
+        "start_time {op} (SELECT {agg}(start_time) FROM match_player WHERE match_id IN \
+         (SELECT DISTINCT match_id FROM {source} ORDER BY match_id {direction} LIMIT {limit}))"
+    )
 }
 
 fn fetch_lines(
@@ -1080,6 +1123,97 @@ mod proptests {
             sql.contains("t_matches AS (SELECT DISTINCT match_id FROM match_player INNER JOIN")
         );
         assert!(!sql.contains("FROM player_match_stats"));
+    }
+
+    fn start_time_ordered(query: BulkMatchMetadataQuery) -> String {
+        build_query(
+            BulkMatchMetadataQuery {
+                include_info: true,
+                order_by: SortKey::StartTime,
+                ..query
+            },
+            None,
+        )
+        .expect("query should build")
+    }
+
+    #[test]
+    fn start_time_order_bounds_start_time_by_the_newest_match_ids() {
+        let sql = start_time_ordered(BulkMatchMetadataQuery {
+            game_mode: Some(GameMode::Normal),
+            order_direction: SortDirectionAsc::Desc,
+            limit: 1000,
+            ..BulkMatchMetadataQuery::default()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains(
+            "t_matches AS (SELECT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 \
+             AND start_time >= (SELECT min(start_time) FROM match_player WHERE match_id IN \
+             (SELECT DISTINCT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND game_mode = 1 \
+             ORDER BY match_id desc LIMIT 1000)) GROUP BY match_id  ORDER BY any(start_time) desc   LIMIT 1000 )"
+        ));
+    }
+
+    #[test]
+    fn ascending_start_time_order_bounds_from_above() {
+        let sql = start_time_ordered(BulkMatchMetadataQuery {
+            limit: 10,
+            ..BulkMatchMetadataQuery::default()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains(
+            "start_time <= (SELECT max(start_time) FROM match_player WHERE match_id IN \
+             (SELECT DISTINCT match_id FROM match_player WHERE"
+        ));
+        assert!(sql.contains("ORDER BY match_id asc LIMIT 10))"));
+    }
+
+    #[test]
+    fn player_filtered_start_time_order_has_no_bound() {
+        for query in [
+            BulkMatchMetadataQuery {
+                hero_ids: Some(vec![13]),
+                limit: 50,
+                ..BulkMatchMetadataQuery::default()
+            },
+            BulkMatchMetadataQuery {
+                item_filter_hero_id: Some(13),
+                include_item_ids: Some(vec![1_282_141_666]),
+                limit: 50,
+                ..BulkMatchMetadataQuery::default()
+            },
+        ] {
+            let sql = start_time_ordered(query);
+            assert_valid_sql(&sql);
+            assert!(sql.contains(" pf ON match_id = pf._pf_match_id"));
+            assert!(!sql.contains("max(start_time)"), "{sql}");
+        }
+    }
+
+    #[test]
+    fn start_time_bound_only_applies_to_match_player_start_time_order() {
+        let account_scoped = start_time_ordered(BulkMatchMetadataQuery {
+            account_ids: Some(vec![848124002]),
+            limit: 50,
+            ..BulkMatchMetadataQuery::default()
+        });
+        assert!(account_scoped.contains("FROM player_match_stats"));
+        assert!(!account_scoped.contains("SELECT min(start_time)"));
+        assert!(!account_scoped.contains("SELECT max(start_time)"));
+        for order_by in [SortKey::MatchId, SortKey::AverageBadge] {
+            let sql = build_query(
+                BulkMatchMetadataQuery {
+                    include_info: true,
+                    order_by,
+                    limit: 50,
+                    ..BulkMatchMetadataQuery::default()
+                },
+                None,
+            )
+            .expect("query should build");
+            assert!(!sql.contains("min(start_time)"), "{order_by:?}: {sql}");
+            assert!(!sql.contains("max(start_time)"), "{order_by:?}: {sql}");
+        }
     }
 
     #[test]
