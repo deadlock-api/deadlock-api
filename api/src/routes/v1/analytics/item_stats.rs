@@ -1367,16 +1367,13 @@ fn build_query(query: &ItemStatsQuery) -> String {
         .enemy_hero_ids
         .as_deref()
         .filter(|ids| !ids.is_empty());
-    // Until the backfill of `enemy_hero_ids` and the v4 projection reaches the oldest partition,
-    // only windows that start in backfilled partitions read the column.
-    let enemy_column = min_unix_timestamp.is_some_and(|t| t >= ENEMY_HERO_IDS_SINCE_UNIX_TIMESTAMP);
     let (enemy_cte, enemy_prewhere) = if let Some(ids) = enemy_hero_ids {
         let unique_ids: Vec<u32> = ids.iter().copied().sorted().dedup().collect();
         let all_match = query.enemy_hero_ids_all_match == Some(true);
         let same_lane = query.same_lane_filter == Some(true);
         let enemy_networth =
             query.min_enemy_networth.is_some() || query.max_enemy_networth.is_some();
-        if same_lane || enemy_networth || !enemy_column {
+        if same_lane || enemy_networth {
             enemy_team_semi_join(&scope_filters, &unique_ids, all_match, same_lane, query)
         } else {
             // Every row carries its opposing team's heroes in `enemy_hero_ids` (sorted, distinct;
@@ -1405,40 +1402,6 @@ fn build_query(query: &ItemStatsQuery) -> String {
      * -41% CPU, -54% memory.
      */
     let enemy_bucket = query.bucket == BucketQuery::EnemyHero;
-    // Windows that start before the backfilled partitions join the buyer rows to per-(match,
-    // team) rosters built from a second scan of the buyer's matches.
-    let roster_cte = (enemy_bucket && !enemy_column).then(|| {
-        #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
-        let account_ids = with_legacy_id(query.account_ids.as_deref(), query.account_id);
-        let buyer_matches = [
-            (!hero_ids.is_empty()).then(|| format!("hero_id IN ({})", id_list(&hero_ids))),
-            (!account_ids.is_empty())
-                .then(|| format!("account_id IN ({})", id_list(&account_ids))),
-        ]
-        .into_iter()
-        .flatten()
-        .join(" AND ");
-        let prefilter = if buyer_matches.is_empty() {
-            String::new()
-        } else {
-            format!(
-                "
-            AND match_id IN (
-                SELECT match_id FROM match_player
-                WHERE {scope_filters} AND {buyer_matches}
-            )"
-            )
-        };
-        format!(
-            "t_enemy_rosters AS (
-        SELECT match_id * 2 + (team = 'Team1') AS team_key, groupUniqArray(hero_id) AS enemy_hero_ids
-        FROM match_player
-        WHERE {scope_filters}
-            AND team IN ('Team0', 'Team1'){prefilter}
-        GROUP BY team_key
-    )"
-        )
-    });
 
     /* ---------- final query ----------
      *
@@ -1489,7 +1452,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     // prunes: those matches are spread over every granule. Not building that index keeps the
     // same rows and bytes. Measured on hero vs enemy hero weekly buckets: -36% wall, -17% CPU,
     // -10% memory; on the base-table no-hero shape no significant change.
-    if !enemy_cte.is_empty() || roster_cte.is_some() {
+    if !enemy_cte.is_empty() {
         settings.push("use_index_for_in_with_subqueries = 0");
     }
     let settings_clause = settings.join(", ");
@@ -1582,8 +1545,6 @@ fn build_query(query: &ItemStatsQuery) -> String {
     if !enemy_cte.is_empty() {
         ctes.push(enemy_cte);
     }
-    let uses_rosters = roster_cte.is_some();
-    ctes.extend(roster_cte);
     let with_clause = if ctes.is_empty() {
         String::new()
     } else {
@@ -1598,16 +1559,7 @@ ARRAY JOIN
     );
     // The enemy hero bucket fans the buyer rows out over their enemy heroes. Its bucket only
     // reads `enemy_hero_id`, so the scan keeps just the measures' columns.
-    let from_clause = if uses_rosters {
-        format!(
-            "(
-    SELECT match_id * 2 + (team = 'Team0') AS team_key, won, account_id, duration_s, item_id, buy_time, sold_time
-    FROM {scan}
-) AS buys
-INNER JOIN t_enemy_rosters USING team_key
-ARRAY JOIN enemy_hero_ids AS enemy_hero_id"
-        )
-    } else if enemy_bucket {
+    let from_clause = if enemy_bucket {
         format!(
             "(
     SELECT won, account_id, duration_s, item_id, buy_time, sold_time, enemy_hero_ids
@@ -1647,12 +1599,6 @@ SETTINGS {settings_clause}
         "
     )
 }
-
-/// Start of the oldest `match_player` partition whose `enemy_hero_ids` are backfilled and whose
-/// parts all carry the `item_stats_by_hero_mode_badge_v4` projection (the backfill runs newest
-/// partition first, 2026-11-16). Earlier windows would read the unfilled column, and the base
-/// table for parts without v4.
-const ENEMY_HERO_IDS_SINCE_UNIX_TIMESTAMP: i64 = 1_786_532_666;
 
 /// The enemy filter for the shapes `enemy_hero_ids` alone can't answer: the enemy heroes' net
 /// worth and the buyer's lane are on the enemy rows, so those still list the enemy (match, team)
@@ -2245,46 +2191,11 @@ mod tests {
         );
     }
 
-    /// A window that starts in the partitions with `enemy_hero_ids` backfilled.
-    fn recent() -> ItemStatsQuery {
-        ItemStatsQuery {
-            min_unix_timestamp: Some(ENEMY_HERO_IDS_SINCE_UNIX_TIMESTAMP),
-            ..Default::default()
-        }
-    }
-
-    #[test]
-    fn enemy_filters_before_the_backfilled_partitions_keep_the_joins() {
-        for min_unix_timestamp in [None, Some(ENEMY_HERO_IDS_SINCE_UNIX_TIMESTAMP - 1)] {
-            let sql = build_query(&ItemStatsQuery {
-                enemy_hero_ids: Some(vec![66]),
-                min_unix_timestamp,
-                ..Default::default()
-            });
-            assert_valid_sql(&sql);
-            assert!(sql.contains(
-                "AND (match_id * 2 + (team = 'Team0')) IN (SELECT match_id * 2 + (enemy_team = 'Team1') FROM t_enemy_teams)\nWHERE true"
-            ));
-            assert!(!sql.contains("enemy_hero_ids,"));
-            assert!(sql.contains("use_index_for_in_with_subqueries = 0"));
-            let bucket = build_query(&ItemStatsQuery {
-                hero_ids: Some(vec![6]),
-                bucket: BucketQuery::EnemyHero,
-                min_unix_timestamp,
-                ..Default::default()
-            });
-            assert_valid_sql(&bucket);
-            assert!(bucket.contains("INNER JOIN t_enemy_rosters USING team_key"));
-            assert!(bucket.contains("AND hero_id IN (6)\n            )"));
-            assert!(bucket.contains("use_index_for_in_with_subqueries = 0"));
-        }
-    }
-
     #[test]
     fn enemy_hero_filter_tests_the_rows_enemy_hero_ids_in_prewhere() {
         let sql = build_query(&ItemStatsQuery {
             enemy_hero_ids: Some(vec![66]),
-            ..recent()
+            ..Default::default()
         });
         assert_valid_sql(&sql);
         assert!(!sql.contains("INNER JOIN"));
@@ -2294,13 +2205,13 @@ mod tests {
         assert!(!sql.contains("use_index_for_in_with_subqueries"));
         let any = build_query(&ItemStatsQuery {
             enemy_hero_ids: Some(vec![67, 66, 67]),
-            ..recent()
+            ..Default::default()
         });
         assert!(any.contains("AND hasAny(enemy_hero_ids, [66, 67])\nWHERE true"));
         let all_match = build_query(&ItemStatsQuery {
             enemy_hero_ids: Some(vec![66, 67]),
             enemy_hero_ids_all_match: Some(true),
-            ..recent()
+            ..Default::default()
         });
         assert!(all_match.contains("AND hasAll(enemy_hero_ids, [66, 67])\nWHERE true"));
 
@@ -2310,7 +2221,7 @@ mod tests {
             enemy_hero_ids: Some(vec![66, 67]),
             enemy_hero_ids_all_match: Some(true),
             min_enemy_networth: Some(10_000),
-            ..recent()
+            ..Default::default()
         });
         assert_valid_sql(&networth);
         assert!(networth.contains(
@@ -2638,7 +2549,7 @@ mod tests {
         assert!(
             build_query(&ItemStatsQuery {
                 enemy_hero_ids: Some(vec![6]),
-                ..recent()
+                ..Default::default()
             })
             .contains("optimize_use_projections = 0")
         );
