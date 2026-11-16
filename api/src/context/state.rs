@@ -20,6 +20,7 @@ use crate::services::data_dump::DataDump;
 use crate::services::data_dump::catalog::FooterSource;
 use crate::services::data_lake::{CatalogError, SnapshotCatalog};
 use crate::services::feature_flags::FeatureFlags;
+use crate::services::live_requests::LiveRequests;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::request_logger::RequestLogger;
 use crate::services::steam::client::SteamClient;
@@ -77,6 +78,8 @@ pub(crate) struct AppStateInner {
     pub(crate) assets_client: AssetsClient,
     pub(crate) rate_limit_client: RateLimitClient,
     pub(crate) request_logger: Arc<RequestLogger>,
+    /// Sampled feed of served requests for the website's live map.
+    pub(crate) live_requests: Arc<LiveRequests>,
     pub(crate) batchers: Batchers,
     pub(crate) steam_search_index: SteamSearchIndex,
     pub(crate) version_store: VersionStore,
@@ -198,6 +201,14 @@ impl AppState {
         // Create a Request Logger
         debug!("Creating Request Logger");
         let request_logger: Arc<RequestLogger> = insert_batcher(&ch_client, "request_logs");
+        let live_requests = Arc::new(LiveRequests::default());
+        live_requests.spawn_ticker();
+        if let (Some(token), Some(zone)) = (
+            config.cloudflare.analytics_token.clone(),
+            config.cloudflare.zone_id.clone(),
+        ) {
+            live_requests.spawn_edge_poller(http_client.clone(), token, zone);
+        }
 
         // Create batchers
         debug!("Creating batchers");
@@ -287,6 +298,7 @@ impl AppState {
             assets_client,
             rate_limit_client,
             request_logger,
+            live_requests,
             batchers,
             steam_search_index,
             version_store,

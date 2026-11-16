@@ -5,6 +5,7 @@ pub(super) mod ch_caller;
 pub(super) mod ch_cost;
 pub(super) mod cors;
 pub(super) mod feature_flags;
+pub(super) mod live_requests;
 pub(super) mod rate_limit;
 pub(super) mod request_id;
 pub(super) mod track_requests;

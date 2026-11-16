@@ -281,6 +281,19 @@ pub(crate) struct Config {
     pub(crate) data_dump: DataDumpConfig,
     #[serde(default)]
     pub(crate) live_query: LiveQueryConfig,
+    #[serde(default)]
+    pub(crate) cloudflare: CloudflareConfig,
+}
+
+/// Cloudflare analytics for the live request map's edge traffic (`CLOUDFLARE_ANALYTICS_TOKEN`,
+/// `CLOUDFLARE_ZONE_ID`). Without both, the map shows only the requests that reach the API.
+#[derive(Deserialize, Debug, Clone, Default)]
+pub(crate) struct CloudflareConfig {
+    /// API token with Analytics: Read on the zone.
+    #[serde(default)]
+    pub(crate) analytics_token: Option<String>,
+    #[serde(default)]
+    pub(crate) zone_id: Option<String>,
 }
 
 impl Config {

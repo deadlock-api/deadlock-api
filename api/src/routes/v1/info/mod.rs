@@ -1,4 +1,5 @@
 pub mod health;
+pub mod live_requests;
 pub mod route;
 
 use utoipa::OpenApi;
@@ -18,4 +19,5 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
         .routes(routes!(health::health_check))
         .routes(routes!(route::info))
+        .routes(routes!(live_requests::live_requests))
 }

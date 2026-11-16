@@ -29,6 +29,11 @@ pub(crate) fn spawn_controller(ch_client: clickhouse::Client) {
     LazyLock::force(&CH_ADMISSION).spawn_controller(ch_client, ControllerConfig::default());
 }
 
+/// Queries running and queued right now, and the current slot limit.
+pub(crate) fn load() -> (clickhouse_utils::admission::Load, usize) {
+    (CH_ADMISSION.load(), CH_ADMISSION.limit())
+}
+
 /// Waits for a query slot for the current request's client (see [`CH_CALLER`]).
 pub(crate) async fn acquire() -> Result<Permit<'static>, Busy> {
     let caller = CH_CALLER

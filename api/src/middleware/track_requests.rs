@@ -65,7 +65,8 @@ pub(crate) async fn track_requests(
     let graphql = response.extensions_mut().remove::<GraphQLRequestLog>();
     let ch_cost = response
         .extensions_mut()
-        .remove::<ChCost>()
+        .get::<ChCost>()
+        .copied()
         .unwrap_or_default();
     let status_code = response.status().as_u16();
     let headers = response.headers();

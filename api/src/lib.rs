@@ -66,6 +66,7 @@ use crate::middleware::ch_caller::scope_ch_caller;
 use crate::middleware::ch_cost::ch_cost_headers;
 use crate::middleware::cors;
 use crate::middleware::feature_flags::feature_flags;
+use crate::middleware::live_requests::live_requests;
 use crate::middleware::request_id::request_id;
 use crate::middleware::track_requests::track_requests;
 use crate::services::patreon::verification_job::PatreonVerificationJob;
@@ -174,6 +175,7 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .layer(from_fn_with_state(state.clone(), scope_ch_caller))
         .layer(from_fn(ch_cost_headers))
         .layer(from_fn_with_state(state.clone(), track_requests))
+        .layer(from_fn_with_state(state.clone(), live_requests))
         .layer(
             CacheControlLayer::new(Duration::from_secs(DEFAULT_CACHE_TIME))
                 .with_stale_while_revalidate(Duration::from_secs(DEFAULT_CACHE_TIME)),
