@@ -18,8 +18,9 @@ const tooltipContentClassName = cn(
   "z-50 w-fit animate-in text-xs text-balance fade-in-0 zoom-in-95",
 );
 
+// The surface's fill, with the surface's border on the two edges that point away from the card.
 const tooltipArrowClassName =
-  "relative bottom-0.5 z-50 size-2.5 -translate-y-1/2 rotate-45 rounded-xs bg-foreground fill-foreground";
+  "relative bottom-0.5 z-50 size-2.5 -translate-y-1/2 rotate-45 rounded-xs border-e border-b border-border bg-popover";
 
 /**
  * The tooltip surface for chart tooltips, which are positioned by Recharts. A polite live region: the arrow keys move
@@ -206,7 +207,9 @@ function Tooltip({
                 )}
               >
                 {content}
-                <HoverCardPrimitive.Arrow className={tooltipArrowClassName} />
+                <HoverCardPrimitive.Arrow asChild>
+                  <span aria-hidden="true" className={tooltipArrowClassName} />
+                </HoverCardPrimitive.Arrow>
               </HoverCardPrimitive.Content>
             </HoverCardPrimitive.Portal>
           )}
@@ -231,7 +234,9 @@ function Tooltip({
               className={cn(tooltipContentClassName, "origin-(--radix-tooltip-content-transform-origin)")}
             >
               {content}
-              <TooltipPrimitive.Arrow className={tooltipArrowClassName} />
+              <TooltipPrimitive.Arrow asChild>
+                <span aria-hidden="true" className={tooltipArrowClassName} />
+              </TooltipPrimitive.Arrow>
             </TooltipPrimitive.Content>
           </TooltipPrimitive.Portal>
         )}
