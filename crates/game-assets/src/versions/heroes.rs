@@ -788,6 +788,9 @@ pub enum HeroType {
     Marksman,
     #[strum(serialize = "ECitadelHeroType_Mystic")]
     Mystic,
+    /// Since the 2026-10-30 update.
+    #[strum(serialize = "ECitadelHeroType_Healer")]
+    Healer,
 }
 
 #[derive(Debug, Deserialize, Serialize, Clone, Copy, PartialEq, Eq, EnumString)]
@@ -1050,7 +1053,11 @@ fn transform(
         tags,
         gun_tag,
         hideout_rich_presence,
-        hero_type: r.hero_type.as_deref().and_then(|s| s.parse().ok()),
+        hero_type: r.hero_type.as_deref().and_then(|s| {
+            s.parse()
+                .inspect_err(|_| tracing::warn!("{class_name}: unknown hero type {s}"))
+                .ok()
+        }),
         gender,
         search_name,
         popular_items,
