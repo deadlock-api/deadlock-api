@@ -75,9 +75,42 @@ for name in manifest["tables"]:
 
 print(con.sql("SELECT count(*) FROM leaderboard"))
 
-# pandas / polars work on single files directly:
-#   pd.read_parquet(urls("leaderboard")[0])
-#   pl.scan_parquet(urls("match_player")).filter(pl.col("match_id") > 105_000_000)`;
+# pandas works on single files directly:
+#   pd.read_parquet(urls("leaderboard")[0])`;
+
+const POLARS_EXAMPLE = `# pip install polars requests
+import polars as pl
+import requests
+
+manifest = requests.get("${MANIFEST_URL}").json()
+base = manifest["public_url"]
+
+def urls(table: str, partition: int | None = None) -> list[str]:
+    """Parquet URLs of a table; for match_player optionally only the files holding one match_id // 1_000_000 partition."""
+    t = manifest["tables"][table]
+    files = [f for f in t["files"] if t["policy"] == "snapshot" or f.get("generation", 0) == t["generation"]]
+    if partition is not None:
+        files = [f for f in files if f.get("partition") == partition or str(partition) in f.get("rows_by_partition", {})]
+    return [f"{base}/{f['key']}" for f in files]
+
+# Snapshot tables are a single file
+leaderboard = pl.read_parquet(urls("leaderboard")[0])
+print(leaderboard.head())
+
+# match_player: scan lazily, so only the needed columns and row groups are downloaded
+matches = (
+    pl.scan_parquet(urls("match_player", partition=136), missing_columns="insert")
+    .filter(pl.col("match_id").is_between(136_000_000, 136_009_999))
+    .select("match_id", "account_id", "hero_id", "kills", "deaths", "won", "created_at")
+    # base + newer delta can hold the same row: keep the newest per (match_id, account_id)
+    .sort("created_at")
+    .unique(["match_id", "account_id"], keep="last")
+    .group_by("hero_id")
+    .agg(games=pl.len(), win_rate=pl.col("won").mean(), kills=pl.col("kills").mean())
+    .sort("games", descending=True)
+    .collect()
+)
+print(matches)`;
 
 const CURL_EXAMPLE = `# List the tables and their files
 curl -s ${MANIFEST_URL} | jq '.tables | map_values({policy, status, files: (.files | length)})'
@@ -106,6 +139,7 @@ const STATIC_TABS = [
   { id: "mcp", label: "MCP Server (AI assistants)", language: "bash", code: "" },
   { id: "duckdb", label: "DuckDB / DuckLake", language: "sql", code: DUCKLAKE_EXAMPLE },
   { id: "python", label: "Python", language: "python", code: PYTHON_EXAMPLE },
+  { id: "polars", label: "Polars", language: "python", code: POLARS_EXAMPLE },
   { id: "manifest", label: "Manifest", language: "json", code: MANIFEST_EXAMPLE },
   { id: "curl", label: "curl", language: "bash", code: CURL_EXAMPLE },
   { id: "js", label: "JavaScript", language: "javascript", code: JS_EXAMPLE },
