@@ -1,3 +1,5 @@
+use core::ops::Range;
+use core::sync::atomic::{AtomicUsize, Ordering};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
@@ -27,7 +29,7 @@ const BATCH_SIZE: usize = 50;
 /// list when done with it, so a long claim only delays the matches of a worker that died.
 const CLAIM_TTL_SECS: u64 = 75 * 60;
 const POOL_LIMIT: usize = 200_000;
-/// Pool entries the claim script walks per call.
+/// Pool entries the claim script walks per call. A call holds Redis for ~10-30 ms.
 const CLAIM_SCAN_CHUNK: usize = 1_000;
 const CLAIM_PREFIX: &str = "matches_to_fetch:claimed:";
 /// How often a match was handed out while still pending, keyed by match id. A successful
@@ -196,6 +198,32 @@ struct PoolEntry {
     requested: bool,
 }
 
+/// One build of the pending pool, and where the walks over it left off.
+#[derive(Debug, Default)]
+struct PendingPool {
+    entries: Vec<PoolEntry>,
+    /// Index just past the last match a walk claimed. Everything before it was claimed or
+    /// skipped (held by another worker, or out of handouts) when that walk passed, so the next
+    /// walk starts here instead of re-checking the pool's head: with tens of thousands of
+    /// matches held at a time, every request used to walk ~30 chunks (2026-11-16: global
+    /// to-fetch p50 ~360 ms, all of Redis' slow log). A match before it that is released
+    /// meanwhile waits for the next build, at most the pool's 60 s cache.
+    resume_at: AtomicUsize,
+}
+
+/// The pool's index ranges in walk order, [`CLAIM_SCAN_CHUNK`] entries each: from `start` to
+/// the end, then from the beginning up to `start`.
+fn walk_chunks(len: usize, start: usize) -> impl Iterator<Item = Range<usize>> {
+    let start = start.min(len);
+    let chunks = |range: Range<usize>| {
+        range
+            .clone()
+            .step_by(CLAIM_SCAN_CHUNK)
+            .map(move |from| from..from.saturating_add(CLAIM_SCAN_CHUNK).min(range.end))
+    };
+    chunks(start..len).chain(chunks(0..start))
+}
+
 /// Cache key of [`pending_pool`]: the pool depends on the prioritized accounts.
 fn pool_key(prioritized: &[u32]) -> u64 {
     use core::hash::{BuildHasher as _, BuildHasherDefault};
@@ -218,7 +246,7 @@ fn pool_key(prioritized: &[u32]) -> u64 {
 async fn pending_pool(
     ch_client: &clickhouse::Client,
     prioritized: &[u32],
-) -> clickhouse::error::Result<Arc<Vec<PoolEntry>>> {
+) -> clickhouse::error::Result<Arc<PendingPool>> {
     let prio = if prioritized.is_empty() {
         "SELECT toUInt64(0) AS match_id WHERE 0".to_owned()
     } else {
@@ -249,7 +277,10 @@ async fn pending_pool(
          SETTINGS log_comment = 'matches_to_fetch_pool'"
     );
     let entries: Vec<PoolEntry> = ch_client.query(&query).fetch_all_tracked().await?;
-    Ok(Arc::new(entries))
+    Ok(Arc::new(PendingPool {
+        entries,
+        resume_at: AtomicUsize::new(0),
+    }))
 }
 
 #[cached(
@@ -287,14 +318,14 @@ pub(super) struct ToFetchQuery {
 }
 
 /// Claims up to `needed` of `entries` for `token` in one script call, skipping matches another
-/// worker holds or that used up their handouts. Returns each claimed entry with its handout
-/// count, in pool order.
-async fn claim_chunk<'a>(
+/// worker holds or that used up their handouts. Returns each claimed entry's index in
+/// `entries` with its handout count, in pool order.
+async fn claim_chunk(
     conn: &mut redis::aio::ConnectionManager,
-    entries: &'a [PoolEntry],
+    entries: &[PoolEntry],
     token: &str,
     needed: usize,
-) -> redis::RedisResult<Vec<(&'a PoolEntry, u32)>> {
+) -> redis::RedisResult<Vec<(usize, u32)>> {
     let mut cmd = redis::cmd("EVAL");
     cmd.arg(CLAIM_SCRIPT).arg(entries.len().saturating_mul(2));
     for entry in entries {
@@ -312,8 +343,8 @@ async fn claim_chunk<'a>(
         .0
         .iter()
         .filter_map(|&[index, handouts]| {
-            let entry = entries.get(usize::try_from(index).ok()?.checked_sub(1)?)?;
-            Some((entry, u32::try_from(handouts).unwrap_or(u32::MAX)))
+            let index = usize::try_from(index).ok()?.checked_sub(1)?;
+            (index < entries.len()).then(|| (index, u32::try_from(handouts).unwrap_or(u32::MAX)))
         })
         .collect())
 }
@@ -351,21 +382,31 @@ pub(super) async fn matches_to_fetch(
     let prioritized = prioritized_account_ids(&state.pg_client).await;
     let pool = pending_pool(&state.ch_client_ro, prioritized.as_slice()).await?;
 
-    // Walk the pool in priority order, skipping matches another worker has claimed.
-    // The claims carry this request's token, so a failed chunk can release exactly its own.
+    // Walk the pool in priority order from where the last walk left off, skipping matches
+    // another worker has claimed. The claims carry this request's token, so a failed chunk
+    // can release exactly its own.
     let token_id = Uuid::new_v4();
     let token = token_id.to_string();
     let mut claimed: Vec<u64> = Vec::with_capacity(limit);
     let mut claimed_requested: Vec<u64> = Vec::new();
     let mut abandoned: Vec<u64> = Vec::new();
-    for entries in pool.chunks(CLAIM_SCAN_CHUNK) {
+    let mut resume_at = None;
+    let start = pool.resume_at.load(Ordering::Relaxed);
+    for range in walk_chunks(pool.entries.len(), start) {
         let needed = limit.saturating_sub(claimed.len());
         if needed == 0 {
             break;
         }
+        let Some(entries) = pool.entries.get(range.clone()) else {
+            break;
+        };
         match claim_chunk(&mut conn, entries, &token, needed).await {
             Ok(chunk_claims) => {
-                for (entry, handouts) in chunk_claims {
+                for (index, handouts) in chunk_claims {
+                    let Some(entry) = entries.get(index) else {
+                        continue;
+                    };
+                    resume_at = Some(range.start.saturating_add(index).saturating_add(1));
                     claimed.push(entry.match_id);
                     if entry.requested {
                         claimed_requested.push(entry.match_id);
@@ -389,6 +430,11 @@ pub(super) async fn matches_to_fetch(
                 break;
             }
         }
+    }
+    // Concurrent walks race here; whichever stores last wins, which at worst re-checks a
+    // stretch of held matches.
+    if let Some(resume_at) = resume_at {
+        pool.resume_at.store(resume_at, Ordering::Relaxed);
     }
     if !abandoned.is_empty() {
         debug!(?abandoned, "giving up on requested matches");
@@ -630,8 +676,8 @@ mod tests {
                 requested: i % 2 == 0,
             })
             .collect();
-        let ids = |claims: &[(&PoolEntry, u32)]| -> Vec<u64> {
-            claims.iter().map(|(e, _)| e.match_id).collect()
+        let ids = |claims: &[(usize, u32)]| -> Vec<u64> {
+            claims.iter().map(|&(i, _)| entries[i].match_id).collect()
         };
         // Another worker holds the first match; the second used up its handouts.
         let _: () = redis::cmd("SET")
@@ -662,11 +708,9 @@ mod tests {
             assert_eq!(again[0].1, handouts);
         }
         release_claims(&mut conn, &[base + 2], "a").await;
-        assert!(
-            claim_chunk(&mut conn, &entries, "a", 10)
-                .await
-                .unwrap()
-                .is_empty()
+        assert_eq!(
+            claim_chunk(&mut conn, &entries, "a", 10).await.unwrap(),
+            Vec::<(usize, u32)>::new()
         );
         let ttl: i64 = redis::cmd("TTL")
             .arg(format!("{HANDOUT_PREFIX}{}", base + 2))
@@ -766,6 +810,26 @@ mod tests {
             .await
             .unwrap();
         assert!(ttl > 0, "a refund keeps the counter's expiry");
+    }
+
+    #[test]
+    fn walks_resume_where_the_last_one_left_off_then_wrap() {
+        let walk = |len, start| walk_chunks(len, start).collect::<Vec<_>>();
+        assert_eq!(walk(2_500, 0), [0..1_000, 1_000..2_000, 2_000..2_500]);
+        assert_eq!(
+            walk(2_500, 1_200),
+            [1_200..2_200, 2_200..2_500, 0..1_000, 1_000..1_200]
+        );
+        // Every entry is visited exactly once.
+        for (len, start) in [(2_500, 1_200), (999, 998), (3_000, 3_000), (10, 50), (0, 0)] {
+            let mut seen: Vec<usize> = walk(len, start).into_iter().flatten().collect();
+            seen.sort_unstable();
+            assert_eq!(
+                seen,
+                (0..len).collect::<Vec<_>>(),
+                "len {len}, start {start}"
+            );
+        }
     }
 
     fn report(attempts: &[(u64, AttemptResult)]) -> ReleaseReport {
