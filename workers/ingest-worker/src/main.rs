@@ -43,7 +43,9 @@ use valveprotos::deadlock::{
     CMsgMatchMetaData, CMsgMatchMetaDataContents, CMsgMatchMetaDataContentsPatched,
 };
 
-use crate::models::clickhouse_match_metadata::{ClickhouseMatchPlayer, MatchShared};
+use crate::models::clickhouse_match_metadata::{
+    ClickhouseMatchPlayer, MatchShared, set_enemy_hero_ids,
+};
 use crate::models::clickhouse_player_match_history::PlayerMatchHistoryEntry;
 
 mod models;
@@ -683,7 +685,7 @@ fn build_parsed_match(match_info: &MatchInfo) -> ParsedMatch {
 /// Build the per-player Clickhouse rows for a parsed match.
 fn build_ch_players(match_info: &MatchInfo) -> Vec<ClickhouseMatchPlayer> {
     let shared = MatchShared::new(match_info);
-    match_info
+    let mut rows: Vec<ClickhouseMatchPlayer> = match_info
         .players
         .iter()
         .filter(|p| p.hero_id.is_some_and(|h| h > 0) && is_identified(p))
@@ -695,7 +697,9 @@ fn build_ch_players(match_info: &MatchInfo) -> Vec<ClickhouseMatchPlayer> {
             )
                 .into()
         })
-        .collect()
+        .collect();
+    set_enemy_hero_ids(&mut rows);
+    rows
 }
 
 /// Try to find a match file in processed/ first, then failed/, across all known extensions.
@@ -871,6 +875,51 @@ async fn move_object(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn enemy_hero_ids_list_the_written_rows_of_the_other_team() {
+        use valveprotos::deadlock::ECitadelLobbyTeam;
+        let player = |account_id, hero_id, team: ECitadelLobbyTeam| Players {
+            account_id: Some(account_id),
+            hero_id: Some(hero_id),
+            team: Some(team as i32),
+            ..Default::default()
+        };
+        let (t0, t1) = (
+            ECitadelLobbyTeam::KECitadelLobbyTeamTeam0,
+            ECitadelLobbyTeam::KECitadelLobbyTeamTeam1,
+        );
+        let match_info = MatchInfo {
+            match_id: Some(1),
+            players: vec![
+                player(1, 7, t0),
+                player(2, 3, t0),
+                player(3, 50, t1),
+                player(4, 12, t1),
+                // A repeated hero is listed once.
+                player(5, 12, t1),
+                // Anonymous rows aren't written, so their hero isn't an enemy either.
+                player(0, 66, t1),
+                player(6, 9, ECitadelLobbyTeam::KECitadelLobbyTeamSpectator),
+            ],
+            ..Default::default()
+        };
+        let enemies: Vec<(u32, Vec<u8>)> = build_ch_players(&match_info)
+            .into_iter()
+            .map(|p| (p.account_id, p.enemy_hero_ids))
+            .collect();
+        assert_eq!(
+            enemies,
+            [
+                (1, vec![12, 50]),
+                (2, vec![12, 50]),
+                (3, vec![3, 7]),
+                (4, vec![3, 7]),
+                (5, vec![3, 7]),
+                (6, vec![]),
+            ]
+        );
+    }
 
     #[test]
     fn anonymous_players_are_not_ingested() {

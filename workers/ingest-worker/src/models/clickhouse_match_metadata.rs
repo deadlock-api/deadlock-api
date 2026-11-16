@@ -365,6 +365,9 @@ pub(crate) struct ClickhouseMatchPlayer {
     pub player_rank_initial_demotion_protection_games: Option<u32>,
     pub player_rank_consumed_demotion_protection: Option<bool>,
     pub player_rank_initial_win_streak: Option<u32>,
+    /// Sorted, distinct heroes of the opposing team's rows written for this match (empty for
+    /// spectators). Filled by [`set_enemy_hero_ids`] once every row of the match is built.
+    pub enemy_hero_ids: Vec<u8>,
 }
 
 /// Match-level average badge, in the `tier * 10 + subrank` encoding.
@@ -1020,7 +1023,33 @@ impl From<(&MatchShared<'_>, bool, &Players)> for ClickhouseMatchPlayer {
             player_rank_initial_win_streak: value
                 .player_rank_data
                 .and_then(|r| r.initial_win_streak),
+            enemy_hero_ids: Vec::new(),
         }
+    }
+}
+
+/// Fills `enemy_hero_ids` from the rows of one match. Only the rows that are written count,
+/// so the column agrees with what a query over `match_player` sees as the other team, and with
+/// the backfill that derived it from the table for older matches.
+pub(crate) fn set_enemy_hero_ids(rows: &mut [ClickhouseMatchPlayer]) {
+    let team_heroes = |team: &Team| -> Vec<u8> {
+        let mut heroes: Vec<u8> = rows
+            .iter()
+            .filter(|r| &r.team == team)
+            .map(|r| r.hero_id)
+            .collect();
+        heroes.sort_unstable();
+        heroes.dedup();
+        heroes
+    };
+    let team0 = team_heroes(&Team::Team0);
+    let team1 = team_heroes(&Team::Team1);
+    for row in rows {
+        row.enemy_hero_ids = match row.team {
+            Team::Team0 => team1.clone(),
+            Team::Team1 => team0.clone(),
+            Team::Spectator => Vec::new(),
+        };
     }
 }
 
