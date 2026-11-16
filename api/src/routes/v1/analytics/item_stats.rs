@@ -1369,110 +1369,39 @@ fn build_query(query: &ItemStatsQuery) -> String {
         .filter(|ids| !ids.is_empty());
     let (enemy_cte, enemy_prewhere) = if let Some(ids) = enemy_hero_ids {
         let unique_ids: Vec<u32> = ids.iter().copied().sorted().dedup().collect();
-        let mut enemy_having = vec![];
-        if query.enemy_hero_ids_all_match == Some(true) {
-            enemy_having.push(format!("uniqExact(hero_id) = {}", unique_ids.len()));
-        }
-        if let Some(v) = query.min_enemy_networth {
-            enemy_having.push(format!("min(net_worth) >= {v}"));
-        }
-        if let Some(v) = query.max_enemy_networth {
-            enemy_having.push(format!("max(net_worth) <= {v}"));
-        }
+        let all_match = query.enemy_hero_ids_all_match == Some(true);
         let same_lane = query.same_lane_filter == Some(true);
-        // Without a HAVING or the lanes, the CTE only lists the enemy (match, team) pairs, and the
-        // semi-join's IN set dedups them itself: the GROUP BY hashed every enemy row once more.
-        // Measured on a buyer hero vs five enemy heroes over 30 days: -9% CPU, -9% memory,
-        // identical rows; no significant change with a single enemy hero.
-        let enemy_group_by = if enemy_having.is_empty() && !same_lane {
-            String::new()
-        } else if enemy_having.is_empty() {
-            "\n        GROUP BY match_id, team".to_owned()
+        let enemy_networth =
+            query.min_enemy_networth.is_some() || query.max_enemy_networth.is_some();
+        if same_lane || enemy_networth {
+            enemy_team_semi_join(&scope_filters, &unique_ids, all_match, same_lane, query)
         } else {
-            format!(
-                "\n        GROUP BY match_id, team\n        HAVING {}",
-                enemy_having.join(" AND ")
-            )
-        };
-        let lanes_col = if same_lane {
-            ",\n            groupUniqArray(assigned_lane) AS enemy_lanes"
-        } else {
-            ""
-        };
-        let cte = format!(
-            "t_enemy_teams AS (
-        SELECT
-            match_id,
-            team AS enemy_team{lanes_col}
-        FROM match_player
-        WHERE {scope_filters}
-            AND team IN ('Team0', 'Team1')
-            AND hero_id IN ({}){enemy_group_by}
-    )",
-            id_list(&unique_ids)
-        );
-        // A semi-join on (match, opposing team[, lane]) instead of `INNER JOIN t_enemy_teams`:
-        // the join hashed every row of the window before discarding the buyer's own team,
-        // while the IN set is evaluated in PREWHERE, so the item arrays are only read for
-        // rows on the enemy side (measured -25% CPU, -21% memory, identical rows).
-        // The (match, team) pair packs into one integer like the enemy hero bucket's roster key:
-        // the buyer's `match_id * 2 + (team = 'Team0')` equals its enemy team's `match_id * 2 +
-        // (team = 'Team1')`, so the set holds a UInt64 instead of a (UInt64, String) tuple built by
-        // `if()` per row. Measured on no-buyer-hero 5-week windows: -6% CPU, -12% memory, identical
-        // rows; no significant change on the smaller same-lane shapes.
-        let semi_join = if same_lane {
-            "(match_id * 2 + (team = 'Team0'), assigned_lane) IN (SELECT match_id * 2 + (enemy_team = 'Team1'), arrayJoin(enemy_lanes) FROM t_enemy_teams)"
-        } else {
-            "(match_id * 2 + (team = 'Team0')) IN (SELECT match_id * 2 + (enemy_team = 'Team1') FROM t_enemy_teams)"
-        };
-        (cte, format!("\n        AND {semi_join}"))
+            // Every row carries its opposing team's heroes in `enemy_hero_ids` (sorted, distinct;
+            // filled at ingest), so the filter is a per-row test in PREWHERE: no second scan of
+            // the enemy heroes' rows and no IN set built before the scan. The hero-led projection
+            // `item_stats_by_hero_mode_badge_v4` stores the column. Measured locally on a buyer
+            // hero against the semi-join below, same rows: any of 6 enemies -13% CPU, -27% wall;
+            // 1 enemy -14% CPU, -26% wall; all of 3 -65% CPU, -41% wall. On prod the semi-join was
+            // about half the CPU of 90-day, 6-enemy requests.
+            let pred = match unique_ids.as_slice() {
+                [id] => format!("has(enemy_hero_ids, {id})"),
+                _ if all_match => format!("hasAll(enemy_hero_ids, [{}])", id_list(&unique_ids)),
+                _ => format!("hasAny(enemy_hero_ids, [{}])", id_list(&unique_ids)),
+            };
+            (String::new(), format!("\n        AND {pred}"))
+        }
     } else {
         (String::new(), String::new())
     };
 
     /* ---------- enemy hero bucket (optional) ----------
      *
-     * `bucket=enemy_hero` joins each buyer row to its opposing team's heroes and fans out over
-     * them. A (match, team) key packs into one integer: the buyer's `match_id * 2 + (team =
-     * 'Team0')` equals its enemy team's `match_id * 2 + (team = 'Team1')`. The rosters only cover
-     * the buyer hero's or account's matches. Measured on prod, one buyer hero over 30 days: 72
-     * CPU-s for every enemy at once, against ~340 CPU-s for the 43 single-enemy requests it
-     * replaces, with the same rows (`players` included). A multi-row join on a String team key
-     * cost 100 CPU-s and twice the memory.
+     * `bucket=enemy_hero` fans each buyer row out over its opposing team's heroes, which the row
+     * carries in `enemy_hero_ids`. Measured locally on a buyer hero against the previous join to
+     * per-(match, team) rosters built from a second scan of the buyer's matches: same rows,
+     * -41% CPU, -54% memory.
      */
     let enemy_bucket = query.bucket == BucketQuery::EnemyHero;
-    let roster_cte = enemy_bucket.then(|| {
-        #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
-        let account_ids = with_legacy_id(query.account_ids.as_deref(), query.account_id);
-        let buyer_matches = [
-            (!hero_ids.is_empty()).then(|| format!("hero_id IN ({})", id_list(&hero_ids))),
-            (!account_ids.is_empty())
-                .then(|| format!("account_id IN ({})", id_list(&account_ids))),
-        ]
-        .into_iter()
-        .flatten()
-        .join(" AND ");
-        let prefilter = if buyer_matches.is_empty() {
-            String::new()
-        } else {
-            format!(
-                "
-            AND match_id IN (
-                SELECT match_id FROM match_player
-                WHERE {scope_filters} AND {buyer_matches}
-            )"
-            )
-        };
-        format!(
-            "t_enemy_rosters AS (
-        SELECT match_id * 2 + (team = 'Team1') AS team_key, groupUniqArray(hero_id) AS enemy_hero_ids
-        FROM match_player
-        WHERE {scope_filters}
-            AND team IN ('Team0', 'Team1'){prefilter}
-        GROUP BY team_key
-    )"
-        )
-    });
 
     /* ---------- final query ----------
      *
@@ -1504,8 +1433,8 @@ fn build_query(query: &ItemStatsQuery) -> String {
      * (Originally this carve-out covered only account-only shapes; it was generalized to
      * all no-hero shapes after benchmarking the projection vs base-table access paths.)
      *
-     * An enemy hero filter counts too, even though the buyer side has no hero
-     * predicate: the enemy-team CTE selects on `hero_id`, which is exactly the
+     * An enemy filter that needs the enemy-team CTE (enemy net worth or same lane) counts too,
+     * even though the buyer side has no hero predicate: the CTE selects on `hero_id`, which is exactly the
      * projection's leading key, so it prunes to ~1.1k marks instead of ~38k. The
      * main ARRAY JOIN scan reads `upgrades.*`, which the projection does not
      * store, so it falls back to the base table on its own. With `corrupted_items`
@@ -1514,7 +1443,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
      * scan). Projections therefore stay off for those opt-in cases, and for `enhanced_items`
      * `exclude`/`only`, which read `items.*` too.
      */
-    if !has_buyer_hero_filter && (enemy_hero_ids.is_none() || use_items_arrays) {
+    if !has_buyer_hero_filter && (enemy_cte.is_empty() || use_items_arrays) {
         settings.push("optimize_use_projections = 0");
     }
     // The enemy semi-join's IN set holds every (match, team) the enemy heroes played in the
@@ -1523,9 +1452,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
     // prunes: those matches are spread over every granule. Not building that index keeps the
     // same rows and bytes. Measured on hero vs enemy hero weekly buckets: -36% wall, -17% CPU,
     // -10% memory; on the base-table no-hero shape no significant change.
-    // The enemy hero bucket's roster prefilter is the same kind of IN set (every match of the
-    // buyer hero in the window).
-    if enemy_hero_ids.is_some() || enemy_bucket {
+    if !enemy_cte.is_empty() {
         settings.push("use_index_for_in_with_subqueries = 0");
     }
     let settings_clause = settings.join(", ");
@@ -1618,7 +1545,6 @@ fn build_query(query: &ItemStatsQuery) -> String {
     if !enemy_cte.is_empty() {
         ctes.push(enemy_cte);
     }
-    ctes.extend(roster_cte);
     let with_clause = if ctes.is_empty() {
         String::new()
     } else {
@@ -1631,15 +1557,14 @@ ARRAY JOIN
 {prewhere_clause}WHERE {where_match_filters}{upgrade_filter}
     {player_filters}"
     );
-    // The enemy hero bucket aggregates the buyer rows joined to their enemy rosters. Its bucket
-    // only reads `enemy_hero_id`, so the scan keeps just the measures' columns.
+    // The enemy hero bucket fans the buyer rows out over their enemy heroes. Its bucket only
+    // reads `enemy_hero_id`, so the scan keeps just the measures' columns.
     let from_clause = if enemy_bucket {
         format!(
             "(
-    SELECT match_id * 2 + (team = 'Team0') AS team_key, won, account_id, duration_s, item_id, buy_time, sold_time
+    SELECT won, account_id, duration_s, item_id, buy_time, sold_time, enemy_hero_ids
     FROM {scan}
 ) AS buys
-INNER JOIN t_enemy_rosters USING team_key
 ARRAY JOIN enemy_hero_ids AS enemy_hero_id"
         )
     } else {
@@ -1673,6 +1598,74 @@ ORDER BY item_id, bucket
 SETTINGS {settings_clause}
         "
     )
+}
+
+/// The enemy filter for the shapes `enemy_hero_ids` alone can't answer: the enemy heroes' net
+/// worth and the buyer's lane are on the enemy rows, so those still list the enemy (match, team)
+/// pairs in a CTE and semi-join the buyer rows on them. Returns the CTE and the PREWHERE term.
+fn enemy_team_semi_join(
+    scope_filters: &str,
+    unique_ids: &[u32],
+    all_match: bool,
+    same_lane: bool,
+    query: &ItemStatsQuery,
+) -> (String, String) {
+    let mut enemy_having = vec![];
+    if all_match {
+        enemy_having.push(format!("uniqExact(hero_id) = {}", unique_ids.len()));
+    }
+    if let Some(v) = query.min_enemy_networth {
+        enemy_having.push(format!("min(net_worth) >= {v}"));
+    }
+    if let Some(v) = query.max_enemy_networth {
+        enemy_having.push(format!("max(net_worth) <= {v}"));
+    }
+    // Without a HAVING or the lanes, the CTE only lists the enemy (match, team) pairs, and the
+    // semi-join's IN set dedups them itself: the GROUP BY hashed every enemy row once more.
+    // Measured on a buyer hero vs five enemy heroes over 30 days: -9% CPU, -9% memory,
+    // identical rows; no significant change with a single enemy hero.
+    let enemy_group_by = if enemy_having.is_empty() && !same_lane {
+        String::new()
+    } else if enemy_having.is_empty() {
+        "\n        GROUP BY match_id, team".to_owned()
+    } else {
+        format!(
+            "\n        GROUP BY match_id, team\n        HAVING {}",
+            enemy_having.join(" AND ")
+        )
+    };
+    let lanes_col = if same_lane {
+        ",\n            groupUniqArray(assigned_lane) AS enemy_lanes"
+    } else {
+        ""
+    };
+    let cte = format!(
+        "t_enemy_teams AS (
+    SELECT
+        match_id,
+        team AS enemy_team{lanes_col}
+    FROM match_player
+    WHERE {scope_filters}
+        AND team IN ('Team0', 'Team1')
+        AND hero_id IN ({}){enemy_group_by}
+)",
+        id_list(unique_ids)
+    );
+    // A semi-join on (match, opposing team[, lane]) instead of `INNER JOIN t_enemy_teams`:
+    // the join hashed every row of the window before discarding the buyer's own team,
+    // while the IN set is evaluated in PREWHERE, so the item arrays are only read for
+    // rows on the enemy side (measured -25% CPU, -21% memory, identical rows).
+    // The (match, team) pair packs into one integer like the enemy hero bucket's roster key:
+    // the buyer's `match_id * 2 + (team = 'Team0')` equals its enemy team's `match_id * 2 +
+    // (team = 'Team1')`, so the set holds a UInt64 instead of a (UInt64, String) tuple built by
+    // `if()` per row. Measured on no-buyer-hero 5-week windows: -6% CPU, -12% memory, identical
+    // rows; no significant change on the smaller same-lane shapes.
+    let semi_join = if same_lane {
+        "(match_id * 2 + (team = 'Team0'), assigned_lane) IN (SELECT match_id * 2 + (enemy_team = 'Team1'), arrayJoin(enemy_lanes) FROM t_enemy_teams)"
+    } else {
+        "(match_id * 2 + (team = 'Team0')) IN (SELECT match_id * 2 + (enemy_team = 'Team1') FROM t_enemy_teams)"
+    };
+    (cte, format!("\n        AND {semi_join}"))
 }
 
 cached_ch_query! {
@@ -2199,27 +2192,46 @@ mod tests {
     }
 
     #[test]
-    fn enemy_hero_filter_is_a_prewhere_semi_join_not_a_join() {
+    fn enemy_hero_filter_tests_the_rows_enemy_hero_ids_in_prewhere() {
         let sql = build_query(&ItemStatsQuery {
             enemy_hero_ids: Some(vec![66]),
             ..Default::default()
         });
+        assert_valid_sql(&sql);
         assert!(!sql.contains("INNER JOIN"));
+        assert!(!sql.contains("t_enemy_teams"));
         assert!(sql.contains("PREWHERE match_mode IN ('Ranked', 'Unranked') AND 1=1 "));
-        assert!(sql.contains(
-            "AND (match_id * 2 + (team = 'Team0')) IN (SELECT match_id * 2 + (enemy_team = 'Team1') FROM t_enemy_teams)\nWHERE true"
-        ));
-        assert!(sql.contains("use_index_for_in_with_subqueries = 0"));
-        // The IN set dedups the enemy (match, team) pairs; only a HAVING or the lanes group them.
-        assert!(!sql.contains("GROUP BY match_id, team"));
+        assert!(sql.contains("AND has(enemy_hero_ids, 66)\nWHERE true"));
+        assert!(!sql.contains("use_index_for_in_with_subqueries"));
+        let any = build_query(&ItemStatsQuery {
+            enemy_hero_ids: Some(vec![67, 66, 67]),
+            ..Default::default()
+        });
+        assert!(any.contains("AND hasAny(enemy_hero_ids, [66, 67])\nWHERE true"));
         let all_match = build_query(&ItemStatsQuery {
             enemy_hero_ids: Some(vec![66, 67]),
             enemy_hero_ids_all_match: Some(true),
             ..Default::default()
         });
-        assert!(
-            all_match.contains("GROUP BY match_id, team\n        HAVING uniqExact(hero_id) = 2")
-        );
+        assert!(all_match.contains("AND hasAll(enemy_hero_ids, [66, 67])\nWHERE true"));
+
+        // The enemy heroes' net worth and the lanes are on the enemy rows: those keep the
+        // semi-join on the enemy (match, team) pairs.
+        let networth = build_query(&ItemStatsQuery {
+            enemy_hero_ids: Some(vec![66, 67]),
+            enemy_hero_ids_all_match: Some(true),
+            min_enemy_networth: Some(10_000),
+            ..Default::default()
+        });
+        assert_valid_sql(&networth);
+        assert!(networth.contains(
+            "GROUP BY match_id, team\n        HAVING uniqExact(hero_id) = 2 AND min(net_worth) >= 10000"
+        ));
+        assert!(networth.contains(
+            "AND (match_id * 2 + (team = 'Team0')) IN (SELECT match_id * 2 + (enemy_team = 'Team1') FROM t_enemy_teams)\nWHERE true"
+        ));
+        assert!(networth.contains("use_index_for_in_with_subqueries = 0"));
+        assert!(!networth.contains("enemy_hero_ids,"));
 
         let same_lane = build_query(&ItemStatsQuery {
             enemy_hero_ids: Some(vec![66]),
@@ -2323,7 +2335,7 @@ mod tests {
     }
 
     #[test]
-    fn enemy_hero_bucket_joins_buyers_to_their_enemy_rosters() {
+    fn enemy_hero_bucket_fans_buyers_out_over_their_enemy_hero_ids() {
         let query = ItemStatsQuery {
             hero_ids: Some(vec![6]),
             bucket: BucketQuery::EnemyHero,
@@ -2333,25 +2345,26 @@ mod tests {
         assert!(build_enemy_mv_query(&query).is_none());
         let sql = build_query(&query);
         assert_valid_sql(&sql);
-        assert!(sql.contains("t_enemy_rosters AS"));
-        assert!(sql.contains("SELECT match_id * 2 + (team = 'Team1') AS team_key"));
-        assert!(sql.contains("SELECT match_id * 2 + (team = 'Team0') AS team_key"));
-        assert!(sql.contains("AND hero_id IN (6)\n            )"));
-        assert!(sql.contains("INNER JOIN t_enemy_rosters USING team_key"));
-        assert!(sql.contains("ARRAY JOIN enemy_hero_ids AS enemy_hero_id"));
+        assert!(!sql.contains("t_enemy_rosters"));
+        assert!(!sql.contains("JOIN t_"));
+        assert!(sql.contains(
+            "SELECT won, account_id, duration_s, item_id, buy_time, sold_time, enemy_hero_ids\n"
+        ));
+        assert!(sql.contains(") AS buys\nARRAY JOIN enemy_hero_ids AS enemy_hero_id"));
+        assert!(sql.contains("AND hero_id IN (6)"));
         assert!(sql.contains("toUInt32(enemy_hero_id)    AS bucket"));
-        assert!(sql.contains("use_index_for_in_with_subqueries = 0"));
         // The hero-led projection serves the buyer scan.
         assert!(!sql.contains("optimize_use_projections = 0"));
 
-        // An enemy filter keeps its semi-join; the rosters still list the whole enemy team.
+        // An enemy filter is a PREWHERE test on the same column; the fan-out still lists the
+        // whole enemy team.
         let filtered = build_query(&ItemStatsQuery {
             enemy_hero_ids: Some(vec![50]),
             ..query.clone()
         });
         assert_valid_sql(&filtered);
-        assert!(filtered.contains("t_enemy_teams AS"));
-        assert!(filtered.contains("INNER JOIN t_enemy_rosters USING team_key"));
+        assert!(filtered.contains("AND has(enemy_hero_ids, 50)\nWHERE true"));
+        assert!(filtered.contains("ARRAY JOIN enemy_hero_ids AS enemy_hero_id"));
 
         let by_account = build_query(&ItemStatsQuery {
             hero_ids: None,
@@ -2359,7 +2372,8 @@ mod tests {
             ..query
         });
         assert_valid_sql(&by_account);
-        assert!(by_account.contains("AND account_id IN (12)\n            )"));
+        assert!(by_account.contains("account_id IN (12)"));
+        assert!(by_account.contains("ARRAY JOIN enemy_hero_ids AS enemy_hero_id"));
     }
 
     #[test]
@@ -2527,10 +2541,21 @@ mod tests {
             assert!(!sql.contains("upgrade_info"));
             assert_eq!(sql.contains("optimize_use_projections = 0"), !has_hero);
         }
-        // Enemy filter without a buyer hero: the default main scan reads upgrades.*
-        // (projection-ineligible), the opt-in one reads items.*, so projections go off.
+        // Enemy filter without a buyer hero: a plain one reads the base table (its column test
+        // has nothing for the hero-led projection to prune on), so projections go off. One
+        // that needs the enemy-team CTE keeps them for the CTE's `hero_id IN` scan while the
+        // default main scan reads upgrades.* (projection-ineligible); the opt-in one reads
+        // items.*, so projections go off.
+        assert!(
+            build_query(&ItemStatsQuery {
+                enemy_hero_ids: Some(vec![6]),
+                ..Default::default()
+            })
+            .contains("optimize_use_projections = 0")
+        );
         let enemy = ItemStatsQuery {
             enemy_hero_ids: Some(vec![6]),
+            same_lane_filter: Some(true),
             ..Default::default()
         };
         assert!(!build_query(&enemy).contains("optimize_use_projections"));
@@ -2760,6 +2785,7 @@ mod tests {
         let enemy = build_query(&ItemStatsQuery {
             corrupted_items: Some(CorruptedItemsFilter::Only),
             enemy_hero_ids: Some(vec![6]),
+            same_lane_filter: Some(true),
             min_unix_timestamp: Some(1_700_000_000),
             ..Default::default()
         });
