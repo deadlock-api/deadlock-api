@@ -739,8 +739,14 @@ fn build_weapon_info(w: &RawWeaponInfo) -> WeaponInfo {
     let standing_shot_spread_penalty = normalize_spread(w.standing_shot_spread_penalty.as_ref());
 
     let cycle_time = w.cycle_time;
-    let intra = w.intra_burst_cycle_time.unwrap_or(0.0);
     let burst = w.burst_shot_count.unwrap_or(1).max(1) as f64;
+    // Single-shot weapons (Paige, Doorman, ...) carry a stray intra-burst time
+    // the game ignores: the in-game stat panel shows them at 1 / cycle_time.
+    let intra = if burst > 1.0 {
+        w.intra_burst_cycle_time.unwrap_or(0.0)
+    } else {
+        0.0
+    };
 
     let shots_per_second = cycle_time.map(|ct| {
         let adj = burst * intra + ct;
@@ -1171,6 +1177,33 @@ mod tests {
     use super::*;
 
     const SNAPSHOT_VERSION: u32 = 6064;
+
+    #[test]
+    fn weapon_dps_matches_in_game_stats() {
+        // Paige: single shot with a stray intra-burst time; the game shows 64 DPS.
+        let paige = build_weapon_info(&RawWeaponInfo {
+            bullet_damage: Some(32.0),
+            bullets: Some(1),
+            burst_shot_count: Some(1),
+            cycle_time: Some(0.5),
+            intra_burst_cycle_time: Some(0.1),
+            ..Default::default()
+        });
+        assert_eq!(paige.shots_per_second, Some(2.0));
+        assert_eq!(paige.damage_per_second, Some(64.0));
+
+        // Paradox: 5-round bursts keep the full burst time, 0.66 s per burst.
+        let paradox = build_weapon_info(&RawWeaponInfo {
+            bullet_damage: Some(6.6),
+            bullets: Some(1),
+            burst_shot_count: Some(5),
+            cycle_time: Some(0.3),
+            intra_burst_cycle_time: Some(0.072),
+            ..Default::default()
+        });
+        let sps = paradox.shots_per_second.unwrap_or_default();
+        assert!((sps - 5.0 / 0.66).abs() < 1e-9, "{sps}");
+    }
 
     #[test]
     fn shop_filters_to_snake_case() {

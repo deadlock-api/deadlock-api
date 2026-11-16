@@ -1173,8 +1173,11 @@ const fn obj_health_phase_out(r: RawObjectiveHealthGrowthPhase) -> ObjectiveHeal
 fn weapon_info_out(r: RawWeaponInfo) -> WeaponInfo {
     let reload_duration = r.reload_duration_a.or(r.reload_duration_b);
     let cycle_time = r.cycle_time;
-    let intra_burst = r.intra_burst_cycle_time;
     let burst_shot_count = r.burst_shot_count;
+    // Like hero weapons: the game ignores the intra-burst time of single-shot weapons.
+    let intra_burst = r
+        .intra_burst_cycle_time
+        .filter(|_| burst_shot_count.unwrap_or(1) > 1);
     let clip_size = r.clip_size;
     let recoil_recov = r.recoil_shot_index_recovery_time_factor;
     let bullets = r.bullets;
