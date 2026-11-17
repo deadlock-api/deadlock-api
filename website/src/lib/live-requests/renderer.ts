@@ -3,9 +3,11 @@ import {
   EDGE_KINDS,
   type EdgeMinute,
   fitMap,
+  isLand,
   landPoints,
   type LiveBatch,
   type MapFrame,
+  onLand,
   ORIGIN,
   project,
   statusClass,
@@ -68,8 +70,13 @@ const PULSE_HALF_LIFE_MS = 350;
 const FRAME_MS = 15;
 /** Longest frame step the Cloudflare traffic is played out for, so a frame after a stall does not burst. */
 const MAX_STEP_MS = 250;
-/** How far around its data center a Cloudflare-served client is drawn, in degrees: the cloud of a city. */
-const EDGE_SPREAD = 2.5;
+/**
+ * How far around its data center a Cloudflare-served client is drawn, in degrees (one standard deviation of
+ * longitude; latitude 0.7 of it): the region it serves. Only points on land are kept.
+ */
+const EDGE_SPREAD = 10;
+/** Tries for a point on land before a client is drawn at its data center. */
+const LAND_TRIES = 20;
 
 function at(t: number, x0: number, y0: number, x1: number, y1: number): [number, number] {
   // A quadratic arc whose control point sits above the midpoint by a fifth of the distance.
@@ -100,6 +107,8 @@ export class LiveMapRenderer {
   /** Requests of each Cloudflare group owed but not yet drawn: fractions carried between frames. */
   private edgeOwed: number[] = [];
   private pulses = new Map<string, number>();
+  /** Where each data center is drawn on the current frame, moved onto the map's coast if it sits off it. */
+  private coloPoints = new Map<string, [number, number] | null>();
   private originPulse = 0;
   private raf = 0;
   private last = 0;
@@ -124,6 +133,7 @@ export class LiveMapRenderer {
       canvas.height = Math.round(height * this.dpr);
     }
     this.frame = fitMap(width, height);
+    this.coloPoints.clear();
     this.origin = project(this.frame, ORIGIN.lat, ORIGIN.lon);
     // Trips in flight were placed on the old frame.
     this.flights = [];
@@ -157,11 +167,11 @@ export class LiveMapRenderer {
     for (const r of batch.requests) {
       const points: number[] = [];
       const visited: string[] = [];
-      if (r.lat !== null && r.lon !== null) this.stop(points, ...project(this.frame, r.lat, r.lon));
+      if (r.lat !== null && r.lon !== null) this.stop(points, ...project(this.frame, ...onLand(r.lat, r.lon)));
       for (const code of [r.edge, r.hop]) {
-        const colo = code ? CLOUDFLARE_COLOS[code] : undefined;
-        if (!code || !colo) continue;
-        this.stop(points, ...project(this.frame, colo[0], colo[1]));
+        const at = code ? this.coloAt(code) : null;
+        if (!code || !at) continue;
+        this.stop(points, at[0], at[1]);
         if (!visited.includes(code)) visited.push(code);
       }
       this.stop(points, this.origin[0], this.origin[1]);
@@ -228,19 +238,18 @@ export class LiveMapRenderer {
   private spawnEdge(now: number, dt: number) {
     const minute = this.edgeMinute;
     if (!minute || !dt || !this.frame.width) return;
-    const cell = this.frame.width / 360;
     const speed = this.frame.width / 2400;
     minute.groups.forEach((group, i) => {
       this.edgeOwed[i] += (group.count * dt) / 60_000;
       if (this.edgeOwed[i] < 1) return;
       const colo = CLOUDFLARE_COLOS[group.colo];
-      if (!colo) return;
-      const [ex, ey] = project(this.frame, colo[0], colo[1]);
+      const at = this.coloAt(group.colo);
+      if (!colo || !at) return;
+      const [ex, ey] = at;
       const slot = EDGE_SLOT + EDGE_KINDS.indexOf(group.kind);
       for (; this.edgeOwed[i] >= 1; this.edgeOwed[i]--) {
         if (this.flights.length >= MAX_FLIGHTS) continue;
-        const ux = ex + gauss() * EDGE_SPREAD * cell;
-        const uy = ey + gauss() * EDGE_SPREAD * cell * 0.7;
+        const [ux, uy] = project(this.frame, ...this.clientNear(colo[0], colo[1]));
         // Spread over the frame, so a busy group does not leave in lockstep.
         this.flights.push({
           born: now - Math.random() * dt,
@@ -255,6 +264,30 @@ export class LiveMapRenderer {
         this.pulses.set(group.colo, (this.pulses.get(group.colo) ?? 0) + 0.02);
       }
     });
+  }
+
+  /** A data center's point on the map, on land; null when it is unknown. Cached per frame. */
+  private coloAt(code: string): [number, number] | null {
+    let at = this.coloPoints.get(code);
+    if (at === undefined) {
+      const colo = CLOUDFLARE_COLOS[code];
+      at = colo ? project(this.frame, ...onLand(colo[0], colo[1])) : null;
+      this.coloPoints.set(code, at);
+    }
+    return at;
+  }
+
+  /**
+   * Where to draw a client of a data center Cloudflare gives no location for: a random point of the region around
+   * it, on land. A few tries, then the data center itself (moved onto the map's coast if it sits off it).
+   */
+  private clientNear(lat: number, lon: number): [number, number] {
+    for (let attempt = 0; attempt < LAND_TRIES; attempt++) {
+      const la = lat + gauss() * EDGE_SPREAD * 0.7;
+      const lo = lon + gauss() * EDGE_SPREAD;
+      if (isLand(la, lo)) return [la, lo];
+    }
+    return onLand(lat, lon);
   }
 
   private admit(now: number) {
@@ -294,8 +327,10 @@ export class LiveMapRenderer {
     ctx.fillStyle = this.palette.edge;
     ctx.beginPath();
     const edgeDot = Math.max(1, cell * 0.5);
-    for (const [, lat, lon] of colos()) {
-      const [x, y] = project(frame, lat, lon);
+    for (const [code] of colos()) {
+      const at = this.coloAt(code);
+      if (!at) continue;
+      const [x, y] = at;
       ctx.rect(x - edgeDot / 2, y - edgeDot / 2, edgeDot, edgeDot);
     }
     ctx.fill();
@@ -390,9 +425,9 @@ export class LiveMapRenderer {
         continue;
       }
       this.pulses.set(colo, next);
-      const edge = CLOUDFLARE_COLOS[colo];
-      if (!edge) continue;
-      const [x, y] = project(this.frame, edge[0], edge[1]);
+      const at = this.coloAt(colo);
+      if (!at) continue;
+      const [x, y] = at;
       ctx.globalAlpha = Math.min(0.6, 0.2 + next * 0.1);
       ctx.beginPath();
       ctx.arc(x, y, cell * (0.6 + Math.min(next, 3) * 0.3), 0, Math.PI * 2);

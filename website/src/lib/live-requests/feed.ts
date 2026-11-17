@@ -277,10 +277,58 @@ export function project(frame: MapFrame, lat: number, lon: number): [number, num
 
 /** The centres of the land cells, as latitude/longitude pairs, decoded once. */
 let landCells: Float32Array | null = null;
+let landMask: Uint8Array | null = null;
+
+function landBits(): Uint8Array {
+  landMask ??= Uint8Array.from(atob(LAND_MASK), (c) => c.charCodeAt(0));
+  return landMask;
+}
+
+function landAt(row: number, col: number): boolean {
+  if (row < 0 || row >= LAND_GRID.rows) return false;
+  const c = ((col % LAND_GRID.cols) + LAND_GRID.cols) % LAND_GRID.cols;
+  const i = row * LAND_GRID.cols + c;
+  return ((landBits()[i >> 3] >> (i & 7)) & 1) === 1;
+}
+
+function cellOf(lat: number, lon: number): [number, number] {
+  return [Math.floor((LAND_GRID.top - lat) / LAND_GRID.step), Math.floor((lon + 180) / LAND_GRID.step)];
+}
+
+/** Whether a point falls on a land cell of the map's grid. */
+export function isLand(lat: number, lon: number): boolean {
+  return landAt(...cellOf(lat, lon));
+}
+
+/**
+ * A point moved onto the map's land if it falls in the sea: to the centre of the nearest land cell within `reach`
+ * cells. The grid is 1° coarse, so a coastal city or a small island (Singapore) can sit just off the drawn coast.
+ * Unchanged when it is on land, or when no land is near (a ship, a remote island).
+ */
+export function onLand(lat: number, lon: number, reach = 2): [number, number] {
+  const [row, col] = cellOf(lat, lon);
+  if (landAt(row, col)) return [lat, lon];
+  for (let ring = 1; ring <= reach; ring++) {
+    let best: [number, number] | null = null;
+    let bestDistance = Infinity;
+    for (let dr = -ring; dr <= ring; dr++) {
+      for (let dc = -ring; dc <= ring; dc++) {
+        if (Math.max(Math.abs(dr), Math.abs(dc)) !== ring || !landAt(row + dr, col + dc)) continue;
+        const distance = dr * dr + dc * dc;
+        if (distance < bestDistance) {
+          bestDistance = distance;
+          best = [LAND_GRID.top - (row + dr + 0.5) * LAND_GRID.step, -180 + (col + dc + 0.5) * LAND_GRID.step];
+        }
+      }
+    }
+    if (best) return best;
+  }
+  return [lat, lon];
+}
 
 export function landPoints(): Float32Array {
   if (landCells) return landCells;
-  const bytes = Uint8Array.from(atob(LAND_MASK), (c) => c.charCodeAt(0));
+  const bytes = landBits();
   const points: number[] = [];
   for (let i = 0; i < LAND_GRID.rows * LAND_GRID.cols; i++) {
     if ((bytes[i >> 3] >> (i & 7)) & 1) {
