@@ -13,6 +13,7 @@ import { ensureCached } from "~/lib/prefetch-safe";
 import { combatStats, type CombatStats } from "~/lib/tracker/combat-stats";
 import { DEMO_ACCOUNT_ID, isDemoAccount, isDemoMatch } from "~/lib/tracker/demo";
 import { type MatchTeams, teamsByMatch } from "~/lib/tracker/hero-matchups";
+import { MIN_ITEM_GAMES } from "~/lib/tracker/item-performance";
 import {
   claimedMidBosses,
   destroyedObjectives,
@@ -223,6 +224,76 @@ export interface TrackerMatchStatsParams {
   heroId: number | null;
   minUnixTimestamp?: number | null;
   maxUnixTimestamp?: number | null;
+}
+
+/** The parts of the tracker's filters the analytics endpoints take; an open start is sent as 0, not their 30 days. */
+function itemAnalyticsParams({
+  accountId,
+  gameMode,
+  matchMode,
+  heroId,
+  minUnixTimestamp,
+  maxUnixTimestamp,
+}: TrackerMatchStatsParams) {
+  return {
+    accountIds: [accountId],
+    gameMode,
+    matchMode,
+    heroIds: heroId == null ? undefined : String(heroId),
+    minUnixTimestamp: minUnixTimestamp ?? 0,
+    maxUnixTimestamp: maxUnixTimestamp ?? undefined,
+    minMatches: MIN_ITEM_GAMES,
+  };
+}
+
+async function demoItemData(client: QueryClient) {
+  // The abilities too: the generator draws their upgrades first, so the shop items match the demo's match details.
+  const [demo, history, heroes, items, abilities] = await Promise.all([
+    loadDemoData(),
+    demoHistory(client),
+    ensureCached(client, heroesQueryOptions),
+    ensureCached(client, itemUpgradesQueryOptions),
+    ensureCached(client, trackerAbilitiesQueryOptions),
+  ]);
+  return { demo, history, assets: { heroes, items, abilities } };
+}
+
+const demoFilter = (params: TrackerMatchStatsParams) => ({
+  gameMode: params.gameMode,
+  matchMode: params.matchMode,
+  heroIds: params.heroId == null ? null : String(params.heroId),
+  minUnixTimestamp: params.minUnixTimestamp,
+  maxUnixTimestamp: params.maxUnixTimestamp,
+});
+
+/** How the player did in the selected matches in which they bought each item. */
+export function trackerItemStatsQueryOptions(params: TrackerMatchStatsParams) {
+  return queryOptions({
+    queryKey: queryKeys.players.itemStats(params),
+    queryFn: async ({ client }) => {
+      if (isDemoAccount(params.accountId)) {
+        const { demo, history, assets } = await demoItemData(client);
+        return demo.demoItemStats(history, demoFilter(params), assets);
+      }
+      return (await api.analytics_api.itemStats(itemAnalyticsParams(params))).data;
+    },
+    staleTime: CACHE_DURATIONS.FIVE_MINUTES,
+  });
+}
+
+/** How the player did in the selected matches in which they bought both items of a pair. */
+export function trackerItemPairStatsQueryOptions(params: TrackerMatchStatsParams) {
+  return queryOptions({
+    queryKey: queryKeys.players.itemPairStats(params),
+    queryFn: async ({ client }) => {
+      if (isDemoAccount(params.accountId)) {
+        const { demo, history, assets } = await demoItemData(client);
+        return demo.demoItemPairStats(history, demoFilter(params), assets);
+      }
+      return (await api.analytics_api.itemPermutationStats({ ...itemAnalyticsParams(params), combSize: 2 })).data;
+    },
+    staleTime: CACHE_DURATIONS.FIVE_MINUTES,
+  });
 }
 
 /** The most recent matches the stat trends read: enough for every rolling window, light enough for a phone. */

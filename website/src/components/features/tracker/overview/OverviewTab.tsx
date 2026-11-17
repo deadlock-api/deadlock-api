@@ -45,6 +45,7 @@ import { cn } from "~/lib/utils";
 import { CompanionsPanel } from "./CompanionsPanel";
 import { HeroMatchupsPanel } from "./HeroMatchupsPanel";
 import { HeroStatsTable } from "./HeroStatsTable";
+import { ItemPanels } from "./ItemPanels";
 import { MatchStatsPanels } from "./MatchStatsPanels";
 import { PerformanceInsights } from "./PerformanceInsights";
 import { PlaytimeHeatmap } from "./PlaytimeHeatmap";
@@ -102,6 +103,8 @@ export function OverviewTab({
   );
   const recent = useMemo(() => compareRecentMatches(formEntries, recentWindow), [formEntries, recentWindow]);
   const { streaks } = recent;
+  // The item panels read both outcomes, as the item stats do; a result filter would leave nothing to compare.
+  const formBaseline = useMemo(() => summarize(formEntries).winrate, [formEntries]);
   const insights = useMemo(
     () =>
       filters.result === "all"
@@ -292,6 +295,8 @@ export function OverviewTab({
         />
         <CompanionsPanel accountId={accountId} filters={filters} entries={sorted} onOpenMatch={onOpenMatch} />
       </div>
+
+      <ItemPanels accountId={accountId} filters={filters} baseline={formBaseline} />
 
       <HeroMatchupsPanel entries={sorted} onOpenMatch={onOpenMatch} />
 

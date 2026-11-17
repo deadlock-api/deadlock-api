@@ -1,12 +1,14 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import type { SlimHero } from "~/queries/asset-queries";
+import type { SlimHero, SlimUpgrade } from "~/queries/asset-queries";
 
 import { DEMO_ACCOUNT_ID, isDemoAccount, isDemoMatch } from "./demo";
 import {
   demoEnemyStats,
   demoHeroStats,
+  demoItemPairStats,
+  demoItemStats,
   demoMatchHistory,
   demoMatchMetadata,
   demoMatchStats,
@@ -111,4 +113,40 @@ test("the demo's benchmark averages come from the same matches and numbers as th
   // No generated numbers, no "your average".
   assert.equal(metrics.neutral_damage, undefined);
   assert.deepEqual(demoPlayerMetrics(history, { ...filter, minUnixTimestamp: NOW_S + 86_400 }), {});
+});
+
+test("the demo's item stats count the shop items its match details list", () => {
+  const history = demoMatchHistory(HERO_IDS, NOW_S);
+  const items = [1, 2, 3, 4].flatMap((tier) =>
+    Array.from(
+      { length: 6 },
+      (_, i) =>
+        ({ id: tier * 100 + i, item_tier: tier, shopable: true, disabled: false, shop_image_webp: "x" }) as SlimUpgrade,
+    ),
+  );
+  const shop = { heroes, items, abilities: [] };
+  const filter = { gameMode: "normal", matchMode: "ranked,unranked", minUnixTimestamp: NOW_S - 30 * 86_400 };
+  const kept = history.filter((entry) => entry.game_mode === 1 && entry.start_time >= filter.minUnixTimestamp);
+  const purchases = new Map(
+    kept.map((entry) => [
+      entry.match_id,
+      demoMatchMetadata(entry.match_id, history, shop)
+        ?.players.find((player) => player.account_id === DEMO_ACCOUNT_ID)
+        ?.items.map((item) => item.item_id) ?? [],
+    ]),
+  );
+  const bought = (itemId: number) => kept.filter((entry) => purchases.get(entry.match_id)?.includes(itemId));
+
+  const stats = demoItemStats(history, filter, shop);
+  assert.ok(stats.length > 10);
+  const [first] = stats;
+  assert.equal(first.matches, bought(first.item_id).length);
+  assert.ok(stats.every((row) => row.wins + row.losses === row.matches && row.matches <= kept.length));
+
+  const pairs = demoItemPairStats(history, filter, shop);
+  assert.ok(pairs.every((row) => row.item_ids.length === 2 && row.item_ids[0] < row.item_ids[1]));
+  const pair = pairs.find((row) => row.item_ids[0] === first.item_id);
+  assert.ok(pair);
+  const withBoth = bought(first.item_id).filter((entry) => bought(pair.item_ids[1]).includes(entry));
+  assert.equal(pair.matches, withBoth.length);
 });

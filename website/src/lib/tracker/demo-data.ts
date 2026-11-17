@@ -1,6 +1,8 @@
 import type {
   EnemyStats,
   HeroStats,
+  ItemPermutationStats,
+  ItemStats,
   MateStats,
   PlayerMatchHistoryEntry,
   RankResponse,
@@ -244,7 +246,7 @@ export function demoSteamProfile(accountId: number): SteamProfile {
   };
 }
 
-interface HistoryFilter {
+export interface HistoryFilter {
   gameMode?: string | null;
   matchMode?: string | null;
   heroIds?: string | null;
@@ -415,7 +417,100 @@ export function demoPlayerMetrics(
   );
 }
 
-interface DemoAssets {
+/** Each generated match's shop purchases by the demo player, per history; the item and pair panels share one pass. */
+const purchaseCache = new WeakMap<
+  readonly PlayerMatchHistoryEntry[],
+  { assets: DemoAssets; byMatch: Map<number, TrackerMatchItem[]> }
+>();
+
+/** Shop item purchases of the demo player, per generated match a filter keeps; the same items its match details list. */
+function demoShopPurchases(history: readonly PlayerMatchHistoryEntry[], filter: HistoryFilter, assets: DemoAssets) {
+  let cached = purchaseCache.get(history);
+  const sameAssets =
+    cached?.assets.items === assets.items &&
+    cached.assets.heroes === assets.heroes &&
+    cached.assets.abilities === assets.abilities;
+  if (!cached || !sameAssets) {
+    const shopItems = new Set(assets.items.map((item) => item.id));
+    const byMatch = new Map(
+      history.map((entry) => {
+        const player = demoMatchMetadata(entry.match_id, history, assets)?.players.find(
+          (candidate) => candidate.account_id === DEMO_ACCOUNT_ID,
+        );
+        return [entry.match_id, (player?.items ?? []).filter((item) => shopItems.has(item.item_id))] as const;
+      }),
+    );
+    cached = { assets, byMatch };
+    purchaseCache.set(history, cached);
+  }
+  const { byMatch } = cached;
+  return history
+    .filter((entry) => matchesFilter(entry, filter))
+    .map((entry) => ({ entry, items: byMatch.get(entry.match_id) ?? [] }));
+}
+
+/** The demo player's item stats, as `/v1/analytics/item-stats` would answer them for the generated matches. */
+export function demoItemStats(
+  history: readonly PlayerMatchHistoryEntry[],
+  filter: HistoryFilter,
+  assets: DemoAssets,
+): ItemStats[] {
+  const byItem = new Map<number, ItemStats>();
+  for (const { entry, items } of demoShopPurchases(history, filter, assets)) {
+    const won = isWin(entry);
+    for (const item of items) {
+      const row = byItem.get(item.item_id) ?? {
+        item_id: item.item_id,
+        bucket: 0,
+        wins: 0,
+        losses: 0,
+        matches: 0,
+        players: 1,
+        avg_buy_time_s: 0,
+        avg_sell_time_s: 0,
+        avg_buy_time_relative: 0,
+        avg_sell_time_relative: 0,
+        sold: 0,
+      };
+      // Running means, so the row needs no separate sums.
+      row.avg_buy_time_s += (item.game_time_s - row.avg_buy_time_s) / (row.matches + 1);
+      row.avg_buy_time_relative +=
+        ((100 * item.game_time_s) / entry.match_duration_s - row.avg_buy_time_relative) / (row.matches + 1);
+      row.matches++;
+      if (won) row.wins++;
+      else row.losses++;
+      if (item.sold_time_s > 0) row.sold = (row.sold ?? 0) + 1;
+      byItem.set(item.item_id, row);
+    }
+  }
+  return [...byItem.values()];
+}
+
+/** The demo player's item pairs, as `/v1/analytics/item-permutation-stats` with `comb_size=2` would answer them. */
+export function demoItemPairStats(
+  history: readonly PlayerMatchHistoryEntry[],
+  filter: HistoryFilter,
+  assets: DemoAssets,
+): ItemPermutationStats[] {
+  const byPair = new Map<string, ItemPermutationStats>();
+  for (const { entry, items } of demoShopPurchases(history, filter, assets)) {
+    const won = isWin(entry);
+    const ids = [...new Set(items.map((item) => item.item_id))].sort((a, b) => a - b);
+    ids.forEach((first, i) => {
+      for (const second of ids.slice(i + 1)) {
+        const key = `${first}-${second}`;
+        const row = byPair.get(key) ?? { item_ids: [first, second], wins: 0, losses: 0, matches: 0 };
+        row.matches++;
+        if (won) row.wins++;
+        else row.losses++;
+        byPair.set(key, row);
+      }
+    });
+  }
+  return [...byPair.values()];
+}
+
+export interface DemoAssets {
   heroes: readonly SlimHero[];
   items: readonly SlimUpgrade[];
   abilities: readonly TrackerAbility[];

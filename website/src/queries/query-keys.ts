@@ -144,6 +144,8 @@ export const queryKeys = {
     matchSummary: (matchId: number) => ["api-match-summary", matchId] as const,
     matchTeams: (matchIds: readonly number[]) => ["api-tracker-match-teams", matchIds] as const,
     matchStats: (params: TrackerMatchStatsParams) => ["api-tracker-match-stats", params] as const,
+    itemStats: (params: TrackerMatchStatsParams) => ["api-tracker-item-stats", params] as const,
+    itemPairStats: (params: TrackerMatchStatsParams) => ["api-tracker-item-pair-stats", params] as const,
     abilities: () => ["api-tracker-abilities"] as const,
     ingestStatus: (accountId: number) => ["api-player-ingest-status", accountId] as const,
   },
