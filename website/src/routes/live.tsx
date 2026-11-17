@@ -10,7 +10,6 @@ import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Badge } from "~/components/ui/badge";
 import { Inline } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
-import { useIngestFeed } from "~/lib/live-requests/useIngestFeed";
 import { type LiveFeedStatus, useLiveRequests } from "~/lib/live-requests/useLiveRequests";
 import { pageTitle, seo } from "~/lib/seo";
 
@@ -34,7 +33,6 @@ const STATUS_LABEL: Record<LiveFeedStatus, string> = {
 
 function LivePage() {
   const { status, stats, edge, subscribe, retry } = useLiveRequests();
-  const ingest = useIngestFeed(subscribe);
   return (
     <PageShell height="viewport">
       <PageHeader
@@ -61,7 +59,7 @@ function LivePage() {
           {/* The map is wider than it is tall, so the matches being written fit under it. */}
           <div className="flex min-h-0 flex-col gap-3">
             <LiveRequestMap subscribe={subscribe} className="min-h-0 flex-1" />
-            <LiveIngestPanel feed={ingest} className="flex h-160 shrink-0 flex-col @5xl:h-84" />
+            <LiveIngestPanel subscribe={subscribe} className="flex h-160 shrink-0 flex-col @5xl:h-84" />
           </div>
           {/* The queue's chart takes what the traffic leaves, so both fit the viewport; short screens scroll. */}
           <div className="flex min-h-0 flex-col gap-3 overflow-y-auto">

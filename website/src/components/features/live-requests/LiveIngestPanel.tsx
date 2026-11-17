@@ -18,26 +18,22 @@ import { TextLink } from "~/components/ui/text-link";
 import { day } from "~/dayjs";
 import { formatShare } from "~/lib/format";
 import { regionName, WORLD_AREA_LABEL, WORLD_AREAS } from "~/lib/live-requests/server-regions";
-import type { IngestFeed, ShownMatch } from "~/lib/live-requests/useIngestFeed";
+import { type IngestFeed, type ShownMatch, useIngestFeed } from "~/lib/live-requests/useIngestFeed";
+import type { LiveListener } from "~/lib/live-requests/useLiveRequests";
 import { formatClock } from "~/lib/stat-format";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
 import { LiveRing, type LiveRingSlice } from "./LiveRing";
 
 interface LiveIngestPanelProps extends React.ComponentProps<typeof Panel> {
-  /** The matches being written, from `useIngestFeed`. Empty until the first flush arrives. */
-  feed?: IngestFeed;
+  /**
+   * The live feed's `subscribe` (`useLiveRequests`). The panel follows the matches itself, so its updates render only
+   * the panel, not the page's charts. Without it the panel waits for matches.
+   */
+  subscribe?: (listener: LiveListener) => () => void;
 }
 
-const EMPTY_FEED: IngestFeed = {
-  matches: [],
-  flushes: [],
-  perMinute: null,
-  counted: 0,
-  areas: { europe: 0, northAmerica: 0, southAmerica: 0, asia: 0, oceania: 0, middleEast: 0, africa: 0, unknown: 0 },
-  freshShare: null,
-  now: null,
-};
+const NO_FEED = () => () => {};
 
 const FLUSH_COLOR = CHART_COLOR.primary;
 
@@ -135,7 +131,8 @@ function MatchRow({ match, now, ranks }: { match: ShownMatch; now: number; ranks
  * The matches being written to the database, as they are: the rate, a ring of where they were played, the size of
  * every flush in the last half hour, and the matches themselves streaming in.
  */
-export function LiveIngestPanel({ feed = EMPTY_FEED, ...props }: LiveIngestPanelProps) {
+export function LiveIngestPanel({ subscribe = NO_FEED, ...props }: LiveIngestPanelProps) {
+  const feed: IngestFeed = useIngestFeed(subscribe);
   const { data: ranks = [] } = useQuery(ranksQueryOptions);
   const { matches, flushes, perMinute, counted, freshShare, now } = feed;
   const slices = areaSlices(feed.areas);

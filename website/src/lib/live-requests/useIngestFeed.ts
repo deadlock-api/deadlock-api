@@ -5,16 +5,28 @@ import { regionArea, WORLD_AREAS, type WorldArea } from "./server-regions";
 import type { LiveListener } from "./useLiveRequests";
 
 /**
- * The worker writes about once a minute, so a flush's sample plays out until a minute after it was written, when the
- * next one lands: a steady stream about a minute behind instead of a burst a minute.
+ * The worker writes about once a minute, in flushes of very different sizes (a thousand matches, then one). Every
+ * flush's sample joins one queue, and the queue drains at a rate in proportion to its length: all of it over about
+ * one flush interval. It slows as it empties and never runs dry before the next flush refills it, so the list moves
+ * as a steady stream, without the pause a flush played out on its own clock left behind a small one.
  */
-const PLAYOUT_MS = 60_000;
-/** A flush that arrives late (the newest one, on connect) still plays out over at least this long. */
-const MIN_PLAYOUT_MS = 10_000;
-/** How often due matches are released and the clock moves. */
-const STEP_MS = 200;
-/** Matches the list keeps; the oldest leave at the bottom. */
-const MAX_ROWS = 40;
+const DRAIN_DEFAULT_MS = 60_000;
+/** The drain horizon follows the flush interval, within these bounds. */
+const DRAIN_MIN_MS = 30_000;
+const DRAIN_MAX_MS = 150_000;
+/** The slowest the list moves while matches wait: one every 3 s. */
+const MIN_RATE = 1 / 3000;
+/** Most matches waiting; beyond it the oldest waiting ones are skipped, so the list does not fall far behind. */
+const MAX_QUEUE = 600;
+/** How often matches are released: one or two at a time, each a render of the panel. */
+const STEP_MS = 400;
+/** Matches the list keeps; the oldest leave at the bottom. More than the tallest list shows. */
+const MAX_ROWS = 16;
+/**
+ * The ages ("3 minutes ago") are measured against a clock that moves this often, so the rows already shown keep
+ * their props between releases and are not rendered again.
+ */
+const CLOCK_MS = 15_000;
 /** Flushes the rate and the chart cover: about half an hour. */
 const MAX_FLUSHES = 30;
 /** A match that ended within this long is "fresh"; older ones come from uploaded history. */
@@ -37,11 +49,14 @@ export interface IngestFeed {
   perMinute: number | null;
   /** Matches written since the page opened, counting up as their sample plays out. */
   counted: number;
-  /** Matches shown so far, by the part of the world their server is in (plus unknown). */
+  /** The sampled matches of the flushes seen, by the part of the world their server is in (plus unknown). */
   areas: Record<WorldArea | "unknown", number>;
-  /** Share of the matches shown so far that ended within a day; null before the first. */
+  /** Share of the sampled matches that ended within a day; null before the first. */
   freshShare: number | null;
-  /** The clock the ages are measured against, unix ms; null before the first flush (and on the server). */
+  /**
+   * The clock the ages are measured against, unix ms, moving every 15 s; null before the first flush (and on the
+   * server).
+   */
   now: number | null;
 }
 
@@ -59,9 +74,19 @@ const EMPTY: IngestFeed = {
 
 interface Due {
   match: ShownMatch;
-  at: number;
   /** Written matches this one stands for: the flush's total over its sample. */
   weight: number;
+}
+
+/** The typical time between flushes (the median of the recent ones), within the drain bounds. */
+function drainMs(flushes: IngestFlush[]): number {
+  const gaps = flushes
+    .slice(1)
+    .map((flush, i) => flush.at - flushes[i].at)
+    .sort((a, b) => a - b);
+  if (!gaps.length) return DRAIN_DEFAULT_MS;
+  const median = gaps[Math.floor(gaps.length / 2)];
+  return Math.min(DRAIN_MAX_MS, Math.max(DRAIN_MIN_MS, median));
 }
 
 /** Matches per minute over the flushes: everything after the first, over the time since it. */
@@ -93,35 +118,33 @@ export function useIngestFeed(subscribe: (listener: LiveListener) => () => void)
     };
     const queue: Due[] = [];
     const seen = new Set<number>();
-    let shown = 0;
+    let sampled = 0;
     let fresh = 0;
+    const clock = (now: number) => Math.floor(now / CLOCK_MS) * CLOCK_MS;
 
-    const release = (now: number, all = false) => {
-      queue.sort((a, b) => a.at - b.at);
-      const firstLater = all ? -1 : queue.findIndex((d) => d.at > now);
-      const count = firstLater === -1 ? queue.length : firstLater;
+    // Matches owed to the list, fractional between releases.
+    let owed = 0;
+    let lastStep = Date.now();
+
+    const release = (now: number) => {
+      const elapsed = now - lastStep;
+      lastStep = now;
+      // A short queue still moves at a row every few seconds instead of creeping.
+      owed = queue.length ? owed + Math.max(queue.length / drainMs(state.flushes), MIN_RATE) * elapsed : 0;
+      const count = Math.min(queue.length, Math.floor(owed));
+      owed -= count;
       if (!count) {
-        if (state.now !== null) publish({ ...state, now });
+        if (state.now !== null && clock(now) !== state.now) publish({ ...state, now: clock(now) });
         return;
       }
       const due = queue.splice(0, count);
-      const areas = { ...state.areas };
-      let counted = state.counted;
-      for (const { match, weight } of due) {
-        const area = match.region ? regionArea(match.region) : null;
-        areas[area ?? "unknown"]++;
-        counted += weight;
-        shown++;
-        if (now - match.endedAt < FRESH_MS) fresh++;
-      }
+      const counted = due.reduce((sum, d) => sum + d.weight, state.counted);
       const newest = due.map((d) => d.match).reverse();
       publish({
         ...state,
         matches: [...newest, ...state.matches].slice(0, MAX_ROWS),
         counted,
-        areas,
-        freshShare: shown ? fresh / shown : null,
-        now,
+        now: clock(now),
       });
     };
 
@@ -129,24 +152,30 @@ export function useIngestFeed(subscribe: (listener: LiveListener) => () => void)
       if (seen.has(entry.at)) return;
       seen.add(entry.at);
       const now = Date.now();
-      // What is left of the last flush shows at once: the new one takes the stage.
-      if (queue.length) release(now, true);
-      const until = Math.max(entry.at + PLAYOUT_MS, now + MIN_PLAYOUT_MS);
-      const step = entry.matches.length ? (until - now) / entry.matches.length : 0;
       const weight = entry.matches.length ? entry.total / entry.matches.length : 0;
-      entry.matches.forEach((match, i) => {
+      for (const match of entry.matches) {
         queue.push({
-          match: {
-            ...match,
-            key: `${entry.at}-${match.matchId}`,
-            endedAt: (match.startTime + match.durationS) * 1000,
-          },
-          at: now + i * step,
+          match: { ...match, key: `${entry.at}-${match.matchId}`, endedAt: (match.startTime + match.durationS) * 1000 },
           weight,
         });
-      });
+      }
+      if (queue.length > MAX_QUEUE) queue.splice(0, queue.length - MAX_QUEUE);
+      // Where the flush's matches were played and how old they are, once for the flush rather than per row.
+      const areas = { ...state.areas };
+      for (const match of entry.matches) {
+        areas[(match.region ? regionArea(match.region) : null) ?? "unknown"]++;
+        if (now - (match.startTime + match.durationS) * 1000 < FRESH_MS) fresh++;
+      }
+      sampled += entry.matches.length;
       const flushes = withFlush(state.flushes, { at: entry.at, total: entry.total });
-      publish({ ...state, flushes, perMinute: perMinute(flushes), now: state.now ?? now });
+      publish({
+        ...state,
+        flushes,
+        perMinute: perMinute(flushes),
+        areas,
+        freshShare: sampled ? fresh / sampled : null,
+        now: state.now ?? clock(now),
+      });
     };
 
     const onIngestHistory = (history: IngestFlush[]) => {

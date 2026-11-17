@@ -46,6 +46,8 @@ interface Flight {
   points: number[];
   /** Milliseconds of each leg (between consecutive stops). */
   legs: number[];
+  /** Their sum, filled in on the first frame that draws the trip. */
+  travel?: number;
   /** Time at the last stop before the way back. */
   dwell: number;
   /** Color slots on the way in and on the way back. */
@@ -66,8 +68,11 @@ const TRAIL_STEPS = 4;
 const STILL_MS = 1200;
 /** Pulse of a data center or our server, decaying by half every this many ms. */
 const PULSE_HALF_LIFE_MS = 350;
-/** Lowest gap between two frames: 60 fps on a 120 Hz screen. */
-const FRAME_MS = 15;
+/**
+ * Lowest gap between two frames: 30 fps. Each frame redraws every trip on screen (thousands with Cloudflare's
+ * traffic), and at 60 fps that alone kept the main thread busy enough to make the page around it stutter.
+ */
+const FRAME_MS = 32;
 /** Longest frame step the Cloudflare traffic is played out for, so a frame after a stall does not burst. */
 const MAX_STEP_MS = 250;
 /**
@@ -83,14 +88,6 @@ const LAND_TRIES = 20;
  */
 const POPULATED_NORTH = 66;
 const POPULATED_SOUTH = -56;
-
-function at(t: number, x0: number, y0: number, x1: number, y1: number): [number, number] {
-  // A quadratic arc whose control point sits above the midpoint by a fifth of the distance.
-  const cx = (x0 + x1) / 2;
-  const cy = (y0 + y1) / 2 - Math.hypot(x1 - x0, y1 - y0) * 0.2;
-  const u = 1 - t;
-  return [u * u * x0 + 2 * u * t * cx + t * t * x1, u * u * y0 + 2 * u * t * cy + t * t * y1];
-}
 
 /** A normally distributed number (Box-Muller), for the spread of clients around a data center. */
 function gauss(): number {
@@ -362,7 +359,7 @@ export class LiveMapRenderer {
     for (const f of this.flights) {
       const age = now - f.born;
       const { points, legs } = f;
-      const travel = legs.reduce((sum, leg) => sum + leg, 0);
+      const travel = (f.travel ??= legs.reduce((sum, leg) => sum + leg, 0));
       if (age >= (this.still ? STILL_MS : 2 * travel + f.dwell)) continue;
       this.flights[kept++] = f;
       clients.rect(points[0] - head / 2, points[1] - head / 2, head, head);
@@ -388,14 +385,14 @@ export class LiveMapRenderer {
         while (t >= legs[leg]) t -= legs[leg--];
       }
       if (leg < 0) continue;
+      // From stop `a` to the next one, or back from it.
       const a = 2 * leg;
-      const [x0, y0, x1, y1] = back
-        ? [points[a + 2], points[a + 3], points[a], points[a + 1]]
-        : [points[a], points[a + 1], points[a + 2], points[a + 3]];
+      const from = back ? a + 2 : a;
+      const to = back ? a : a + 2;
       const slot = back ? f.outSlot : f.inSlot;
       const p = t / legs[leg];
-      const [hx, hy] = this.trail(trails[slot], x0, y0, x1, y1, Math.max(0, p - TRAIL), p);
-      heads[slot].rect(hx - head / 2, hy - head / 2, head, head);
+      this.trail(trails[slot], points[from], points[from + 1], points[to], points[to + 1], Math.max(0, p - TRAIL), p);
+      heads[slot].rect(this.endX - head / 2, this.endY - head / 2, head, head);
     }
     this.flights.length = kept;
 
@@ -459,22 +456,27 @@ export class LiveMapRenderer {
     ctx.globalAlpha = 1;
   }
 
-  /** Adds the stretch `from`..`to` (0 to 1) of the arc from (x0, y0) to (x1, y1) to `path`; returns its end. */
-  private trail(
-    path: Path2D,
-    x0: number,
-    y0: number,
-    x1: number,
-    y1: number,
-    from: number,
-    to: number,
-  ): [number, number] {
-    let end = at(from, x0, y0, x1, y1);
-    path.moveTo(end[0], end[1]);
-    for (let s = 1; s <= TRAIL_STEPS; s++) {
-      end = at(from + ((to - from) * s) / TRAIL_STEPS, x0, y0, x1, y1);
-      path.lineTo(end[0], end[1]);
+  /**
+   * Adds the stretch `from`..`to` (0 to 1) of the arc from (x0, y0) to (x1, y1) to `path`, and leaves its end in
+   * `endX`/`endY`. The arc is quadratic, its control point above the midpoint by a fifth of the distance. Runs for
+   * every trip every frame, so it allocates nothing.
+   */
+  private trail(path: Path2D, x0: number, y0: number, x1: number, y1: number, from: number, to: number) {
+    const cx = (x0 + x1) / 2;
+    const cy = (y0 + y1) / 2 - Math.hypot(x1 - x0, y1 - y0) * 0.2;
+    for (let s = 0; s <= TRAIL_STEPS; s++) {
+      const t = from + ((to - from) * s) / TRAIL_STEPS;
+      const u = 1 - t;
+      const x = u * u * x0 + 2 * u * t * cx + t * t * x1;
+      const y = u * u * y0 + 2 * u * t * cy + t * t * y1;
+      if (s === 0) path.moveTo(x, y);
+      else path.lineTo(x, y);
+      this.endX = x;
+      this.endY = y;
     }
-    return end;
   }
+
+  /** The end of the last `trail`. */
+  private endX = 0;
+  private endY = 0;
 }
