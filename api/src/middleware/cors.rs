@@ -1,3 +1,5 @@
+use core::time::Duration;
+
 use axum::extract::Request;
 use axum::http::{HeaderMap, HeaderName, HeaderValue, header};
 use axum::middleware::Next;
@@ -9,6 +11,11 @@ use crate::error::APIError;
 use crate::services::patreon::SESSION_COOKIE;
 use crate::utils::request::cookie;
 
+/// How long browsers may reuse a public preflight answer (Chrome caps it at 2 h). Without it they
+/// preflight again after 5 s. Matches the Cloudflare Snippet that answers these preflights at the
+/// edge; this is the fallback for when it is off.
+const PREFLIGHT_MAX_AGE: Duration = Duration::from_hours(24);
+
 /// Wildcard-origin CORS with no `Vary` header, so public responses stay
 /// CDN-cacheable. Request headers are mirrored so header-based auth keeps
 /// working; cookies are not allowed.
@@ -18,6 +25,7 @@ pub(crate) fn public() -> CorsLayer {
         .allow_methods(Any)
         .allow_headers(AllowHeaders::mirror_request())
         .expose_headers(Any)
+        .max_age(PREFLIGHT_MAX_AGE)
         .vary(Vec::<HeaderName>::new())
 }
 
