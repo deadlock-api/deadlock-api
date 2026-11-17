@@ -1968,7 +1968,7 @@ mod tests {
                     enemy_hero_ids: Some(vec![66]),
                     ..window.clone()
                 }),
-                "HAVING has(enemy_hero_ids, 66)",
+                "AND has(enemy_hero_ids, 66)\nGROUP BY",
             ),
             (
                 build_bucket_mv_query(&ItemStatsQuery {
