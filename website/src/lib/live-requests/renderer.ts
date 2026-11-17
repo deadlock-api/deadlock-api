@@ -77,6 +77,12 @@ const MAX_STEP_MS = 250;
 const EDGE_SPREAD = 10;
 /** Tries for a point on land before a client is drawn at its data center. */
 const LAND_TRIES = 20;
+/**
+ * Where a scattered client may land: south of the Arctic Circle and north of the Southern Ocean. The land grid counts
+ * Greenland and the Arctic islands as land, and a cloud around Stockholm or Anchorage reached them.
+ */
+const POPULATED_NORTH = 66;
+const POPULATED_SOUTH = -56;
 
 function at(t: number, x0: number, y0: number, x1: number, y1: number): [number, number] {
   // A quadratic arc whose control point sits above the midpoint by a fifth of the distance.
@@ -279,13 +285,15 @@ export class LiveMapRenderer {
 
   /**
    * Where to draw a client of a data center Cloudflare gives no location for: a random point of the region around
-   * it, on land. A few tries, then the data center itself (moved onto the map's coast if it sits off it).
+   * it, on populated land. A few tries, then the data center itself (moved onto the map's coast if it sits off it).
    */
   private clientNear(lat: number, lon: number): [number, number] {
+    // Two standard deviations at most, so a rare far draw does not leave the cluster.
+    const spread = () => Math.max(-2, Math.min(2, gauss()));
     for (let attempt = 0; attempt < LAND_TRIES; attempt++) {
-      const la = lat + gauss() * EDGE_SPREAD * 0.7;
-      const lo = lon + gauss() * EDGE_SPREAD;
-      if (isLand(la, lo)) return [la, lo];
+      const la = lat + spread() * EDGE_SPREAD * 0.7;
+      const lo = lon + spread() * EDGE_SPREAD;
+      if (la < POPULATED_NORTH && la > POPULATED_SOUTH && isLand(la, lo)) return [la, lo];
     }
     return onLand(lat, lon);
   }
