@@ -164,9 +164,13 @@ struct Dimensions {
     country: String,
 }
 
+/// Leaves out Cloudflare's Early Hints subrequests (user agent `nginx-ssl early hints` / `bastion
+/// early hints`): they are logged as requests (a quarter of the API host's rows, as `miss`/504
+/// without any origin contact) but no client sent them.
 const QUERY: &str = "query($zone: String!, $from: Time!, $to: Time!) { viewer { zones(filter: \
                      {zoneTag: $zone}) { httpRequestsAdaptiveGroups(limit: 10000, filter: \
-                     {datetime_geq: $from, datetime_lt: $to}) { count sum { edgeResponseBytes } \
+                     {datetime_geq: $from, datetime_lt: $to, userAgent_notlike: \
+                     \"%early hints%\"}) { count sum { edgeResponseBytes } \
                      dimensions { clientRequestHTTPHost cacheStatus coloCode clientCountryName } } } \
                      } }";
 
