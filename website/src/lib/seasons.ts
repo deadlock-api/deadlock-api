@@ -101,6 +101,18 @@ export function currentPatchLabel(): string {
   return `${day.utc(PATCHES[0].id).format("MMM D")} Patch`;
 }
 
+/**
+ * `defaultDateRange` as titles name it: the running season as players search for it ("Season 2", without the API's
+ * "Beta" prefix), or the current patch ("Oct 30 Patch") when the period is a patch.
+ */
+export function defaultPeriodTitle(
+  seasons: readonly SeasonInfo[],
+  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
+): string {
+  const season = preference === "season" ? currentSeason(seasons) : undefined;
+  return season ? season.name.replace(/^beta\s+/i, "") : currentPatchLabel();
+}
+
 export function defaultPrevDateRange(
   seasons: readonly SeasonInfo[],
   preference: DateFilterPreference = DEFAULT_DATE_FILTER,

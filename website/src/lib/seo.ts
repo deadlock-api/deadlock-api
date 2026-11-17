@@ -14,7 +14,7 @@ const ORGANIZATION = {
 
 const TITLE_SUFFIX = " | Deadlock API";
 /** Search results cut titles at about 60 characters; past that the suffix would only push the page's name out. */
-const TITLE_MAX_LENGTH = 60;
+export const TITLE_MAX_LENGTH = 60;
 
 /** A page's document title: its name, then the one site suffix every page uses, when both fit in a search result. */
 export function pageTitle(name: string): string {

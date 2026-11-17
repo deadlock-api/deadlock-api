@@ -22,8 +22,8 @@ import { SegmentedItem } from "~/components/ui/segmented";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
 import { prefetchCached } from "~/lib/prefetch-safe";
-import { defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
-import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
+import { currentPatchLabel, defaultPeriodTitle, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
+import { TITLE_MAX_LENGTH, datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { loadSeasons } from "~/queries/asset-queries";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -59,18 +59,22 @@ export const Route = createFileRoute("/community/badge-distribution")({
     ]);
     return {
       medianRank: findMedianRankName(distribution, ranks),
+      period: defaultPeriodTitle(seasons, preferences.dateFilter),
       coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
     };
   },
   head: ({ loaderData }) => {
-    const year = new Date().getFullYear();
-    const median = loaderData?.medianRank ? ` Half of all players sit at ${loaderData.medianRank} or below.` : "";
+    const period = loaderData?.period ?? currentPatchLabel();
+    const name = `Deadlock Rank Distribution (${period})`;
+    const title = `${name}: % of Players per Rank`;
+    const inPeriod = period.endsWith("Patch") ? `in the ${period}` : `in ${period}`;
+    const median = loaderData?.medianRank ? ` The median rank is ${loaderData.medianRank}.` : "";
     return seo({
-      title: pageTitle(`Deadlock Rank Distribution ${year}: % of Players per Rank`),
-      description: `What percent of Deadlock players sit at each rank and subtier, from Obscurus to Eternus.${median}`,
+      title: pageTitle(title.length <= TITLE_MAX_LENGTH ? title : name),
+      description: `What percent of Deadlock players sit at each rank and subtier ${inPeriod}, from Obscurus to Eternus.${median}`,
       path: "/community/badge-distribution",
       jsonLd: datasetJsonLd({
-        name: `Deadlock Rank Distribution ${year}`,
+        name,
         description:
           "Distribution of Deadlock players across every rank badge and subtier, showing the share of players at each tier of the competitive ladder along with rank percentiles.",
         path: "/community/badge-distribution",
