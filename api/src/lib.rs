@@ -65,6 +65,7 @@ use crate::middleware::cache_bust::reject_cache_busts;
 use crate::middleware::ch_caller::scope_ch_caller;
 use crate::middleware::ch_cost::ch_cost_headers;
 use crate::middleware::cors;
+use crate::middleware::etag::conditional_get;
 use crate::middleware::feature_flags::feature_flags;
 use crate::middleware::live_requests::live_requests;
 use crate::middleware::request_id::request_id;
@@ -112,10 +113,11 @@ const ROBOTS_TXT: &str = include_str!("../public/robots.txt");
 
 /// Marks every non-2xx response `no-store`, overriding any `Cache-Control` set further in
 /// (including by [`CacheControlLayer`]). Applied outside of every other layer that can
-/// produce an error response.
+/// produce an error response. A 304 keeps its headers: they renew the cached copy it confirms.
 async fn no_store_on_error(req: Request, next: Next) -> Response {
     let mut response = next.run(req).await;
-    if !response.status().is_success() {
+    let status = response.status();
+    if !status.is_success() && status != StatusCode::NOT_MODIFIED {
         response
             .headers_mut()
             .insert(header::CACHE_CONTROL, HeaderValue::from_static("no-store"));
@@ -169,6 +171,13 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         // Add application routes
         .merge(routes::router(&state))
         .layer(metrics_layer)
+        .layer(
+            CacheControlLayer::new(Duration::from_secs(DEFAULT_CACHE_TIME))
+                .with_stale_while_revalidate(Duration::from_secs(DEFAULT_CACHE_TIME)),
+        )
+        // Outside every Cache-Control layer (it only tags public responses) and inside request
+        // tracking, so request logs and the live map record its 304s.
+        .layer(from_fn(conditional_get))
         // Add Middlewares
         .layer(from_fn_with_state(state.clone(), feature_flags))
         .layer(from_fn(reject_cache_busts))
@@ -176,10 +185,6 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .layer(from_fn(ch_cost_headers))
         .layer(from_fn_with_state(state.clone(), track_requests))
         .layer(from_fn_with_state(state.clone(), live_requests))
-        .layer(
-            CacheControlLayer::new(Duration::from_secs(DEFAULT_CACHE_TIME))
-                .with_stale_while_revalidate(Duration::from_secs(DEFAULT_CACHE_TIME)),
-        )
         // Level 1: Cloudflare always asks for brotli, and tower-http's default brotli quality 4
         // zero-fills ~16 MiB of hash tables per large body, about half the API's CPU. Quality 1
         // costs ~3x less CPU for ~15% bigger metadata and match-history bodies.

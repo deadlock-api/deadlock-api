@@ -4,6 +4,7 @@ pub(super) mod cache_bust;
 pub(super) mod ch_caller;
 pub(super) mod ch_cost;
 pub(super) mod cors;
+pub(super) mod etag;
 pub(super) mod feature_flags;
 pub(super) mod live_requests;
 pub(super) mod rate_limit;

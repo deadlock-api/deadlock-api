@@ -71,6 +71,7 @@ jsonwebtoken = { version = "11", features = ["aws_lc_rs"] }
 async-trait = "0.1.92"
 tantivy = { version = "0.27.0", features = ["zstd-compression"] }
 arc-swap = "1.9.5"
+xxhash-rust = { workspace = true }
 datafusion = { version = "55", default-features = false, features = [
     "sql",
     "parquet",
