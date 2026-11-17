@@ -76,7 +76,6 @@ export const navGroups: NavGroup[] = [
     links: [
       { to: "/streamkit", label: "Stream Kit", icon: Radio },
       { to: "/data-dumps", label: "MCP & Data Dumps", icon: HardDrive },
-      { to: "/live", label: "Live API Traffic", icon: Activity },
       { to: "/crosshair", label: "Crosshair Editor", icon: Crosshair },
       { to: "/sounds", label: "Sounds", icon: Volume2 },
       { to: "/blog", label: "Blog", icon: BookOpen },
@@ -97,6 +96,7 @@ export const navGroups: NavGroup[] = [
 ];
 
 export const bottomNavLinks: NavLink[] = [
+  { to: "/live", label: "Live API Traffic", icon: Activity },
   { to: "/ingest-cache", label: "Data Ingest", icon: Database },
   { to: "/data-privacy", label: "Data Privacy", icon: Shield },
 ];

@@ -78,7 +78,7 @@ function SidebarContent() {
             ))}
           </SideNavGroup>
         ))}
-        {/* The API, the ingest tool and the privacy page: entries like every other, not a stack of footer buttons. */}
+        {/* The API, its live traffic, the ingest tool and the privacy page: entries like every other, not a stack of footer buttons. */}
         <SideNavGroup label="Resources">
           <SideNavItem asChild>
             <a href={`${API_ORIGIN}/docs`} target="_blank" rel="noopener noreferrer">
