@@ -155,21 +155,112 @@ function parseEdgeMinute(wire: WireEdgeMinute): EdgeMinute | null {
   return { start: wire.m * 60_000, groups, perSecond, cache, lakeToday };
 }
 
-/** One SSE message: a batch of our server's requests, a new minute of Cloudflare's, or both. */
+/** One match the ingest worker just wrote to the database. */
+export interface IngestedMatch {
+  matchId: number;
+  /** When it started, unix seconds. */
+  startTime: number;
+  durationS: number;
+  /** Valve's game mode: 1 normal, 4 Street Brawl. */
+  gameMode: number;
+  /** Valve's match mode: 1 unranked, 4 ranked, 2 private lobby, 3 bots. */
+  matchMode: number;
+  /** The lobby's average badge; null when unranked. */
+  badge: number | null;
+  /** The winning team, 0 or 1; null for a draw. */
+  winner: 0 | 1 | null;
+  /** The server region, e.g. `eu_west`; null when unknown. */
+  region: string | null;
+  /** Hero ids of each team, in slot order. */
+  teams: [number[], number[]];
+}
+
+/** How many matches one flush of the ingest worker wrote, and when. */
+export interface IngestFlush {
+  /** When it was written, unix ms. */
+  at: number;
+  /** Matches written. */
+  total: number;
+}
+
+/** One flush of the ingest worker: about a minute of matches written to the database. */
+export interface IngestEntry {
+  /** When it was written, unix ms. */
+  at: number;
+  /** Matches written, sampled or not. */
+  total: number;
+  /** A random sample of them (at most 300). */
+  matches: IngestedMatch[];
+}
+
+type WireIngestedMatch = [
+  number,
+  number,
+  number,
+  number,
+  number,
+  number | null,
+  number | null,
+  string | null,
+  number[],
+  number[],
+];
+
+interface WireIngestEntry {
+  t: number;
+  n: number;
+  m: WireIngestedMatch[];
+}
+
+function parseIngestEntry(wire: WireIngestEntry): IngestEntry | null {
+  if (typeof wire?.t !== "number" || typeof wire.n !== "number" || !Array.isArray(wire.m)) return null;
+  const matches: IngestedMatch[] = [];
+  for (const row of wire.m) {
+    if (!Array.isArray(row) || row.length < 10) continue;
+    const [matchId, startTime, durationS, gameMode, matchMode, badge, winner, region, team0, team1] = row;
+    if (!Array.isArray(team0) || !Array.isArray(team1)) continue;
+    matches.push({
+      matchId,
+      startTime,
+      durationS,
+      gameMode,
+      matchMode,
+      badge: badge || null,
+      winner: winner === 0 || winner === 1 ? winner : null,
+      region: region || null,
+      teams: [team0, team1],
+    });
+  }
+  return { at: wire.t, total: wire.n, matches };
+}
+
+/** One SSE message: a batch of our server's requests, a new minute of Cloudflare's, new flushes of the ingest worker. */
 export interface LiveMessage {
   batch: LiveBatch | null;
   edge: EdgeMinute | null;
+  ingest: IngestEntry[];
+  /** The sizes of the flushes before the newest, oldest first; sent on connect. */
+  ingestHistory: IngestFlush[] | null;
 }
 
 /** Parses one SSE message. */
 export function parseMessage(data: string): LiveMessage {
-  let wire: WireBatch & { hm?: WireEdgeMinute };
+  type Wire = WireBatch & { hm?: WireEdgeMinute; im?: WireIngestEntry[]; ih?: [number, number][] };
+  let wire: Wire;
   try {
-    wire = JSON.parse(data) as WireBatch & { hm?: WireEdgeMinute };
+    wire = JSON.parse(data) as Wire;
   } catch {
-    return { batch: null, edge: null };
+    return { batch: null, edge: null, ingest: [], ingestHistory: null };
   }
-  return { batch: parseBatch(wire), edge: wire?.hm ? parseEdgeMinute(wire.hm) : null };
+  const ingest = Array.isArray(wire?.im)
+    ? wire.im.map(parseIngestEntry).filter((entry): entry is IngestEntry => entry !== null)
+    : [];
+  const ingestHistory = Array.isArray(wire?.ih)
+    ? wire.ih
+        .filter((row) => Array.isArray(row) && typeof row[0] === "number" && typeof row[1] === "number")
+        .map(([at, total]) => ({ at, total }))
+    : null;
+  return { batch: parseBatch(wire), edge: wire?.hm ? parseEdgeMinute(wire.hm) : null, ingest, ingestHistory };
 }
 
 function parseBatch(wire: WireBatch): LiveBatch | null {

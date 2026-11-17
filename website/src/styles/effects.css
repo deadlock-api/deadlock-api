@@ -161,3 +161,35 @@ html:has(.mobile-navigation[open]) {
     animation: none;
   }
 }
+
+/* An entry arriving at the top of a LiveList: its grid row opens from nothing to its height, so the entries below
+   glide down instead of jumping, and its body glows with the primary tint for a moment. Under reduced motion the
+   durations collapse and it simply appears. */
+@keyframes live-list-enter {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+@keyframes live-list-glow {
+  from {
+    background-color: color-mix(in oklab, var(--primary) 14%, transparent);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+
+[data-slot="live-list-item"] {
+  display: grid;
+  animation: live-list-enter var(--duration-slow) var(--ease-standard) both;
+}
+
+[data-slot="live-list-item-body"] {
+  animation: live-list-glow var(--duration-highlight) var(--ease-standard) both;
+}

@@ -202,6 +202,8 @@
   --duration-fast: 150ms;
   --duration-normal: 200ms;
   --duration-slow: 300ms;
+  /* A highlight that fades on its own: a new entry of a live list. */
+  --duration-highlight: 1500ms;
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* App chrome on phones (below md): the bar along the top that holds the menu button, and the room kept under the
@@ -400,5 +402,6 @@
     --duration-fast: 0.01ms;
     --duration-normal: 0.01ms;
     --duration-slow: 0.01ms;
+    --duration-highlight: 0.01ms;
   }
 }

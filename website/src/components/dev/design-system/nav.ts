@@ -221,6 +221,7 @@ export const NAV: readonly NavChapter[] = [
       },
       { title: "Tier list", items: ["TierList", "TierList grouped"] },
       { title: "List detail", items: ["ListDetail"] },
+      { title: "Live list", items: ["LiveList"] },
       {
         title: "Panel",
         items: ["Panel", "PanelRow", "PanelViews", "PanelWithDetails", "PanelSection", "PanelSection tone"],

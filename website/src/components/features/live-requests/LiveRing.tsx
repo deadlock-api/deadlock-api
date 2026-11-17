@@ -12,7 +12,7 @@ export interface LiveRingSlice {
   label: string;
   /** A CSS color, from `SERIES_COLORS`, `CHART_COLOR` or `LIVE_MAP_COLOR`. */
   color: string;
-  /** Requests per second. */
+  /** Requests per second, or a count with `unit` "". */
   value: number;
 }
 
@@ -20,10 +20,12 @@ interface LiveRingProps extends React.ComponentProps<"div"> {
   /** What the ring splits, for assistive technology: "Requests by where they are answered". */
   label: string;
   slices: LiveRingSlice[];
+  /** Printed after each value: "/s" for rates (the default), "" for counts. */
+  unit?: string;
 }
 
 /** A split of the traffic as a ring, with its list beside it carrying the numbers: requests per second and share. */
-export function LiveRing({ label, slices, ...props }: LiveRingProps) {
+export function LiveRing({ label, slices, unit = "/s", ...props }: LiveRingProps) {
   const total = slices.reduce((sum, slice) => sum + slice.value, 0) || 1;
   return (
     <div className="flex items-center gap-3" {...props}>
@@ -59,7 +61,8 @@ export function LiveRing({ label, slices, ...props }: LiveRingProps) {
               {slice.label}
             </Text>
             <Text variant="caption" numeric="tabular">
-              {formatCompact(slice.value)}/s
+              {formatCompact(slice.value)}
+              {unit}
             </Text>
             <Text variant="caption" tone="muted" numeric="tabular" align="end" className="w-10">
               {formatShare(slice.value / total)}

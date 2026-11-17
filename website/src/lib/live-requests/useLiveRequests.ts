@@ -2,7 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { API_ORIGIN } from "~/lib/constants";
 
-import { coloCity, type EdgeMinute, type LiveBatch, type LiveQueue, parseMessage } from "./feed";
+import {
+  coloCity,
+  type EdgeMinute,
+  type IngestEntry,
+  type IngestFlush,
+  type LiveBatch,
+  type LiveQueue,
+  parseMessage,
+} from "./feed";
 
 export const LIVE_REQUESTS_URL = `${API_ORIGIN}/v1/info/live-requests`;
 
@@ -67,10 +75,16 @@ interface Feed {
 
 const EMPTY_FEED: Feed = { batches: [] };
 
-/** What a renderer gets: each batch of our server's requests, and each new minute of Cloudflare's (null: none). */
+/**
+ * What a renderer gets: each batch of our server's requests, each new minute of Cloudflare's (null: none), and each
+ * flush of the ingest worker (the newest one again when the stream reopens).
+ */
 export interface LiveListener {
-  onBatch: (batch: LiveBatch) => void;
-  onEdgeMinute: (minute: EdgeMinute | null) => void;
+  onBatch?: (batch: LiveBatch) => void;
+  onEdgeMinute?: (minute: EdgeMinute | null) => void;
+  onIngest?: (entry: IngestEntry) => void;
+  /** The sizes of the flushes before the newest one, when the stream opens. */
+  onIngestHistory?: (flushes: IngestFlush[]) => void;
 }
 
 function topShares(counts: Map<string, number>, total: number, label: (key: string) => string, top = Infinity) {
@@ -162,7 +176,7 @@ export function useLiveRequests() {
     const publishEdge = (minute: EdgeMinute | null) => {
       edgeRef.current = minute;
       setEdge(minute);
-      for (const listener of listeners.current) listener.onEdgeMinute(minute);
+      for (const listener of listeners.current) listener.onEdgeMinute?.(minute);
     };
     const close = () => {
       source?.close();
@@ -177,11 +191,16 @@ export function useLiveRequests() {
       source.onmessage = (event: MessageEvent<string>) => {
         const message = parseMessage(event.data);
         if (message.edge) publishEdge(message.edge);
+        const history = message.ingestHistory;
+        if (history) for (const listener of listeners.current) listener.onIngestHistory?.(history);
+        for (const entry of message.ingest) {
+          for (const listener of listeners.current) listener.onIngest?.(entry);
+        }
         const batch = message.batch;
         if (!batch) return;
         setStatus("live");
         setFeed((prev) => ({ batches: [...prev.batches.slice(1 - HISTORY_BATCHES), batch] }));
-        for (const listener of listeners.current) listener.onBatch(batch);
+        for (const listener of listeners.current) listener.onBatch?.(batch);
       };
       source.onerror = () => {
         // A dropped stream reconnects by itself (CONNECTING); a refused one (an error status) stays CLOSED.
@@ -218,7 +237,7 @@ export function useLiveRequests() {
 
   const subscribe = useCallback((listener: LiveListener) => {
     listeners.current.add(listener);
-    listener.onEdgeMinute(edgeRef.current);
+    listener.onEdgeMinute?.(edgeRef.current);
     return () => {
       listeners.current.delete(listener);
     };
