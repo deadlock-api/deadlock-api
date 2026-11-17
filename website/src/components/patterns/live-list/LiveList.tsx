@@ -2,7 +2,9 @@ import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "~/lib/utils";
 
-const liveListVariants = cva("flex min-h-0 flex-col overflow-hidden", {
+// `relative`: the list is the containing block of what is positioned inside its entries (a screen-reader-only label
+// is absolute), so the entries it cuts off cannot stretch the page.
+const liveListVariants = cva("relative flex min-h-0 flex-col overflow-hidden", {
   variants: {
     /** `fade`: the oldest entries fade out where the list cuts them off. `cut`: they end at the edge. */
     edge: { fade: "mask-b-from-70%", cut: "" },

@@ -104,7 +104,7 @@ function Team({ heroes, won, side }: { heroes: number[]; won: boolean; side: "st
 function MatchRow({ match, now, ranks }: { match: ShownMatch; now: number; ranks: Rank[] }) {
   return (
     <Stack gap={1}>
-      <Inline gap={2} wrap="nowrap" justify="between">
+      <Inline gap={2} wrap="nowrap">
         <Team heroes={match.teams[0]} won={match.winner === 0} side="start" />
         <Text variant="meta" tone="muted" aria-hidden>
           vs
@@ -143,52 +143,55 @@ export function LiveIngestPanel({ feed = EMPTY_FEED, ...props }: LiveIngestPanel
   return (
     <Panel {...props}>
       <PanelHeader title="Matches coming in" icon={DatabaseZap} description="Written to the database" size="sm" />
-      <PanelBody size="sm" className="flex min-h-0 flex-1 flex-col">
-        <Stack gap={3} className="@container min-h-0 flex-1">
-          <StatGroup size="xs" variant="plain" className="grid-cols-3">
-            <Stat
-              label="Per minute"
-              value={perMinute === null ? undefined : Math.round(perMinute).toLocaleString("en-US")}
-              sub={flushes.length > 1 ? "Last 30 min" : "Measuring"}
-            />
-            <Stat
-              label="While you watch"
-              value={now === null ? undefined : Math.round(counted).toLocaleString("en-US")}
-              sub="Matches written"
-            />
-            <Stat
-              label="Played today"
-              value={freshShare === null ? undefined : formatShare(freshShare)}
-              sub="Rest: old uploads"
-            />
-          </StatGroup>
-          <div className="grid items-center gap-3 @sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-            <ChartSurface
-              label={
-                flushes.length
-                  ? `Matches written per flush over the last ${flushes.length} flushes, at most ${largest.toLocaleString("en-US")}`
-                  : "Matches written per flush, once the first one arrives"
-              }
-              announce="label"
-              size="xs"
-              variant="bare"
-            >
-              <BarChart data={flushes} margin={CHART_MARGIN_SM}>
-                <XAxis
-                  dataKey="at"
-                  type="number"
-                  domain={["dataMin", "dataMax"]}
-                  hide
-                  padding={{ left: 6, right: 6 }}
-                />
-                <YAxis {...CHART_Y_AXIS_SM} allowDecimals={false} domain={[0, "auto"]} />
-                <Bar dataKey="total" fill={FLUSH_COLOR} isAnimationActive={false} maxBarSize={10} radius={2} />
-              </BarChart>
-            </ChartSurface>
-            <LiveRing label="Matches by server region" slices={slices} unit="" />
-          </div>
+      <PanelBody size="sm" className="@container flex min-h-0 flex-1 flex-col">
+        {/* One column in a narrow panel; side by side under the map, the list taking the rest of the width. */}
+        <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)] gap-3 @3xl:grid-cols-[28rem_minmax(0,1fr)] @3xl:grid-rows-[minmax(0,1fr)]">
+          <Stack gap={3}>
+            <StatGroup size="xs" variant="plain" className="grid-cols-3">
+              <Stat
+                label="Per minute"
+                value={perMinute === null ? undefined : Math.round(perMinute).toLocaleString("en-US")}
+                sub={flushes.length > 1 ? "Last 30 min" : "Measuring"}
+              />
+              <Stat
+                label="While you watch"
+                value={now === null ? undefined : Math.round(counted).toLocaleString("en-US")}
+                sub="Matches written"
+              />
+              <Stat
+                label="Played today"
+                value={freshShare === null ? undefined : formatShare(freshShare)}
+                sub="Rest: old uploads"
+              />
+            </StatGroup>
+            <div className="grid items-center gap-3 @sm:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+              <ChartSurface
+                label={
+                  flushes.length
+                    ? `Matches written per flush over the last ${flushes.length} flushes, at most ${largest.toLocaleString("en-US")}`
+                    : "Matches written per flush, once the first one arrives"
+                }
+                announce="label"
+                size="xs"
+                variant="bare"
+              >
+                <BarChart data={flushes} margin={CHART_MARGIN_SM}>
+                  <XAxis
+                    dataKey="at"
+                    type="number"
+                    domain={["dataMin", "dataMax"]}
+                    hide
+                    padding={{ left: 6, right: 6 }}
+                  />
+                  <YAxis {...CHART_Y_AXIS_SM} allowDecimals={false} domain={[0, "auto"]} />
+                  <Bar dataKey="total" fill={FLUSH_COLOR} isAnimationActive={false} maxBarSize={10} radius={2} />
+                </BarChart>
+              </ChartSurface>
+              <LiveRing label="Matches by server region" slices={slices} unit="" />
+            </div>
+          </Stack>
           {matches.length && now !== null ? (
-            <LiveList label="Matches just written to the database" className="min-h-0 flex-1">
+            <LiveList label="Matches just written to the database" className="min-h-0">
               {matches.map((match) => (
                 <LiveListItem key={match.key}>
                   <MatchRow match={match} now={now} ranks={ranks} />
@@ -198,7 +201,7 @@ export function LiveIngestPanel({ feed = EMPTY_FEED, ...props }: LiveIngestPanel
           ) : (
             <LoadingState size="sm" text="Waiting for the next matches to be written" />
           )}
-        </Stack>
+        </div>
       </PanelBody>
     </Panel>
   );

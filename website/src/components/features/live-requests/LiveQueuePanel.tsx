@@ -36,8 +36,8 @@ export function LiveQueuePanel({ history = NO_HISTORY, ...props }: LiveQueuePane
   return (
     <Panel {...props}>
       <PanelHeader title="Server queue" icon={ListOrdered} description="Last minute" size="sm" />
-      <PanelBody size="sm">
-        <Stack gap={2}>
+      <PanelBody size="sm" className="flex min-h-0 flex-1 flex-col">
+        <Stack gap={2} className="min-h-0 flex-1">
           <StatGroup size="xs" variant="plain" className="grid-cols-3">
             <Stat
               label={<Keyed color={REQUESTS_COLOR}>In progress</Keyed>}
@@ -62,8 +62,9 @@ export function LiveQueuePanel({ history = NO_HISTORY, ...props }: LiveQueuePane
                 : "The server queue, once the feed connects"
             }
             announce="label"
-            size="xs"
+            size="grow"
             variant="bare"
+            className="min-h-12"
           >
             <AreaChart data={history} margin={CHART_MARGIN_SM}>
               <XAxis dataKey="time" type="number" domain={["dataMin", "dataMax"]} hide />
