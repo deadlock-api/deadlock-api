@@ -192,7 +192,9 @@ async fn regions(
     let query = format!(
         "
         SELECT match_id,
-            dictGet('default.server_clusters_dict', 'region', toUInt64(any(cluster_id))) AS region
+            -- `cluster_id` is Nullable, which would make the region Nullable too; the filter
+            -- below leaves no NULLs.
+            dictGet('default.server_clusters_dict', 'region', toUInt64(assumeNotNull(any(cluster_id)))) AS region
         FROM match_salts
         WHERE match_id IN ({ids}) AND cluster_id > 0
         GROUP BY match_id
