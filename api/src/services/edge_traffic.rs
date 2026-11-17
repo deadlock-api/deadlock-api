@@ -24,6 +24,9 @@ const ASSETS_PREFIX: &str = "assets";
 const DATA_LAKE_HOST: &str = "data.deadlock-api.com";
 /// Cache statuses Cloudflare answers from its cache without asking the origin.
 const CACHED: &[&str] = &["hit", "stale", "updating", "revalidated"];
+/// Cache status of what Cloudflare answers without looking at its cache: preflights from the CORS
+/// Snippet, firewall blocks, client aborts. On the API host these stay out of the hit rate.
+const NOT_CACHEABLE: &str = "none";
 
 /// What Cloudflare served without the API.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -103,7 +106,8 @@ struct Sum {
 }
 
 /// The zone's cache in a minute: requests and response bytes, all and from cache, for every host
-/// and for the API alone, and the data lake's requests and bytes.
+/// and for the API alone (only what Cloudflare could cache, see [`NOT_CACHEABLE`]), and the data
+/// lake's requests and bytes.
 #[derive(Debug, Default, PartialEq, Eq)]
 struct CacheTotals {
     requests: u64,
@@ -130,7 +134,7 @@ impl CacheTotals {
             self.lake_requests = self.lake_requests.saturating_add(group.count);
             self.lake_bytes = self.lake_bytes.saturating_add(bytes);
         }
-        if group.dimensions.host == API_HOST {
+        if group.dimensions.host == API_HOST && group.dimensions.cache_status != NOT_CACHEABLE {
             self.api_requests = self.api_requests.saturating_add(group.count);
             if cached {
                 self.api_cached_requests = self.api_cached_requests.saturating_add(group.count);
@@ -351,6 +355,8 @@ mod tests {
         for g in [
             group(API_HOST, "hit", "FRA", 5),
             group(API_HOST, "miss", "FRA", 15),
+            // Preflights answered by the Snippet: zone traffic, but not in the API's hit rate.
+            group(API_HOST, "none", "FRA", 40),
             group("assets-bucket.deadlock-api.com", "hit", "FRA", 80),
         ] {
             totals.add(&g);
@@ -358,9 +364,9 @@ mod tests {
         assert_eq!(
             totals,
             CacheTotals {
-                requests: 100,
+                requests: 140,
                 cached_requests: 85,
-                bytes: 1000,
+                bytes: 1400,
                 cached_bytes: 850,
                 api_requests: 20,
                 api_cached_requests: 5,
