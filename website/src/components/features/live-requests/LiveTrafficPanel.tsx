@@ -122,6 +122,10 @@ export function LiveTrafficPanel({ stats, edge = null, ...props }: LiveTrafficPa
                   value={formatPercent(edge.cache.apiCachedRequests / (edge.cache.apiRequests || 1), 0)}
                 />
                 <Stat
+                  label="API uncached/s"
+                  value={formatCompact(Math.max(0, edge.cache.apiRequests - edge.cache.apiCachedRequests) / 60)}
+                />
+                <Stat
                   label="All cache hits"
                   value={formatPercent(edge.cache.cachedRequests / (edge.cache.requests || 1), 0)}
                 />
