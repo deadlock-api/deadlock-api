@@ -125,6 +125,20 @@ async fn no_store_on_error(req: Request, next: Next) -> Response {
     response
 }
 
+/// `Cache-Control` of the 404 for a path no route matches. Only a deploy can change that
+/// answer, so Cloudflare may keep it (removed routes still get millions of requests a day);
+/// one hour bounds how long a route added by a deploy can stay hidden behind a cached 404.
+const UNKNOWN_ROUTE_CACHE_CONTROL: &str = "public, max-age=3600";
+
+/// Router fallback, set after every layer so it skips them: unknown paths stay out of the
+/// request logs, and `no_store_on_error` doesn't mark the response `no-store`.
+async fn unknown_route() -> impl IntoResponse {
+    (
+        StatusCode::NOT_FOUND,
+        [(header::CACHE_CONTROL, UNKNOWN_ROUTE_CACHE_CONTROL)],
+    )
+}
+
 async fn favicon() -> impl IntoResponse {
     (
         [(header::CONTENT_TYPE, "image/x-icon")],
@@ -227,6 +241,58 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .merge(Scalar::with_url("/docs", api.clone()).custom_html(api_doc::SCALAR_HTML))
         .route("/openapi.json", get(|| async { Json(api) }))
         .layer(cors::public());
-    let router = router.with_state(state).merge(docs);
+    let router = router.with_state(state).merge(docs).fallback(unknown_route);
     Ok(NormalizePathLayer::trim_trailing_slash().layer(router))
+}
+
+#[cfg(test)]
+mod tests {
+    use axum::body::Body;
+    use tower::ServiceExt as _;
+
+    use super::*;
+
+    /// Nested routers inherit the fallback, and layers added before it don't wrap it.
+    #[tokio::test]
+    async fn unknown_route_is_cacheable_404() {
+        let nested = Router::new()
+            .route("/known", get(|| async { "ok" }))
+            .route(
+                "/missing",
+                get(|| async {
+                    (
+                        StatusCode::NOT_FOUND,
+                        [(header::CACHE_CONTROL, "public, max-age=600")],
+                    )
+                }),
+            )
+            .layer(from_fn(no_store_on_error));
+        let app = Router::new()
+            .nest("/v1/players", nested)
+            .layer(from_fn(no_store_on_error))
+            .fallback(unknown_route);
+
+        for (uri, cache_control) in [
+            (
+                "/v1/players/1/rank-predict/image",
+                UNKNOWN_ROUTE_CACHE_CONTROL,
+            ),
+            ("/v1/nope", UNKNOWN_ROUTE_CACHE_CONTROL),
+            ("/nope", UNKNOWN_ROUTE_CACHE_CONTROL),
+            // A handler's 404 (e.g. metadata not ingested yet) can turn 200 minutes later.
+            ("/v1/players/missing", "no-store"),
+        ] {
+            let response = app
+                .clone()
+                .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::NOT_FOUND, "{uri}");
+            assert_eq!(
+                response.headers().get(header::CACHE_CONTROL).unwrap(),
+                cache_control,
+                "{uri}"
+            );
+        }
+    }
 }
