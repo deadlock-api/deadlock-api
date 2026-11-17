@@ -43,7 +43,12 @@ s: {tr, cr, tb, cb, at, ac, lr, lb}, d: {lr, lb}}`: kind 0-4 is API cache hits, 
 subdomains, data lake; `s` holds the minute's requests (`tr`) and response bytes (`tb`) with the cached \
 ones (`cr`, `cb`), the API's requests (`at`) with its cached ones (`ac`) and the data lake's requests \
 and bytes (`lr`, `lb`); `d` the data lake's since midnight UTC (null if unavailable). It comes first \
-on connect and then whenever a new minute is complete, a few minutes behind real time."),
+on connect and then whenever a new minute is complete, a few minutes behind real time. `im` carries \
+the matches the ingest worker just wrote to the database, one entry per flush (about one a minute): \
+`{t: unix_ms, n: matches_written, m: [[match_id, start_time, duration_s, game_mode, match_mode, \
+average_badge, winning_team, region, team0_hero_ids, team1_hero_ids], ...]}`, `m` a random sample \
+of at most 300 of them and `region` the server region (null if unknown). The newest entry comes \
+first on connect, with `ih`: `[t, n]` of the last 30 flushes."),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded, or too many streams open")
     ),
     tags = ["Info"],
@@ -80,7 +85,12 @@ pub(super) async fn live_requests(
         .live_requests
         .edge_minute()
         .map(|data| Ok(Event::default().data(data)));
-    let stream = futures::stream::iter(edge)
+    // And the ingest worker's newest flush, so the list of written matches is not empty.
+    let ingest = state
+        .live_requests
+        .ingest_entry()
+        .map(|data| Ok(Event::default().data(data)));
+    let stream = futures::stream::iter(edge.into_iter().chain(ingest))
         .chain(batches(viewer))
         .take_until(crate::SHUTDOWN_TOKEN.clone().cancelled_owned())
         .take_until(tokio::time::sleep(MAX_STREAM));

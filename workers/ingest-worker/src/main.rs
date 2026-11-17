@@ -43,11 +43,13 @@ use valveprotos::deadlock::{
     CMsgMatchMetaData, CMsgMatchMetaDataContents, CMsgMatchMetaDataContentsPatched,
 };
 
+use crate::live_feed::{IngestedMatch, LiveFeed};
 use crate::models::clickhouse_match_metadata::{
-    ClickhouseMatchPlayer, MatchShared, set_enemy_hero_ids,
+    ClickhouseMatchPlayer, MatchShared, average_badge, set_enemy_hero_ids,
 };
 use crate::models::clickhouse_player_match_history::PlayerMatchHistoryEntry;
 
+mod live_feed;
 mod models;
 
 /// Current season's placement length, 0 until the first refresh succeeds. Needed to
@@ -196,6 +198,8 @@ const MAX_DECOMPRESSED_BYTES: u64 = 256 * 1024 * 1024;
 struct ParsedMatch {
     players: Vec<ClickhouseMatchPlayer>,
     history: Vec<PlayerMatchHistoryEntry>,
+    /// What the live page shows of it (see `live_feed`).
+    summary: IngestedMatch,
 }
 
 type InflightSet = Arc<Mutex<HashSet<Path>>>;
@@ -276,6 +280,8 @@ struct PostFlush<S> {
     total_ingested: AtomicUsize,
     move_permits: Semaphore,
     tasks: TaskTracker,
+    /// The live page's feed of written matches; `None` without Redis.
+    live_feed: Option<Arc<LiveFeed>>,
 }
 
 fn lock_inflight(inflight: &InflightSet) -> std::sync::MutexGuard<'_, HashSet<Path>> {
@@ -351,6 +357,7 @@ where
         total_ingested: AtomicUsize::new(0),
         move_permits: Semaphore::new(POST_FLUSH_MOVE_CONCURRENCY),
         tasks: TaskTracker::new(),
+        live_feed: LiveFeed::spawn(ch_client.clone()).await,
     });
 
     let mut interval = tokio::time::interval(Duration::from_secs(10));
@@ -515,6 +522,10 @@ async fn fetch_parse_and_send<S: ObjectStore + 'static>(
         }
     };
 
+    let summary = post_flush
+        .live_feed
+        .is_some()
+        .then(|| parsed.summary.clone());
     let Some(flushed) = inserters.insert(parsed).await else {
         return Err(IngestError::InsertersShutDown);
     };
@@ -523,6 +534,9 @@ async fn fetch_parse_and_send<S: ObjectStore + 'static>(
     post_flush.tasks.clone().spawn(async move {
         if flushed.await {
             counter!("ingest_worker.batch_flush.matches").increment(1);
+            if let Some((feed, summary)) = post_flush.live_feed.as_ref().zip(summary) {
+                feed.record(summary);
+            }
             post_flush.total_ingested.fetch_add(1, Ordering::Relaxed);
             let new_path = Path::from(format!("{PROCESSED_PREFIX}/{filename}"));
             let _permit = post_flush.move_permits.acquire().await;
@@ -679,7 +693,12 @@ fn build_parsed_match(match_info: &MatchInfo) -> ParsedMatch {
             )
         })
         .collect();
-    ParsedMatch { players, history }
+    let summary = IngestedMatch::new(match_info, average_badge(match_info));
+    ParsedMatch {
+        players,
+        history,
+        summary,
+    }
 }
 
 /// Build the per-player Clickhouse rows for a parsed match.

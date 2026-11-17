@@ -25,6 +25,7 @@ use tracing::warn;
 
 use crate::services::ch_cost::ChCost;
 use crate::services::edge_traffic::{self, EdgeMinute};
+use crate::services::live_ingest::{self, IngestEntry};
 use crate::utils::request::header_str;
 
 /// How often a batch goes out.
@@ -148,6 +149,8 @@ pub(crate) struct LiveRequests {
     pending: Mutex<Pending>,
     /// The newest complete minute of Cloudflare-served traffic, when configured.
     edge: Mutex<Option<EdgeMinute>>,
+    /// The ingest worker's flushes (see `live_ingest`).
+    ingest: Mutex<Ingest>,
     tx: broadcast::Sender<Bytes>,
 }
 
@@ -160,6 +163,7 @@ impl Default for LiveRequests {
             per_client: Mutex::default(),
             pending: Mutex::new(Pending::new()),
             edge: Mutex::new(None),
+            ingest: Mutex::default(),
             tx: broadcast::Sender::new(CHANNEL_CAPACITY),
         }
     }
@@ -288,6 +292,77 @@ impl LiveRequests {
             .map(|minute| serde_json::json!({ "hm": minute.json }).to_string())
     }
 
+    /// Follows the ingest worker's stream while anyone watches: one small Redis read a second,
+    /// none while nobody does. The newest entry is kept for viewers that connect.
+    pub(crate) fn spawn_ingest_poller(
+        self: &std::sync::Arc<Self>,
+        mut redis: redis::aio::ConnectionManager,
+    ) {
+        let feed = std::sync::Arc::clone(self);
+        tokio::spawn(async move {
+            let mut interval = tokio::time::interval(INGEST_POLL);
+            interval.set_missed_tick_behavior(MissedTickBehavior::Skip);
+            // Where reading resumes; `None` starts again from the newest entry.
+            let mut position: Option<String> = None;
+            let mut failing = false;
+            loop {
+                tokio::select! {
+                    () = crate::SHUTDOWN_TOKEN.cancelled() => break,
+                    _ = interval.tick() => {}
+                }
+                if !feed.is_watched() {
+                    // Nothing old to replay once someone watches again.
+                    if position.take().is_some() {
+                        *feed.ingest.lock().unwrap_or_else(PoisonError::into_inner) =
+                            Ingest::default();
+                    }
+                    continue;
+                }
+                let reads = match &position {
+                    None => live_ingest::latest(&mut redis, INGEST_HISTORY).await,
+                    Some(id) => live_ingest::after(&mut redis, id).await,
+                };
+                let reads = match reads {
+                    Ok(reads) => {
+                        failing = false;
+                        reads
+                    }
+                    Err(e) => {
+                        if !core::mem::replace(&mut failing, true) {
+                            warn!("Failed to read the ingest stream: {e}");
+                        }
+                        continue;
+                    }
+                };
+                let starting = position.is_none();
+                // An empty stream starts from its beginning, so the first entry is not missed.
+                position.get_or_insert_with(|| "0-0".to_owned());
+                let mut ingest = feed.ingest.lock().unwrap_or_else(PoisonError::into_inner);
+                for read in reads {
+                    position = Some(read.id);
+                    if let Some(entry) = read.entry {
+                        ingest.push(entry);
+                    }
+                }
+                // Of the history read at the start, viewers already watching need only the newest.
+                if starting {
+                    ingest.history_fresh = true;
+                    if let Some(newest) = ingest.fresh.pop() {
+                        ingest.fresh = vec![newest];
+                    }
+                }
+            }
+        });
+    }
+
+    /// The newest flush of the ingest worker and the sizes of the ones before it as an SSE
+    /// payload (`{"im": [...], "ih": [[t, n], ...]}`), for a viewer that just connected.
+    pub(crate) fn ingest_entry(&self) -> Option<String> {
+        let ingest = self.ingest.lock().unwrap_or_else(PoisonError::into_inner);
+        let latest = ingest.latest.as_ref()?;
+        serde_json::to_string(&serde_json::json!({ "im": [latest], "ih": ingest.history })).ok()
+    }
+
     /// Encodes and sends one batch per [`TICK`] while anyone watches, until shutdown.
     pub(crate) fn spawn_ticker(self: &std::sync::Arc<Self>) {
         let feed = std::sync::Arc::clone(self);
@@ -329,7 +404,17 @@ impl LiveRequests {
                 if let Some(minute) = &edge {
                     edge_sent = Some(minute.minute);
                 }
-                match encode_batch(&pending, load, edge.as_ref().map(|m| &m.json)) {
+                let (ingest, history) = {
+                    let mut ingest = feed.ingest.lock().unwrap_or_else(PoisonError::into_inner);
+                    let history = core::mem::take(&mut ingest.history_fresh)
+                        .then(|| ingest.history.iter().copied().collect::<Vec<_>>());
+                    (core::mem::take(&mut ingest.fresh), history)
+                };
+                let ingest = IngestUpdate {
+                    entries: &ingest,
+                    history: history.as_deref(),
+                };
+                match encode_batch(&pending, load, edge.as_ref().map(|m| &m.json), ingest) {
                     // No receivers is not an error worth handling: the next tick checks again.
                     Ok(batch) => drop(feed.tx.send(batch)),
                     Err(e) => warn!("Failed to encode live request batch: {e}"),
@@ -338,6 +423,37 @@ impl LiveRequests {
         });
     }
 }
+
+/// The ingest worker's flushes as the feed has them.
+#[derive(Debug, Default)]
+struct Ingest {
+    /// The newest one, for viewers that connect.
+    latest: Option<IngestEntry>,
+    /// `(t, n)` of the newest [`INGEST_HISTORY`] ones, oldest first, for viewers that connect.
+    history: std::collections::VecDeque<(u64, u64)>,
+    /// The ones the next batch carries.
+    fresh: Vec<IngestEntry>,
+    /// Whether the next batch carries `history` too: it was just read, after the viewers that
+    /// started the reading connected.
+    history_fresh: bool,
+}
+
+impl Ingest {
+    fn push(&mut self, entry: IngestEntry) {
+        if self.history.len() >= INGEST_HISTORY {
+            self.history.pop_front();
+        }
+        self.history.push_back((entry.t, entry.n));
+        self.latest = Some(entry.clone());
+        self.fresh.push(entry);
+    }
+}
+
+/// How often the ingest stream is read while anyone watches.
+const INGEST_POLL: Duration = Duration::from_secs(1);
+
+/// Flushes a connecting viewer gets the size of: about half an hour.
+const INGEST_HISTORY: usize = 30;
 
 /// A request in flight; see [`LiveRequests::begin`].
 pub(crate) struct InFlight(std::sync::Arc<LiveRequests>);
@@ -407,6 +523,12 @@ struct Batch<'a> {
     /// while it has not changed.
     #[serde(skip_serializing_if = "Option::is_none")]
     hm: Option<&'a serde_json::Value>,
+    /// New flushes of the ingest worker (see `live_ingest`), absent when there are none.
+    #[serde(skip_serializing_if = "<[_]>::is_empty")]
+    im: &'a [IngestEntry],
+    /// `[t, n]` of the recent flushes, when they were just read (see `Ingest::history_fresh`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    ih: Option<&'a [(u64, u64)]>,
     /// Route templates of this batch.
     r: Vec<&'a str>,
     /// `[offset_ms, lat, lon, country, colo, route, status, duration_ms, bytes, rows_read]`;
@@ -427,10 +549,18 @@ type Row<'a> = (
     u64,
 );
 
+/// What a batch carries of the ingest worker's flushes.
+#[derive(Default, Clone, Copy)]
+struct IngestUpdate<'a> {
+    entries: &'a [IngestEntry],
+    history: Option<&'a [(u64, u64)]>,
+}
+
 fn encode_batch(
     pending: &Pending,
     queue: Queue,
     edge: Option<&serde_json::Value>,
+    ingest: IngestUpdate<'_>,
 ) -> serde_json::Result<Bytes> {
     let elapsed = pending.started.elapsed();
     let started_ms = chrono::Utc::now()
@@ -477,6 +607,8 @@ fn encode_batch(
         rr: pending.ch.read_rows,
         rb: pending.ch.read_bytes,
         hm: edge,
+        im: ingest.entries,
+        ih: ingest.history,
         r: routes,
         e: rows,
     };
@@ -544,9 +676,10 @@ mod tests {
         let pending = feed.pending.lock().unwrap();
         assert_eq!(pending.seen, 1000);
         assert_eq!(pending.events.len(), MAX_EVENTS_PER_TICK);
-        let json: serde_json::Value =
-            serde_json::from_slice(&encode_batch(&pending, Queue::default(), None).unwrap())
-                .unwrap();
+        let json: serde_json::Value = serde_json::from_slice(
+            &encode_batch(&pending, Queue::default(), None, IngestUpdate::default()).unwrap(),
+        )
+        .unwrap();
         assert_eq!(json["n"], 1000);
         assert_eq!(json["r"].as_array().unwrap().len(), 2);
         assert_eq!(json["e"][0].as_array().unwrap().len(), 10);

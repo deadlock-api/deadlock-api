@@ -379,7 +379,7 @@ pub(crate) struct ClickhouseMatchPlayer {
 /// A player's `initial_display_rank` is `0` while they are still in placement games;
 /// those are excluded rather than averaged in as rank zero. `None` when neither source
 /// yields a rank, which is the normal case for non-ranked match modes.
-fn average_badge(match_info: &MatchInfo) -> Option<u32> {
+pub(crate) fn average_badge(match_info: &MatchInfo) -> Option<u32> {
     let team_badges: Vec<u32> = [
         match_info.average_badge_team0,
         match_info.average_badge_team1,

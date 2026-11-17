@@ -8,6 +8,7 @@ pub(crate) mod data_lake;
 pub(crate) mod edge_traffic;
 pub(crate) mod feature_flags;
 pub(crate) mod leaderboard;
+pub(crate) mod live_ingest;
 pub(crate) mod live_requests;
 pub(crate) mod patreon;
 pub(crate) mod pending_matches;

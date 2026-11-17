@@ -203,6 +203,7 @@ impl AppState {
         let request_logger: Arc<RequestLogger> = insert_batcher(&ch_client, "request_logs");
         let live_requests = Arc::new(LiveRequests::default());
         live_requests.spawn_ticker();
+        live_requests.spawn_ingest_poller(redis_client.clone());
         if let (Some(token), Some(zone)) = (
             config.cloudflare.analytics_token.clone(),
             config.cloudflare.zone_id.clone(),
