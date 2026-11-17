@@ -24,8 +24,8 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::ch_admission::ChQueryError;
 use crate::services::cohort_agg_refresh::{
-    COHORT_PLAYERS_PRECISION, HORIZON_DAYS, ITEM_BUCKET_ROLLUP_MEASURES, ITEM_ROLLUP_MEASURES,
-    cohort_rollup_rows, enemy_hero_select_body,
+    COHORT_PLAYERS_PRECISION, ENEMY_AGG_TABLE, ENEMY_PLAYERS_PRECISION, HORIZON_DAYS,
+    ITEM_BUCKET_ROLLUP_MEASURES, ITEM_ROLLUP_MEASURES, cohort_rollup_rows, enemy_hero_select_body,
 };
 use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{
@@ -474,7 +474,7 @@ pub struct ItemStats {
     pub sold: u64,
 }
 
-// All rollups below (`item_stats_agg_v2`, `item_cohort_stats_*_agg_v3`, `item_enemy_stats_agg`)
+// All rollups below (`item_stats_agg_v2`, `item_cohort_stats_*_agg_v3`, `item_enemy_stats_agg_v2`)
 // are built from the `upgrades.*` arrays, which exclude corrupted purchases (migration 42),
 // and keep no per-purchase corruption or enhanced dimension: `corrupted_items` `include`/`only`
 // and `enhanced_items` `exclude`/`only` requests always go to the base table.
@@ -498,10 +498,10 @@ const HERO_FILTERED_REACH: Reach = Reach::Days(10);
 const ROLLUP_MEASURES: &str = "n_matches, n_wins, sum_buy_time, sum_buy_rel, sum_sold_time, n_sold, sum_sold_rel, players_state";
 
 /// The `SELECT` over an item rollup source (`item_stats_agg_v2`, `item_cohort_stats_*_agg_v3` and
-/// `item_enemy_stats_agg` share their measures), from [`Rollup::source`]. The per-row averages
+/// `item_enemy_stats_agg_v2` share their measures), from [`Rollup::source`]. The per-row averages
 /// equal the base query's `avg()`/`avgIf()`: the denominators (`matches`, `n_sold`) are the same
 /// counts. `players_state` is a `uniqCombined` state of `players_precision`, 14 for all but the
-/// hero-less bucket and cohort rollups (12; migration 39): merging plain uniq states was ~99% of this query's CPU.
+/// hero-less bucket, cohort and enemy rollups (12; migration 39): merging plain uniq states was ~99% of this query's CPU.
 fn rollup_query(
     source: &str,
     bucket_expr: &str,
@@ -882,9 +882,9 @@ const COHORT_NW_AGG: Rollup<'static> = Rollup {
     coverage: ITEM_ROLLUP_COVERAGE,
 };
 
-/// `item_enemy_stats_agg`: per day, mode, enemy hero, badge and item.
+/// `item_enemy_stats_agg_v2`: per day, mode, enemy hero, badge and item.
 const ENEMY_AGG: Rollup<'static> = Rollup {
-    table: "item_enemy_stats_agg",
+    table: ENEMY_AGG_TABLE,
     grain: &[
         ("game_mode", "game_mode"),
         ("match_mode", "match_mode"),
@@ -1021,7 +1021,7 @@ fn build_cohort_mv_query(query: &ItemStatsQuery) -> Option<String> {
     ))
 }
 
-/// Builds a query against the `item_enemy_stats_agg` rollup for the plain "what
+/// Builds a query against the `item_enemy_stats_agg_v2` rollup for the plain "what
 /// beats hero X" shape (exactly one enemy hero, no granular filters), else `None`.
 /// On the base table this shape decompresses the item arrays of the whole window:
 /// the enemy hero is in ~20% of matches, spread evenly, so no granule is skipped.
@@ -1106,7 +1106,7 @@ fn build_enemy_mv_query(query: &ItemStatsQuery) -> Option<String> {
         bucket_expr,
         &query.matches_having_clause(),
         "item_stats_enemy_mv",
-        14,
+        ENEMY_PLAYERS_PRECISION,
     ))
 }
 
@@ -2392,7 +2392,7 @@ mod tests {
         };
         let sql = build_enemy_mv_query(&query).unwrap();
         assert_valid_sql(&sql);
-        assert!(sql.contains("FROM item_enemy_stats_agg"));
+        assert!(sql.contains("FROM default.item_enemy_stats_agg_v2 "));
         assert!(sql.contains("toUInt32(enemy_hero_id)"));
         assert!(!sql.contains("enemy_hero_id = "));
         assert!(!sql.contains("HAVING has(enemy_hero_ids"));
@@ -2425,7 +2425,7 @@ mod tests {
         };
         let sql = build_enemy_mv_query(&servable).unwrap();
         assert_valid_sql(&sql);
-        assert!(sql.contains("FROM item_enemy_stats_agg"));
+        assert!(sql.contains("FROM default.item_enemy_stats_agg_v2 "));
         assert!(sql.contains("enemy_hero_id = 6"));
         assert!(sql.contains("least_badge >= 91"));
 

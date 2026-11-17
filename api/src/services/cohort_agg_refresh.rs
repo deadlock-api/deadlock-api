@@ -244,8 +244,8 @@ fn cohort_specs() -> Vec<CohortSpec> {
             history: None,
         },
         CohortSpec {
-            table: "default.item_enemy_stats_agg",
-            staging: "default.item_enemy_stats_agg_staging",
+            table: ENEMY_AGG_TABLE,
+            staging: "default.item_enemy_stats_agg_v2_staging",
             source: Source::EnemyHero,
             horizon_days: HORIZON_DAYS,
             history: None,
@@ -313,8 +313,20 @@ macro_rules! item_rollup_measures {
     };
 }
 
-/// Measures of `item_stats_agg_v2` and the enemy rollup: `uniqCombined(14)` players.
+/// Measures of `item_stats_agg_v2`: `uniqCombined(14)` players.
 pub(crate) const ITEM_ROLLUP_MEASURES: &str = item_rollup_measures!("14");
+
+/// The enemy hero rollup: per day, mode, enemy hero, badge and item.
+pub(crate) const ENEMY_AGG_TABLE: &str = "default.item_enemy_stats_agg_v2";
+
+/// Measures of the enemy hero rollup ([`ENEMY_AGG_TABLE`]): `uniqCombined(12)` players (v2,
+/// 2026-11-17). Merging its states was most of a read's CPU: one enemy over 32 days (12.5M rows)
+/// at 12 instead of 14 measured CPU -49% (-31% with a badge band), wall -44%, memory -44%, and a
+/// table ~35% smaller. Players against exact: p50 0.87%, p99 3.3% (0.43%, 2.6% at 14).
+const ENEMY_ROLLUP_MEASURES: &str = item_rollup_measures!("12");
+
+/// `players_state` precision of the enemy hero rollup ([`ENEMY_ROLLUP_MEASURES`]).
+pub(crate) const ENEMY_PLAYERS_PRECISION: u8 = 12;
 
 /// Measures of the cohort rollups (`item_cohort_stats_*_agg_v3`): `uniqCombined(12)` players.
 /// Their tables were ~37% smaller on disk at 12 than at 14 (275 GiB of states). Against precision
@@ -387,7 +399,7 @@ pub(crate) fn cohort_rollup_rows(table: &str) -> Option<impl Fn(&str) -> String>
     Some(move |since_clause: &str| select_body(&spec, since_clause, Slice::ALL))
 }
 
-/// Rows of `item_enemy_stats_agg` for the matches selected by a since-clause: one row per buyer
+/// Rows of the enemy hero rollup ([`ENEMY_AGG_TABLE`]) for the matches selected by a since-clause: one row per buyer
 /// purchase and opposing hero. With `enemy_hero_id`, only the rows facing that hero (the
 /// item-stats reader's partial days).
 pub(crate) fn enemy_hero_select_body(since_clause: &str, enemy_hero_id: Option<u32>) -> String {
@@ -411,7 +423,7 @@ pub(crate) fn enemy_hero_select_body(since_clause: &str, enemy_hero_id: Option<u
     ifNull(average_badge, 0) AS least_badge,
     ifNull(average_badge, 65535) AS greatest_badge,
     CAST(upgrade_item_id, 'UInt32') AS item_id,
-    {ITEM_ROLLUP_MEASURES}
+    {ENEMY_ROLLUP_MEASURES}
 FROM default.match_player
 ARRAY JOIN
     `upgrades.item_id` AS upgrade_item_id,
@@ -436,7 +448,7 @@ fn all_enemy_heroes_select_body(since_clause: &str) -> String {
     ifNull(average_badge, 0) AS least_badge,
     ifNull(average_badge, 65535) AS greatest_badge,
     CAST(upgrade_item_id, 'UInt32') AS item_id,
-    {ITEM_ROLLUP_MEASURES}
+    {ENEMY_ROLLUP_MEASURES}
 FROM (
     SELECT
         game_mode, match_mode, start_time, average_badge, won, duration_s, account_id,
