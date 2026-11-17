@@ -2922,6 +2922,7 @@ dependencies = [
  "strum 0.28.0",
  "tantivy",
  "telemetry",
+ "tempfile",
  "thiserror",
  "tokio",
  "tokio-util",

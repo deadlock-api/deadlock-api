@@ -60,7 +60,7 @@ impl DiskTier {
 
     /// The stored result of `key`, its deadline and its encoded size, if one is stored, unexpired
     /// and decodable.
-    pub(super) async fn load<T>(&self, cache: &str, key: u128) -> Option<(T, SystemTime, usize)>
+    pub async fn load<T>(&self, cache: &str, key: u128) -> Option<(T, SystemTime, usize)>
     where
         T: DeserializeOwned + Send + 'static,
     {
@@ -102,6 +102,22 @@ impl DiskTier {
             };
             metrics::counter!("ch_cache_disk_writes", "result" => result).increment(1);
         });
+    }
+
+    /// Stores `value` as the entry `key` of `cache` until `expires_at`, in the background and
+    /// dropped if too many writes are in flight. For values kept outside a
+    /// [`QueryCache`](super::QueryCache); `cache` must not be a query cache's name.
+    pub fn store_value<T: serde::Serialize + ?Sized>(
+        &self,
+        cache: &str,
+        key: u128,
+        expires_at: SystemTime,
+        value: &T,
+    ) {
+        match rmp_serde::to_vec_named(value) {
+            Ok(encoded) => self.store(cache, key, expires_at, encoded),
+            Err(e) => warn!("Failed to encode cache entry {cache}/{key:032x}: {e}"),
+        }
     }
 
     /// Waits for the background writes started so far.

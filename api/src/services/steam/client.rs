@@ -1,16 +1,15 @@
 use core::time::Duration;
 use std::collections::{HashMap, HashSet};
+use std::sync::Arc;
 
 use cached::macros::cached;
 use metrics::counter;
 use prost::Message;
 use reqwest::Response;
 use steam_proxy::{SteamProxyClient, SteamProxyOptions, SteamProxyReply, SteamProxyResponse};
-use tracing::{debug, warn};
+use tracing::debug;
 use url::Url;
 use valveprotos::deadlock::{CMsgClientToGcGetMatchMetaDataResponse, EgcCitadelClientMessages};
-use wreq::redirect;
-use wreq_util::Emulation;
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
@@ -18,9 +17,10 @@ use crate::middleware::cors::is_own_origin;
 use crate::services::protected_accounts;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope};
+use crate::services::steam::patch_feed::PatchFeeds;
 use crate::services::steam::types::{
-    FeedItem, ForumRssV2, GetPlayerSummariesResponse, Patch, Rss, SteamAccountNameError,
-    SteamAccountVerifyError, SteamProxyResult, SteamRss,
+    FeedItem, GetPlayerSummariesResponse, Patch, SteamAccountNameError, SteamAccountVerifyError,
+    SteamProxyResult,
 };
 use crate::utils::valve_replay::replay_file_url;
 
@@ -33,18 +33,12 @@ const ACCOUNT_NAME_RATE_LIMIT: RateLimit = RateLimit::new(
 );
 
 const STEAM_OPENID_ENDPOINT: &str = "https://steamcommunity.com/openid/login";
-const RSS_ENDPOINT: &str = "https://forums.playdeadlock.com/forums/changelog.10/index.rss";
-// Without `l`, Steam localizes titles and notes by the caller's location (Ukrainian from production, 2026-10).
-const STEAM_NEWS_ENDPOINT: &str =
-    "https://store.steampowered.com/feeds/news/app/1422450/?l=english";
 
 /// Client for interacting with the Steam API and proxy
 #[derive(Clone)]
 pub(crate) struct SteamClient {
     http_client: reqwest::Client,
-    /// Chrome-emulating client used only for the forum RSS feed, which sits behind the stile bot
-    /// wall. Keeps the clearance cookie handed out by [`fetch_through_stile`] across fetches.
-    forum_client: wreq::Client,
+    patch_feeds: Arc<PatchFeeds>,
     steam_proxy: SteamProxyClient,
     steam_api_key: String,
 }
@@ -57,7 +51,7 @@ impl SteamClient {
         steam_api_key: String,
     ) -> Self {
         Self {
-            forum_client: build_forum_client(),
+            patch_feeds: Arc::new(PatchFeeds::new()),
             steam_proxy: SteamProxyClient::new(
                 http_client.clone(),
                 steam_proxy_urls,
@@ -171,12 +165,12 @@ impl SteamClient {
         .await
     }
 
-    pub(crate) async fn fetch_patch_notes(&self) -> APIResult<Vec<Patch>> {
-        fetch_patch_notes(&self.forum_client).await
+    pub(crate) async fn fetch_patch_notes(&self) -> APIResult<Arc<Vec<Patch>>> {
+        self.patch_feeds.patch_notes().await
     }
 
-    pub(crate) async fn fetch_combined_patch_feed(&self) -> APIResult<Vec<FeedItem>> {
-        fetch_combined_patch_feed(&self.forum_client).await
+    pub(crate) async fn fetch_combined_patch_feed(&self) -> APIResult<Arc<Vec<FeedItem>>> {
+        self.patch_feeds.combined().await
     }
 
     pub(crate) async fn fetch_metadata_file(
@@ -198,131 +192,6 @@ impl SteamClient {
             .await
             .map(Vec::from)
     }
-}
-
-/// Build the Chrome-emulating client used for the forum RSS feed. The feed is behind the `stile`
-/// bot challenge, which redirects any request it deems suspect to an HTML challenge page (breaking
-/// XML parsing). A Chrome `ClientHello` no longer clears the wall on its own, so the client also
-/// needs to follow redirects into the challenge and keep the cookies it hands out. wreq has no
-/// timeout by default, so a stalled hop hung the fetch; a hop takes about a second.
-fn build_forum_client() -> wreq::Client {
-    wreq::Client::builder()
-        .emulation(Emulation::Chrome137)
-        .cookie_store(true)
-        .redirect(redirect::Policy::limited(10))
-        .connect_timeout(Duration::from_secs(5))
-        .timeout(Duration::from_secs(10))
-        .build()
-        .unwrap_or_else(|e| {
-            warn!("Failed to build forum emulation client, using default: {e}");
-            wreq::Client::new()
-        })
-}
-
-#[cached(ttl_secs = 1800, convert = "{ 0 }", key = "u8", result_fallback = true)]
-async fn fetch_patch_notes(http_client: &wreq::Client) -> Result<Vec<Patch>, APIError> {
-    let rss = fetch_rss_text(http_client, RSS_ENDPOINT).await?;
-    parse_rss::<Rss>(&rss, "patch notes").map(|rss| rss.channel.patch_notes)
-}
-
-fn parse_rss<T: serde::de::DeserializeOwned>(rss: &str, what: &str) -> APIResult<T> {
-    quick_xml::de::from_str(rss).map_err(|e| {
-        APIError::status_msg(
-            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to parse {what}: {e}"),
-        )
-    })
-}
-
-/// Number of attempts for a forum/steam RSS fetch. The forum sits behind a bot challenge that
-/// occasionally resets the connection mid-handshake, so a couple of retries smooth over transient
-/// `SendRequest` errors.
-const RSS_FETCH_ATTEMPTS: u32 = 3;
-
-async fn fetch_rss_text(http_client: &wreq::Client, url: &str) -> APIResult<String> {
-    let mut attempt = 1;
-    loop {
-        match fetch_through_stile(http_client, url).await {
-            Ok(text) => return Ok(text),
-            Err(e) if attempt < RSS_FETCH_ATTEMPTS => {
-                warn!(
-                    "RSS fetch from {url} failed (attempt {attempt}/{RSS_FETCH_ATTEMPTS}): {e}; retrying"
-                );
-                tokio::time::sleep(Duration::from_millis(200 * u64::from(attempt))).await;
-                attempt = attempt.saturating_add(1);
-            }
-            Err(e) => return Err(e),
-        }
-    }
-}
-
-/// Hops to follow before giving up on the `stile` bot wall. Its no-JS ladder chains
-/// `<meta http-equiv="refresh">` pages (challenge -> verify -> the original URL) and ends by setting
-/// a clearance cookie, so walking that chain clears the wall without running its JavaScript rung.
-const STILE_MAX_HOPS: u32 = 6;
-
-async fn fetch_through_stile(http_client: &wreq::Client, url: &str) -> APIResult<String> {
-    fn fetch_error(e: impl core::fmt::Display) -> APIError {
-        APIError::status_msg(
-            reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-            format!("Failed to fetch patch notes: {e}"),
-        )
-    }
-
-    let mut next = Url::parse(url).map_err(fetch_error)?;
-    for _ in 0..STILE_MAX_HOPS {
-        let response = http_client
-            .get(next.as_str())
-            .send()
-            .await
-            .map_err(fetch_error)?;
-        let current = Url::parse(&response.uri().to_string()).map_err(fetch_error)?;
-        let body = response.text().await.map_err(fetch_error)?;
-        if body.trim_start().starts_with("<?xml") {
-            return Ok(body);
-        }
-        let Some(hop) = meta_refresh_target(&body).and_then(|t| current.join(&t).ok()) else {
-            return Ok(body);
-        };
-        debug!("Following stile challenge hop to {hop}");
-        next = hop;
-    }
-    Err(APIError::status_msg(
-        reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-        format!(
-            "Failed to fetch patch notes: stile challenge unsolved after {STILE_MAX_HOPS} hops"
-        ),
-    ))
-}
-
-fn meta_refresh_target(body: &str) -> Option<String> {
-    let tag = body.split_once(r#"http-equiv="refresh""#)?.1;
-    let content = tag.split_once(r#"content=""#)?.1.split_once('"')?.0;
-    let target = content.split_once("url=")?.1.trim();
-    Some(target.replace("&amp;", "&"))
-}
-
-#[cached(ttl_secs = 1800, convert = "{ 0 }", key = "u8", result_fallback = true)]
-async fn fetch_combined_patch_feed(http_client: &wreq::Client) -> Result<Vec<FeedItem>, APIError> {
-    let (forum_rss, steam_rss) = tokio::try_join!(
-        fetch_rss_text(http_client, RSS_ENDPOINT),
-        fetch_rss_text(http_client, STEAM_NEWS_ENDPOINT),
-    )?;
-
-    let forum_items = parse_rss::<ForumRssV2>(&forum_rss, "forum patch notes")?
-        .channel
-        .patch_notes;
-    let steam_items = parse_rss::<SteamRss>(&steam_rss, "steam patch notes")?
-        .channel
-        .patch_notes;
-
-    let mut items: Vec<FeedItem> = forum_items
-        .into_iter()
-        .map(FeedItem::Forum)
-        .chain(steam_items.into_iter().map(FeedItem::Steam))
-        .collect();
-    items.sort_by_key(|i| core::cmp::Reverse(i.pub_date()));
-    Ok(items)
 }
 
 #[derive(serde::Deserialize)]
@@ -465,47 +334,6 @@ fn is_assertion_for(params: &HashMap<String, String>, steam_id: u64) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_meta_refresh_target() {
-        let body = r#"<meta http-equiv="refresh" content="20;url=?rung=nojs&amp;band=suspect">"#;
-        assert_eq!(
-            meta_refresh_target(body).as_deref(),
-            Some("?rung=nojs&band=suspect")
-        );
-        assert_eq!(meta_refresh_target("<rss><item/></rss>"), None);
-    }
-
-    #[tokio::test]
-    async fn test_patches() {
-        let patches = fetch_patch_notes(&build_forum_client())
-            .await
-            .expect("Failed to fetch patch notes");
-        assert!(patches.len() > 7);
-    }
-
-    #[tokio::test]
-    async fn test_combined_patch_feed() {
-        let items = fetch_combined_patch_feed(&build_forum_client())
-            .await
-            .expect("Failed to fetch combined patch feed");
-        let forum_count = items
-            .iter()
-            .filter(|i| matches!(i, FeedItem::Forum(_)))
-            .count();
-        let steam_count = items
-            .iter()
-            .filter(|i| matches!(i, FeedItem::Steam(_)))
-            .count();
-        assert!(
-            forum_count >= 2,
-            "expected at least 2 forum entries, got {forum_count}",
-        );
-        assert!(
-            steam_count >= 2,
-            "expected at least 2 steam entries, got {steam_count}",
-        );
-    }
 
     const STEAM_ID: u64 = 76_561_198_000_000_000;
 
