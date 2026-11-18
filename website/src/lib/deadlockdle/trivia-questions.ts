@@ -188,10 +188,10 @@ const heroTypeQuestion: QuestionGenerator = (heroes, _items, _npcs, _abilities, 
   );
   const { options, correctIndex } = buildOptions(correctLabel, wrong, rng);
 
-  return { question: `What type is ${hero.name}?`, options, correctIndex, category: "Hero" };
+  return { question: `Which hero type does the game list ${hero.name} as?`, options, correctIndex, category: "Hero" };
 };
 
-/** "Which of these heroes is a {type}?" — 4 hero names, only one is the correct type */
+/** "Which of these heroes does the game list as a {type}?" — 4 hero names, only one is the correct type */
 const whichHeroIsTypeQuestion: QuestionGenerator = (heroes, _items, _npcs, _abilities, rng) => {
   const heroesWithType = heroes.filter((h) => h.hero_type != null);
   if (heroesWithType.length < 4) return null;
@@ -206,10 +206,19 @@ const whichHeroIsTypeQuestion: QuestionGenerator = (heroes, _items, _npcs, _abil
   const wrong = seededPickN(nonMatching, 3, rng).map((h) => h.name);
   const { options, correctIndex } = buildOptions(correct.name, wrong, rng);
 
-  return { question: `Which of these heroes is a ${type}?`, options, correctIndex, category: "Hero" };
+  const article = /^[aeiou]/i.test(type) ? "an" : "a";
+  return {
+    question: `Which of these heroes does the game list as ${article} ${type}?`,
+    options,
+    correctIndex,
+    category: "Hero",
+  };
 };
 
-/** "Which hero is NOT a {type}?" — 3 of same type + 1 odd one out */
+/**
+ * "Which hero does the game NOT list as a {type}?" — 3 of same type + 1 odd one out. The type questions name the game's
+ * label: asked plainly, "Which hero is NOT a Healer?" is a trap, since Brawlers like Victor heal themselves too.
+ */
 const oddOneOutHeroTypeQuestion: QuestionGenerator = (heroes, _items, _npcs, _abilities, rng) => {
   const heroesWithType = heroes.filter((h) => h.hero_type != null);
   if (heroesWithType.length < 4) return null;
@@ -225,7 +234,12 @@ const oddOneOutHeroTypeQuestion: QuestionGenerator = (heroes, _items, _npcs, _ab
   const { options, correctIndex } = buildOptions(oddOne.name, decoys, rng);
 
   const article = /^[aeiou]/i.test(type) ? "an" : "a";
-  return { question: `Which hero is NOT ${article} ${type}?`, options, correctIndex, category: "Hero" };
+  return {
+    question: `Which hero does the game NOT list as ${article} ${type}?`,
+    options,
+    correctIndex,
+    category: "Hero",
+  };
 };
 
 /** "Which hero has the highest base {stat}?" — 4 heroes compared */
