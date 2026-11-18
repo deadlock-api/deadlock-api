@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartOverlay, ChartOverlayItem, ChartStage } from "~/components/patterns/charts/ChartOverlay";
+import { ChartZoomControls, useChartZoom } from "~/components/patterns/charts/ChartZoom";
 import { LIVE_MAP_COLOR, resolveChartColors } from "~/components/patterns/charts/theme";
 import { useElementSize } from "~/components/ui/hooks/use-element-size";
 import { LiveMapRenderer } from "~/lib/live-requests/renderer";
@@ -20,6 +21,7 @@ const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
  * travels from the client to its Cloudflare edge, on to the data center that hands it to us and to our server, and its
  * response back the same way, colored by its status. One Cloudflare answers itself (an API cache hit, the website, an
  * asset) bounces off the client's edge. With reduced motion nothing travels: a dot where each request came from fades.
+ * The wheel, a pinch, a double click or the buttons zoom in on a region, and a drag pans it.
  */
 export function LiveRequestMap({ subscribe, className, ...props }: LiveRequestMapProps) {
   const boxRef = useRef<HTMLDivElement>(null);
@@ -27,6 +29,9 @@ export function LiveRequestMap({ subscribe, className, ...props }: LiveRequestMa
   const trafficRef = useRef<HTMLCanvasElement>(null);
   const rendererRef = useRef<LiveMapRenderer | null>(null);
   const { width, height } = useElementSize(boxRef, { round: true });
+  // The land is a 1° grid of dots: past 4× it falls apart into blocks.
+  const zoom = useChartZoom(trafficRef, { max: 4 });
+  const { view } = zoom;
 
   useEffect(() => {
     const land = landRef.current;
@@ -48,6 +53,10 @@ export function LiveRequestMap({ subscribe, className, ...props }: LiveRequestMa
     if (width > 0 && height > 0) rendererRef.current?.resize(width, height);
   }, [width, height]);
 
+  useEffect(() => {
+    rendererRef.current?.setView(view);
+  }, [view]);
+
   useEffect(
     () =>
       subscribe?.({
@@ -64,10 +73,14 @@ export function LiveRequestMap({ subscribe, className, ...props }: LiveRequestMa
         {/* Browsers expose a named canvas as an image, so it takes no role of its own. */}
         <canvas
           ref={trafficRef}
+          {...zoom.targetProps}
           aria-label="World map of the live requests to deadlock-api.com: requests to the API travel from the player to a Cloudflare data center, on to our server in Helsinki and back; requests Cloudflare answers itself bounce off the player's data center"
-          className="absolute inset-0 size-full"
+          className={cn("absolute inset-0 size-full", zoom.targetProps.className)}
         />
       </div>
+      <ChartOverlay position="top-end">
+        <ChartZoomControls zoom={zoom} />
+      </ChartOverlay>
       <ChartOverlay position="bottom-start">
         <ChartOverlayItem>
           <ChartLegend label="Map key" size="sm">

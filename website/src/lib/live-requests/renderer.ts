@@ -14,6 +14,13 @@ import {
 } from "./feed";
 import { CLOUDFLARE_COLOS } from "./geo-data";
 
+/** The zoom the map is drawn at: `scale` times its size, moved by `x`, `y` as shares of the canvas. */
+export interface LiveMapView {
+  scale: number;
+  x: number;
+  y: number;
+}
+
 /** The map's colors, read from the `--live-map-*` tokens by the component that owns the canvases. */
 export interface LiveMapPalette {
   land: string;
@@ -103,6 +110,10 @@ export class LiveMapRenderer {
   private readonly ctx: CanvasRenderingContext2D;
   private frame: MapFrame = { x: 0, y: 0, width: 0, height: 0 };
   private dpr = 1;
+  private size = { width: 0, height: 0 };
+  private view: LiveMapView = { scale: 1, x: 0, y: 0 };
+  /** The view changed since the world was last painted: it is repainted with the next frame of traffic. */
+  private viewDirty = false;
   private origin: [number, number] = [0, 0];
   private flights: Flight[] = [];
   private pending: { due: number; flight: Omit<Flight, "born"> }[] = [];
@@ -135,6 +146,7 @@ export class LiveMapRenderer {
       canvas.width = Math.round(width * this.dpr);
       canvas.height = Math.round(height * this.dpr);
     }
+    this.size = { width, height };
     this.frame = fitMap(width, height);
     this.coloPoints.clear();
     this.origin = project(this.frame, ORIGIN.lat, ORIGIN.lon);
@@ -148,6 +160,13 @@ export class LiveMapRenderer {
   setPalette(palette: LiveMapPalette) {
     this.palette = palette;
     this.paintBackground();
+    this.wake();
+  }
+
+  /** Zooms the map; the world and the traffic follow on the next frame. */
+  setView(view: LiveMapView) {
+    this.view = view;
+    this.viewDirty = true;
     this.wake();
   }
 
@@ -229,10 +248,15 @@ export class LiveMapRenderer {
       this.last = now;
       this.spawnEdge(now, Math.min(dt, MAX_STEP_MS));
       this.admit(now);
+      if (this.viewDirty) this.paintBackground();
       this.draw(now, dt);
     }
     const busy =
-      this.flights.length > 0 || this.pending.length > 0 || this.originPulse > 0.02 || this.edgeMinute !== null;
+      this.viewDirty ||
+      this.flights.length > 0 ||
+      this.pending.length > 0 ||
+      this.originPulse > 0.02 ||
+      this.edgeMinute !== null;
     if (busy) this.wake();
     else this.last = 0;
   };
@@ -309,15 +333,31 @@ export class LiveMapRenderer {
     this.pending.length = kept;
   }
 
+  /** Draws on `ctx` in map pixels from here on: the canvas's pixel ratio and the view's zoom. */
+  private applyView(ctx: CanvasRenderingContext2D) {
+    const { dpr, view, size } = this;
+    const scale = dpr * view.scale;
+    ctx.setTransform(scale, 0, 0, scale, dpr * view.x * size.width, dpr * view.y * size.height);
+  }
+
+  /**
+   * How much bigger a mark (a request, a data center, our server) is drawn, in map pixels, than unzoomed: it grows on
+   * screen with the square root of the zoom, so a zoomed map does not blot the marks into each other.
+   */
+  private get markScale() {
+    return 1 / Math.sqrt(this.view.scale);
+  }
+
   private paintBackground() {
     const { background, dpr, frame } = this;
     const ctx = background.getContext("2d");
     if (!ctx || !frame.width) return;
+    this.viewDirty = false;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, background.width, background.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.applyView(ctx);
     const cell = frame.width / 360;
-    const dot = Math.max(1 / dpr, cell * 0.42);
+    const dot = Math.max(1 / (dpr * this.view.scale), cell * 0.42);
     // The land is a quiet field of dots under the traffic.
     ctx.globalAlpha = 0.55;
     ctx.fillStyle = this.palette.land;
@@ -331,7 +371,7 @@ export class LiveMapRenderer {
     ctx.globalAlpha = 0.6;
     ctx.fillStyle = this.palette.edge;
     ctx.beginPath();
-    const edgeDot = Math.max(1, cell * 0.5);
+    const edgeDot = Math.max(1, cell * 0.5) * this.markScale;
     for (const [code] of colos()) {
       const at = this.coloAt(code);
       if (!at) continue;
@@ -343,13 +383,15 @@ export class LiveMapRenderer {
   }
 
   private draw(now: number, dt: number) {
-    const { ctx, dpr, palette } = this;
+    const { ctx, palette } = this;
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.applyView(ctx);
     const decay = dt ? 0.5 ** (dt / PULSE_HALF_LIFE_MS) : 1;
-    const cell = this.frame.width / 360;
-    const head = Math.max(1.5, cell * 0.9);
+    const mark = this.markScale;
+    // Marks are sized from the cell, so they shrink in map pixels as the map zooms and grow only gently on screen.
+    const cell = (this.frame.width / 360) * mark;
+    const head = Math.max(1.5 * mark, cell * 0.9);
 
     // Trails and heads, one path per color slot.
     const trails = Array.from({ length: SLOTS }, () => new Path2D());
@@ -411,7 +453,7 @@ export class LiveMapRenderer {
     ctx.fillStyle = palette.request;
     ctx.fill(clients);
     ctx.lineCap = "round";
-    ctx.lineWidth = Math.max(1, cell * 0.35);
+    ctx.lineWidth = Math.max(mark, cell * 0.35);
     for (let i = 0; i < SLOTS; i++) {
       ctx.globalAlpha = this.still ? 0.35 : 0.55;
       ctx.strokeStyle = colors[i];
@@ -449,7 +491,7 @@ export class LiveMapRenderer {
     ctx.fill();
     ctx.globalAlpha = Math.min(0.8, 0.2 + this.originPulse * 0.08);
     ctx.strokeStyle = palette.origin;
-    ctx.lineWidth = Math.max(1, cell * 0.4);
+    ctx.lineWidth = Math.max(mark, cell * 0.4);
     ctx.beginPath();
     ctx.arc(ox, oy, cell * (2.2 + Math.min(this.originPulse, 12) * 0.35), 0, Math.PI * 2);
     ctx.stroke();

@@ -1,5 +1,5 @@
 import { Flag } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import {
@@ -17,6 +17,7 @@ import {
 } from "~/components/patterns/charts/ChartOverlay";
 import { ChartProbeCard, useChartProbe } from "~/components/patterns/charts/ChartProbe";
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
+import { ChartZoomControls, useChartZoom } from "~/components/patterns/charts/ChartZoom";
 import { chartRampCss, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import { WinRateBarChart } from "~/components/patterns/charts/WinRateBarChart";
 import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
@@ -235,6 +236,7 @@ export function Round3PatternsCharts() {
       </Specimen>
 
       <ChartProbeSpecimen />
+      <ChartZoomSpecimen />
 
       <Specimen
         name="ChartStageFrame"
@@ -338,6 +340,47 @@ function ChartProbeSpecimen() {
             </TooltipStats>
           )}
         </ChartProbeCard>
+      </div>
+    </Specimen>
+  );
+}
+
+/** A zoomable canvas: a grid of dots drawn through the view, so the zoom and the pan show. */
+function ChartZoomSpecimen() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const zoom = useChartZoom(canvasRef, { max: 6 });
+  const { view } = zoom;
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    const { width, height } = canvas.getBoundingClientRect();
+    canvas.width = width;
+    canvas.height = height;
+    ctx.setTransform(view.scale, 0, 0, view.scale, view.x * width, view.y * height);
+    ctx.fillStyle = getComputedStyle(canvas).color;
+    for (let x = 8; x < width; x += 16) {
+      for (let y = 8; y < height; y += 16) ctx.fillRect(x - 2, y - 2, 4, 4);
+    }
+  }, [view]);
+  return (
+    <Specimen
+      name="ChartZoom"
+      source="patterns/charts/ChartZoom"
+      note="useChartZoom(targetRef, { max }) zooms and pans a canvas plot: the wheel or a pinch zooms around the pointer, a drag pans, a double click zooms in, and on the focused target + / - zoom, the arrows pan and 0 resets. Unzoomed, a finger and a wheel that zooms out still scroll the page. Draw with view (scale, x, y as shares of the target). ChartZoomControls zoom={zoom} gives the buttons in a ChartOverlay; one at its limit stays focusable and is announced unavailable."
+    >
+      <div className="h-48 min-w-0">
+        <ChartStage className="bg-muted text-muted-foreground">
+          <canvas
+            ref={canvasRef}
+            {...zoom.targetProps}
+            aria-label="Zoom demo plot"
+            className={cn("absolute inset-0 size-full", zoom.targetProps.className)}
+          />
+          <ChartOverlay position="top-end">
+            <ChartZoomControls zoom={zoom} />
+          </ChartOverlay>
+        </ChartStage>
       </div>
     </Specimen>
   );

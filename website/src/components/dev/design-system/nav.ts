@@ -272,6 +272,7 @@ export const NAV: readonly NavChapter[] = [
           "ChartOverlay",
           "ChartOverlaySlider",
           "ChartProbe",
+          "ChartZoom",
           "ChartStageFrame",
           "Canvas ramps",
           "ChartRegion",
