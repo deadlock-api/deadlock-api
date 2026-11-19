@@ -69,6 +69,7 @@ use crate::middleware::etag::conditional_get;
 use crate::middleware::feature_flags::feature_flags;
 use crate::middleware::live_requests::live_requests;
 use crate::middleware::request_id::request_id;
+use crate::middleware::retry_after_block::retry_after_block;
 use crate::middleware::track_requests::track_requests;
 use crate::services::patreon::verification_job::PatreonVerificationJob;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -197,6 +198,8 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
         .layer(from_fn(reject_cache_busts))
         .layer(from_fn_with_state(state.clone(), scope_ch_caller))
         .layer(from_fn(ch_cost_headers))
+        // Inside request tracking, so request logs and the live map record its 429s.
+        .layer(from_fn_with_state(state.clone(), retry_after_block))
         .layer(from_fn_with_state(state.clone(), track_requests))
         .layer(from_fn_with_state(state.clone(), live_requests))
         // Level 1: Cloudflare always asks for brotli, and tower-http's default brotli quality 4

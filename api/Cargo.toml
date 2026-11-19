@@ -12,7 +12,7 @@ wreq = { version = "6.0.0-rc.31", features = ["cookies"] }
 wreq-util = "3.0.0-rc.14"
 tokio = { version = "1.54.1", features = ["macros", "rt-multi-thread", "signal", "time"] }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }
-redis = { workspace = true, features = ["streams"] }
+redis = { workspace = true, features = ["script", "streams"] }
 clickhouse = { version = "0.15.3", features = ["chrono", "uuid", "zstd"] }
 clickhouse-utils = { workspace = true, features = ["admission", "cache"] }
 sqlx = { version = "0.9.0", features = ["chrono", "derive", "postgres", "runtime-tokio", "sqlx-toml", "uuid"] }
@@ -71,6 +71,7 @@ jsonwebtoken = { version = "11", features = ["aws_lc_rs"] }
 async-trait = "0.1.92"
 tantivy = { version = "0.27.0", features = ["zstd-compression"] }
 arc-swap = "1.9.5"
+ipnet = "2.12.2"
 xxhash-rust = { workspace = true }
 datafusion = { version = "55", default-features = false, features = [
     "sql",

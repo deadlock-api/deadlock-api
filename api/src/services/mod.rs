@@ -16,5 +16,6 @@ pub(crate) mod protected_accounts;
 pub(crate) mod rank_image;
 pub(super) mod rate_limiter;
 pub(crate) mod request_logger;
+pub(crate) mod retry_after_blocks;
 pub(super) mod steam;
 pub(crate) mod steam_search_index;

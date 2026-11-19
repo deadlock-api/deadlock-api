@@ -23,6 +23,7 @@ use crate::services::feature_flags::FeatureFlags;
 use crate::services::live_requests::LiveRequests;
 use crate::services::rate_limiter::RateLimitClient;
 use crate::services::request_logger::RequestLogger;
+use crate::services::retry_after_blocks::RetryAfterBlocks;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam_search_index::SteamSearchIndex;
 
@@ -77,6 +78,7 @@ pub(crate) struct AppStateInner {
     pub(crate) steam_client: SteamClient,
     pub(crate) assets_client: AssetsClient,
     pub(crate) rate_limit_client: RateLimitClient,
+    pub(crate) retry_after_blocks: RetryAfterBlocks,
     pub(crate) request_logger: Arc<RequestLogger>,
     /// Sampled feed of served requests for the website's live map.
     pub(crate) live_requests: Arc<LiveRequests>,
@@ -198,6 +200,10 @@ impl AppState {
             feature_flags.clone(),
         );
 
+        debug!("Loading Retry-After blocks");
+        let retry_after_blocks =
+            RetryAfterBlocks::load(pg_client.clone(), redis_client.clone()).await;
+
         // Create a Request Logger
         debug!("Creating Request Logger");
         let request_logger: Arc<RequestLogger> = insert_batcher(&ch_client, "request_logs");
@@ -298,6 +304,7 @@ impl AppState {
             steam_client,
             assets_client,
             rate_limit_client,
+            retry_after_blocks,
             request_logger,
             live_requests,
             batchers,
