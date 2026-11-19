@@ -68,7 +68,10 @@ export function itemQueryOptions(itemId: number) {
     queryKey: queryKeys.assets.item(itemId),
     queryFn: async () => {
       const response = await api.items_api.getItem({ idOrClassName: String(itemId) });
-      return response.data as Upgrade;
+      // Corrupted items are gone from the game (last bought 2026-10-04) and nothing reads their bonuses; dropping them
+      // keeps them out of the item page's HTML.
+      const { corrupted_info: _corrupted, ...item } = response.data as Upgrade;
+      return item;
     },
     staleTime: CACHE_DURATIONS.FOREVER,
   });
