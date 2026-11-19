@@ -2,6 +2,7 @@ import { Flag } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
+import { mergeChartTargetProps } from "~/components/patterns/charts/chart-target";
 import {
   ChartGradientLegend,
   ChartLegend,
@@ -348,8 +349,16 @@ function ChartProbeSpecimen() {
 /** A zoomable canvas: a grid of dots drawn through the view, so the zoom and the pan show. */
 function ChartZoomSpecimen() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const boxRef = useRef<HTMLDivElement>(null);
   const zoom = useChartZoom(canvasRef, { max: 6 });
+  const probe = useChartProbe(boxRef);
+  const targetProps = mergeChartTargetProps(zoom.targetProps, probe.targetProps);
   const { view } = zoom;
+  // The probe's point on the plot, through the zoom: where it would sit unzoomed.
+  const reading = probe.point && {
+    x: Math.round(((probe.point.rel.x - view.x) / view.scale) * 100),
+    y: Math.round(((probe.point.rel.y - view.y) / view.scale) * 100),
+  };
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas?.getContext("2d");
@@ -367,20 +376,28 @@ function ChartZoomSpecimen() {
     <Specimen
       name="ChartZoom"
       source="patterns/charts/ChartZoom"
-      note="useChartZoom(targetRef, { max }) zooms and pans a canvas plot: the wheel or a pinch zooms around the pointer, a drag pans, a double click zooms in, and on the focused target + / - zoom, the arrows pan and 0 resets. Unzoomed, a finger and a wheel that zooms out still scroll the page. Draw with view (scale, x, y as shares of the target). ChartZoomControls zoom={zoom} gives the buttons in a ChartOverlay; one at its limit stays focusable and is announced unavailable."
+      note="useChartZoom(targetRef, { max }) zooms and pans a canvas plot: the wheel or a pinch zooms around the pointer, a drag pans, a double click zooms in, and on the focused target + / - zoom, the arrows pan and 0 resets. Unzoomed, a finger and a wheel that zooms out still scroll the page. Draw with view (scale, x, y as shares of the target). ChartZoomControls zoom={zoom} gives the buttons in a ChartOverlay; one at its limit stays focusable and is announced unavailable. Here with a probe too: mergeChartTargetProps(zoom.targetProps, probe.targetProps) runs both, and zoomed the arrows pan under the probe."
     >
-      <div className="h-48 min-w-0">
+      <div ref={boxRef} className="relative h-48 min-w-0">
         <ChartStage className="bg-muted text-muted-foreground">
           <canvas
             ref={canvasRef}
-            {...zoom.targetProps}
+            {...targetProps}
             aria-label="Zoom demo plot"
-            className={cn("absolute inset-0 size-full", zoom.targetProps.className)}
+            className={cn("absolute inset-0 size-full", targetProps.className)}
           />
           <ChartOverlay position="top-end">
             <ChartZoomControls zoom={zoom} />
           </ChartOverlay>
         </ChartStage>
+        <ChartProbeCard point={probe.point} announce={reading ? `x ${reading.x}, y ${reading.y}` : ""}>
+          {reading && (
+            <TooltipStats variant="plain">
+              <TooltipStat label="x" value={`${reading.x}%`} />
+              <TooltipStat label="y" value={`${reading.y}%`} />
+            </TooltipStats>
+          )}
+        </ChartProbeCard>
       </div>
     </Specimen>
   );

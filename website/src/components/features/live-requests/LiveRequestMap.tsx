@@ -1,10 +1,14 @@
 import { useEffect, useRef } from "react";
 
+import { mergeChartTargetProps } from "~/components/patterns/charts/chart-target";
 import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
 import { ChartOverlay, ChartOverlayItem, ChartStage } from "~/components/patterns/charts/ChartOverlay";
+import { ChartProbeCard, type ChartProbePoint, useChartProbe } from "~/components/patterns/charts/ChartProbe";
 import { ChartZoomControls, useChartZoom } from "~/components/patterns/charts/ChartZoom";
 import { LIVE_MAP_COLOR, resolveChartColors } from "~/components/patterns/charts/theme";
 import { useElementSize } from "~/components/ui/hooks/use-element-size";
+import { TooltipHeader } from "~/components/ui/tooltip";
+import { type MapPlace, placeAt } from "~/lib/live-requests/feed";
 import { LiveMapRenderer } from "~/lib/live-requests/renderer";
 import type { LiveListener } from "~/lib/live-requests/useLiveRequests";
 import { cn } from "~/lib/utils";
@@ -17,11 +21,25 @@ interface LiveRequestMapProps extends React.ComponentProps<"div"> {
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
 /**
+ * How far from a mark, in CSS pixels, the probe still names it: the marks are a few pixels wide, so the reach is their
+ * hit area (24px across for a mouse, more for a finger), and a keyboard probe, which steps a 32nd of the map, reaches
+ * about half a step.
+ */
+const REACH: Record<ChartProbePoint["source"], number> = { mouse: 12, touch: 24, keyboard: 32 };
+
+/** What a mark is, in words: the card's title and subtitle. Our server is named by its role, never its address. */
+function describePlace(place: MapPlace): { title: string; subtitle?: string } {
+  if (place.kind === "origin") return { title: "API server" };
+  return { title: place.city, subtitle: `Cloudflare edge · ${place.code}` };
+}
+
+/**
  * The world, Cloudflare's data centers and our server, with every request drawn as it happens. One for our server
  * travels from the client to its Cloudflare edge, on to the data center that hands it to us and to our server, and its
  * response back the same way, colored by its status. One Cloudflare answers itself (an API cache hit, the website, an
  * asset) bounces off the client's edge. With reduced motion nothing travels: a dot where each request came from fades.
- * The wheel, a pinch, a double click or the buttons zoom in on a region, and a drag pans it.
+ * The wheel, a pinch, a double click or the buttons zoom in on a region, and a drag pans it. Hovering, tapping or
+ * stepping the probe onto a data center or our server names it.
  */
 export function LiveRequestMap({ subscribe, className, ...props }: LiveRequestMapProps) {
   const boxRef = useRef<HTMLDivElement>(null);
@@ -32,6 +50,17 @@ export function LiveRequestMap({ subscribe, className, ...props }: LiveRequestMa
   // The land is a 1° grid of dots: past 4× it falls apart into blocks.
   const zoom = useChartZoom(trafficRef, { max: 4 });
   const { view } = zoom;
+  const probe = useChartProbe(boxRef);
+  const place = probe.point
+    ? placeAt(
+        { width, height },
+        view,
+        { x: probe.point.rel.x * width, y: probe.point.rel.y * height },
+        REACH[probe.point.source],
+      )
+    : null;
+  const described = place && describePlace(place);
+  const targetProps = mergeChartTargetProps(zoom.targetProps, probe.targetProps);
 
   useEffect(() => {
     const land = landRef.current;
@@ -73,10 +102,16 @@ export function LiveRequestMap({ subscribe, className, ...props }: LiveRequestMa
         {/* Browsers expose a named canvas as an image, so it takes no role of its own. */}
         <canvas
           ref={trafficRef}
-          {...zoom.targetProps}
+          {...targetProps}
           aria-label="World map of the live requests to deadlock-api.com: requests to the API travel from the player to a Cloudflare data center, on to our server in Helsinki and back; requests Cloudflare answers itself bounce off the player's data center"
-          className={cn("absolute inset-0 size-full", zoom.targetProps.className)}
+          className={cn("absolute inset-0 size-full", targetProps.className)}
         />
+        <ChartProbeCard
+          point={probe.point}
+          announce={described ? [described.title, described.subtitle].filter(Boolean).join(", ") : "Nothing here"}
+        >
+          {described && <TooltipHeader title={described.title} subtitle={described.subtitle} />}
+        </ChartProbeCard>
       </div>
       <ChartOverlay position="top-end">
         <ChartZoomControls zoom={zoom} />

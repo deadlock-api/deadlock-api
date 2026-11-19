@@ -436,3 +436,53 @@ export function landPoints(): Float32Array {
 export function colos(): [string, number, number][] {
   return Object.entries(CLOUDFLARE_COLOS).map(([code, [lat, lon]]) => [code, lat, lon]);
 }
+
+/** A mark of the map a point is on: our API server or a Cloudflare data center. */
+export type MapPlace = { kind: "origin" } | { kind: "colo"; code: string; city: string };
+
+/** The data centers where the map draws them, on its land, decoded once. */
+let coloSpots: { code: string; city: string; lat: number; lon: number }[] | null = null;
+
+/**
+ * The mark nearest a point of the map, within `reach` CSS pixels of it; null when none is. `at` is in CSS pixels of the
+ * map's box (`width` × `height`), drawn through `view` (the renderer's zoom). Our server is a disc, so a point on it
+ * picks the server over the data centers beside it.
+ */
+export function placeAt(
+  size: { width: number; height: number },
+  view: { scale: number; x: number; y: number },
+  at: { x: number; y: number },
+  reach: number,
+): MapPlace | null {
+  if (!size.width || !size.height) return null;
+  const frame = fitMap(size.width, size.height);
+  const screen = ([x, y]: [number, number]) => [
+    view.scale * x + view.x * size.width,
+    view.scale * y + view.y * size.height,
+  ];
+  const distance = (point: [number, number]) => {
+    const [x, y] = screen(point);
+    return Math.hypot(x - at.x, y - at.y);
+  };
+  // The renderer's disc: 1.3 cells, grown on screen with the square root of the zoom.
+  const originRadius = (frame.width / 360) * 1.3 * Math.sqrt(view.scale);
+  let best: MapPlace | null = null;
+  let bestDistance = reach;
+  const origin = Math.max(0, distance(project(frame, ORIGIN.lat, ORIGIN.lon)) - originRadius);
+  if (origin <= bestDistance) {
+    best = { kind: "origin" };
+    bestDistance = origin;
+  }
+  coloSpots ??= Object.entries(CLOUDFLARE_COLOS).map(([code, [lat, lon, city]]) => {
+    const [landLat, landLon] = onLand(lat, lon);
+    return { code, city, lat: landLat, lon: landLon };
+  });
+  for (const spot of coloSpots) {
+    const d = distance(project(frame, spot.lat, spot.lon));
+    if (d < bestDistance) {
+      best = { kind: "colo", code: spot.code, city: spot.city };
+      bestDistance = d;
+    }
+  }
+  return best;
+}
