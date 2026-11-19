@@ -7,15 +7,21 @@ import { ChartProbeCard, type ChartProbePoint, useChartProbe } from "~/component
 import { ChartZoomControls, useChartZoom } from "~/components/patterns/charts/ChartZoom";
 import { LIVE_MAP_COLOR, resolveChartColors } from "~/components/patterns/charts/theme";
 import { useElementSize } from "~/components/ui/hooks/use-element-size";
-import { TooltipHeader } from "~/components/ui/tooltip";
-import { type MapPlace, placeAt } from "~/lib/live-requests/feed";
+import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
+import { type EdgeMinute, placeAt } from "~/lib/live-requests/feed";
 import { LiveMapRenderer } from "~/lib/live-requests/renderer";
-import type { LiveListener } from "~/lib/live-requests/useLiveRequests";
+import type { LiveListener, LiveStats } from "~/lib/live-requests/useLiveRequests";
 import { cn } from "~/lib/utils";
+
+import { markReading } from "./map-readings";
 
 interface LiveRequestMapProps extends React.ComponentProps<"div"> {
   /** Hands the feed to the map; returns the unsubscribe. From `useLiveRequests`. */
   subscribe?: (listener: LiveListener) => () => void;
+  /** The last minute's traffic, for the card of a probed mark. From `useLiveRequests`. */
+  stats?: LiveStats | null;
+  /** The newest minute Cloudflare answered itself, for the card of a probed data center. From `useLiveRequests`. */
+  edge?: EdgeMinute | null;
 }
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
@@ -27,21 +33,15 @@ const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
  */
 const REACH: Record<ChartProbePoint["source"], number> = { mouse: 12, touch: 24, keyboard: 32 };
 
-/** What a mark is, in words: the card's title and subtitle. Our server is named by its role, never its address. */
-function describePlace(place: MapPlace): { title: string; subtitle?: string } {
-  if (place.kind === "origin") return { title: "API server" };
-  return { title: place.city, subtitle: `Cloudflare edge · ${place.code}` };
-}
-
 /**
  * The world, Cloudflare's data centers and our server, with every request drawn as it happens. One for our server
  * travels from the client to its Cloudflare edge, on to the data center that hands it to us and to our server, and its
  * response back the same way, colored by its status. One Cloudflare answers itself (an API cache hit, the website, an
  * asset) bounces off the client's edge. With reduced motion nothing travels: a dot where each request came from fades.
  * The wheel, a pinch, a double click or the buttons zoom in on a region, and a drag pans it. Hovering, tapping or
- * stepping the probe onto a data center or our server names it.
+ * stepping the probe onto a data center or our server names it, with its traffic of the last minute.
  */
-export function LiveRequestMap({ subscribe, className, ...props }: LiveRequestMapProps) {
+export function LiveRequestMap({ subscribe, stats = null, edge = null, className, ...props }: LiveRequestMapProps) {
   const boxRef = useRef<HTMLDivElement>(null);
   const landRef = useRef<HTMLCanvasElement>(null);
   const trafficRef = useRef<HTMLCanvasElement>(null);
@@ -59,7 +59,7 @@ export function LiveRequestMap({ subscribe, className, ...props }: LiveRequestMa
         REACH[probe.point.source],
       )
     : null;
-  const described = place && describePlace(place);
+  const reading = place && markReading(place, stats, edge);
   const targetProps = mergeChartTargetProps(zoom.targetProps, probe.targetProps);
 
   useEffect(() => {
@@ -108,9 +108,26 @@ export function LiveRequestMap({ subscribe, className, ...props }: LiveRequestMa
         />
         <ChartProbeCard
           point={probe.point}
-          announce={described ? [described.title, described.subtitle].filter(Boolean).join(", ") : "Nothing here"}
+          announce={
+            reading
+              ? [reading.title, reading.subtitle, ...reading.rows.map((row) => `${row.label} ${row.value}`)]
+                  .filter(Boolean)
+                  .join(", ")
+              : "Nothing here"
+          }
         >
-          {described && <TooltipHeader title={described.title} subtitle={described.subtitle} />}
+          {reading && (
+            <>
+              <TooltipHeader title={reading.title} subtitle={reading.subtitle} />
+              {reading.rows.length > 0 && (
+                <TooltipStats>
+                  {reading.rows.map((row) => (
+                    <TooltipStat key={row.label} label={row.label} value={row.value} />
+                  ))}
+                </TooltipStats>
+              )}
+            </>
+          )}
         </ChartProbeCard>
       </div>
       <ChartOverlay position="top-end">

@@ -58,7 +58,7 @@ function LivePage() {
         <div className="grid min-h-0 flex-1 gap-3 @5xl:grid-cols-[minmax(0,1fr)_30rem]">
           {/* The map is wider than it is tall, so the matches being written fit under it. In one column it keeps 16rem. */}
           <div className="flex min-h-0 flex-col gap-3">
-            <LiveRequestMap subscribe={subscribe} className="min-h-64 flex-1 @5xl:min-h-0" />
+            <LiveRequestMap subscribe={subscribe} stats={stats} edge={edge} className="min-h-64 flex-1 @5xl:min-h-0" />
             <LiveIngestPanel subscribe={subscribe} className="flex h-160 shrink-0 flex-col @5xl:h-84" />
           </div>
           {/* The queue's chart takes what the traffic leaves, so both fit the viewport; short screens scroll. */}

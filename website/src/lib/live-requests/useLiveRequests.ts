@@ -53,11 +53,23 @@ export interface LiveSummary {
   routes: LiveShare[];
 }
 
+/** One Cloudflare data center's part of the requests to our server in the last minute, in requests per second. */
+export interface LiveColoTraffic {
+  /** Requests from players who reached Cloudflare here. */
+  entered: number;
+  /** Requests it handed on to our server: the data centers next to the server, whatever the players' own. */
+  handed: number;
+  /** The countries of the players who reached it, requests per second each. */
+  countries: Map<string, number>;
+}
+
 export interface LiveStats extends LiveSummary {
   /** Database bytes read per second. */
   bytesPerSecond: number;
   /** Every data center that served a sampled request, busiest first. */
   edges: LiveShare[];
+  /** Each data center's part of the requests, by its IATA code. */
+  colos: Map<string, LiveColoTraffic>;
   /** What the server is working on now; null before the first batch. */
   queue: LiveQueue | null;
   /** The queue at every batch of the last minute, oldest first. */
@@ -135,11 +147,28 @@ function liveStats({ batches }: Feed): LiveStats {
   const window = batches.slice(-WINDOW_BATCHES);
   const seconds = window.length / 2 || 1;
   const edges = new Map<string, number>();
+  const colos = new Map<string, LiveColoTraffic>();
+  const colo = (code: string) => {
+    let traffic = colos.get(code);
+    if (!traffic) {
+      traffic = { entered: 0, handed: 0, countries: new Map() };
+      colos.set(code, traffic);
+    }
+    return traffic;
+  };
   let sampled = 0;
   for (const batch of window) {
+    // Each sampled request stands for `total / sampled` of its batch, a rate once divided by the window's seconds.
+    const weight = batch.requests.length ? batch.total / batch.requests.length / seconds : 0;
     for (const r of batch.requests) {
       sampled++;
-      if (r.edge) edges.set(r.edge, (edges.get(r.edge) ?? 0) + 1);
+      if (r.edge) {
+        edges.set(r.edge, (edges.get(r.edge) ?? 0) + 1);
+        const traffic = colo(r.edge);
+        traffic.entered += weight;
+        if (r.country) traffic.countries.set(r.country, (traffic.countries.get(r.country) ?? 0) + weight);
+      }
+      if (r.hop) colo(r.hop).handed += weight;
     }
   }
   const summary = summarize(window);
@@ -152,6 +181,7 @@ function liveStats({ batches }: Feed): LiveStats {
     rowsPerSecond: window.reduce((sum, b) => sum + b.db.rowsRead, 0) / seconds,
     bytesPerSecond: window.reduce((sum, b) => sum + b.db.bytesRead, 0) / seconds,
     edges: sampled ? topShares(edges, sampled, coloCity) : [],
+    colos,
     queue: batches.at(-1)?.queue ?? null,
     queueHistory: batches.map((b) => Object.assign({ time: b.start }, b.queue)),
   };
