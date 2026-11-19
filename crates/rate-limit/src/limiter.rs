@@ -52,6 +52,54 @@ impl<T: Store> RateLimiter<T> {
         self.charge_at(client, limit, cost, SystemTime::now()).await
     }
 
+    /// Records `cost` more for a request by `client` that [`Self::charge`] already admitted,
+    /// without checking it against `limit`: for costs only known once the request has run. It
+    /// counts against every quota, shared ones included, and may take a client past its limits,
+    /// so its next requests are rejected until enough of the cost has left the windows.
+    ///
+    /// Fails open like [`Self::charge`]: when the store errors, the cost is dropped.
+    pub async fn record<S: Scope>(
+        &self,
+        client: &S::Client,
+        limit: RateLimit<'_, S>,
+        cost: NonZeroU64,
+    ) {
+        self.record_at(client, limit, cost, SystemTime::now()).await;
+    }
+
+    /// [`Self::record`] as of `now`.
+    async fn record_at<S: Scope>(
+        &self,
+        client: &S::Client,
+        limit: RateLimit<'_, S>,
+        cost: NonZeroU64,
+        now: SystemTime,
+    ) {
+        if limit.quotas.is_empty() {
+            return;
+        }
+        let keys = keys(client, limit);
+        let (always, shared, _) = plan(limit, &keys);
+        // No windows to check, so the store admits it and records it in the shared logs too.
+        let charge = Charge {
+            cost,
+            now,
+            always: &always,
+            windows: &[],
+            if_admitted: &shared,
+        };
+        let started = Instant::now();
+        let recorded = self.store.charge(charge).await;
+        metrics::histogram!("rate_limit_store_duration_seconds")
+            .record(started.elapsed().as_secs_f64());
+        if let Err(e) = recorded {
+            warn!(
+                bucket = limit.bucket,
+                "Failed to record a rate limit cost: {e}"
+            );
+        }
+    }
+
     /// [`Self::charge`] as of `now`.
     async fn charge_at<S: Scope>(
         &self,
@@ -64,38 +112,8 @@ impl<T: Store> RateLimiter<T> {
             return Ok(None);
         }
 
-        // The key each quota counts in: its subject's, or the bucket's for shared quotas.
-        let keys: Vec<Option<String>> = limit
-            .quotas
-            .iter()
-            .map(|quota| {
-                let subject = quota.scope.subject(client)?;
-                Some(format!("{subject}:{}", limit.bucket))
-            })
-            .collect();
-
-        // One log per subject and one shared by everyone, each kept as long as its longest window.
-        let mut always: Vec<Log<'_>> = Vec::new();
-        let mut shared: Vec<Log<'_>> = Vec::new();
-        let mut windows = Vec::with_capacity(limit.quotas.len());
-        for (quota, key) in limit.quotas.iter().zip(&keys) {
-            let (logs, key) = key
-                .as_deref()
-                .map_or((&mut shared, limit.bucket), |key| (&mut always, key));
-            match logs.iter_mut().find(|log| log.key == key) {
-                Some(log) => log.retention = log.retention.max(quota.period),
-                None => logs.push(Log {
-                    key,
-                    retention: quota.period,
-                }),
-            }
-            windows.push(Window {
-                key,
-                period: quota.period,
-                limit: quota.limit,
-            });
-        }
-
+        let keys = keys(client, limit);
+        let (always, shared, windows) = plan(limit, &keys);
         let charge = Charge {
             cost,
             now,
@@ -137,6 +155,47 @@ impl<T: Store> RateLimiter<T> {
         Ok(statuses.into_iter().min_by_key(Status::remaining))
     }
 }
+/// The key each quota of `limit` counts in: its subject's, or `None` for the bucket's shared one.
+fn keys<S: Scope>(client: &S::Client, limit: RateLimit<'_, S>) -> Vec<Option<String>> {
+    limit
+        .quotas
+        .iter()
+        .map(|quota| {
+            let subject = quota.scope.subject(client)?;
+            Some(format!("{subject}:{}", limit.bucket))
+        })
+        .collect()
+}
+
+/// The logs a request by the client of `keys` is recorded in, per subject and shared by
+/// everyone, each kept as long as its longest window, and the quotas' windows.
+fn plan<'a, S: Scope>(
+    limit: RateLimit<'a, S>,
+    keys: &'a [Option<String>],
+) -> (Vec<Log<'a>>, Vec<Log<'a>>, Vec<Window<'a>>) {
+    let mut always: Vec<Log<'_>> = Vec::new();
+    let mut shared: Vec<Log<'_>> = Vec::new();
+    let mut windows = Vec::with_capacity(limit.quotas.len());
+    for (quota, key) in limit.quotas.iter().zip(keys) {
+        let (logs, key) = key
+            .as_deref()
+            .map_or((&mut shared, limit.bucket), |key| (&mut always, key));
+        match logs.iter_mut().find(|log| log.key == key) {
+            Some(log) => log.retention = log.retention.max(quota.period),
+            None => logs.push(Log {
+                key,
+                retention: quota.period,
+            }),
+        }
+        windows.push(Window {
+            key,
+            period: quota.period,
+            limit: quota.limit,
+        });
+    }
+    (always, shared, windows)
+}
+
 fn count(bucket: &str, outcome: &'static str) {
     metrics::counter!("rate_limit_checks", "bucket" => bucket.to_owned(), "outcome" => outcome)
         .increment(1);
@@ -262,6 +321,38 @@ mod tests {
         charge(&("c", "z"), 9, 4).await.unwrap();
         let Exceeded(status) = charge(&("d", "w"), 1, 5).await.unwrap_err();
         assert_eq!(status.quota.scope, By::Everyone);
+    }
+
+    #[tokio::test]
+    async fn records_costs_past_the_limit() {
+        let limiter = RateLimiter::new(MemoryStore::new());
+        let quotas = [
+            Quota::new(By::Address, 10, MIN),
+            Quota::new(By::Everyone, 55, MIN),
+        ];
+        let limit = RateLimit::new("b", &quotas);
+        limiter
+            .charge_at(&("a", "x"), limit, ONE, at(0))
+            .await
+            .unwrap();
+        // Recorded unchecked, 1 + 49 = 50 takes the address 40 past its limit...
+        limiter.record_at(&("a", "x"), limit, cost(49), at(1)).await;
+        let Exceeded(status) = limiter
+            .charge_at(&("a", "x"), limit, ONE, at(2))
+            .await
+            .unwrap_err();
+        assert_eq!(status.used, 50);
+        // ...and counts against the shared quota too: 50 + 10 does not fit in 55.
+        let Exceeded(status) = limiter
+            .charge_at(&("b", "y"), limit, cost(10), at(3))
+            .await
+            .unwrap_err();
+        assert_eq!((status.quota.scope, status.used), (By::Everyone, 50));
+        // Once the costs leave the window, the address is admitted again.
+        limiter
+            .charge_at(&("a", "x"), limit, ONE, at(62))
+            .await
+            .unwrap();
     }
 
     #[tokio::test]

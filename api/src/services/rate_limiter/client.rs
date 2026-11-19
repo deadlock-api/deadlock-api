@@ -1,5 +1,6 @@
 use core::num::NonZeroU64;
 use core::time::Duration;
+use std::borrow::Cow;
 
 use axum::http::StatusCode;
 use cached::macros::cached;
@@ -71,8 +72,38 @@ impl RateLimitClient {
         limit: RateLimit<'_>,
         cost: NonZeroU64,
     ) -> APIResult<Option<Status>> {
+        let (client, quotas) = self.applicable(client, limit).await?;
+        let limit = RateLimit::new(limit.bucket, &quotas);
+        Ok(self.limiter.charge(&*client, limit, cost).await?)
+    }
+
+    /// Records `cost` more for a request by `client` that [`Self::charge`] admitted against
+    /// `limit`, without checking it: for costs only known once the request has run. The same
+    /// quotas apply as in [`Self::charge`], and the cost may take the client past them, so its
+    /// next requests are rejected until enough of it has left the windows.
+    pub(crate) async fn record(
+        &self,
+        client: &RateLimitKey,
+        limit: RateLimit<'_>,
+        cost: NonZeroU64,
+    ) {
+        // The request was admitted, so this only fails if a flag or key changed since.
+        if let Ok((client, quotas)) = self.applicable(client, limit).await {
+            let limit = RateLimit::new(limit.bucket, &quotas);
+            self.limiter.record(&*client, limit, cost).await;
+        }
+    }
+
+    /// The client `limit` counts `client` as and the quotas it is held to (see [`Self::charge`]),
+    /// or why it is turned away.
+    async fn applicable<'c, 'q>(
+        &self,
+        client: &'c RateLimitKey,
+        limit: RateLimit<'q>,
+    ) -> APIResult<(Cow<'c, RateLimitKey>, Cow<'q, [Quota]>)> {
         let Some(api_key) = client.api_key else {
-            return self.charge_keyless(client, limit, cost).await;
+            self.admit_keyless(limit)?;
+            return Ok((Cow::Borrowed(client), Cow::Borrowed(limit.quotas)));
         };
         let status = self.validate_api_key(api_key).await?;
         let custom = self
@@ -82,9 +113,10 @@ impl RateLimitClient {
                 warn!("Failed to fetch custom quotas due to DB error: {e}, using defaults");
                 Vec::new()
             });
-        let quotas: Vec<Quota> = if !custom.is_empty() {
-            custom
-        } else if status == ApiKeyStatus::CustomLimitsOnly {
+        if !custom.is_empty() {
+            return Ok((Cow::Borrowed(client), Cow::Owned(custom)));
+        }
+        if status == ApiKeyStatus::CustomLimitsOnly {
             if requires_key(limit.quotas) {
                 count_denial("key_not_enabled");
                 return Err(APIError::status_msg(
@@ -92,24 +124,18 @@ impl RateLimitClient {
                     "API key is not enabled for this endpoint",
                 ));
             }
-            return self
-                .charge_keyless(&client.without_api_key(), limit, cost)
-                .await;
-        } else {
-            keyed_client_quotas(limit.quotas).collect()
-        };
-
-        let limit = RateLimit::new(limit.bucket, &quotas);
-        Ok(self.limiter.charge(client, limit, cost).await?)
+            self.admit_keyless(limit)?;
+            return Ok((
+                Cow::Owned(client.without_api_key()),
+                Cow::Borrowed(limit.quotas),
+            ));
+        }
+        let quotas = keyed_client_quotas(limit.quotas).collect();
+        Ok((Cow::Borrowed(client), Cow::Owned(quotas)))
     }
 
-    /// Charges a client without an API key.
-    async fn charge_keyless(
-        &self,
-        client: &RateLimitKey,
-        limit: RateLimit<'_>,
-        cost: NonZeroU64,
-    ) -> APIResult<Option<Status>> {
+    /// Turns a client without a key away from key-only policies and in emergency mode.
+    fn admit_keyless(&self, limit: RateLimit<'_>) -> APIResult<()> {
         if requires_key(limit.quotas) {
             count_denial("key_required");
             return Err(APIError::status_msg(
@@ -124,7 +150,7 @@ impl RateLimitClient {
                 "Service is in emergency mode",
             ));
         }
-        Ok(self.limiter.charge(client, limit, cost).await?)
+        Ok(())
     }
 
     /// The key's status, rejecting invalid keys. A key that can't be checked is let through as

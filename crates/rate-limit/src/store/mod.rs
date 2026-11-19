@@ -165,6 +165,11 @@ pub(crate) mod conformance {
         let usages = charge(store, 1, 53, &[], &[window(shared, 60, open)], &[]).await;
         assert_eq!(usages[0].used, 2);
 
+        // With no windows to check, a request is always admitted and recorded in the shared log.
+        charge(store, 4, 54, &[], &[], &[log(shared)]).await;
+        let usages = charge(store, 1, 55, &[], &[window(shared, 60, open)], &[]).await;
+        assert_eq!(usages[0].used, 6);
+
         // Past the retention of two minutes, only the requests at 30 s and later remain.
         let usages = charge(store, 1, 140, &[log(own)], &[window(own, 120, open)], &[]).await;
         assert_eq!(usages[0].used, 4 + 5 + 1 + 1 + 2 + 1);

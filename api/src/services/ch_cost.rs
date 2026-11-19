@@ -96,6 +96,11 @@ pub(crate) async fn track<F: Future>(future: F) -> (F::Output, ChCost) {
     .await
 }
 
+/// The cost recorded so far in the current [`track`] scope; empty outside one.
+pub(crate) fn current() -> ChCost {
+    COST.try_with(Cell::get).unwrap_or_default()
+}
+
 /// Records one query with its summary, if `ClickHouse` sent one; a no-op outside [`track`].
 pub(crate) fn record(summary: Option<&QuerySummary>) {
     _ = COST.try_with(|cost| cost.set(cost.get().add(summary)));
