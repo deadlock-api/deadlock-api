@@ -17,6 +17,7 @@ CREATE TABLE default.request_logs
     `accept_encoding` Nullable(String),
     `rate_limit_remaining` Nullable(UInt64) DEFAULT NULL STATISTICS(tdigest),
     `rate_limit_reset` Nullable(UInt64) DEFAULT NULL STATISTICS(tdigest),
+    `retry_after` Nullable(UInt32) DEFAULT NULL,
     `graphql_complexity` Nullable(UInt64) DEFAULT NULL,
     `graphql_depth` Nullable(UInt64) DEFAULT NULL,
     `graphql_query` Nullable(String) DEFAULT NULL CODEC(ZSTD(3)),

@@ -47,6 +47,8 @@ pub(crate) struct RequestLog {
     pub rate_limit_remaining: Option<u64>,
     /// Seconds until the rate limit window resets (None if no rate limiting applied)
     pub rate_limit_reset: Option<u64>,
+    /// `Retry-After` the response sent, in seconds (429 rate limits, 503 busy, 504 cooldowns)
+    pub retry_after: Option<u32>,
     /// Prefix of the `query_id` of every `ClickHouse` query the GraphQL request ran
     #[serde(with = "clickhouse::serde::uuid::option")]
     pub graphql_request_id: Option<Uuid>,

@@ -73,6 +73,8 @@ pub(crate) async fn track_requests(
     let content_type = get_header(headers, header::CONTENT_TYPE);
     let rate_limit_remaining = get_header_u64(headers, "ratelimit-remaining");
     let rate_limit_reset = get_header_u64(headers, "ratelimit-reset");
+    let retry_after =
+        get_header_u64(headers, header::RETRY_AFTER).and_then(|secs| u32::try_from(secs).ok());
 
     // Content-Length is only set later by hyper, so read the body's exact size hint (known for
     // buffered bodies). Streaming bodies have no exact hint; fall back to an explicit header.
@@ -119,6 +121,7 @@ pub(crate) async fn track_requests(
             accept_encoding,
             rate_limit_remaining,
             rate_limit_reset,
+            retry_after,
             graphql_request_id: graphql.as_ref().map(|g| g.request_id),
             graphql_complexity: graphql.as_ref().and_then(|g| g.complexity),
             graphql_depth: graphql.as_ref().and_then(|g| g.depth),
