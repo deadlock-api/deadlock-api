@@ -33,17 +33,7 @@ use crate::utils::match_player_stats::{DUPLICATE_STATS, stats_array_expr, stored
 use crate::utils::parse::{comma_separated_deserialize_option, default_true};
 use crate::utils::types::SortDirectionAsc;
 
-const RATE_LIMIT: RateLimit = RateLimit::new(
-    "match_metadata_bulk",
-    &[
-        Quota::new(Scope::Ip, 30, Duration::from_mins(1)),
-        Quota::new(Scope::Key, 30, Duration::from_secs(10)),
-        Quota::new(Scope::Key, 2000, Duration::from_hours(1)),
-        Quota::new(Scope::Global, 600, Duration::from_mins(1)),
-    ],
-);
-
-/// What a request costs against [`COST_LIMIT`]: each started megabyte `ClickHouse` reads for it.
+/// What a request costs against [`RATE_LIMIT`]: each started megabyte `ClickHouse` reads for it.
 /// Bytes read track the CPU a query takes far better than its parameters do (a time-window scan
 /// reads from a few MB to GBs) and, unlike its duration, do not grow while `ClickHouse` is busy.
 const COST_UNIT_BYTES: u64 = 1_000_000;
@@ -51,8 +41,8 @@ const COST_UNIT_BYTES: u64 = 1_000_000;
 /// Budgets of [`COST_UNIT_BYTES`]. The cost is only known once the query has run, so a request is
 /// admitted while one unit is left, and its measured cost is recorded afterwards, taking the client
 /// past its budget until enough of it has left the window.
-const COST_LIMIT: RateLimit = RateLimit::new(
-    "match_metadata_bulk_cost",
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    "match_metadata_bulk",
     &[
         Quota::new(Scope::Ip, 2_000, Duration::from_mins(1)),
         Quota::new(Scope::Ip, 25_000, Duration::from_hours(1)),
@@ -61,7 +51,7 @@ const COST_LIMIT: RateLimit = RateLimit::new(
     ],
 );
 
-/// The [`COST_LIMIT`] units for `read_bytes`, at least 1.
+/// The [`RATE_LIMIT`] units for `read_bytes`, at least 1.
 fn cost_units(read_bytes: u64) -> NonZeroU64 {
     NonZeroU64::new(read_bytes.div_ceil(COST_UNIT_BYTES)).unwrap_or(NonZeroU64::MIN)
 }
@@ -971,14 +961,12 @@ When player info is included, each player object contains `hero_build_id` and `p
 > **Note:** The `pregame_hero_id` is the hero the player had locked before the pre-game swap window (`null` if unknown). A player swapped heroes when it differs from their `hero_id`.
 
     ",
-        Limits::from([("Requests", RATE_LIMIT.quotas)])
-            .and("Data read", COST_LIMIT.quotas, " MB")
-            .note(
-                "Every request also costs the megabytes ClickHouse reads to answer it (see the \
-                 `X-CH-Read-Bytes` response header). The cost is charged once the request has \
-                 run: a request is admitted while any budget is left, so an expensive one can \
-                 take you past the limit until its cost leaves the window. Narrow the time range \
-                 or match id range, request fewer matches, or include fewer fields to read less.",
+        Limits::from(RATE_LIMIT).unit(" MB").note(
+                "Requests are charged the megabytes ClickHouse reads to answer them (see the \
+                 `X-CH-Read-Bytes` response header), once they have run. A request is admitted \
+                 while any budget is left, so an expensive one can take you past the limit until \
+                 its cost leaves the window. Narrow the time range or match id range, request \
+                 fewer matches, or include fewer fields to read less.",
             ),
     )
 )]
@@ -1002,10 +990,6 @@ pub(super) async fn bulk_metadata(
     state
         .rate_limit_client
         .check(&rate_limit_key, RATE_LIMIT)
-        .await?;
-    state
-        .rate_limit_client
-        .check(&rate_limit_key, COST_LIMIT)
         .await?;
     if query.limit == 0 || query.limit > 10000 {
         return Err(APIError::status_msg(
@@ -1067,7 +1051,7 @@ pub(super) async fn bulk_metadata(
     if let Some(rest) = NonZeroU64::new(cost.get().saturating_sub(1)) {
         state
             .rate_limit_client
-            .record(&rate_limit_key, COST_LIMIT, rest)
+            .record(&rate_limit_key, RATE_LIMIT, rest)
             .await;
     }
     let Some(body) = rows else {

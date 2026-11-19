@@ -24,8 +24,7 @@ pub(crate) fn describe<'a>(description: &str, limits: impl Into<Limits<'a>>) -> 
 }
 
 pub(crate) struct Limits<'a> {
-    /// `(label, quotas, unit)`; cases without a unit of their own use [`Self::unit`].
-    cases: Vec<(&'a str, &'a [Quota], Option<&'a str>)>,
+    cases: Vec<(&'a str, &'a [Quota])>,
     note: Option<&'a str>,
     unit: &'a str,
 }
@@ -42,12 +41,6 @@ impl<'a> Limits<'a> {
     /// What a quota counts, for policies charged per unit of cost (default `req`).
     pub(crate) fn unit(self, unit: &'a str) -> Self {
         Self { unit, ..self }
-    }
-
-    /// Another case, for a second policy the endpoint also enforces, counted in `unit`.
-    pub(crate) fn and(mut self, label: &'a str, quotas: &'a [Quota], unit: &'a str) -> Self {
-        self.cases.push((label, quotas, Some(unit)));
-        self
     }
 }
 
@@ -66,10 +59,7 @@ impl<'a> From<&'a [Quota]> for Limits<'a> {
 impl<'a, const N: usize> From<[(&'a str, &'a [Quota]); N]> for Limits<'a> {
     fn from(cases: [(&'a str, &'a [Quota]); N]) -> Self {
         Self {
-            cases: cases
-                .into_iter()
-                .map(|(label, quotas)| (label, quotas, None))
-                .collect(),
+            cases: cases.into(),
             note: None,
             unit: "req",
         }
@@ -85,8 +75,7 @@ impl Display for Limits<'_> {
         writeln!(f, "| ---- | ----- |")?;
         for &scope in Scope::VARIANTS {
             write!(f, "| {} | ", scope.as_str())?;
-            for (i, &(label, quotas, unit)) in self.cases.iter().enumerate() {
-                let unit = unit.unwrap_or(self.unit);
+            for (i, &(label, quotas)) in self.cases.iter().enumerate() {
                 if i > 0 {
                     f.write_str("<br>")?;
                 }
@@ -101,7 +90,7 @@ impl Display for Limits<'_> {
                     if j > 0 {
                         f.write_str(", ")?;
                     }
-                    write!(f, "{}{unit}/{}", quota.limit, Period(quota.period))?;
+                    write!(f, "{}{}/{}", quota.limit, self.unit, Period(quota.period))?;
                 }
             }
             writeln!(f, " |")?;
@@ -169,21 +158,6 @@ mod tests {
             .unit(" accounts")
             .to_string();
         assert!(table.contains("| IP | 10 accounts/min |"));
-    }
-
-    #[test]
-    fn renders_cases_in_their_own_units() {
-        let table = Limits::from([(
-            "Requests",
-            &[Quota::new(Scope::Ip, 30, Duration::from_mins(1))][..],
-        )])
-        .and(
-            "Data read",
-            &[Quota::new(Scope::Ip, 2000, Duration::from_mins(1))],
-            " MB",
-        )
-        .to_string();
-        assert!(table.contains("| IP | Requests: 30req/min<br>Data read: 2000 MB/min |"));
     }
 
     #[test]
