@@ -235,6 +235,7 @@ CREATE TABLE default.match_player
     `upgrades.game_time_s` Array(UInt16) MATERIALIZED arrayFilter((t, x, u) -> (dictHas('default.upgrade_items_dict', toUInt64(x)) AND (t > 0) AND (bitAnd(u, 8388608) = 0)), items.game_time_s, items.item_id, items.upgrade_info) CODEC(Delta(2), LZ4),
     `upgrades.sold_time_s` Array(UInt16) MATERIALIZED arrayFilter((s, x, t, u) -> (dictHas('default.upgrade_items_dict', toUInt64(x)) AND (t > 0) AND (bitAnd(u, 8388608) = 0)), items.sold_time_s, items.item_id, items.game_time_s, items.upgrade_info) CODEC(LZ4),
     `upgrades.net_worth_at_buy` Array(UInt32) MATERIALIZED arrayFilter((w, x, t, u) -> (dictHas('default.upgrade_items_dict', toUInt64(x)) AND (t > 0) AND (bitAnd(u, 8388608) = 0)), `items.net_worth_at_buy`, `items.item_id`, `items.game_time_s`, `items.upgrade_info`),
+    `upgrades.imbued_ability_id` Array(UInt32) MATERIALIZED arrayFilter((a, x, t, u) -> (dictHas('default.upgrade_items_dict', toUInt64(x)) AND (t > 0) AND (bitAnd(u, 8388608) = 0)), `items.imbued_ability_id`, `items.item_id`, `items.game_time_s`, `items.upgrade_info`) CODEC(LZ4),
     `ranked_type` Enum8('Invalid' = 0, 'Normal' = 1) DEFAULT 'Invalid',
     `rank_interval` Nullable(UInt32) DEFAULT NULL COMMENT 'Ranked interval the match counted for, see ranked_season_intervals. It picks the rank ladder of the flat progress columns. A match queued before an interval ends can start a few minutes into the next one and still count for the old interval, so do not derive it from start_time. NULL outside ranked matches.',
     `player_match_outcome` Enum8('Invalid' = 0, 'Win' = 1, 'Loss' = 2, 'Penalized' = 3, 'PenalizedParty' = 4, 'NotScored' = 5) DEFAULT 'Invalid',
@@ -422,7 +423,7 @@ CREATE TABLE default.match_player
             game_mode,
             start_time
     ),
-    PROJECTION item_stats_by_hero_mode_badge_v4
+    PROJECTION item_stats_by_hero_mode_badge_v5
     (
         SELECT
             match_id,
@@ -478,6 +479,7 @@ CREATE TABLE default.match_player
             items.game_time_s,
             items.sold_time_s,
             items.upgrade_info,
+            items.imbued_ability_id,
             abilities,
             stats.time_stamp_s,
             stats.net_worth,

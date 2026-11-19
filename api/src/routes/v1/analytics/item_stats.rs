@@ -91,6 +91,10 @@ pub enum BucketQuery {
     #[serde(rename = "net_worth_by_10000")]
     #[strum(to_string = "net_worth_by_10000")]
     NetWorthBy10000,
+    /// Bucket Item Stats by the hero ability the item was imbued into. The bucket is the ability's
+    /// id. Only purchases imbued into an ability are counted, so only items that imbue an ability
+    /// (e.g. Mystic Expansion, Compress Cooldown, Duration Extender) appear.
+    ImbuedAbility,
 }
 
 // Per-purchase net worth at buy time. Precomputed at write time into the
@@ -135,6 +139,7 @@ impl BucketQuery {
             Self::NetWorthBy3000 => net_worth_bucket(net_worth_expr, 3000),
             Self::NetWorthBy5000 => net_worth_bucket(net_worth_expr, 5000),
             Self::NetWorthBy10000 => net_worth_bucket(net_worth_expr, 10000),
+            Self::ImbuedAbility => "toUInt32(imbued_ability_id)".to_owned(),
         }
     }
 
@@ -172,7 +177,8 @@ impl BucketQuery {
             | Self::NetWorthBy2000
             | Self::NetWorthBy3000
             | Self::NetWorthBy5000
-            | Self::NetWorthBy10000 => None,
+            | Self::NetWorthBy10000
+            | Self::ImbuedAbility => None,
         }
     }
 }
@@ -716,7 +722,8 @@ fn build_bucket_mv_query(query: &ItemStatsQuery) -> Option<String> {
         | BucketQuery::StartTimeDay
         | BucketQuery::StartTimeWeek
         | BucketQuery::StartTimeMonth
-        | BucketQuery::GameTimeNormalizedPercentage => return None,
+        | BucketQuery::GameTimeNormalizedPercentage
+        | BucketQuery::ImbuedAbility => return None,
     };
 
     #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
@@ -931,14 +938,15 @@ fn cohort_mv_bucket(bucket: BucketQuery) -> Option<(&'static Rollup<'static>, St
         BucketQuery::NetWorthBy10000 => {
             Some((&COHORT_NW_AGG, net_worth_bucket("bucket_net_worth", 10000)))
         }
-        // Hero/team need dimensions the cohort grain dropped; the normalized
+        // Hero/team/imbued ability need dimensions the cohort grain dropped; the normalized
         // game-time bucket needs per-match duration; sub-day windows need
         // sub-day resolution.
         BucketQuery::Hero
         | BucketQuery::Team
         | BucketQuery::EnemyHero
         | BucketQuery::StartTimeHour
-        | BucketQuery::GameTimeNormalizedPercentage => None,
+        | BucketQuery::GameTimeNormalizedPercentage
+        | BucketQuery::ImbuedAbility => None,
     }
 }
 
@@ -1379,7 +1387,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
             // Every row carries its opposing team's heroes in `enemy_hero_ids` (sorted, distinct;
             // filled at ingest), so the filter is a per-row test in PREWHERE: no second scan of
             // the enemy heroes' rows and no IN set built before the scan. The hero-led projection
-            // `item_stats_by_hero_mode_badge_v4` stores the column. Measured locally on a buyer
+            // `item_stats_by_hero_mode_badge_v5` stores the column. Measured locally on a buyer
             // hero against the semi-join below, same rows: any of 6 enemies -13% CPU, -27% wall;
             // 1 enemy -14% CPU, -26% wall; all of 3 -65% CPU, -41% wall. On prod the semi-join was
             // about half the CPU of 90-day, 6-enemy requests.
@@ -1494,7 +1502,7 @@ fn build_query(query: &ItemStatsQuery) -> String {
      * `corrupted_items` `include`/`only` also need `items.*`, because `upgrades.*` has no
      * corrupted purchases, and `enhanced_items` `exclude`/`only` need `items.upgrade_info`.
      */
-    let (items_array_join, upgrade_filter, nw_col) = if use_items_arrays {
+    let (items_array_join, upgrade_filter, nw_col, imbued_col) = if use_items_arrays {
         let corrupted_filter = match corrupted_items {
             CorruptedItemsFilter::Include => None,
             CorruptedItemsFilter::Exclude => Some(not_corrupted_sql("upgrade_info")),
@@ -1523,12 +1531,14 @@ fn build_query(query: &ItemStatsQuery) -> String {
             ),
             format!("\n    AND item_id IN t_upgrades AND buy_time > 0{variant_filter}"),
             ",\n    `items.net_worth_at_buy` AS net_worth_at_buy",
+            "items.imbued_ability_id",
         )
     } else {
         (
             "`upgrades.item_id`      AS item_id,\n    `upgrades.game_time_s`  AS buy_time,\n    `upgrades.sold_time_s`  AS sold_time".to_owned(),
             String::new(),
             ",\n    `upgrades.net_worth_at_buy` AS net_worth_at_buy",
+            "`upgrades.imbued_ability_id`",
         )
     };
     // Only ARRAY JOIN the precomputed net-worth column when a net-worth bucket
@@ -1537,6 +1547,24 @@ fn build_query(query: &ItemStatsQuery) -> String {
         nw_col
     } else {
         ""
+    };
+    /*
+     * `bucket=imbued_ability` joins the ability each purchase was imbued into and keeps only the
+     * imbued purchases (~8% of upgrade purchases, 11 items), so only imbue items get rows. The
+     * hero-led projection `item_stats_by_hero_mode_badge_v5` stores `items.imbued_ability_id`, and
+     * the no-hero path reads the MATERIALIZED `upgrades.imbued_ability_id`, the same filter as
+     * the other `upgrades.*` columns. Measured locally on a 3-day prod sample against the
+     * `items.*` scan the bucket would otherwise need: with a buyer hero -98% CPU (the projection
+     * instead of a full scan; -40% below the same hero's request without a bucket), without one
+     * -69% CPU, same rows.
+     */
+    let (imbued_array_join, imbued_filter) = if query.bucket == BucketQuery::ImbuedAbility {
+        (
+            format!(",\n    {imbued_col} AS imbued_ability_id"),
+            "\n    AND imbued_ability_id != 0",
+        )
+    } else {
+        (String::new(), "")
     };
     let mut ctes = vec![];
     if use_items_arrays {
@@ -1553,8 +1581,8 @@ fn build_query(query: &ItemStatsQuery) -> String {
     let scan = format!(
         "match_player
 ARRAY JOIN
-    {items_array_join}{nw_array_join}
-{prewhere_clause}WHERE {where_match_filters}{upgrade_filter}
+    {items_array_join}{nw_array_join}{imbued_array_join}
+{prewhere_clause}WHERE {where_match_filters}{upgrade_filter}{imbued_filter}
     {player_filters}"
     );
     // The enemy hero bucket fans the buyer rows out over their enemy heroes. Its bucket only
@@ -2574,6 +2602,73 @@ mod tests {
             }),
             build_query(&ItemStatsQuery::default())
         );
+    }
+
+    #[test]
+    fn imbued_ability_bucket_reads_only_imbued_purchases_off_the_rollups() {
+        let recent = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs()
+            .cast_signed()
+            - 30 * 86_400;
+        let query = ItemStatsQuery {
+            bucket: BucketQuery::ImbuedAbility,
+            min_unix_timestamp: Some(recent),
+            ..Default::default()
+        };
+        assert!(build_mv_query(&query).is_none());
+        assert!(build_bucket_mv_query(&query).is_none());
+        let cohort = ItemStatsQuery {
+            include_item_ids: Some(vec![1]),
+            ..query.clone()
+        };
+        assert!(build_cohort_mv_query(&cohort).is_none());
+        assert_eq!(cohort_mv_skip_reason(&cohort), "bucket");
+        let enemy = ItemStatsQuery {
+            enemy_hero_ids: Some(vec![6]),
+            ..query.clone()
+        };
+        assert!(build_enemy_mv_query(&enemy).is_none());
+
+        // Without a buyer hero: the materialized `upgrades.*` arrays, base table.
+        let sql = build_query(&query);
+        assert_valid_sql(&sql);
+        assert!(sql.contains(",\n    `upgrades.imbued_ability_id` AS imbued_ability_id\n"));
+        assert!(sql.contains("\n    AND imbued_ability_id != 0\n"));
+        assert!(sql.contains("toUInt32(imbued_ability_id)    AS bucket"));
+        assert!(!sql.contains("items.imbued_ability_id"));
+        assert!(sql.contains("optimize_use_projections = 0"));
+
+        // With a buyer hero: `items.*`, which the hero-led projection stores.
+        let hero = build_query(&ItemStatsQuery {
+            hero_ids: Some(vec![20]),
+            ..query.clone()
+        });
+        assert_valid_sql(&hero);
+        assert!(hero.contains(",\n    items.imbued_ability_id AS imbued_ability_id\n"));
+        assert!(hero.contains("AND item_id IN t_upgrades AND buy_time > 0"));
+        assert!(hero.contains("\n    AND imbued_ability_id != 0\n"));
+        assert!(!hero.contains("upgrades.imbued_ability_id"));
+        assert!(!hero.contains("optimize_use_projections = 0"));
+
+        // An enemy filter moves the match filters to PREWHERE; the imbue filter stays in WHERE.
+        let hero_enemy = build_query(&ItemStatsQuery {
+            hero_ids: Some(vec![20]),
+            enemy_hero_ids: Some(vec![6]),
+            ..query
+        });
+        assert_valid_sql(&hero_enemy);
+        assert!(hero_enemy.contains("WHERE true\n    AND item_id IN t_upgrades"));
+        assert!(hero_enemy.contains("\n    AND imbued_ability_id != 0\n"));
+
+        // Other buckets don't read the column.
+        let plain = build_query(&ItemStatsQuery {
+            bucket: BucketQuery::NoBucket,
+            hero_ids: Some(vec![20]),
+            ..Default::default()
+        });
+        assert!(!plain.contains("imbued_ability_id"));
     }
 
     #[test]
