@@ -13,7 +13,7 @@ type ItemImageLook = Omit<
 > & {
   /** Native hover title, the name by default; pass "" where a tooltip already names the image. */
   title?: string;
-  /** The alt text, the item's name by default; a variant of the item says which ("Corrupted Ricochet"). */
+  /** The alt text, the item's name by default; pass "" where text beside the image already names it. */
   alt?: string;
 };
 

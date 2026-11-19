@@ -40,8 +40,6 @@ import {
   useItemTiers,
 } from "~/components/features/items/ItemStatsControls";
 import { ItemStatTrend, ItemTrendValue } from "~/components/features/items/ItemStatTrend";
-import { useCorruptedItemMode } from "~/components/features/items/useCorruptedItemMode";
-import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
 import { ColumnFilter } from "~/components/patterns/data-table/ColumnFilter";
 import { ExpandableRow, ExpandableRowToggle } from "~/components/patterns/data-table/ExpandableRow";
@@ -55,7 +53,6 @@ import { Button } from "~/components/ui/button";
 import { Delta } from "~/components/ui/delta";
 import { anyValue } from "~/components/ui/hooks/any-selection";
 import { sortParams, useSort } from "~/components/ui/hooks/use-sort";
-import { ProgressBarMarker, ProgressBarSegment } from "~/components/ui/progress-bar";
 import { SearchInput } from "~/components/ui/search-input";
 import { Stack } from "~/components/ui/stack";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
@@ -78,30 +75,6 @@ const parseAsSortDirection = parseAsStringLiteral(["asc", "desc"] as const);
  * Two lists changed by one tap also land in one history entry.
  */
 const together = { limitUrlUpdates: throttle(50) };
-
-const NO_CORRUPTED: CorruptedStats = { wins: 0, matches: 0 };
-
-/** A column header label with the key to its normal and corrupted colors. Spans: it sits inside the sort button. */
-function KeyedHeaderLabel({ normalColor = NORMAL_COLOR, children }: { normalColor?: string; children: ReactNode }) {
-  return (
-    <span className="inline-flex flex-col items-start gap-0.5">
-      <span>{children}</span>
-      <span className="flex items-center gap-3 text-xs font-normal text-muted-foreground">
-        <span className="flex items-center gap-1">
-          <ChartSwatch color={normalColor} />
-          Normal
-        </span>
-        <span className="flex items-center gap-1">
-          <ChartSwatch color={CORRUPTED_COLOR} />
-          Corrupted
-        </span>
-      </span>
-    </span>
-  );
-}
-/** Normal purchases in the stacked cells and header keys; corrupted ones in the second color. */
-const NORMAL_COLOR = CHART_COLOR.pickRate;
-const CORRUPTED_COLOR = CHART_COLOR.comparison;
 
 /** The Pick Rate column's filter: round thresholds of the normalized pick rate, in percent. */
 const PICK_RATE_PRESETS = [0, 5, 10, 20, 30, 50] as const;
@@ -156,19 +129,11 @@ interface ItemStatsTableProps {
   /** The request behind `data`: hovering a win rate charts that item's win rate over time from it. */
   trendParams: AnalyticsApiItemStatsRequest;
   prevStatsMap?: Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>;
-  /** With both kinds of purchase counted: each item's corrupted purchases, split out in the pick and win rate cells. */
-  corruptedStatsMap?: Map<number, CorruptedStats>;
   /**
    * What a row shows when expanded. Rendered inside each row's context, so it reads the row with `useItemStatsRow()`.
    * Without it the rows do not expand.
    */
   details?: ReactNode;
-}
-
-/** The corrupted purchases of one item: part of its row's counts when both kinds of purchase are counted. */
-export interface CorruptedStats {
-  wins: number;
-  matches: number;
 }
 
 export interface DisplayItemStats extends ItemVsTier {
@@ -195,8 +160,6 @@ export interface DisplayItemStats extends ItemVsTier {
 
 interface ItemStatsTableRowProps {
   row: DisplayItemStats;
-  /** `corrupted` while the rows are the corrupted versions of the items. */
-  itemVariant: "normal" | "corrupted";
   index: number;
   minWinRate: number;
   maxWinRate: number;
@@ -206,8 +169,6 @@ interface ItemStatsTableRowProps {
   isIncluded: boolean;
   isExcluded: boolean;
   prevStatsMap?: Map<number, { winrate: number; pickrate: number; normalizedPickrate: number }>;
-  /** This item's corrupted purchases, when both kinds are counted: split out in the pick and win rate cells. */
-  corrupted?: CorruptedStats;
   onItemInclude: (item: number) => void;
   onItemExclude: (item: number) => void;
   details?: ReactNode;
@@ -333,7 +294,6 @@ function ConfidenceTierBadge({ row }: { row: DisplayItemStats }) {
 
 const ItemStatsTableRow = memo(function ItemStatsTableRow({
   row,
-  itemVariant,
   index,
   minWinRate,
   maxWinRate,
@@ -343,7 +303,6 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
   isIncluded,
   isExcluded,
   prevStatsMap,
-  corrupted,
   onItemInclude,
   onItemExclude,
   details,
@@ -366,7 +325,6 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
         <ItemCell
           item={row.item}
           linkToDetail
-          variant={itemVariant}
           meta={
             // Rounded where the cell is narrow, so the count stays whole beside the name.
             <>
@@ -383,51 +341,18 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
         <div className="flex items-center gap-2">{row.item?.item_tier ?? "?"}</div>
       </TableCell>
       <TableCell>
-        {(() => {
-          // With both kinds of purchase counted, the row's counts include the corrupted purchases: the bar is the
-          // normal purchases' win rate, with the corrupted purchases' win rate marked on it and the difference
-          // between them beside it (in place of the change from the previous period).
-          const normalMatches = row.matches - Math.min(corrupted?.matches ?? 0, row.matches);
-          const normalWins = row.wins - Math.min(corrupted?.wins ?? 0, row.wins);
-          const winRate = corrupted && normalMatches > 0 ? normalWins / normalMatches : row.wins / row.matches;
-          const corruptedWinRate = corrupted && corrupted.matches > 0 ? corrupted.wins / corrupted.matches : undefined;
-          return (
-            <ItemStatTrend
-              params={trendParams}
-              itemId={row.item_id}
-              itemName={itemName}
-              stat="winRate"
-              min={minWinRate}
-              max={maxWinRate}
-              value={winRate}
-              color={CHART_COLOR.primary}
-              label={
-                corruptedWinRate === undefined ? (
-                  `${formatPercent(winRate)} `
-                ) : (
-                  <span className="flex flex-wrap items-baseline gap-x-1">
-                    <span>{formatPercent(winRate)}</span>
-                    <span className="text-muted-foreground">vs</span>
-                    <span className="text-chart-5">
-                      <span className="sr-only">corrupted </span>
-                      {formatPercent(corruptedWinRate)}
-                    </span>
-                    <span className="text-xs">({corrupted!.matches.toLocaleString("en-US")})</span>
-                  </span>
-                )
-              }
-              delta={
-                corruptedWinRate !== undefined
-                  ? corruptedWinRate - winRate
-                  : prev !== undefined
-                    ? winRate - prev.winrate
-                    : undefined
-              }
-            >
-              {corruptedWinRate !== undefined && <ProgressBarMarker value={corruptedWinRate} color={CORRUPTED_COLOR} />}
-            </ItemStatTrend>
-          );
-        })()}
+        <ItemStatTrend
+          params={trendParams}
+          itemId={row.item_id}
+          itemName={itemName}
+          stat="winRate"
+          min={minWinRate}
+          max={maxWinRate}
+          value={row.wins / row.matches}
+          color={CHART_COLOR.primary}
+          label={`${formatPercent(row.wins / row.matches)} `}
+          delta={prev !== undefined ? row.wins / row.matches - prev.winrate : undefined}
+        />
       </TableCell>
       <TableCell className="hidden text-center @4xl:table-cell">
         <ItemTrendValue {...trend} stat="vsTier">
@@ -441,41 +366,18 @@ const ItemStatsTableRow = memo(function ItemStatsTableRow({
         </ItemTrendValue>
       </TableCell>
       <TableCell>
-        {(() => {
-          const corruptedMatches = corrupted ? Math.min(corrupted.matches, row.matches) : undefined;
-          const normalMatches = row.matches - (corruptedMatches ?? 0);
-          return (
-            <ItemStatTrend
-              params={trendParams}
-              itemId={row.item_id}
-              itemName={itemName}
-              stat="pickRate"
-              min={minUsage}
-              max={maxUsage}
-              value={row.matches}
-              color={NORMAL_COLOR}
-              label={
-                corruptedMatches === undefined ? (
-                  `${Math.round((row.matches / maxUsage) * 100).toFixed(0)}%`
-                ) : (
-                  <span className="flex flex-wrap items-baseline gap-x-1">
-                    <span className="text-chart-4">{((normalMatches / maxUsage) * 100).toFixed(1)}%</span>
-                    <span className="text-muted-foreground">+</span>
-                    <span className="text-chart-5">{((corruptedMatches / maxUsage) * 100).toFixed(1)}%</span>
-                    <span className="sr-only">corrupted</span>
-                  </span>
-                )
-              }
-              delta={prev !== undefined ? row.matches / maxUsage - prev.normalizedPickrate : undefined}
-            >
-              {/* An array, not a fragment: ProgressBar sums its direct segment children. */}
-              {corruptedMatches !== undefined && [
-                <ProgressBarSegment key="normal" value={normalMatches} color={NORMAL_COLOR} />,
-                <ProgressBarSegment key="corrupted" value={corruptedMatches} color={CORRUPTED_COLOR} />,
-              ]}
-            </ItemStatTrend>
-          );
-        })()}
+        <ItemStatTrend
+          params={trendParams}
+          itemId={row.item_id}
+          itemName={itemName}
+          stat="pickRate"
+          min={minUsage}
+          max={maxUsage}
+          value={row.matches}
+          color={CHART_COLOR.pickRate}
+          label={`${Math.round((row.matches / maxUsage) * 100).toFixed(0)}%`}
+          delta={prev !== undefined ? row.matches / maxUsage - prev.normalizedPickrate : undefined}
+        />
       </TableCell>
       <TableCell className="hidden text-center @6xl:table-cell">
         <ItemTrendValue {...trend} stat="pickVsTier">
@@ -571,7 +473,6 @@ export function ItemStatsTable({
   maxUsage,
   trendParams,
   prevStatsMap,
-  corruptedStatsMap,
   details,
 }: ItemStatsTableProps) {
   const [sortField, setSortField] = useQueryState("item_sort_field", parseAsSortField.withDefault("winRate"));
@@ -596,7 +497,6 @@ export function ItemStatsTable({
   const [nameQuery, setNameQuery] = useItemNameQuery();
   const [minPickRate, setMinPickRate] = useItemMinPickRate();
   const [winRateFloor, setWinRateFloor] = useItemMinWinRate();
-  const [corruptedMode] = useCorruptedItemMode();
 
   // Functional updates keep both callbacks stable, so a click re-renders one memoized row instead of the whole table.
   // An exclusion (or an inclusion the item fails) can take the row, and with it the focused toggle, off the table once
@@ -805,13 +705,7 @@ export function ItemStatsTable({
                     }
                   />
                   <SortableHeader
-                    label={
-                      corruptedMode === "include" ? (
-                        <KeyedHeaderLabel normalColor={CHART_COLOR.primary}>Win Rate</KeyedHeaderLabel>
-                      ) : (
-                        "Win Rate"
-                      )
-                    }
+                    label="Win Rate"
                     sortKey="winRate"
                     activeSortKey={sort.sortKey}
                     sortDir={sort.dir}
@@ -849,13 +743,7 @@ export function ItemStatsTable({
                   <SortableHeader
                     // Relative to the most bought item, like the hero tables' normalized pick rate; the item page's
                     // "Bought" is the share of players instead, so a bare "Pick Rate" read as a contradiction.
-                    label={
-                      corruptedMode === "include" ? (
-                        <KeyedHeaderLabel>Pick Rate (Normalized)</KeyedHeaderLabel>
-                      ) : (
-                        "Pick Rate (Normalized)"
-                      )
-                    }
+                    label="Pick Rate (Normalized)"
                     sortKey="matches"
                     activeSortKey={sort.sortKey}
                     sortDir={sort.dir}
@@ -921,7 +809,6 @@ export function ItemStatsTable({
                   <ItemStatsTableRow
                     key={row.item_id}
                     row={row}
-                    itemVariant={corruptedMode === "only" ? "corrupted" : "normal"}
                     index={index}
                     minWinRate={minWinRate}
                     maxWinRate={maxWinRate}
@@ -931,7 +818,6 @@ export function ItemStatsTable({
                     isIncluded={includeItems.has(row.item_id)}
                     isExcluded={excludeItems.has(row.item_id)}
                     prevStatsMap={prevStatsMap}
-                    corrupted={corruptedStatsMap ? (corruptedStatsMap.get(row.item_id) ?? NO_CORRUPTED) : undefined}
                     onItemInclude={toggleInclude}
                     onItemExclude={toggleExclude}
                     details={details}

@@ -8,7 +8,6 @@ import { EntityNotFound } from "~/components/app/EntityNotFound";
 import { ITEM_SLOT_COLOR } from "~/components/domain/assets/item-slot-color";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
 import { CurrentPatchLink } from "~/components/domain/navigation/CurrentPatchLink";
-import { ItemCorruption } from "~/components/features/items/ItemCorruption";
 import { ItemEffectCard } from "~/components/features/items/ItemEffectCard";
 import { ItemBestHeroes, ItemPairings } from "~/components/features/items/ItemHeroBreakdown";
 import { ItemUpgradePath } from "~/components/features/items/ItemUpgradePath";
@@ -38,13 +37,7 @@ import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
 import { formatStatValue } from "~/lib/stat-format";
 import { toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
-import {
-  corruptionQueryOptions,
-  filterShopableItems,
-  itemQueryOptions,
-  itemUpgradesQueryOptions,
-  loadSeasons,
-} from "~/queries/asset-queries";
+import { filterShopableItems, itemQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -171,13 +164,11 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       matchMode: DEFAULT_MATCH_MODE,
       ...defaultUnixRange(seasons, preferences.dateFilter),
     };
-    const [stats, heroStats, ranks, , , bestHeroes, cohort] = await Promise.all([
+    const [stats, heroStats, ranks, , bestHeroes, cohort] = await Promise.all([
       prefetchCached(queryClient, itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter))),
       prefetchCached(queryClient, heroStatsQueryOptions(currentHeroStatsParams(seasons, preferences.dateFilter))),
       prefetchCached(queryClient, ranksQueryOptions),
       prefetchCached(queryClient, itemQueryOptions(item.id)),
-      // The corrupted section's penalties and frame art; only items the Broker trades have one.
-      item.corrupted_info && prefetchCached(queryClient, corruptionQueryOptions),
       catchPrefetch(fetchItemBestHeroes({ data: breakdownRequest })),
       catchPrefetch(fetchItemCohort({ data: breakdownRequest })),
     ]);
@@ -351,10 +342,6 @@ function ItemDetailPage() {
           <ItemUpgradePath itemId={itemId} request={itemRequest} rankRange={rankRange} />
         </div>
       </Section>
-
-      {itemQuery.data?.corrupted_info && (
-        <ItemCorruption item={itemQuery.data} request={itemRequest} rankRange={rankRange} />
-      )}
 
       <Section title={`Who Should Buy ${itemName}`} description={`${rankRange} matches`}>
         <div className="grid gap-4 lg:grid-cols-2">

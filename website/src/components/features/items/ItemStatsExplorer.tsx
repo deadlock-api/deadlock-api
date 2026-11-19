@@ -7,7 +7,6 @@ import MatchHistoryCard from "~/components/domain/match/MatchHistoryCard";
 import { useTopBuildsOpen } from "~/components/features/items/ItemStatsControls";
 import { getDisplayItemStats, ItemStatsTable, useItemStatsRow } from "~/components/features/items/ItemStatsTable";
 import { PlayerHeroBuildsDialog } from "~/components/features/items/PlayerHeroBuildsDialog";
-import { corruptedItemsParam, useCorruptedItemMode } from "~/components/features/items/useCorruptedItemMode";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Button } from "~/components/ui/button";
@@ -88,8 +87,6 @@ export function ItemStatsExplorer({
 }) {
   const [includeItems] = useQueryState("include_items", parseAsSetOf(parseAsInteger).withDefault(new Set()));
   const [excludeItems] = useQueryState("exclude_items", parseAsSetOf(parseAsInteger).withDefault(new Set()));
-  const [corruptedMode] = useCorruptedItemMode();
-  const corruptedItems = corruptedItemsParam(corruptedMode);
 
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(minDate, maxDate);
   const { minUnixTimestamp: prevMinTimestamp, maxUnixTimestamp: prevMaxTimestamp } = useNormalizedTimeRange(
@@ -121,7 +118,6 @@ export function ItemStatsExplorer({
       maxBoughtAtS,
       gameMode,
       matchMode,
-      corruptedItems,
     }),
     [
       minMatches,
@@ -137,7 +133,6 @@ export function ItemStatsExplorer({
       maxBoughtAtS,
       gameMode,
       matchMode,
-      corruptedItems,
     ],
   );
 
@@ -150,33 +145,15 @@ export function ItemStatsExplorer({
     placeholderData: keepPreviousData,
   });
 
-  // With both kinds of purchase counted, each item's corrupted purchases split its pick rate and win rate cells.
-  const { data: corruptedData } = useQuery({
-    ...itemStatsQueryOptions({ ...queryStatOptions, corruptedItems: "only" }),
-    enabled: corruptedMode === "include",
-    placeholderData: keepPreviousData,
-  });
-  const corruptedStatsMap = useMemo(
-    () =>
-      corruptedMode === "include" && corruptedData
-        ? new Map(corruptedData.map((stat) => [stat.item_id, { wins: stat.wins, matches: stat.matches }]))
-        : undefined,
-    [corruptedMode, corruptedData],
-  );
-
-  // The previous period counts normal purchases only, which every period has.
   const prevQueryStatOptions: AnalyticsApiItemStatsRequest = {
     ...queryStatOptions,
     minUnixTimestamp: prevMinTimestamp ?? 0,
     maxUnixTimestamp: prevMaxTimestamp,
-    corruptedItems: undefined,
   };
 
-  // Corrupted purchases began with the City Never Sleeps update: a period before it has none to compare with.
-  const comparesPrevious = hasPreviousInterval && corruptedMode !== "only";
   const { data: prevData } = useQuery({
     ...itemStatsQueryOptions(prevQueryStatOptions),
-    enabled: comparesPrevious,
+    enabled: hasPreviousInterval,
     placeholderData: keepPreviousData,
   });
 
@@ -238,7 +215,7 @@ export function ItemStatsExplorer({
   const minUsage = useMemo(() => Math.min(...filteredData.map((item) => item.matches)), [filteredData]);
   const maxUsage = useMemo(() => Math.max(...filteredData.map((item) => item.matches)), [filteredData]);
   const prevStatsMap = useMemo(() => {
-    if (!prevData || !comparesPrevious) return undefined;
+    if (!prevData || !hasPreviousInterval) return undefined;
     const prevSumMatches = prevData.reduce((acc, row) => acc + row.matches, 0);
     // On the same base as this period's bars (shop items only), or the pick rate delta compares two scales.
     const prevMaxMatches = Math.max(
@@ -253,7 +230,7 @@ export function ItemStatsExplorer({
       });
     }
     return map;
-  }, [prevData, comparesPrevious, shopableIds]);
+  }, [prevData, hasPreviousInterval, shopableIds]);
 
   const sortedData = useMemo(
     () =>
@@ -293,7 +270,6 @@ export function ItemStatsExplorer({
             maxUsage={maxUsage}
             trendParams={rowQueryOptions}
             prevStatsMap={prevStatsMap}
-            corruptedStatsMap={corruptedStatsMap}
             details={rowDetails}
           />
         </div>

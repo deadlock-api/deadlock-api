@@ -39,7 +39,6 @@ const UPGRADE_FIELDS = [
   "name",
   "class_name",
   "component_items",
-  "corrupted_info",
   "cost",
   "disabled",
   "image_webp",

@@ -233,7 +233,7 @@ export function ChartsMore() {
             </Card>
           </div>
           <div className="flex min-w-0 flex-col gap-1.5">
-            <span className="eyebrow">comparisonLabel: a second series (e.g. corrupted purchases)</span>
+            <span className="eyebrow">comparisonLabel: a second series (e.g. ranked beside unranked)</span>
             <Card size="sm" className="px-3">
               <StatTrendChart
                 data={trendPoints(bucket).map((point, i) => ({
@@ -246,8 +246,8 @@ export function ChartsMore() {
                 stat={stat}
                 value={bucket}
                 onValueChange={setBucket}
-                valueLabel="Normal"
-                comparisonLabel="Corrupted"
+                valueLabel="Ranked"
+                comparisonLabel="Unranked"
               />
             </Card>
           </div>

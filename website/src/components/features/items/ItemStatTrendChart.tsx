@@ -30,29 +30,18 @@ const BUCKET: StatTrendBucket = "start_time_day";
 export default function ItemStatTrendChart({ params, itemId, stat }: ItemStatTrendChartProps) {
   // `minMatches` would apply to every bucket on its own and drop the quiet ones; the sample floor below handles them.
   const itemParams = { ...params, minMatches: undefined, bucket: BUCKET };
-  // With both kinds of purchase counted, the corrupted purchases are charted beside the normal ones. The other stats
-  // chart both kinds together, as their table cells count them.
-  const splitCorrupted = params.corruptedItems === "include" && (stat === "winRate" || stat === "pickRate");
   // The differences to the tier are measured within each day against that day's shop items, as the table measures
   // them against the shop items on screen.
   const byTier = stat === "vsTier" || stat === "pickVsTier";
   const { data: assetsItems } = useQuery({ ...itemUpgradesQueryOptions, enabled: byTier });
-  const corruptedParams = { ...itemParams, corruptedItems: "only" as const };
   const itemQuery = useQuery(itemStatsQueryOptions(itemParams));
-  const corruptedQuery = useQuery({ ...itemStatsQueryOptions(corruptedParams), enabled: splitCorrupted });
   const itemData = itemQuery.data;
-  const corruptedData = corruptedQuery.data;
   const chartData = useMemo(() => {
     const range = { minUnixTimestamp: params.minUnixTimestamp, maxUnixTimestamp: params.maxUnixTimestamp };
     const rows = completeTimeBuckets(itemData ?? [], BUCKET, range);
     // The table's pick rate is relative to the most bought item; each bucket is measured against its own.
     const mostBought = new Map<number, number>();
     for (const row of rows) mostBought.set(row.bucket, Math.max(mostBought.get(row.bucket) ?? 0, row.matches));
-    const corruptedByBucket = new Map(
-      splitCorrupted
-        ? (corruptedData ?? []).filter((row) => row.item_id === itemId).map((row) => [row.bucket, row])
-        : [],
-    );
     const rate = (wins: number, matches: number, bucketStart: number) =>
       stat === "winRate" ? wins / matches : matches / (mostBought.get(bucketStart) ?? matches);
     const itemRows = rows
@@ -87,37 +76,15 @@ export default function ItemStatTrendChart({ params, itemId, stat }: ItemStatTre
         };
       });
     }
-    return itemRows.map((row): StatTrendPoint => {
-      if (!splitCorrupted) {
-        return { date: row.bucket * 1000, value: rate(row.wins, row.matches, row.bucket), matches: row.matches };
-      }
-      // The combined counts include the corrupted purchases: take them out for the normal series.
-      const corrupted = corruptedByBucket.get(row.bucket);
-      const corruptedMatches = Math.min(corrupted?.matches ?? 0, row.matches);
-      const corruptedWins = Math.min(corrupted?.wins ?? 0, row.wins);
-      const normalMatches = row.matches - corruptedMatches;
-      return {
-        date: row.bucket * 1000,
-        value: normalMatches > 0 ? rate(row.wins - corruptedWins, normalMatches, row.bucket) : null,
-        matches: normalMatches,
-        comparison: corruptedMatches > 0 ? rate(corruptedWins, corruptedMatches, row.bucket) : null,
-        comparisonMatches: corruptedMatches,
-      };
-    });
-  }, [
-    itemData,
-    corruptedData,
-    assetsItems,
-    splitCorrupted,
-    byTier,
-    itemId,
-    stat,
-    params.minUnixTimestamp,
-    params.maxUnixTimestamp,
-  ]);
+    return itemRows.map((row): StatTrendPoint => ({
+      date: row.bucket * 1000,
+      value: rate(row.wins, row.matches, row.bucket),
+      matches: row.matches,
+    }));
+  }, [itemData, assetsItems, byTier, itemId, stat, params.minUnixTimestamp, params.maxUnixTimestamp]);
 
-  const pending = itemQuery.isPending || (splitCorrupted && corruptedQuery.isPending) || (byTier && !assetsItems);
-  const failed = itemQuery.isError || (splitCorrupted && corruptedQuery.isError);
+  const pending = itemQuery.isPending || (byTier && !assetsItems);
+  const failed = itemQuery.isError;
   return (
     <StatTrendChart
       data={chartData}
@@ -125,8 +92,6 @@ export default function ItemStatTrendChart({ params, itemId, stat }: ItemStatTre
       state={pending ? "loading" : failed ? "error" : "ready"}
       stat={ITEM_TABLE_TRENDS[stat]}
       value={BUCKET}
-      comparisonLabel={splitCorrupted ? "Corrupted" : undefined}
-      valueLabel={splitCorrupted ? "Normal" : undefined}
     />
   );
 }

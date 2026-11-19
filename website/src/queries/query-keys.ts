@@ -48,7 +48,6 @@ export const queryKeys = {
     item: (itemId: number) => ["assets-item", itemId] as const,
     rankedSeasons: () => ["assets-ranked-seasons"] as const,
     miscEntities: () => ["assets-misc-entities"] as const,
-    corruption: () => ["assets-corruption"] as const,
     itemPricePerTier: () => ["assets-item-price-per-tier"] as const,
     buildTags: () => ["assets-build-tags"] as const,
     /** The wasm module that reads and writes game build codes. */

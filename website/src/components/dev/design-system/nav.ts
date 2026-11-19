@@ -297,7 +297,6 @@ export const NAV: readonly NavChapter[] = [
         items: [
           "HeroImage and HeroName",
           "ItemImage and ItemName",
-          "CorruptedItemImage",
           "AbilityImage and AbilityName",
           "EntityName",
           "AssetImage",

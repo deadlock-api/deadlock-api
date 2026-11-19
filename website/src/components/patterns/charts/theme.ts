@@ -129,11 +129,11 @@ export const CHART_COLOR = {
   neutral: "var(--muted-foreground)",
   winRate: "var(--chart-win-rate)",
   share: "var(--chart-share)",
-  /** The second series a chart compares its main one with, such as corrupted item purchases. */
+  /** The second series a chart compares its main one with (StatTrendChart `comparisonLabel`). */
   comparison: "var(--chart-5)",
   /** A hero or rank whose own color is missing from the assets API. */
   fallback: "var(--foreground)",
-  /** Pick rate (and normal purchases) in the stat tables, beside labels in `text-chart-4`. */
+  /** Pick rate in the stat tables, beside labels in `text-chart-4`. */
   pickRate: "var(--chart-4)",
   /** A mark in ink that is not a series: the core items of a build, a point on a curve. */
   ink: "var(--foreground)",

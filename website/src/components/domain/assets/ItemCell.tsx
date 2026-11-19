@@ -1,4 +1,3 @@
-import { CorruptedItemImage } from "~/components/domain/assets/CorruptedItemImage";
 import { ItemImage, type ItemSource } from "~/components/domain/assets/ItemImage";
 import { ItemName } from "~/components/domain/assets/ItemName";
 import { useItemById } from "~/hooks/useAssetById";
@@ -8,8 +7,6 @@ import type { SlimUpgrade } from "~/queries/asset-queries";
 type ItemCellProps = Omit<React.ComponentProps<"span">, "children"> & {
   /** Links the name to the item's analytics page. */
   linkToDetail?: boolean;
-  /** `corrupted` draws the icon in the Broker's frame, for a row about the corrupted version of the item. */
-  variant?: "normal" | "corrupted";
   /** `sm`: a 24px icon, for dense tables, as HeroCell's. */
   size?: "sm" | "default";
   /**
@@ -40,7 +37,6 @@ function ItemCellView({
   item,
   loading = false,
   linkToDetail = false,
-  variant = "normal",
   size = "default",
   meta,
   className,
@@ -50,17 +46,12 @@ function ItemCellView({
   return (
     <span
       data-slot="item-cell"
-      data-variant={variant}
       data-size={size}
       className={cn("flex min-w-0 items-center", size === "sm" ? "gap-1.5" : "gap-2", className)}
       {...props}
     >
-      {/* The name beside it already says what this is; the corrupted frame says which version. */}
-      {variant === "corrupted" ? (
-        <CorruptedItemImage item={item} loading={loading} className={cn("shrink-0", IMAGE_SIZE[size])} />
-      ) : (
-        <ItemImage item={item} loading={loading} alt="" title="" className={cn("shrink-0", IMAGE_SIZE[size])} />
-      )}
+      {/* The name beside it already says what this is. */}
+      <ItemImage item={item} loading={loading} alt="" title="" className={cn("shrink-0", IMAGE_SIZE[size])} />
       {meta === undefined ? (
         name
       ) : (
