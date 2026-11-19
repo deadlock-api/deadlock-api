@@ -60,6 +60,8 @@ pub(super) enum APIError {
     },
     #[error("{0}")]
     ClickhouseBusy(crate::services::ch_admission::Busy),
+    #[error("More than {limit} requests in flight")]
+    TooManyInFlight { limit: usize },
     #[error("PostgreSQL Error: {0}")]
     PostgreSQL(#[from] sqlx::Error),
     #[error("Redis Error: {0}")]
@@ -299,6 +301,18 @@ impl IntoResponse for APIError {
                 );
                 res.headers_mut()
                     .insert(header::RETRY_AFTER, header::HeaderValue::from_static("5"));
+                res
+            }
+            Self::TooManyInFlight { limit } => {
+                let mut res = build_error_response(
+                    StatusCode::TOO_MANY_REQUESTS,
+                    format!(
+                        "At most {limit} of your requests to this endpoint run at once. Wait for one \
+                         to finish."
+                    ),
+                );
+                res.headers_mut()
+                    .insert(header::RETRY_AFTER, header::HeaderValue::from_static("1"));
                 res
             }
             Self::PostgreSQL(e) => {

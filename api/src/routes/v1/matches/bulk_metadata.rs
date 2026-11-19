@@ -1,5 +1,6 @@
 use crate::services::ch_admission;
 use crate::services::ch_cost::{self, TrackedLines, TrackedQuery as _};
+use crate::services::client_slots::ClientSlots;
 use crate::utils::sql::{
     DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, id_list, where_clause,
 };
@@ -40,16 +41,24 @@ const COST_UNIT_BYTES: u64 = 1_000_000;
 
 /// Budgets of [`COST_UNIT_BYTES`]. The cost is only known once the query has run, so a request is
 /// admitted while one unit is left, and its measured cost is recorded afterwards, taking the client
-/// past its budget until enough of it has left the window.
+/// past its budget until enough of it has left the window. Replayed on the week to 2026-11-19, these
+/// budgets reject 75% of what the heaviest ~300 IPs read and hold back one API key (Lockbuilds, 6%
+/// of its requests, at the per-minute budget); no other key reaches them.
 const RATE_LIMIT: RateLimit = RateLimit::new(
     "match_metadata_bulk",
     &[
-        Quota::new(Scope::Ip, 2_000, Duration::from_mins(1)),
-        Quota::new(Scope::Ip, 25_000, Duration::from_hours(1)),
-        Quota::new(Scope::Key, 20_000, Duration::from_mins(1)),
-        Quota::new(Scope::Key, 250_000, Duration::from_hours(1)),
+        Quota::new(Scope::Ip, 1_000, Duration::from_mins(1)),
+        Quota::new(Scope::Ip, 10_000, Duration::from_hours(1)),
+        Quota::new(Scope::Key, 15_000, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 150_000, Duration::from_hours(1)),
     ],
 );
+
+/// Requests a client may have in flight at once on one replica. [`RATE_LIMIT`] admits every
+/// request while one unit is left, so without it a burst sent all at once would run in full before
+/// its cost is recorded. The busiest clients peaked at 24–30 in flight across both replicas in the
+/// week to 2026-11-19.
+static SLOTS: LazyLock<ClientSlots> = LazyLock::new(|| ClientSlots::new(16));
 
 /// The [`RATE_LIMIT`] units for `read_bytes`, at least 1.
 fn cost_units(read_bytes: u64) -> NonZeroU64 {
@@ -966,7 +975,8 @@ When player info is included, each player object contains `hero_build_id` and `p
                  `X-CH-Read-Bytes` response header), once they have run. A request is admitted \
                  while any budget is left, so an expensive one can take you past the limit until \
                  its cost leaves the window. Narrow the time range or match id range, request \
-                 fewer matches, or include fewer fields to read less.",
+                 fewer matches, or include fewer fields to read less. At most 16 of your \
+                 requests run at once on each server; more get a 429 with `Retry-After: 1`.",
             ),
     )
 )]
@@ -975,6 +985,11 @@ pub(super) async fn bulk_metadata(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    let slot = SLOTS
+        .acquire(rate_limit_key.client_id())
+        .ok_or(APIError::TooManyInFlight {
+            limit: SLOTS.limit(),
+        })?;
     reject_brawl_badge_filter(
         query.game_mode,
         query.min_average_badge,
@@ -1042,7 +1057,7 @@ pub(super) async fn bulk_metadata(
         .await
         .map_err(APIError::ClickhouseBusy)?;
     let lines = fetch_lines(&state.ch_client_ro, &query).inspect_err(|e| permit.observe(e))?;
-    let rows = match stream_rows(lines, format, permit).await {
+    let rows = match stream_rows(lines, format, (permit, slot)).await {
         Ok(rows) => rows,
         Err(e) => return Err(cool_down_timeout(key, e).await),
     };
