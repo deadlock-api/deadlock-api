@@ -25,6 +25,7 @@ use uuid::Uuid;
 
 use crate::context::AppState;
 use crate::error::APIError;
+use crate::services::match_data_budget;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Limits, Quota, RateLimit, Scope, describe};
 
@@ -41,6 +42,16 @@ const RATE_LIMIT: RateLimit = RateLimit::new(
         Quota::new(Scope::Global, 5000, Duration::from_mins(1)),
     ],
 );
+
+/// The rate limit note of the GraphQL docs: both policies apply to every request.
+const GRAPHQL_LIMITS_NOTE: &str = "They apply to `POST /v1/graphql`. Each request counts once against the \
+     request limits and is charged the megabytes ClickHouse reads to answer it (see the \
+     `X-CH-Read-Bytes` response header), once it has run, against a budget shared with \
+     `GET /v1/matches/metadata`. A request is admitted while any budget is left, so an expensive \
+     one can take you past the limit until its cost leaves the window. Select fewer fields, \
+     narrow `where` filters or lower `limit` to read less. At most 16 of your requests to these \
+     two endpoints run at once on each server; more get a 429 with `Retry-After: 1`. A single \
+     query above the complexity limit is rejected before it runs.";
 
 /// Longest query or variables text kept in `request_logs`; the body limit alone allows 10 MB.
 const MAX_LOGGED_TEXT_BYTES: usize = 64 * 1024;
@@ -130,7 +141,9 @@ Interactive GraphiQL playground for exploring the GraphQL API.
 Open this endpoint in a browser to access the playground. Send GraphQL queries via `POST /v1/graphql` with a JSON body of the form `{ \"query\": \"...\", \"variables\": {...} }`.
 
     ",
-        Limits::from(RATE_LIMIT).note("They apply to `POST /v1/graphql`."),
+        Limits::from([("Requests", RATE_LIMIT.quotas)])
+            .and("ClickHouse reads", match_data_budget::BUDGET, " MB")
+            .note(GRAPHQL_LIMITS_NOTE),
     )
 )]
 async fn playground() -> impl IntoResponse {
@@ -142,24 +155,28 @@ async fn graphql_handler(
     State(state): State<AppState>,
     req: GraphQLRequest,
 ) -> Result<Response, APIError> {
+    let _slot = match_data_budget::acquire_slot(&rate_limit_key)?;
     state
         .rate_limit_client
         .check(&rate_limit_key, RATE_LIMIT)
         .await?;
+    match_data_budget::admit(&state, &rate_limit_key).await?;
 
     let hero_build_loader =
         DataLoader::new(HeroBuildLoader::new(state.pg_client.clone()), tokio::spawn);
     let request = req.into_inner();
     let mut log = GraphQLRequestLog::new(&request);
     let request = request
-        .data(state)
-        .data(rate_limit_key)
+        .data(state.clone())
+        .data(rate_limit_key.clone())
         .data(hero_build_loader)
         .data(GraphQLRequestId {
             id: log.request_id,
             next_query: AtomicU32::new(0),
         });
     let resp = shared_schema().execute(request).await;
+    // Every resolver has run, so all of the request's queries have finished.
+    match_data_budget::record(&state, &rate_limit_key).await;
     log.set_cost(&resp);
     let mut response = GraphQLResponse::from(resp).into_response();
     response.extensions_mut().insert(log);

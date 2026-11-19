@@ -307,8 +307,8 @@ impl IntoResponse for APIError {
                 let mut res = build_error_response(
                     StatusCode::TOO_MANY_REQUESTS,
                     format!(
-                        "At most {limit} of your requests to this endpoint run at once. Wait for one \
-                         to finish."
+                        "At most {limit} of your requests to the match data endpoints (bulk metadata \
+                         and GraphQL) run at once. Wait for one to finish."
                     ),
                 );
                 res.headers_mut()

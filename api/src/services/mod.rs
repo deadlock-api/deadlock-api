@@ -11,6 +11,7 @@ pub(crate) mod feature_flags;
 pub(crate) mod leaderboard;
 pub(crate) mod live_ingest;
 pub(crate) mod live_requests;
+pub(crate) mod match_data_budget;
 pub(crate) mod patreon;
 pub(crate) mod pending_matches;
 pub(crate) mod protected_accounts;

@@ -1,11 +1,9 @@
 use crate::services::ch_admission;
-use crate::services::ch_cost::{self, TrackedLines, TrackedQuery as _};
-use crate::services::client_slots::ClientSlots;
+use crate::services::ch_cost::{TrackedLines, TrackedQuery as _};
+use crate::services::match_data_budget;
 use crate::utils::sql::{
     DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, id_list, where_clause,
 };
-use core::num::NonZeroU64;
-use core::time::Duration;
 use std::collections::HashSet;
 use std::sync::{Arc, LazyLock};
 
@@ -27,43 +25,12 @@ use crate::error::{APIError, APIResult};
 use crate::services::pending_matches::queue_unknown_matches;
 use crate::services::protected_accounts::without_protected;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::{Limits, Quota, RateLimit, Scope, describe};
+use crate::services::rate_limiter::{Limits, describe};
 use crate::utils::json_stream::{ResponseFormat, stream_rows};
 use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::match_player_stats::{DUPLICATE_STATS, stats_array_expr, stored_stat};
 use crate::utils::parse::{comma_separated_deserialize_option, default_true};
 use crate::utils::types::SortDirectionAsc;
-
-/// What a request costs against [`RATE_LIMIT`]: each started megabyte `ClickHouse` reads for it.
-/// Bytes read track the CPU a query takes far better than its parameters do (a time-window scan
-/// reads from a few MB to GBs) and, unlike its duration, do not grow while `ClickHouse` is busy.
-const COST_UNIT_BYTES: u64 = 1_000_000;
-
-/// Budgets of [`COST_UNIT_BYTES`]. The cost is only known once the query has run, so a request is
-/// admitted while one unit is left, and its measured cost is recorded afterwards, taking the client
-/// past its budget until enough of it has left the window. Replayed on the week to 2026-11-19, these
-/// budgets reject 75% of what the heaviest ~300 IPs read and hold back one API key (Lockbuilds, 6%
-/// of its requests, at the per-minute budget); no other key reaches them.
-const RATE_LIMIT: RateLimit = RateLimit::new(
-    "match_metadata_bulk",
-    &[
-        Quota::new(Scope::Ip, 1_000, Duration::from_mins(1)),
-        Quota::new(Scope::Ip, 10_000, Duration::from_hours(1)),
-        Quota::new(Scope::Key, 15_000, Duration::from_mins(1)),
-        Quota::new(Scope::Key, 150_000, Duration::from_hours(1)),
-    ],
-);
-
-/// Requests a client may have in flight at once on one replica. [`RATE_LIMIT`] admits every
-/// request while one unit is left, so without it a burst sent all at once would run in full before
-/// its cost is recorded. The busiest clients peaked at 24–30 in flight across both replicas in the
-/// week to 2026-11-19.
-static SLOTS: LazyLock<ClientSlots> = LazyLock::new(|| ClientSlots::new(16));
-
-/// The [`RATE_LIMIT`] units for `read_bytes`, at least 1.
-fn cost_units(read_bytes: u64) -> NonZeroU64 {
-    NonZeroU64::new(read_bytes.div_ceil(COST_UNIT_BYTES)).unwrap_or(NonZeroU64::MIN)
-}
 
 /// Timed-out queries fail fast for [`TimeoutCooldown::DEFAULT`] instead of running again. The
 /// streamed rows bypass the query caches, so this route keeps its own cooldown. Replayed on 24 h
@@ -970,14 +937,9 @@ When player info is included, each player object contains `hero_build_id` and `p
 > **Note:** The `pregame_hero_id` is the hero the player had locked before the pre-game swap window (`null` if unknown). A player swapped heroes when it differs from their `hero_id`.
 
     ",
-        Limits::from(RATE_LIMIT).unit(" MB").note(
-                "Requests are charged the megabytes ClickHouse reads to answer them (see the \
-                 `X-CH-Read-Bytes` response header), once they have run. A request is admitted \
-                 while any budget is left, so an expensive one can take you past the limit until \
-                 its cost leaves the window. Narrow the time range or match id range, request \
-                 fewer matches, or include fewer fields to read less. At most 16 of your \
-                 requests run at once on each server; more get a 429 with `Retry-After: 1`.",
-            ),
+        Limits::from(match_data_budget::BUDGET)
+            .unit(" MB")
+            .note(match_data_budget::DOCS_NOTE),
     )
 )]
 pub(super) async fn bulk_metadata(
@@ -985,11 +947,7 @@ pub(super) async fn bulk_metadata(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    let slot = SLOTS
-        .acquire(rate_limit_key.client_id())
-        .ok_or(APIError::TooManyInFlight {
-            limit: SLOTS.limit(),
-        })?;
+    let slot = match_data_budget::acquire_slot(&rate_limit_key)?;
     reject_brawl_badge_filter(
         query.game_mode,
         query.min_average_badge,
@@ -1002,10 +960,7 @@ pub(super) async fn bulk_metadata(
         }
         query.account_ids = Some(filtered_account_ids);
     }
-    state
-        .rate_limit_client
-        .check(&rate_limit_key, RATE_LIMIT)
-        .await?;
+    match_data_budget::admit(&state, &rate_limit_key).await?;
     if query.limit == 0 || query.limit > 10000 {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
@@ -1061,14 +1016,8 @@ pub(super) async fn bulk_metadata(
         Ok(rows) => rows,
         Err(e) => return Err(cool_down_timeout(key, e).await),
     };
-    // The query has finished (`wait_end_of_query`); one unit was charged up front.
-    let cost = cost_units(ch_cost::current().read_bytes);
-    if let Some(rest) = NonZeroU64::new(cost.get().saturating_sub(1)) {
-        state
-            .rate_limit_client
-            .record(&rate_limit_key, RATE_LIMIT, rest)
-            .await;
-    }
+    // The query has finished (`wait_end_of_query`).
+    match_data_budget::record(&state, &rate_limit_key).await;
     let Some(body) = rows else {
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
@@ -1119,16 +1068,6 @@ mod proptests {
                 .await
                 .is_none()
         );
-    }
-
-    #[test]
-    fn costs_each_started_megabyte_and_at_least_one() {
-        assert_eq!(cost_units(0).get(), 1);
-        assert_eq!(cost_units(1).get(), 1);
-        assert_eq!(cost_units(1_000_000).get(), 1);
-        assert_eq!(cost_units(1_000_001).get(), 2);
-        assert_eq!(cost_units(2_500_000_000).get(), 2_500);
-        assert_eq!(cost_units(u64::MAX).get(), u64::MAX.div_ceil(1_000_000));
     }
 
     #[test]

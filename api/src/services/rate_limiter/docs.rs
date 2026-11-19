@@ -24,8 +24,14 @@ pub(crate) fn describe<'a>(description: &str, limits: impl Into<Limits<'a>>) -> 
 }
 
 pub(crate) struct Limits<'a> {
-    cases: Vec<(&'a str, &'a [Quota])>,
+    cases: Vec<Case<'a>>,
     note: Option<&'a str>,
+}
+
+/// One labelled policy of [`Limits`] and what its quotas count.
+struct Case<'a> {
+    label: &'a str,
+    quotas: &'a [Quota],
     unit: &'a str,
 }
 
@@ -38,9 +44,23 @@ impl<'a> Limits<'a> {
         }
     }
 
-    /// What a quota counts, for policies charged per unit of cost (default `req`).
-    pub(crate) fn unit(self, unit: &'a str) -> Self {
-        Self { unit, ..self }
+    /// What the quotas count, for policies charged per unit of cost (default `req`).
+    pub(crate) fn unit(mut self, unit: &'a str) -> Self {
+        for case in &mut self.cases {
+            case.unit = unit;
+        }
+        self
+    }
+
+    /// Adds `limit` as one more labelled case counting `unit`, for endpoints charged against
+    /// several policies at once.
+    pub(crate) fn and(mut self, label: &'a str, limit: RateLimit<'a>, unit: &'a str) -> Self {
+        self.cases.push(Case {
+            label,
+            quotas: limit.quotas,
+            unit,
+        });
+        self
     }
 }
 
@@ -59,9 +79,15 @@ impl<'a> From<&'a [Quota]> for Limits<'a> {
 impl<'a, const N: usize> From<[(&'a str, &'a [Quota]); N]> for Limits<'a> {
     fn from(cases: [(&'a str, &'a [Quota]); N]) -> Self {
         Self {
-            cases: cases.into(),
+            cases: cases
+                .into_iter()
+                .map(|(label, quotas)| Case {
+                    label,
+                    quotas,
+                    unit: "req",
+                })
+                .collect(),
             note: None,
-            unit: "req",
         }
     }
 }
@@ -75,14 +101,14 @@ impl Display for Limits<'_> {
         writeln!(f, "| ---- | ----- |")?;
         for &scope in Scope::VARIANTS {
             write!(f, "| {} | ", scope.as_str())?;
-            for (i, &(label, quotas)) in self.cases.iter().enumerate() {
+            for (i, case) in self.cases.iter().enumerate() {
                 if i > 0 {
                     f.write_str("<br>")?;
                 }
-                if !label.is_empty() {
-                    write!(f, "{label}: ")?;
+                if !case.label.is_empty() {
+                    write!(f, "{}: ", case.label)?;
                 }
-                let mut quotas = quotas.iter().filter(|q| q.scope == scope).peekable();
+                let mut quotas = case.quotas.iter().filter(|q| q.scope == scope).peekable();
                 if quotas.peek().is_none() {
                     f.write_str("-")?;
                 }
@@ -90,7 +116,7 @@ impl Display for Limits<'_> {
                     if j > 0 {
                         f.write_str(", ")?;
                     }
-                    write!(f, "{}{}/{}", quota.limit, self.unit, Period(quota.period))?;
+                    write!(f, "{}{}/{}", quota.limit, case.unit, Period(quota.period))?;
                 }
             }
             writeln!(f, " |")?;
@@ -172,5 +198,18 @@ mod tests {
         .to_string();
         assert!(table.contains("| IP | From DB: 100req/s<br>From Steam: - |"));
         assert!(table.contains("| Key | From DB: -<br>From Steam: 5req/h |"));
+    }
+
+    #[test]
+    fn renders_policies_with_their_own_units() {
+        const BUDGET: RateLimit = RateLimit::new(
+            "test",
+            &[Quota::new(Scope::Ip, 1_000, Duration::from_hours(1))],
+        );
+        let table = Limits::from([("Requests", DOCUMENTED_DEFAULT)])
+            .and("Reads", BUDGET, " MB")
+            .to_string();
+        assert!(table.contains("| IP | Requests: 100req/s<br>Reads: 1000 MB/h |"));
+        assert!(table.contains("| Global | Requests: -<br>Reads: - |"));
     }
 }
