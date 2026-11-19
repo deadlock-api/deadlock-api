@@ -154,7 +154,7 @@ export function Round3DomainAssets() {
       <Specimen
         name="RankedEntityList"
         source="domain/assets/RankedEntityList"
-        note="A short leaderboard of heroes or items (best items of a hero, best heroes for an item): one RankedEntityRow per place with the rank, the art, the name linked to its page and a meta line, and RankedEntityMetric children for the numbers. A metric with share draws a bar under its value; tone colors a value that has a pivot; labelDisplay hidden leaves the label to screen readers; a single-column list then names its metric columns once in a RankedEntityListHead of RankedEntityListLabels (same width as their metric) passed as head (the last list here), so every row keeps one height. density compact (the item list here) draws smaller art and tighter rows. A metric with change draws a signed bar (DivergingBar) under its value: a gain right of the middle, a loss left, with an optional uncertainty interval; width wide makes room for a unit after the value. priority secondary takes a supporting metric out of a list narrower than @sm, so the name keeps its room (the last list, 18rem wide). significant false marks a difference within its noise by weight as well as color: regular, muted, and read as within noise (the third row of the compact list). A metric with details opens a hover card from its value, underlined dashed (reachable by keyboard; the first row of the second list here). The meta line wraps rather than cutting off. One column in a narrow container, two (filled top to bottom) from @3xl; columns single keeps one."
+        note="A short leaderboard of heroes, items or abilities (best items of a hero, best heroes for an item, the abilities an item is imbued into): one RankedEntityRow per place with the rank, the art, the name linked to its page (an ability has none, the last list) and a meta line, and RankedEntityMetric children for the numbers. A metric with share draws a bar under its value; tone colors a value that has a pivot; labelDisplay hidden leaves the label to screen readers; a single-column list then names its metric columns once in a RankedEntityListHead of RankedEntityListLabels (same width as their metric) passed as head (the last list here), so every row keeps one height. density compact (the item list here) draws smaller art and tighter rows. A metric with change draws a signed bar (DivergingBar) under its value: a gain right of the middle, a loss left, with an optional uncertainty interval; width wide makes room for a unit after the value. priority secondary takes a supporting metric out of a list narrower than @sm, so the name keeps its room (the last list, 18rem wide). significant false marks a difference within its noise by weight as well as color: regular, muted, and read as within noise (the third row of the compact list). A metric with details opens a hover card from its value, underlined dashed (reachable by keyboard; the first row of the second list here). The meta line wraps rather than cutting off. One column in a narrow container, two (filled top to bottom) from @3xl; columns single keeps one."
       >
         <RankedEntityList density="compact">
           {RANKED_HEROES.map(({ heroId, winRate, usage }, index) => (
@@ -226,6 +226,15 @@ export function Round3DomainAssets() {
                 significant
                 change={{ value: 9.3, scale: 20 }}
               />
+            </RankedEntityRow>
+          ))}
+        </RankedEntityList>
+        {/* Abilities: the art and name, no link (an ability has no page of its own). */}
+        <RankedEntityList density="compact" columns="single" className="max-w-sm">
+          {SAMPLE_ABILITY_IDS.slice(0, 3).map((abilityId, index) => (
+            <RankedEntityRow key={abilityId} rank={index + 1} entity={{ abilityId }} meta="1,204 imbues">
+              <RankedEntityMetric label="Share" value={`${[62, 30, 8][index]}%`} share={[0.62, 0.3, 0.08][index]} />
+              <RankedEntityMetric label="Win rate" value="51.4%" tone="positive" />
             </RankedEntityRow>
           ))}
         </RankedEntityList>

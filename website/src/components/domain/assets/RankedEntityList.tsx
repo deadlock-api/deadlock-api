@@ -1,5 +1,7 @@
 import { Children, cloneElement, isValidElement } from "react";
 
+import { AbilityImage } from "~/components/domain/assets/AbilityImage";
+import { AbilityName } from "~/components/domain/assets/AbilityName";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroName } from "~/components/domain/assets/HeroName";
 import { ItemImage } from "~/components/domain/assets/ItemImage";
@@ -103,8 +105,9 @@ export function RankedEntityListLabel({
 const NAME = "line-clamp-2 max-w-full type-label whitespace-normal";
 
 /**
- * One place in a RankedEntityList: the rank, the hero or item art, its name linked to its page with a `meta` line
- * under it (a sample size), and the numbers that earned the place as `RankedEntityMetric` children.
+ * One place in a RankedEntityList: the rank, the hero, item or ability art, its name (linked to its page; abilities have
+ * none) with a `meta` line under it (a sample size), and the numbers that earned the place as `RankedEntityMetric`
+ * children.
  */
 export function RankedEntityRow({
   rank,
@@ -117,7 +120,7 @@ export function RankedEntityRow({
   /** 1-based. */
   rank: number;
   /** An item the parent already holds (`item`) renders without the item list. */
-  entity: { heroId: number } | { itemId: number } | { item: SlimUpgrade };
+  entity: { heroId: number } | { itemId: number } | { item: SlimUpgrade } | { abilityId: number };
   /** A quiet line under the name: "1,204 matches". */
   meta?: React.ReactNode;
 }) {
@@ -152,6 +155,12 @@ export function RankedEntityRow({
         />
       ) : "item" in entity ? (
         <ItemImage item={entity.item} className="size-10 shrink-0 group-data-[density=compact]/ranked:size-8" />
+      ) : "abilityId" in entity ? (
+        <AbilityImage
+          abilityId={entity.abilityId}
+          title=""
+          className="size-10 shrink-0 group-data-[density=compact]/ranked:size-8"
+        />
       ) : (
         <ItemImage itemId={entity.itemId} className="size-10 shrink-0 group-data-[density=compact]/ranked:size-8" />
       )}
@@ -160,6 +169,8 @@ export function RankedEntityRow({
           <HeroName heroId={entity.heroId} linkToDetail className={NAME} />
         ) : "item" in entity ? (
           <ItemName item={entity.item} linkToDetail className={NAME} />
+        ) : "abilityId" in entity ? (
+          <AbilityName abilityId={entity.abilityId} className={NAME} />
         ) : (
           <ItemName itemId={entity.itemId} linkToDetail className={NAME} />
         )}

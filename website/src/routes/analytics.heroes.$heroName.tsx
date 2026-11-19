@@ -19,6 +19,7 @@ import { EntityNotFound } from "~/components/app/EntityNotFound";
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroSkillOrder, skillPathMinMatches } from "~/components/domain/graph/HeroSkillOrder";
 import { CurrentPatchLink } from "~/components/domain/navigation/CurrentPatchLink";
+import { HeroImbueTargets } from "~/components/features/heroes/HeroImbueTargets";
 import { HeroMatchupDetailsStatsTable } from "~/components/features/heroes/HeroMatchupDetailsStatsTable";
 import { HeroMatchupSummary } from "~/components/features/heroes/HeroMatchupSummary";
 import { HeroPreRelease } from "~/components/features/heroes/HeroPreRelease";
@@ -548,6 +549,13 @@ function HeroDetailPage() {
               heroName={heroName}
               request={currentAbilityOrderParams(seasons, summary.matches, preferences.dateFilter)}
               rankRange={rankRange}
+            />
+            <HeroImbueTargets
+              heroId={heroId}
+              heroName={heroName}
+              heroMatches={summary.matches}
+              rankRange={rankRange}
+              request={currentItemStatsParams(seasons, preferences.dateFilter)}
             />
           </div>
         </Section>
