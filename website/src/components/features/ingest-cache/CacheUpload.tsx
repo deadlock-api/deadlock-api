@@ -17,6 +17,7 @@ import { Tabs, TabsContent, TabsList, TabsPanels, TabsTrigger } from "~/componen
 import { Text } from "~/components/ui/text";
 import { type IngestResult, useIngestUpload } from "~/hooks/useIngestUpload";
 import { useIsLinux } from "~/hooks/useIsLinux";
+import { useIsMac } from "~/hooks/useIsMac";
 
 import { STEAM_CACHE_PATHS } from "./faq";
 
@@ -26,9 +27,14 @@ function CachePath({ path }: { path: string }) {
 
 function CachePaths() {
   const isLinux = useIsLinux();
+  const isMac = useIsMac();
   const [picked, setPicked] = useState<string>();
   return (
-    <Tabs value={picked ?? (isLinux ? "linux" : "windows")} onValueChange={setPicked} className="gap-3">
+    <Tabs
+      value={picked ?? (isMac ? "macos" : isLinux ? "linux" : "windows")}
+      onValueChange={setPicked}
+      className="gap-3"
+    >
       <TabsList aria-label="Operating system">
         <TabsTrigger value="windows">Windows</TabsTrigger>
         <TabsTrigger value="macos">macOS</TabsTrigger>

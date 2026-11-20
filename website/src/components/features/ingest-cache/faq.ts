@@ -43,7 +43,7 @@ export const INGEST_FAQ: readonly IngestFaqEntry[] = [
   {
     question: "What is the difference between the background tool and the cache upload?",
     answer:
-      "The background tool runs on your PC all the time. It sends the matches already in your Steam cache when it starts, then each new match as Deadlock downloads or loads it. While the game is closed, it asks Steam for up to 40 missing matches a day for each Steam account saved on your PC: new matches of your Steam friends who play Deadlock first, then matches still missing for everyone. The cache upload runs once in your browser and sends what is in your cache right now, so new matches need another upload. It needs no install and works on macOS, where the tool only runs in Docker.",
+      "The background tool runs on your PC all the time. It sends the matches already in your Steam cache when it starts, then each new match as Deadlock downloads or loads it. While the game is closed, it asks Steam for up to 40 missing matches a day for each Steam account saved on your PC: new matches of your Steam friends who play Deadlock first, then matches still missing for everyone. The cache upload runs once in your browser and sends what is in your cache right now, so new matches need another upload. It needs no install.",
   },
   {
     question: "Where is Steam's httpcache folder?",
@@ -52,7 +52,7 @@ export const INGEST_FAQ: readonly IngestFaqEntry[] = [
   {
     question: "What does it send, and is it safe?",
     answer:
-      "The cache upload sends only match IDs and their salts, taken from the addresses of the match files in Steam's cache. The background tool sends the same plus your Steam account ID, a public number that already appears in every match you play. To find your friends' new matches, it also sends the account IDs of your Steam friends. While Deadlock runs, it reads match salts from the game's memory, read-only. It asks Steam for missing matches with the saved sessions of the Steam accounts on your PC and never sends those sessions to Deadlock API. Nothing else about your account, your PC or your other games is sent. The tool is open source on GitHub, and its README lists the switches that turn off the Steam requests and the memory reading.",
+      "The cache upload sends only match IDs and their salts, taken from the addresses of the match files in Steam's cache. The background tool sends the same plus your Steam account ID, a public number that already appears in every match you play. To find your friends' new matches, it also sends the account IDs of your Steam friends. While Deadlock runs on Windows or Linux, it also reads match salts from the game's memory, read-only. It asks Steam for missing matches with the saved sessions of the Steam accounts on your PC and never sends those sessions to Deadlock API. Nothing else about your account, your PC or your other games is sent. The tool is open source on GitHub, and its README lists the switches that turn off the Steam requests and the memory reading.",
   },
   {
     question: "Do I get the player tracker for running the tool?",
@@ -60,7 +60,7 @@ export const INGEST_FAQ: readonly IngestFaqEntry[] = [
   },
   {
     question: "Does it work on macOS?",
-    answer: `The cache upload does: choose ${STEAM_CACHE_PATHS.macos} and the matches are sent. Finder hides the Library folder, so press Cmd+Shift+G in the file dialog and paste the path. The background tool runs on Windows and Linux, and on macOS in Docker. In the Docker command, mount "$HOME/Library/Application Support/Steam" instead of ~/.steam/steam, keeping the quotes because the path has a space.`,
+    answer: `Yes. The background tool installs with one command in Terminal, shown in the macOS tab of the install steps, and runs on Apple Silicon and Intel Macs. It sends the matches in your Steam cache and asks Steam for missing ones as it does on Windows and Linux, but it does not read match salts from the game's memory. The cache upload works too: choose ${STEAM_CACHE_PATHS.macos} and the matches are sent. Finder hides the Library folder, so press Cmd+Shift+G in the file dialog and paste the path.`,
   },
 ];
 
