@@ -15,3 +15,7 @@ allowBuilds:
 
 patchedDependencies:
   react-remove-scroll-bar@2.3.8: patches/react-remove-scroll-bar@2.3.8.patch
+
+overrides:
+  # @tailwindcss/typography 0.5.20 pins 6.0.10 (GHSA-rj75-hqrm-r3gf); 6.1.x is API-compatible.
+  "@tailwindcss/typography>postcss-selector-parser": "^6.1.6"

@@ -20,7 +20,7 @@ indexmap = { version = "2", features = ["serde"] }
 keyvalues = { workspace = true }
 murmur2 = "0.1.0"
 object_store = { workspace = true }
-regex = "1.13.1"
+regex = "1.13.2"
 reqwest = { workspace = true }
 schemars = { version = "1.2.3", optional = true }
 serde = { workspace = true }

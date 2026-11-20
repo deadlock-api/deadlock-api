@@ -37,11 +37,9 @@ pub(crate) fn create_session_token(patron_id: Uuid, secret: &str) -> JwtResult<S
         exp: expiration.timestamp(),
     };
 
-    let token = encode(
-        &Header::default(),
-        &claims,
-        &EncodingKey::from_secret(secret.as_bytes()),
-    )?;
+    // jsonwebtoken rejects an empty HMAC secret.
+    let key = EncodingKey::from_secret(secret.as_bytes())?;
+    let token = encode(&Header::default(), &claims, &key)?;
 
     Ok(token)
 }
@@ -50,12 +48,10 @@ pub(crate) fn create_session_token(patron_id: Uuid, secret: &str) -> JwtResult<S
 ///
 /// Returns an error if the token is invalid, expired, or has an invalid signature.
 pub(crate) fn validate_session_token(token: &str, secret: &str) -> JwtResult<PatronClaims> {
-    let token_data = decode::<PatronClaims>(
-        token,
-        &DecodingKey::from_secret(secret.as_bytes()),
-        &Validation::default(),
-    )
-    .map_err(|_invalid| JwtError::InvalidToken)?;
+    let key =
+        DecodingKey::from_secret(secret.as_bytes()).map_err(|_empty| JwtError::InvalidToken)?;
+    let token_data = decode::<PatronClaims>(token, &key, &Validation::default())
+        .map_err(|_invalid| JwtError::InvalidToken)?;
 
     Ok(token_data.claims)
 }
