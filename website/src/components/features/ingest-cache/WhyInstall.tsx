@@ -37,7 +37,7 @@ export function WhyInstall() {
         <Stack asChild gap={4}>
           <ul>
             <Reason icon={<Gamepad2 />} title="Every match you play, on every tracker">
-              It sends each match as soon as Deadlock loads it, and everything already in your Steam cache.
+              It sends each match as soon as Deadlock downloads or loads it, and everything already in your Steam cache.
             </Reason>
             <Reason icon={<History />} title="Your whole match history, not just new games">
               Run the last install step once, with Deadlock closed, and it also sends your past matches that are still
@@ -55,7 +55,7 @@ export function WhyInstall() {
               for free once we have checked one of those matches, no sign-in needed.
             </Reason>
             <Reason icon={<Power />} title="Set up once">
-              It starts with your PC and stays out of the way. Nothing to click after the install.
+              It starts with your computer and stays out of the way. Nothing to click after the install.
             </Reason>
             <Reason icon={<ShieldCheck />} title="Open source and private">
               It sends match IDs and your public Steam ID, nothing else. Your Steam login is never sent to us.

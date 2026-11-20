@@ -14,17 +14,22 @@ import { Tabs, TabsContent, TabsList, TabsPanels, TabsTrigger } from "~/componen
 import { Text } from "~/components/ui/text";
 import { TextLink } from "~/components/ui/text-link";
 import { useIsLinux } from "~/hooks/useIsLinux";
+import { useIsMac } from "~/hooks/useIsMac";
 
 const WINDOWS_INSTALL = `irm https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-windows.ps1 | iex`;
 const WINDOWS_UNINSTALL = `& "$env:LOCALAPPDATA\\deadlock-api-ingest\\uninstall-windows.ps1"`;
 const LINUX_INSTALL = `curl -fsSL https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-linux.sh | bash`;
 const LINUX_UNINSTALL = "~/.local/share/deadlock-api-ingest/uninstall-linux.sh";
+const MACOS_INSTALL = `curl -fsSL https://raw.githubusercontent.com/deadlock-api/deadlock-api-ingest/master/install-macos.sh | bash`;
+const MACOS_UNINSTALL = "bash ~/Library/Application\\ Support/deadlock-api-ingest/uninstall-macos.sh";
 const DOCKER_INSTALL = `docker run -d --restart unless-stopped --name deadlock-api-ingest \\
   -v ~/.steam/steam:/root/.steam/steam:ro \\
   ghcr.io/deadlock-api/deadlock-api-ingest:latest`;
 const DOCKER_UNINSTALL = "docker rm -f deadlock-api-ingest";
 const WINDOWS_OWN_MATCHES = `& "$env:LOCALAPPDATA\\deadlock-api-ingest\\deadlock-api-ingest.exe" --own-matches`;
 const LINUX_OWN_MATCHES = "deadlock-api-ingest --own-matches";
+// macOS doesn't put ~/.local/bin, where the installer links the tool, on the PATH.
+const MACOS_OWN_MATCHES = "~/.local/bin/deadlock-api-ingest --own-matches";
 const DOCKER_OWN_MATCHES = "docker exec deadlock-api-ingest deadlock-api-ingest --own-matches";
 
 /** The optional last step of every tab: send the past matches that are still missing, once. */
@@ -49,13 +54,19 @@ function Uninstall({ code, children }: { code: string; children?: React.ReactNod
 export function InstallGuide() {
   const downloadTracking = useInstallCtaTracking("ingest_guide", "download");
   const isLinux = useIsLinux();
+  const isMac = useIsMac();
   const [picked, setPicked] = useState<string>();
   return (
     <Card className="h-full">
       <CardContent>
-        <Tabs value={picked ?? (isLinux ? "linux" : "windows")} onValueChange={setPicked} className="gap-5">
+        <Tabs
+          value={picked ?? (isMac ? "macos" : isLinux ? "linux" : "windows")}
+          onValueChange={setPicked}
+          className="gap-5"
+        >
           <TabsList aria-label="Platform">
             <TabsTrigger value="windows">Windows</TabsTrigger>
+            <TabsTrigger value="macos">macOS</TabsTrigger>
             <TabsTrigger value="linux">Linux</TabsTrigger>
             <TabsTrigger value="docker">Docker</TabsTrigger>
           </TabsList>
@@ -108,6 +119,31 @@ export function InstallGuide() {
                   Installed with PowerShell: run this.
                 </Text>
               </Uninstall>
+            </TabsContent>
+
+            <TabsContent value="macos" className="flex flex-col gap-4">
+              <Steps>
+                <Step
+                  title={
+                    <>
+                      Open Terminal (press <Kbd>Cmd</Kbd> <Kbd>Space</Kbd> and type Terminal), paste the installer and
+                      press Enter. It installs for your account only, no password needed, and starts every time you log
+                      in.
+                    </>
+                  }
+                >
+                  <CopyableCode
+                    overflow="wrap"
+                    language="bash"
+                    code={MACOS_INSTALL}
+                    copyLabel="Copy macOS install command"
+                  />
+                </Step>
+                <Step title="Play Deadlock. Your matches are sent while you play." />
+                <Step title="To see the matches you have sent, open Deadlock API Ingest from Launchpad or Spotlight." />
+                <OwnMatches shell="Terminal" code={MACOS_OWN_MATCHES} />
+              </Steps>
+              <Uninstall code={MACOS_UNINSTALL} />
             </TabsContent>
 
             <TabsContent value="linux" className="flex flex-col gap-4">
