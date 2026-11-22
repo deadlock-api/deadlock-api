@@ -369,7 +369,15 @@ impl ClickhouseClients {
             // The analytics endpoints re-read the same window's item arrays on every request, and
             // decompressing them dominates their CPU. Measured on the top production shapes: identical
             // results, -35% to -65% CPU once warm (hero_stats, item_flow_stats, item_stats).
-            .with_setting("use_columns_cache", "1");
+            .with_setting("use_columns_cache", "1")
+            // Read MergeTree files with a plain pread in the query thread instead of handing each
+            // page-cache miss to the shared reader pool (pread_threadpool). On the saturated host
+            // every hand-off waits for a CPU slot twice (pool thread wakes, query thread wakes):
+            // player_hero_stats spent 1.4 s per query in SynchronousReadWait for 0.2 s of actual
+            // reads. Paired replays of production SQL (2026-11-22): wall -29..-50% on the point
+            // lookups and account reads (player hero stats, match history, rank, bulk metadata, account
+            // perf curve, p<0.01) with CPU flat or -7..-10%; scans and rollups n.s.
+            .with_setting("local_filesystem_read_method", "pread");
 
         tokio::try_join!(
             ch_health_check(&ch_client, CH_HEALTH_CHECK),
