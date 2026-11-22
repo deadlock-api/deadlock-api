@@ -19,7 +19,7 @@ runs:
     # protoc for the valveprotos build script; mold because .cargo/config.toml links with it (clang
     # ships with the runner image). Prebuilt binaries install in seconds, apt-get update takes ~20 s.
     - name: Install protoc and mold
-      uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
+      uses: taiki-e/install-action@fe3acb53a98b62c772db35de75ce0e4595e7ca8c # v2.90.8
       with:
         tool: protoc,mold
     # .cargo/config.toml passes mold by its absolute path.
