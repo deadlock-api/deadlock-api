@@ -6,7 +6,7 @@ import { enemyHeroFilter, parseEnemyParam } from "~/lib/enemy-heroes";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { prefetchCached, prefetchSeed } from "~/lib/prefetch-safe";
-import { defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
+import { defaultPeriodLabel, defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import type { RouterContext } from "~/router";
@@ -180,9 +180,10 @@ export const itemsPageOptions = {
     ]);
     if (!isServer) return { leader: null, coverage };
     const [stats] = await overall;
-    // The description names the patch-wide leader, which a hero-filtered table would misrepresent.
+    // The description names the leader of the whole period, which a hero-filtered table would misrepresent.
     return {
       leader: deps.heroId === null && deps.enemyIds.length === 0 ? findWinRateLeader(stats, await items) : null,
+      period: defaultPeriodLabel(seasons, preferences.dateFilter),
       coverage,
     };
   },
@@ -190,14 +191,16 @@ export const itemsPageOptions = {
     loaderData,
     match,
   }: {
-    loaderData?: { leader: { name: string; winRate: number } | null; coverage?: string };
+    loaderData?: { leader: { name: string; winRate: number } | null; period?: string; coverage?: string };
     match: { pathname: string };
   }) => {
     const tab = analyticsTabFromPath("items", match.pathname);
     const view = ANALYTICS_VIEWS.items[tab];
     // The leader is the win-rate table's headline; the other views are about something else.
     const leader = tab === "item-stats" ? loaderData?.leader : null;
-    const lead = leader ? ` Most reliable this patch: ${leader.name}, ${formatPercent(leader.winRate)}.` : "";
+    // Named as the table's default period: the season, or the patch when the visitor prefers patches.
+    const when = loaderData?.period === "this season" ? "this season" : "this patch";
+    const lead = leader ? ` Most reliable ${when}: ${leader.name}, ${formatPercent(leader.winRate)}.` : "";
     const path = match.pathname.replace(/\/$/, "");
     const base = seo({
       title: pageTitle(view.title),
