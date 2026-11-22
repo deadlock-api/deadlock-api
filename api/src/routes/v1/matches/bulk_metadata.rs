@@ -718,6 +718,9 @@ fn build_query(
     // ClickHouse 26.9 then fails to build the primary-key set for the outer
     // `match_id IN t_matches` (NOT_IMPLEMENTED "Cannot clone a plan holding a
     // DelayedCreatingSets step with sets").
+    // Set when the player filters run on match_player itself: the CTE path then applies them in
+    // the same pass as the match filters (see `t_matches_source`).
+    let mut single_pass_filters: Option<Vec<String>> = None;
     let player_filter_subquery = if player_filters.is_empty() {
         None
     } else if advanced_player_filters || (account_filter.is_none() && has_lower_bound) {
@@ -727,10 +730,12 @@ fn build_query(
         // returned, matching the `players` array.
         let mut match_player_filters = info_filters.clone();
         match_player_filters.extend(player_filters);
-        Some(format!(
+        let subquery = format!(
             "SELECT match_id FROM match_player WHERE {}",
             match_player_filters.join(" AND ")
-        ))
+        );
+        single_pass_filters = Some(match_player_filters);
+        Some(subquery)
     } else {
         Some(format!(
             "SELECT match_id FROM player_match_history WHERE {}",
@@ -802,12 +807,21 @@ fn build_query(
         // index (measured -15% wall, -59% read_rows). The player-filter subquery stays as the
         // join in join_clause, so the match set is unchanged. Item filters and pool flags need
         // columns only match_player has.
-        let join_clause = player_filter_subquery.as_ref().map_or_default(|sub| {
-            format!(
-                " INNER JOIN (SELECT DISTINCT match_id AS _pf_match_id FROM ({sub})) pf \
+        // Player filters on match_player need no join: every row carries its match's columns, so
+        // a match qualifies exactly when one of its rows passes the match and player filters
+        // together. The join re-read the match columns of the whole window to find the matches
+        // its right side had already found (hero + item, 7 days: 1.74 GB -> 257 MB; 38 days:
+        // 9.4 -> 1.9 GB; same match ids), and in `match_id` order the single pass stops at the
+        // `LIMIT`.
+        let join_clause = player_filter_subquery
+            .as_ref()
+            .filter(|_| single_pass_filters.is_none())
+            .map_or_default(|sub| {
+                format!(
+                    " INNER JOIN (SELECT DISTINCT match_id AS _pf_match_id FROM ({sub})) pf \
                      ON match_id = pf._pf_match_id"
-            )
-        });
+                )
+            });
         let t_matches_source = match &account_filter {
             Some(account_filter) if !advanced_player_filters && !wide_only_filter => {
                 let mut conds = vec![account_filter.clone()];
@@ -818,24 +832,18 @@ fn build_query(
                 )
             }
             _ => {
-                let source = if info_filters.is_empty() {
+                let conds = single_pass_filters.as_ref().unwrap_or(&info_filters);
+                let source = if conds.is_empty() {
                     format!("match_player{join_clause}")
                 } else {
-                    format!(
-                        "match_player{join_clause} WHERE {}",
-                        info_filters.join(" AND ")
-                    )
+                    format!("match_player{join_clause} WHERE {}", conds.join(" AND "))
                 };
                 match query.order_by {
                     // With a player filter the probe would repeat the join, computing its
                     // right side (all of player_match_history for a hero) a second time.
                     SortKey::StartTime if player_filter_subquery.is_none() => {
                         let bound = start_time_bound(&source, query.order_direction, query.limit);
-                        let joiner = if info_filters.is_empty() {
-                            " WHERE "
-                        } else {
-                            " AND "
-                        };
+                        let joiner = if conds.is_empty() { " WHERE " } else { " AND " };
                         format!("{source}{joiner}{bound}")
                     }
                     SortKey::StartTime | SortKey::MatchId | SortKey::AverageBadge => source,
@@ -1162,23 +1170,88 @@ mod proptests {
 
     #[test]
     fn player_filtered_start_time_order_has_no_bound() {
-        for query in [
-            BulkMatchMetadataQuery {
-                hero_ids: Some(vec![13]),
-                limit: 50,
-                ..BulkMatchMetadataQuery::default()
-            },
-            BulkMatchMetadataQuery {
-                item_filter_hero_id: Some(13),
-                include_item_ids: Some(vec![1_282_141_666]),
-                limit: 50,
-                ..BulkMatchMetadataQuery::default()
-            },
+        for (query, joined) in [
+            (
+                BulkMatchMetadataQuery {
+                    hero_ids: Some(vec![13]),
+                    limit: 50,
+                    ..BulkMatchMetadataQuery::default()
+                },
+                true,
+            ),
+            (
+                BulkMatchMetadataQuery {
+                    item_filter_hero_id: Some(13),
+                    include_item_ids: Some(vec![1_282_141_666]),
+                    limit: 50,
+                    ..BulkMatchMetadataQuery::default()
+                },
+                false,
+            ),
         ] {
             let sql = start_time_ordered(query);
             assert_valid_sql(&sql);
-            assert!(sql.contains(" pf ON match_id = pf._pf_match_id"));
+            assert_eq!(
+                sql.contains(" pf ON match_id = pf._pf_match_id"),
+                joined,
+                "{sql}"
+            );
             assert!(!sql.contains("max(start_time)"), "{sql}");
+        }
+    }
+
+    #[test]
+    fn match_player_player_filters_select_matches_in_one_pass() {
+        for (query, single_pass) in [
+            // Item filter.
+            (
+                BulkMatchMetadataQuery {
+                    include_info: true,
+                    hero_ids: Some(vec![13]),
+                    item_filter_hero_id: Some(13),
+                    include_item_ids: Some(vec![630_839_635]),
+                    min_unix_timestamp: Some(1_792_033_920),
+                    min_average_badge: Some(91),
+                    include_player_items: true,
+                    limit: 60,
+                    ..BulkMatchMetadataQuery::default()
+                },
+                true,
+            ),
+            // Hero filter with a lower bound runs on match_player too.
+            (
+                BulkMatchMetadataQuery {
+                    include_info: true,
+                    hero_ids: Some(vec![13]),
+                    min_match_id: Some(130_000_000),
+                    limit: 60,
+                    ..BulkMatchMetadataQuery::default()
+                },
+                true,
+            ),
+            // Unbounded hero filter reads player_match_history: still joined.
+            (
+                BulkMatchMetadataQuery {
+                    include_info: true,
+                    hero_ids: Some(vec![13]),
+                    limit: 60,
+                    ..BulkMatchMetadataQuery::default()
+                },
+                false,
+            ),
+        ] {
+            let sql = build_query(query, None).expect("query should build");
+            assert_valid_sql(&sql);
+            assert_eq!(!sql.contains("_pf_match_id"), single_pass, "{sql}");
+            if single_pass {
+                assert!(
+                    sql.starts_with(
+                        "WITH t_matches AS (SELECT DISTINCT match_id FROM match_player WHERE "
+                    ),
+                    "{sql}"
+                );
+                assert!(sql.contains("hero_id IN (13)"), "{sql}");
+            }
         }
     }
 
@@ -1399,7 +1472,7 @@ mod proptests {
         let bounded = build(Some(1_780_256_805));
         assert_valid_sql(&bounded);
         assert!(bounded.contains(
-            "SELECT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND 1=1 AND start_time >= 1780256805 AND hero_id IN (13)"
+            "SELECT DISTINCT match_id FROM match_player WHERE match_mode IN ('Ranked', 'Unranked') AND 1=1 AND start_time >= 1780256805 AND hero_id IN (13) ORDER BY match_id"
         ));
         assert!(!bounded.contains("player_match_history"));
         let unbounded = build(None);
