@@ -1,3 +1,4 @@
+use core::time::Duration;
 use std::collections::{HashMap, HashSet};
 
 use axum::Json;
@@ -8,6 +9,7 @@ use axum_extra::extract::Query;
 use chrono::Utc;
 use clickhouse::Row;
 use clickhouse_utils::{BatchQuery, ClickhouseBatcher, in_clause};
+use itertools::Itertools as _;
 use serde::{Deserialize, Serialize};
 use steam_id::SteamId;
 use tracing::{debug, warn};
@@ -15,6 +17,7 @@ use utoipa::{IntoParams, ToSchema};
 
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
+use crate::routes::v1::players::rank::account_cost;
 use crate::routes::v1::players::steam::update::{
     MAX_REFRESH_ACCOUNT_IDS, SteamProfileInsertRow, refresh_steam_profiles,
 };
@@ -23,12 +26,40 @@ use crate::services::protected_accounts::{
     ensure_not_protected, protected_accounts, without_protected,
 };
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, describe};
+use crate::services::rate_limiter::{
+    DOCUMENTED_DEFAULT, Limits, Quota, RateLimit, Scope, describe,
+};
 use crate::services::steam_search_index::IndexedProfile;
 use crate::utils::parse::comma_separated_deserialize;
 use crate::utils::sql::POINT_LOOKUP_MAX_THREADS;
 
 use crate::utils::types::AccountIdQuery;
+
+/// Shared by the profile lookups and charged per requested account, like the rank endpoints: the
+/// batcher's work scales with accounts, not requests. Sized from 7 days of traffic (2026-11-22)
+/// above every client but a crawler that asked for up to 3.4M accounts an hour: the busiest
+/// keyless clients peaked at ~57k accounts/min and ~332k/h, keyed ones at ~30k/min and ~69k/h,
+/// and everyone together at ~69k/min.
+const RATE_LIMIT: RateLimit = RateLimit::new(
+    "steam_profiles",
+    &[
+        Quota::new(Scope::Ip, 60_000, Duration::from_mins(1)),
+        Quota::new(Scope::Ip, 400_000, Duration::from_hours(1)),
+        Quota::new(Scope::Key, 100_000, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 1_000_000, Duration::from_hours(1)),
+        Quota::new(Scope::Global, 150_000, Duration::from_mins(1)),
+    ],
+);
+
+fn rate_limits() -> Limits<'static> {
+    Limits::from([("Read", RATE_LIMIT.quotas)])
+        .unit(" accounts")
+        .note(
+            "Each requested account counts as one, so a batch of 100 accounts uses as much as 100 \
+             single lookups.",
+        )
+        .and("Refresh", super::update::RATE_LIMIT, "req")
+}
 
 #[derive(Deserialize, IntoParams, Clone)]
 pub(crate) struct AccountIdsQuery {
@@ -296,9 +327,14 @@ impl BatchQuery for SteamProfileGraphQlQuery {
 pub(crate) type SteamProfileGraphQlBatcher = ClickhouseBatcher<SteamProfileGraphQlQuery>;
 
 pub(crate) async fn steam_single(
+    rate_limit_key: RateLimitKey,
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
+    state
+        .rate_limit_client
+        .check(&rate_limit_key, RATE_LIMIT)
+        .await?;
     ensure_not_protected(&state, &[account_id]).await?;
     let mut profile = SteamProfile::from(state.batchers.steam_profile.load(account_id).await?);
     hide_protected_friends(&state, core::slice::from_mut(&mut profile)).await?;
@@ -313,7 +349,7 @@ pub(crate) async fn steam_single(
         (status = OK, description = "Steam Profiles", body = [SteamProfile]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
         (status = NOT_FOUND, description = "No Steam profile found."),
-        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded (only enforced when refresh=true)."),
+        (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded."),
         (status = BAD_GATEWAY, description = "Steam Web API call failed (only when refresh=true)."),
         (status = INTERNAL_SERVER_ERROR, description = "Failed to fetch steam profiles.")
     ),
@@ -333,10 +369,7 @@ shared Steam Web API key budget.
 See: https://developer.valvesoftware.com/wiki/Steam_Web_API#GetPlayerSummaries_(v0002)
 
     ",
-        [
-            ("Read", DOCUMENTED_DEFAULT),
-            ("Refresh", super::update::RATE_LIMIT.quotas),
-        ],
+        rate_limits(),
     )
 )]
 pub(super) async fn steam(
@@ -372,6 +405,14 @@ pub(super) async fn steam(
             ),
         ));
     }
+    state
+        .rate_limit_client
+        .charge(
+            &rate_limit_key,
+            RATE_LIMIT,
+            account_cost(account_ids.iter().unique().count()),
+        )
+        .await?;
     let account_ids = without_protected(&state, account_ids).await?;
 
     if !refresh {
@@ -617,6 +658,16 @@ pub(super) async fn steam_search(
 mod tests {
     use super::*;
     use crate::utils::proptest_utils::assert_valid_sql;
+
+    #[test]
+    fn test_steam_docs_count_accounts() {
+        let docs = rate_limits().to_string();
+        assert!(
+            docs.contains("60000 accounts/min, 400000 accounts/h"),
+            "{docs}"
+        );
+        assert!(docs.contains("150000 accounts/min"), "{docs}");
+    }
 
     #[test]
     fn steam_profile_query_reads_latest_row_only() {
