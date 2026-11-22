@@ -441,7 +441,7 @@ async fn run_iteration(
         gauge!("matchdata_downloader.matches_to_download").set(pending.len() as f64);
         state.prune(&pending.iter().map(|s| s.match_id).collect());
     }
-    let (mut to_fetch, retries) = state.select_eligible(pending);
+    let (mut to_fetch, retries) = state.select_eligible(pending, unix_now());
     let eligible = to_fetch.len().saturating_add(retries.len());
     gauge!("matchdata_downloader.matches_eligible_now").set(eligible as f64);
     gauge!("matchdata_downloader.matches_retryable_now").set(retries.len() as f64);
@@ -698,14 +698,22 @@ impl State {
     /// Splits the pending set into matches that were never attempted and those
     /// whose retry cooldown has elapsed, so the caller can serve the fresh ones
     /// first. Both keep the newest-first order of the query.
+    ///
+    /// Retries past [`GIVE_UP_AGE`] lead the retries, cooldown or not: their next failure
+    /// writes them off, but only a failure does, and the retries are served newest first
+    /// within [`RETRY_BATCH_LIMIT`]. The retryable backlog never empties (10-17k on
+    /// 2026-11-22), so the oldest matches sat at its tail and never got that failure: no
+    /// match was written off by age after 2026-11-20, and ~37k past the age piled up.
     fn select_eligible(
         &self,
         pending: Vec<MatchCandidates>,
+        now_unix: u64,
     ) -> (Vec<MatchCandidates>, Vec<MatchCandidates>) {
         let now = tokio::time::Instant::now();
         let uploaded = self.uploaded.lock().unwrap_or_else(PoisonError::into_inner);
         let failed = self.failed.lock().unwrap_or_else(PoisonError::into_inner);
         let mut fresh = Vec::new();
+        let mut expired = Vec::new();
         let mut retries = Vec::new();
         for s in pending {
             if uploaded.contains(&s.match_id) {
@@ -713,13 +721,16 @@ impl State {
             }
             match failed.get(&s.match_id) {
                 None => fresh.push(s),
-                Some(a) if a.count < MAX_ATTEMPTS && now >= a.next => retries.push(s),
+                Some(a) if a.count >= MAX_ATTEMPTS => {}
+                Some(_) if salt_age_s(&s, now_unix) >= GIVE_UP_AGE.as_secs() => expired.push(s),
+                Some(a) if now >= a.next => retries.push(s),
                 Some(_) => {}
             }
         }
         drop(uploaded);
         drop(failed);
-        (fresh, retries)
+        expired.append(&mut retries);
+        (fresh, expired)
     }
 }
 
@@ -1038,14 +1049,14 @@ mod tests {
         let state = State::new();
         state.back_off(1);
 
-        assert_eq!(state.select_eligible(vec![salts(1)]), (vec![], vec![]));
+        assert_eq!(state.select_eligible(vec![salts(1)], 0), (vec![], vec![]));
         // The entry survives pruning, so the cooldown is not lost while the match
         // is still pending, and it becomes eligible again once the delay elapses.
         state.prune(&HashSet::from([1]));
         assert_eq!(state.failed.lock().unwrap().len(), 1);
         state.failed.lock().unwrap().get_mut(&1).unwrap().next = tokio::time::Instant::now();
         assert_eq!(
-            state.select_eligible(vec![salts(1)]),
+            state.select_eligible(vec![salts(1)], 0),
             (vec![], vec![salts(1)])
         );
     }
@@ -1060,7 +1071,7 @@ mod tests {
 
         // Cooldown elapsed, but the attempt budget is spent, so it no longer
         // competes for download slots with matches that can still arrive.
-        assert_eq!(state.select_eligible(vec![salts(1)]), (vec![], vec![]));
+        assert_eq!(state.select_eligible(vec![salts(1)], 0), (vec![], vec![]));
     }
 
     #[tokio::test]
@@ -1070,7 +1081,7 @@ mod tests {
         state.mark_uploaded(1);
 
         assert!(state.failed.lock().unwrap().is_empty());
-        assert_eq!(state.select_eligible(vec![salts(1)]), (vec![], vec![]));
+        assert_eq!(state.select_eligible(vec![salts(1)], 0), (vec![], vec![]));
     }
 
     /// A backlog of retryable matches must never displace matches whose salts just
@@ -1085,10 +1096,35 @@ mod tests {
 
         // Newest first, as the pending query returns them.
         let (fresh, retries) =
-            state.select_eligible(vec![salts(40), salts(30), salts(20), salts(10)]);
+            state.select_eligible(vec![salts(40), salts(30), salts(20), salts(10)], 0);
 
         assert_eq!(fresh, vec![salts(40), salts(10)]);
         assert_eq!(retries, vec![salts(30), salts(20)]);
+    }
+
+    /// Only a failed attempt writes a match off by age, so a match past the age must not wait
+    /// behind newer retries or for its cooldown: it would never reach that attempt.
+    #[tokio::test]
+    async fn retries_past_the_give_up_age_lead_the_retries_despite_their_cooldown() {
+        let state = State::new();
+        for id in [10, 20, 30] {
+            state.back_off(id);
+        }
+        // 30 is due; 20 and 10 are still cooling down.
+        state.failed.lock().unwrap().get_mut(&30).unwrap().next = tokio::time::Instant::now();
+        let at = |id: u64, created_at: u32| {
+            let mut m = salts(id);
+            m.candidates[0].created_at = created_at;
+            m
+        };
+        let now = 1_000 + GIVE_UP_AGE.as_secs();
+
+        // Newest first, as the pending query returns them: 10 is past the age, 20 is not.
+        let (fresh, retries) =
+            state.select_eligible(vec![at(30, 2_000), at(20, 1_001), at(10, 1_000)], now);
+
+        assert_eq!(fresh, vec![]);
+        assert_eq!(retries, vec![at(10, 1_000), at(30, 2_000)]);
     }
 
     /// `buffer_unordered` completes fast failures before slow successes, so results
@@ -1125,7 +1161,7 @@ mod tests {
             state.failed.lock().unwrap().get_mut(&id).unwrap().next = tokio::time::Instant::now();
         }
         assert_eq!(
-            state.select_eligible(batch.to_vec()),
+            state.select_eligible(batch.to_vec(), 0),
             (vec![], vec![salts(20), salts(30)])
         );
     }
