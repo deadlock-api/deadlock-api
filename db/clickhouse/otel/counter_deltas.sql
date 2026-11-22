@@ -1,6 +1,27 @@
 CREATE VIEW otel.counter_deltas
-COMMENT 'Per-sample increase (delta) of the cumulative counter {metric} in otel_metrics_sum, for TimeUnix in [from_s, to_s] (unix seconds; reads 1 h before from_s for the previous sample). Series = (ServiceName, ResourceAttributes[service.instance.id], Attributes). A series\' first sample counts only if <= 10, a reset counts its full value. Legacy rows (instance api.deadlock-api.com, the API scraped through Caddy until 2026-11-04, gone by 2026-12-04 TTL) interleave two replicas in one series: there a drop starts a run of the lower counter, climbing back past the pre-drop value continues from it, the next drop continues from the lower counter\'s last value, and a reset counts only if <= 10.'
+COMMENT 'Per-sample increase (delta) of the cumulative counter {metric} in otel_metrics_sum, for TimeUnix in [from_s, to_s] (unix seconds; reads 1 h before from_s for the previous sample). Series = (ServiceName, ResourceAttributes[service.instance.id], Attributes). A series\' first sample counts only if <= 10, a reset counts its full value. Series = materialized SeriesKey, instance = materialized InstanceId (both from ResourceAttributes, which is too wide to read per row). Two branches split by instance: current rows need one lagInFrame window per series. Legacy rows (instance api.deadlock-api.com, the API scraped through Caddy until 2026-11-04, gone by 2026-12-04 TTL) interleave two replicas in one series: there a drop starts a run of the lower counter, climbing back past the pre-drop value continues from it, the next drop continues from the lower counter\'s last value, and a reset counts only if <= 10.'
 AS SELECT
+    TimeUnix,
+    ServiceName,
+    ResourceAttributes,
+    Attributes,
+    Value,
+    multiIf(prev < 0, if(Value <= 10, Value, 0.), Value < prev, Value, Value - prev) AS delta
+FROM
+(
+    SELECT
+        TimeUnix,
+        ServiceName,
+        ResourceAttributes,
+        Attributes,
+        Value,
+        lagInFrame(Value, 1, -1.) OVER (PARTITION BY SeriesKey ORDER BY TimeUnix ASC) AS prev
+    FROM otel.otel_metrics_sum
+    WHERE (MetricName = {metric:String}) AND (Flags = 0) AND (InstanceId != 'api.deadlock-api.com') AND (TimeUnix >= toDateTime({from_s:UInt32} - 3600)) AND (TimeUnix <= toDateTime({to_s:UInt32}))
+)
+WHERE TimeUnix >= toDateTime({from_s:UInt32})
+UNION ALL
+SELECT
     TimeUnix,
     ServiceName,
     ResourceAttributes,
@@ -25,12 +46,12 @@ FROM
                 ResourceAttributes,
                 Attributes,
                 Value,
-                (ResourceAttributes['service.instance.id']) = 'api.deadlock-api.com' AS legacy,
-                cityHash64(ServiceName, ResourceAttributes['service.instance.id'], Attributes) AS sk,
+                InstanceId = 'api.deadlock-api.com' AS legacy,
+                SeriesKey AS sk,
                 lagInFrame(Value, 1, -1.) OVER (PARTITION BY sk ORDER BY TimeUnix ASC) AS prev
             FROM otel.otel_metrics_sum
-            WHERE (MetricName = {metric:String}) AND (Flags = 0) AND (TimeUnix >= toDateTime64({from_s:UInt32} - 3600, 9)) AND (TimeUnix <= toDateTime64({to_s:UInt32}, 9))
+            WHERE (MetricName = {metric:String}) AND (Flags = 0) AND (InstanceId = 'api.deadlock-api.com') AND (TimeUnix >= toDateTime({from_s:UInt32} - 3600)) AND (TimeUnix <= toDateTime({to_s:UInt32}))
         )
     )
 )
-WHERE TimeUnix >= toDateTime64({from_s:UInt32}, 9);
+WHERE TimeUnix >= toDateTime({from_s:UInt32});

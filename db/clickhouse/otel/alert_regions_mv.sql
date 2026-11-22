@@ -164,7 +164,7 @@ AS WITH
                 toStartOfFiveMinutes(TimeUnix) AS t,
                 avg(Value) AS v
             FROM otel.otel_metrics_gauge
-            WHERE (MetricName = 'up') AND (Flags = 0) AND (ServiceName = 'api') AND (TimeUnix >= toDateTime64((now() - toIntervalDay(30)), 9)) AND (TimeUnix <= toDateTime64(now(), 9))
+            WHERE (MetricName = 'up') AND (Flags = 0) AND (ServiceName = 'api') AND (TimeUnix >= toDateTime((now() - toIntervalDay(30)))) AND (TimeUnix <= toDateTime(now()))
             GROUP BY t
             HAVING v < 0.5
         )
@@ -227,7 +227,7 @@ AS WITH
                 toStartOfFiveMinutes(TimeUnix) AS t,
                 max(Value) AS v
             FROM otel.otel_metrics_gauge
-            WHERE (MetricName = 'node_memory_MemAvailable_bytes') AND (Flags = 0) AND (TimeUnix >= toDateTime64((now() - toIntervalDay(30)), 9)) AND (TimeUnix <= toDateTime64(now(), 9))
+            WHERE (MetricName = 'node_memory_MemAvailable_bytes') AND (Flags = 0) AND (TimeUnix >= toDateTime((now() - toIntervalDay(30)))) AND (TimeUnix <= toDateTime(now()))
             GROUP BY t
             HAVING v < 45000000000.
         )
@@ -243,7 +243,7 @@ AS WITH
                 toStartOfFiveMinutes(TimeUnix) AS t,
                 min(Value) AS v
             FROM otel.otel_metrics_gauge
-            WHERE (MetricName = 'node_filesystem_avail_bytes') AND (Flags = 0) AND ((Attributes['mountpoint']) IN ('/', '/data')) AND (TimeUnix >= toDateTime64((now() - toIntervalDay(30)), 9)) AND (TimeUnix <= toDateTime64(now(), 9))
+            WHERE (MetricName = 'node_filesystem_avail_bytes') AND (Flags = 0) AND ((Attributes['mountpoint']) IN ('/', '/data')) AND (TimeUnix >= toDateTime((now() - toIntervalDay(30)))) AND (TimeUnix <= toDateTime(now()))
             GROUP BY t
             HAVING v < 250000000000.
         )
