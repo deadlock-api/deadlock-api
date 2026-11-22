@@ -3,6 +3,7 @@ import { ChartLegend, ChartLegendToggle } from "~/components/patterns/charts/Cha
 import { ChartReading, ChartReadings } from "~/components/patterns/charts/ChartReadings";
 import { RadarChart, RadarSeries } from "~/components/patterns/charts/RadarChart";
 import { SERIES_COLORS } from "~/components/patterns/charts/theme";
+import { useSeriesFilter } from "~/components/patterns/charts/useSeriesFilter";
 import { useSeriesHighlight } from "~/components/patterns/charts/useSeriesHighlight";
 import { Grid } from "~/components/ui/grid";
 import { Stack } from "~/components/ui/stack";
@@ -80,6 +81,26 @@ function RadarDemo({ count }: { count: number }) {
   );
 }
 
+const KINDS = ["Requests", "Responses", "Errors"] as const;
+
+function FilterDemo() {
+  const { shown, toggleProps } = useSeriesFilter<(typeof KINDS)[number]>();
+  return (
+    <Stack gap={1}>
+      <ChartLegend label="Show">
+        {KINDS.map((kind, i) => (
+          <ChartLegendToggle key={kind} color={SERIES_COLORS[i]} shape="dot" {...toggleProps(kind)}>
+            {kind}
+          </ChartLegendToggle>
+        ))}
+      </ChartLegend>
+      <Text variant="caption" tone="muted">
+        Drawn: {KINDS.filter(shown).join(", ")}
+      </Text>
+    </Stack>
+  );
+}
+
 export function ChartsRadar() {
   return (
     <>
@@ -99,7 +120,7 @@ export function ChartsRadar() {
       <Specimen
         name="ChartLegendToggle"
         source="patterns/charts/ChartLegend"
-        note="A legend item that singles out its series: hover or focus highlights it for as long as it lasts, pressing pins it (aria-pressed). Drive a set of them with useSeriesHighlight(): spread toggleProps(id) and pass highlighted to the chart."
+        note="A legend item that singles out its series: hover or focus highlights it for as long as it lasts, pressing pins it (aria-pressed). Drive a set of them with useSeriesHighlight(): spread toggleProps(id) and pass highlighted to the chart. As a filter, drive them with useSeriesFilter(): pressing selects one or more series to show, none selected shows all; ask shown(id)."
       >
         <Variants label="size default, one pinned">
           <ChartLegend label="Players">
@@ -110,6 +131,9 @@ export function ChartsRadar() {
               Lilac
             </ChartLegendToggle>
           </ChartLegend>
+        </Variants>
+        <Variants label="as a filter: useSeriesFilter">
+          <FilterDemo />
         </Variants>
         <Variants label='size="sm"'>
           <ChartLegend size="sm" label="Players">

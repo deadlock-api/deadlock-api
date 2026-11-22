@@ -1,15 +1,16 @@
 import { useEffect, useRef } from "react";
 
 import { mergeChartTargetProps } from "~/components/patterns/charts/chart-target";
-import { ChartLegend, ChartLegendItem } from "~/components/patterns/charts/ChartLegend";
+import { ChartLegend, ChartLegendToggle } from "~/components/patterns/charts/ChartLegend";
 import { ChartOverlay, ChartOverlayItem, ChartStage } from "~/components/patterns/charts/ChartOverlay";
 import { ChartProbeCard, type ChartProbePoint, useChartProbe } from "~/components/patterns/charts/ChartProbe";
 import { ChartZoomControls, useChartZoom } from "~/components/patterns/charts/ChartZoom";
 import { LIVE_MAP_COLOR, resolveChartColors } from "~/components/patterns/charts/theme";
+import { useSeriesFilter } from "~/components/patterns/charts/useSeriesFilter";
 import { useElementSize } from "~/components/ui/hooks/use-element-size";
 import { TooltipHeader, TooltipStat, TooltipStats } from "~/components/ui/tooltip";
 import { type EdgeMinute, placeAt } from "~/lib/live-requests/feed";
-import { LiveMapRenderer } from "~/lib/live-requests/renderer";
+import { type LiveMapLayer, LiveMapRenderer } from "~/lib/live-requests/renderer";
 import type { LiveListener, LiveStats } from "~/lib/live-requests/useLiveRequests";
 import { cn } from "~/lib/utils";
 
@@ -23,6 +24,20 @@ interface LiveRequestMapProps extends React.ComponentProps<"div"> {
   /** The newest minute Cloudflare answered itself, for the card of a probed data center. From `useLiveRequests`. */
   edge?: EdgeMinute | null;
 }
+
+/** The map's key, in drawing order; pressing entries shows only those (`useSeriesFilter`). */
+const LAYERS: readonly [LiveMapLayer, string][] = [
+  ["request", "Request to our server"],
+  ["ok", "Response"],
+  ["clientError", "4xx"],
+  ["serverError", "5xx"],
+  ["apiCache", "API cache hit"],
+  ["website", "Website"],
+  ["assets", "Assets"],
+  ["lake", "Data lake"],
+  ["other", "Other"],
+  ["origin", "Our server"],
+];
 
 const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 
@@ -39,7 +54,8 @@ const REACH: Record<ChartProbePoint["source"], number> = { mouse: 12, touch: 24,
  * response back the same way, colored by its status. One Cloudflare answers itself (an API cache hit, the website, an
  * asset) bounces off the client's edge. With reduced motion nothing travels: a dot where each request came from fades.
  * The wheel, a pinch, a double click or the buttons zoom in on a region, and a drag pans it. Hovering, tapping or
- * stepping the probe onto a data center or our server names it, with its traffic of the last minute.
+ * stepping the probe onto a data center or our server names it, with its traffic of the last minute. Pressing entries
+ * of the key draws only those kinds.
  */
 export function LiveRequestMap({ subscribe, stats = null, edge = null, className, ...props }: LiveRequestMapProps) {
   const boxRef = useRef<HTMLDivElement>(null);
@@ -51,6 +67,8 @@ export function LiveRequestMap({ subscribe, stats = null, edge = null, className
   const zoom = useChartZoom(trafficRef, { max: 4 });
   const { view } = zoom;
   const probe = useChartProbe(boxRef);
+  const filter = useSeriesFilter<LiveMapLayer>();
+  const { shown } = filter;
   const place = probe.point
     ? placeAt(
         { width, height },
@@ -85,6 +103,10 @@ export function LiveRequestMap({ subscribe, stats = null, edge = null, className
   useEffect(() => {
     rendererRef.current?.setView(view);
   }, [view]);
+
+  useEffect(() => {
+    rendererRef.current?.setShown(shown);
+  }, [shown]);
 
   useEffect(
     () =>
@@ -135,37 +157,12 @@ export function LiveRequestMap({ subscribe, stats = null, edge = null, className
       </ChartOverlay>
       <ChartOverlay position="bottom-start">
         <ChartOverlayItem>
-          <ChartLegend label="Map key" size="sm">
-            <ChartLegendItem color={LIVE_MAP_COLOR.request} shape="dot">
-              Request to our server
-            </ChartLegendItem>
-            <ChartLegendItem color={LIVE_MAP_COLOR.ok} shape="dot">
-              Response
-            </ChartLegendItem>
-            <ChartLegendItem color={LIVE_MAP_COLOR.clientError} shape="dot">
-              4xx
-            </ChartLegendItem>
-            <ChartLegendItem color={LIVE_MAP_COLOR.serverError} shape="dot">
-              5xx
-            </ChartLegendItem>
-            <ChartLegendItem color={LIVE_MAP_COLOR.apiCache} shape="dot">
-              API cache hit
-            </ChartLegendItem>
-            <ChartLegendItem color={LIVE_MAP_COLOR.website} shape="dot">
-              Website
-            </ChartLegendItem>
-            <ChartLegendItem color={LIVE_MAP_COLOR.assets} shape="dot">
-              Assets
-            </ChartLegendItem>
-            <ChartLegendItem color={LIVE_MAP_COLOR.lake} shape="dot">
-              Data lake
-            </ChartLegendItem>
-            <ChartLegendItem color={LIVE_MAP_COLOR.other} shape="dot">
-              Other
-            </ChartLegendItem>
-            <ChartLegendItem color={LIVE_MAP_COLOR.origin} shape="dot">
-              Our server
-            </ChartLegendItem>
+          <ChartLegend label="Show on the map" size="sm">
+            {LAYERS.map(([layer, label]) => (
+              <ChartLegendToggle key={layer} color={LIVE_MAP_COLOR[layer]} shape="dot" {...filter.toggleProps(layer)}>
+                {label}
+              </ChartLegendToggle>
+            ))}
           </ChartLegend>
         </ChartOverlayItem>
       </ChartOverlay>

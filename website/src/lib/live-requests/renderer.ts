@@ -38,6 +38,9 @@ export interface LiveMapPalette {
 }
 
 /** Color slots: a request on its way in, its response by status, then the five kinds Cloudflare answers itself. */
+const SLOT_LAYERS = ["request", "ok", "clientError", "serverError", ...EDGE_KINDS] as const;
+/** What the map draws, each of which the reader can hide: the color slots, and our server. */
+export type LiveMapLayer = (typeof SLOT_LAYERS)[number] | "origin";
 const IN = 0;
 const OK = 1;
 const EDGE_SLOT = 4;
@@ -124,6 +127,9 @@ export class LiveMapRenderer {
   /** Where each data center is drawn on the current frame, moved onto the map's coast if it sits off it. */
   private coloPoints = new Map<string, [number, number] | null>();
   private originPulse = 0;
+  /** Color slots the reader hid, and whether our server is hidden. */
+  private hidden: boolean[] = SLOT_LAYERS.map(() => false);
+  private originHidden = false;
   private raf = 0;
   private last = 0;
   private stopped = false;
@@ -167,6 +173,13 @@ export class LiveMapRenderer {
   setView(view: LiveMapView) {
     this.view = view;
     this.viewDirty = true;
+    this.wake();
+  }
+
+  /** Draws only the layers `shown` says, from the next frame on, trips already in flight included. */
+  setShown(shown: (layer: LiveMapLayer) => boolean) {
+    this.hidden = SLOT_LAYERS.map((layer) => !shown(layer));
+    this.originHidden = !shown("origin");
     this.wake();
   }
 
@@ -274,6 +287,11 @@ export class LiveMapRenderer {
       if (!colo || !at) return;
       const [ex, ey] = at;
       const slot = EDGE_SLOT + EDGE_KINDS.indexOf(group.kind);
+      if (this.hidden[slot]) {
+        // Hidden: the requests are owed and forgotten, so showing the kind again does not burst.
+        this.edgeOwed[i] -= Math.floor(this.edgeOwed[i]);
+        return;
+      }
       for (; this.edgeOwed[i] >= 1; this.edgeOwed[i]--) {
         if (this.flights.length >= MAX_FLIGHTS) continue;
         const [ux, uy] = project(this.frame, ...this.clientNear(colo[0], colo[1]));
@@ -326,6 +344,7 @@ export class LiveMapRenderer {
         this.pending[kept++] = p;
       } else if (this.flights.length < MAX_FLIGHTS) {
         this.flights.push({ ...p.flight, born: now });
+        if (this.hidden[p.flight.inSlot] && this.hidden[p.flight.outSlot]) continue;
         for (const colo of p.flight.colos) this.pulses.set(colo, (this.pulses.get(colo) ?? 0) + 1);
         this.originPulse += 0.35;
       }
@@ -404,12 +423,15 @@ export class LiveMapRenderer {
       const travel = (f.travel ??= legs.reduce((sum, leg) => sum + leg, 0));
       if (age >= (this.still ? STILL_MS : 2 * travel + f.dwell)) continue;
       this.flights[kept++] = f;
+      const { hidden } = this;
+      if (hidden[f.inSlot] && hidden[f.outSlot]) continue;
       clients.rect(points[0] - head / 2, points[1] - head / 2, head, head);
       if (this.still) {
-        // Nothing travels: the whole way, drawn still, until it is gone.
+        // Nothing travels: the whole way, drawn still, until it is gone, in the response's color unless it is hidden.
+        const stillSlot = hidden[f.outSlot] ? f.inSlot : f.outSlot;
         for (let i = 0; i < legs.length; i++) {
           const a = 2 * i;
-          this.trail(trails[f.outSlot], points[a], points[a + 1], points[a + 2], points[a + 3], 0, 1);
+          this.trail(trails[stillSlot], points[a], points[a + 1], points[a + 2], points[a + 3], 0, 1);
         }
         continue;
       }
@@ -432,6 +454,7 @@ export class LiveMapRenderer {
       const from = back ? a + 2 : a;
       const to = back ? a : a + 2;
       const slot = back ? f.outSlot : f.inSlot;
+      if (hidden[slot]) continue;
       const p = t / legs[leg];
       this.trail(trails[slot], points[from], points[from + 1], points[to], points[to + 1], Math.max(0, p - TRAIL), p);
       heads[slot].rect(this.endX - head / 2, this.endY - head / 2, head, head);
@@ -483,6 +506,8 @@ export class LiveMapRenderer {
 
     // Our server: a dot with a ring that swells with the traffic.
     this.originPulse = Math.min(this.originPulse * decay, 12);
+    ctx.globalAlpha = 1;
+    if (this.originHidden) return;
     const [ox, oy] = this.origin;
     ctx.globalAlpha = 1;
     ctx.fillStyle = palette.origin;
