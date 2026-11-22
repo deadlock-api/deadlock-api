@@ -1,4 +1,6 @@
 pub(crate) mod bot_friends;
+pub(crate) mod build_misses;
+pub(crate) mod build_probe_bans;
 pub(crate) mod ch_admission;
 pub(crate) mod ch_cache;
 pub(crate) mod ch_cost;

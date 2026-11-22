@@ -4,7 +4,7 @@ use std::sync::LazyLock;
 use axum::Json;
 use axum::extract::{Path, State};
 use axum::http::StatusCode;
-use axum::response::IntoResponse;
+use axum::response::{IntoResponse as _, Response};
 use axum_extra::extract::Query;
 use chrono::{DateTime, NaiveDateTime};
 use moka::future::Cache;
@@ -22,6 +22,8 @@ use valveprotos::deadlock::{
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::builds::structs::Build;
+use crate::services::build_misses::{self, Miss};
+use crate::services::build_probe_bans;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{Quota, RateLimit, Scope, describe};
 use crate::utils::types::AccountIdQuery;
@@ -184,6 +186,7 @@ fn to_build(result: &HeroBuildResult) -> APIResult<Build> {
     responses(
         (status = OK, body = Build),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = FORBIDDEN, description = "Banned from Game Coordinator lookups for crawling"),
         (status = NOT_FOUND, description = "Build not found"),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching build failed")
@@ -199,7 +202,15 @@ Set `force_refetch=true` to fetch from the Game Coordinator even if the build is
 pick up a newer version. A build fetched from the Game Coordinator in the last 10 minutes is returned from that
 fetch instead.
 
+A lookup that finds no build is remembered: for 6 hours if the build is in our database (it was deleted or hidden in
+the game), otherwise for 10 minutes. Until then the build gets a 404 without asking the Game Coordinator, also with
+`force_refetch=true`.
+
 Rate limits only apply when the build is fetched from the Game Coordinator.
+
+Clients that look like they crawl the Game Coordinator, with 10 or more lookups of builds that don't exist within an
+hour, are banned from Game Coordinator lookups for 24 hours: those get a 403 with Retry-After. Builds already in our
+database are still served. To find builds, search them with `/v1/builds`.
 
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
 
@@ -216,16 +227,40 @@ pub(super) async fn fetch_build_live(
     Query(LiveBuildQuery { force_refetch }): Query<LiveBuildQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
-) -> APIResult<impl IntoResponse> {
+) -> APIResult<Response> {
     if !force_refetch
         && let Some(build) = fetch_build_from_db(&state.pg_client, hero_id, build_id).await?
     {
-        return Ok(Json(build));
+        return Ok(Json(build).into_response());
     }
     if let Some(build) = RECENTLY_FETCHED.get(&(hero_id, build_id)).await {
-        return Ok(Json(build));
+        return Ok(Json(build).into_response());
     }
 
+    let client = rate_limit_key.client_id();
+    if let Some(miss) = build_misses::get(&state.redis_client, hero_id, build_id).await {
+        // A build nobody knew may have been crawled into the database since; refetch that one.
+        let crawled_since = force_refetch
+            && miss == Miss::Unknown
+            && matches!(
+                fetch_build_from_db(&state.pg_client, hero_id, build_id).await,
+                Ok(Some(_))
+            );
+        if !crawled_since {
+            // Guessing a build somebody else guessed costs no lookup, but is crawling all the same.
+            if miss == Miss::Unknown {
+                build_probe_bans::record_miss(&state.redis_client, &client, hero_id, build_id)
+                    .await;
+            }
+            return Err(APIError::status_msg(
+                StatusCode::NOT_FOUND,
+                "Build not found",
+            ));
+        }
+    }
+    if let Some(remaining) = build_probe_bans::ban_remaining(&state.redis_client, &client).await {
+        return Ok(build_probe_bans::banned_response(remaining));
+    }
     state
         .rate_limit_client
         .check(&rate_limit_key, RATE_LIMIT)
@@ -238,19 +273,36 @@ pub(super) async fn fetch_build_live(
         ..Default::default()
     };
     let results = fetch_and_store_builds(&state, msg).await?;
-    let build = results
+    let Some(build) = results
         .iter()
         .filter(|b| b.hero_build.is_some())
         .max_by_key(|b| {
             let h = b.hero_build.as_ref()?;
             h.version
         })
-        .ok_or_else(|| APIError::status_msg(StatusCode::NOT_FOUND, "Build not found"))?;
+    else {
+        // Refetching a build the database has is no miss, even when the Game Coordinator dropped
+        // it. A failed lookup doesn't count either.
+        let known = force_refetch
+            && !matches!(
+                fetch_build_from_db(&state.pg_client, hero_id, build_id).await,
+                Ok(None)
+            );
+        let miss = if known { Miss::Known } else { Miss::Unknown };
+        build_misses::remember(&state.redis_client, hero_id, build_id, miss).await;
+        if !known {
+            build_probe_bans::record_miss(&state.redis_client, &client, hero_id, build_id).await;
+        }
+        return Err(APIError::status_msg(
+            StatusCode::NOT_FOUND,
+            "Build not found",
+        ));
+    };
     let build = to_build(build)?;
     RECENTLY_FETCHED
         .insert((hero_id, build_id), build.clone())
         .await;
-    Ok(Json(build))
+    Ok(Json(build).into_response())
 }
 
 #[utoipa::path(
@@ -260,6 +312,7 @@ pub(super) async fn fetch_build_live(
     responses(
         (status = OK, body = [Build]),
         (status = BAD_REQUEST, description = "Provided parameters are invalid."),
+        (status = FORBIDDEN, description = "Banned from Game Coordinator lookups for crawling"),
         (status = TOO_MANY_REQUESTS, description = "Rate limit exceeded"),
         (status = INTERNAL_SERVER_ERROR, description = "Fetching builds failed")
     ),
@@ -271,6 +324,10 @@ Fetches all builds of an author directly from the Deadlock Game Coordinator and 
 
 Unlike the search endpoint, this does not rely on builds already being in our database, so it can be used to
 look up builds that have not been crawled yet. Every fetched build is upserted into the database.
+
+Clients that look like they crawl the Game Coordinator, with 10 or more lookups of builds that don't exist within an
+hour on the single-build endpoint, are banned from Game Coordinator lookups for 24 hours: those get a 403 with
+Retry-After.
 
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
 
@@ -286,7 +343,11 @@ pub(super) async fn fetch_builds_by_author_live(
     Path(AccountIdQuery { account_id }): Path<AccountIdQuery>,
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
-) -> APIResult<impl IntoResponse> {
+) -> APIResult<Response> {
+    let client = rate_limit_key.client_id();
+    if let Some(remaining) = build_probe_bans::ban_remaining(&state.redis_client, &client).await {
+        return Ok(build_probe_bans::banned_response(remaining));
+    }
     state
         .rate_limit_client
         .check(&rate_limit_key, RATE_LIMIT)
@@ -302,5 +363,5 @@ pub(super) async fn fetch_builds_by_author_live(
         .filter(|b| b.hero_build.is_some())
         .map(to_build)
         .collect::<APIResult<Vec<_>>>()?;
-    Ok(Json(builds))
+    Ok(Json(builds).into_response())
 }
