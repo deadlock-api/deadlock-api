@@ -2,15 +2,23 @@ import type { Hero } from "deadlock_api_client";
 
 import { seededRandom, seededShuffle } from "~/lib/daily-seed";
 
-/** A boon (hero level): the souls it takes, and the ability points and unlocks gained up to and including it. */
+/**
+ * The souls every player starts a match with. Net worth counts them; the boon table does not: across 948 snapshots of
+ * 8 matches (2026-11-23), the level matched the table at net worth minus 600 in 95% of them (43% at net worth itself,
+ * and every other offset matched fewer). The assets carry no field for it.
+ */
+export const STARTING_SOULS = 600;
+
+/** A boon (hero level): the net worth it takes, and the ability points and unlocks gained up to and including it. */
 export interface BoonLevel {
   boon: number;
+  /** The net worth a player reaches it at: the table's souls plus `STARTING_SOULS`. */
   souls: number;
   abilityPoints: number;
   abilityUnlocks: number;
 }
 
-/** The boon table of a hero's `level_info`, in order, with the ability points and unlocks summed up. */
+/** The boon table of a hero's `level_info`, in order, with the ability points and unlocks summed up and net worths. */
 export function boonLevelsFrom(levelInfo: Hero["level_info"]): BoonLevel[] {
   let abilityPoints = 0;
   let abilityUnlocks = 0;
@@ -23,7 +31,7 @@ export function boonLevelsFrom(levelInfo: Hero["level_info"]): BoonLevel[] {
         if (currency === "EAbilityPoints") abilityPoints += 1;
         if (currency === "EAbilityUnlocks") abilityUnlocks += 1;
       }
-      return { boon, souls: info.required_gold, abilityPoints, abilityUnlocks };
+      return { boon, souls: info.required_gold + STARTING_SOULS, abilityPoints, abilityUnlocks };
     });
 }
 

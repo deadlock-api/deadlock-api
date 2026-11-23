@@ -4,6 +4,7 @@ import type { Ability } from "deadlock_api_client";
 import { Fragment, useMemo, useState } from "react";
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
+import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { HeroSelector } from "~/components/domain/selectors/HeroSelector";
 import { FlashcardPage } from "~/components/features/flashcards/FlashcardChrome";
 import {
@@ -12,6 +13,7 @@ import {
   FlashcardPrompt,
   useFlashcardEntry,
 } from "~/components/features/flashcards/FlashcardGame";
+import { AbilityPointCost, UpgradePips } from "~/components/features/flashcards/GameGlyphs";
 import { useFlashcardDeck } from "~/components/features/flashcards/use-flashcard-deck";
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { LoadingState } from "~/components/patterns/states/LoadingState";
@@ -169,9 +171,12 @@ function UpgradePrompt() {
       <div className="flex items-center gap-3 pe-10">
         <AbilityImage abilityId={ability.id} title="" className="size-12 shrink-0" />
         <div className="min-w-0">
-          <Text as="div" variant="eyebrow" className="font-mono">
-            {hero.name}
-          </Text>
+          <div className="flex items-center gap-1.5">
+            <HeroImage hero={hero} title="" shape="circle" className="size-5" />
+            <Text as="div" variant="eyebrow" className="font-mono">
+              {hero.name}
+            </Text>
+          </div>
           <div className="font-game text-2xl tracking-tight text-balance uppercase">{ability.name}</div>
         </div>
       </div>
@@ -197,13 +202,14 @@ function UpgradePrompt() {
   );
 }
 
-/** An option: the tier and the ability points it costs. */
+/** An option: the tier with the HUD's upgrade pips, and the ability points it costs. */
 function TierOption() {
   const tier = useFlashcardEntry<UpgradeTier>();
   return (
-    <span className="flex min-w-0 items-baseline gap-2 tracking-wide uppercase">
+    <span className="flex min-w-0 items-center gap-3 tracking-wide uppercase">
       <span>Tier {tier}</span>
-      <span className="font-mono text-sm text-muted-foreground">{UPGRADE_TIER_COST[tier]} AP</span>
+      <UpgradePips tier={tier} />
+      <AbilityPointCost points={UPGRADE_TIER_COST[tier]} className="font-mono text-sm text-muted-foreground" />
     </span>
   );
 }

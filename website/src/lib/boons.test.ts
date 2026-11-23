@@ -21,17 +21,20 @@ const levels = boonLevelsFrom(levelInfo);
 
 test("boonLevelsFrom sums the ability points and unlocks", () => {
   assert.equal(levels.length, 36);
-  assert.deepEqual(levels[7], { boon: 8, souls: 3200, abilityPoints: 4, abilityUnlocks: 4 });
-  assert.deepEqual(levels.at(-1), { boon: 36, souls: 48600, abilityPoints: 32, abilityUnlocks: 4 });
+  // Net worth: the table's souls plus the 600 every player starts with.
+  assert.deepEqual(levels[7], { boon: 8, souls: 3800, abilityPoints: 4, abilityUnlocks: 4 });
+  assert.deepEqual(levels.at(-1), { boon: 36, souls: 49200, abilityPoints: 32, abilityUnlocks: 4 });
 });
 
 test("requiredBoon finds the first boon with enough points and unlocks", () => {
   // 1 + 8 + 8 + 0 = 17 points, four unlocks.
-  assert.equal(requiredBoon([1, 3, 3, 0], levels)?.souls, 13800);
-  assert.equal(requiredBoon([0, null, null, null], levels)?.souls, 0);
-  assert.equal(requiredBoon([1, 0, null, null], levels)?.souls, 500);
-  assert.equal(requiredBoon([0, 0, 0, 0], levels)?.souls, 3200);
-  assert.equal(requiredBoon([3, 3, 3, 3], levels)?.souls, 48600);
+  assert.equal(requiredBoon([1, 3, 3, 0], levels)?.boon, 21);
+  assert.equal(requiredBoon([1, 3, 3, 0], levels)?.souls, 14400);
+  assert.equal(requiredBoon([0, null, null, null], levels)?.souls, 600);
+  assert.equal(requiredBoon([1, 0, null, null], levels)?.souls, 1100);
+  assert.equal(requiredBoon([0, 0, 0, 0], levels)?.souls, 3800);
+  assert.equal(requiredBoon([2, 2, 2, 2], levels)?.souls, 9800);
+  assert.equal(requiredBoon([3, 3, 3, 3], levels)?.souls, 49200);
 });
 
 test("boonCards holds every set of tiers once, without the all-locked one", () => {
