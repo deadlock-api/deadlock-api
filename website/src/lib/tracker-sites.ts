@@ -77,4 +77,5 @@ export const TRACKER_SITES: readonly TrackerSite[] = [
   { name: "Deadbuff", icon: "/tracker-sites/deadbuff.webp" },
   { name: "Frogged", icon: "/tracker-sites/frogged.webp" },
   { name: "Deadlock Ledger", icon: "/tracker-sites/deadlock-ledger.webp" },
+  { name: "D1 Deadlock", icon: "/tracker-sites/d1-deadlock.webp" },
 ];
