@@ -1,8 +1,8 @@
 //! Refreshes every day-partitioned analytics rollup every 30 minutes, not just the cohort ones
 //! the name comes from: `item_stats_agg_v2`, the hero-less and cohort rollups by buy time and net
 //! worth, the enemy-hero rollup, `player_performance_curve_agg_v2`, the item-flow rollups (nodes, edges,
-//! totals; of all players and per included upgrade), the item pair rollup, `game_stats_agg`,
-//! `hero_pair_stats_agg` and `hero_stats_duration_agg`.
+//! totals; of all players and per included upgrade), the item pair rollup, `hero_item_stats_agg`,
+//! `game_stats_agg`, `hero_pair_stats_agg` and `hero_stats_duration_agg`.
 //! Each run rebuilds only the days whose source matches grew past [`rebuild_threshold`] since
 //! their last build, plus the days a [`History`] rollup has due by age, and the include item-flow
 //! rollups a few days per run (see [`include_rollup_due`]).
@@ -166,6 +166,9 @@ enum Source {
     /// Sums every player's stats per hero, match-level grain and duration key
     /// (`hero_stats_duration_agg`).
     HeroStatsDuration,
+    /// Sums every player's stats per hero, owned upgrade and duration key
+    /// (`hero_item_stats_agg`).
+    HeroItemStats,
     /// One of the item build-flow rollups (`item_flow_*_agg`).
     ItemFlow(item_flow_agg::Agg),
     /// Every pair of upgrades each player owned (`item_permutation_pairs_agg`).
@@ -191,7 +194,16 @@ const ITEM_PAIRS_SPEC: CohortSpec = CohortSpec {
     history: None,
 };
 
-/// The hero-stats rollup by duration: ~2 CPU-s per day. Kept for all of history, like the other
+/// The hero-stats rollup by owned upgrade: ~11 CPU-s and 1.2 GiB per day (2026-11-22 on prod).
+const HERO_ITEM_STATS_SPEC: CohortSpec = CohortSpec {
+    table: hero_stats::ITEM_AGG_TABLE,
+    staging: hero_stats::ITEM_AGG_STAGING,
+    source: Source::HeroItemStats,
+    horizon_days: hero_stats::ITEM_AGG_HORIZON_DAYS,
+    history: None,
+};
+
+/// The hero-stats rollup by duration: ~5 CPU-s per day. Kept for all of history, like the other
 /// rollups listed after it in [`cohort_specs`], so all-time duration windows are served too.
 const HERO_STATS_DURATION_SPEC: CohortSpec = CohortSpec {
     table: hero_stats::DURATION_AGG_TABLE,
@@ -239,6 +251,7 @@ fn cohort_specs() -> Vec<CohortSpec> {
         item_bucket_spec(item_stats::ItemBucketAgg::Time),
         item_bucket_spec(item_stats::ItemBucketAgg::NetWorth),
         ITEM_PAIRS_SPEC,
+        HERO_ITEM_STATS_SPEC,
         CohortSpec {
             table: "default.item_cohort_stats_time_agg_v3",
             staging: "default.item_cohort_stats_time_agg_v3_staging",
@@ -380,6 +393,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str, slice: Slice) -> String {
         Source::GameStats => return game_stats::agg_select_body(since_clause),
         Source::HeroPairs => return hero_pair_agg::agg_select_body(since_clause),
         Source::HeroStatsDuration => return hero_stats::duration_agg_select_body(since_clause),
+        Source::HeroItemStats => return hero_stats::item_agg_select_body(since_clause),
         Source::ItemFlow(agg) => {
             return item_flow_agg::agg_select_body(agg, since_clause, slice);
         }

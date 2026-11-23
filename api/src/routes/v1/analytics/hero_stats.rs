@@ -4,6 +4,7 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum_extra::extract::Query;
 use clickhouse::Row;
+use game_assets::versions::items::types::ItemType;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tracing::debug;
@@ -13,7 +14,7 @@ use super::common_filters::{
     BucketQuery, MatchScope, PlayerFilters, filter_protected_accounts, is_non_empty, join_filters,
     range_filters, rollup_oldest_servable, round_timestamps,
 };
-use super::rollup_window::{Coverage, DaySplit, EdgeRows, Rollup, RollupFilters};
+use super::rollup_window::{Coverage, DaySplit, EdgeRows, Reach, Rollup, RollupFilters};
 use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
@@ -50,10 +51,10 @@ pub(crate) struct HeroStatsQuery {
     min_unix_timestamp: Option<i64>,
     /// Filter matches based on their start time (Unix timestamp).
     max_unix_timestamp: Option<i64>,
-    /// Filter matches based on their duration in seconds (up to 7000s).
+    /// Filter matches based on their duration in seconds (up to 7000s). With a single `include_item_ids` or `exclude_item_ids` item, rounded to the nearest minute.
     #[param(maximum = 7000)]
     min_duration_s: Option<u64>,
-    /// Filter matches based on their duration in seconds (up to 7000s).
+    /// Filter matches based on their duration in seconds (up to 7000s). With a single `include_item_ids` or `exclude_item_ids` item, rounded to the nearest minute (a value ending in 59 seconds, e.g. `1799`, is kept).
     #[param(maximum = 7000)]
     max_duration_s: Option<u64>,
     /// Filter players based on their final net worth.
@@ -134,6 +135,25 @@ pub(crate) struct HeroStatsQuery {
 impl_match_info!(HeroStatsQuery);
 
 impl HeroStatsQuery {
+    /// Whether the request filters on anything [`ITEM_AGG_TABLE`] can't serve besides its one item:
+    /// per-player filters, a badge (the rollup has none) or a match mode it doesn't hold.
+    fn has_filter_beyond_item_rollup(&self) -> bool {
+        #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
+        let account = self.account_id.is_some();
+        account
+            || is_non_empty(self.account_ids.as_deref())
+            || self.min_networth.is_some()
+            || self.max_networth.is_some()
+            || self.min_match_id.is_some()
+            || self.max_match_id.is_some()
+            || self.hero_matches_bounds() != (None, None)
+            || self.hero_matches_total_bounds() != (None, None)
+            || is_non_empty(self.hero_matches_total_buckets.as_deref())
+            || self.has_ability_order_filter()
+            || self.match_info().has_badge_filter()
+            || !MatchMode::is_agg_servable(self.match_mode.as_deref())
+    }
+
     fn has_ability_order_filter(&self) -> bool {
         is_non_empty(self.ability_order_prefix.as_deref())
             || is_non_empty(self.ability_unlock_order_prefix.as_deref())
@@ -350,26 +370,27 @@ const DURATION_GRAIN: &[(&str, &str)] = &[
     ("hero_id", "hero_id"),
 ];
 
-/// The inclusive `duration_key` bounds selecting exactly the matches with `min <= duration_s <=
-/// max`, or `None` when a bound falls inside an open interval of [`DURATION_KEY`]: a minimum
-/// must be a multiple of [`DURATION_STEP_S`], a maximum a multiple or one less.
-fn duration_key_bounds(min: Option<u64>, max: Option<u64>) -> Option<(Option<u64>, Option<u64>)> {
+/// The inclusive duration key bounds selecting exactly the matches with `min <= duration_s <=
+/// max`, for a key over steps of `step` seconds like [`DURATION_KEY`] (15 s) or
+/// [`ITEM_DURATION_KEY`] (60 s), or `None` when a bound falls inside an open interval of the key:
+/// a minimum must be a multiple of `step`, a maximum a multiple or one less.
+fn duration_key_bounds(
+    step: u64,
+    min: Option<u64>,
+    max: Option<u64>,
+) -> Option<(Option<u64>, Option<u64>)> {
     let low = match min {
         None => None,
-        Some(min) if min.checked_rem(DURATION_STEP_S)? == 0 => {
-            Some(min.checked_div(DURATION_STEP_S)?.checked_mul(2)?)
-        }
+        Some(min) if min.checked_rem(step)? == 0 => Some(min.checked_div(step)?.checked_mul(2)?),
         Some(_) => return None,
     };
     let high = match max {
         None => None,
-        Some(max) if max.checked_rem(DURATION_STEP_S)? == 0 => {
-            Some(max.checked_div(DURATION_STEP_S)?.checked_mul(2)?)
-        }
+        Some(max) if max.checked_rem(step)? == 0 => Some(max.checked_div(step)?.checked_mul(2)?),
         // `duration_s <= max` is `duration_s < max + 1`: every key below the next step's.
-        Some(max) if max.checked_add(1)?.checked_rem(DURATION_STEP_S)? == 0 => Some(
+        Some(max) if max.checked_add(1)?.checked_rem(step)? == 0 => Some(
             max.checked_add(1)?
-                .checked_div(DURATION_STEP_S)?
+                .checked_div(step)?
                 .checked_mul(2)?
                 .checked_sub(1)?,
         ),
@@ -388,20 +409,64 @@ pub(crate) fn duration_agg_select_body(since_clause: &str) -> String {
     duration_rows(&EdgeRows::full_grain(DURATION_GRAIN, since_clause))
 }
 
+/// The hero-stats rollup by owned upgrade and match duration, rebuilt per day by
+/// `services/cohort_agg_refresh.rs` from [`item_agg_select_body`]: per hero, the matches of the
+/// players who bought the item, so a request filtering on one item (deadlocklabs and dedolog sweep
+/// every item, ~2 `ClickHouse` cores of 30-day `match_player FINAL` scans in 2026-11) reads ~2.7k
+/// rows a day of that item instead. It has no badge columns, and its duration key steps by a
+/// minute: ~0.9M rows (57 MiB) a day where 15 s steps took 2.8M (98 MiB). Its columns are
+/// [`ITEM_GRAIN`], then [`MV_MEASURES`], then `built_through`.
+pub(crate) const ITEM_AGG_TABLE: &str = "default.hero_item_stats_agg";
+pub(crate) const ITEM_AGG_STAGING: &str = "default.hero_item_stats_agg_staging";
+/// Days the rollup keeps (~7 GiB); requests starting earlier read `match_player`.
+pub(crate) const ITEM_AGG_HORIZON_DAYS: u32 = 120;
+
+/// Width in seconds of the open duration intervals of [`ITEM_DURATION_KEY`].
+const ITEM_DURATION_STEP_S: u64 = 60;
+
+/// [`DURATION_KEY`] by whole minutes.
+const ITEM_DURATION_KEY: &str = "toUInt16(least(if(duration_s % 60 = 0, 2 * intDiv(duration_s, 60), \
+                                 2 * intDiv(duration_s, 60) + 1), 65535))";
+
+/// Grain columns of [`ITEM_AGG_TABLE`], in table order, with the expressions of
+/// [`item_agg_select_body`]: `item_id` is each upgrade the player owned.
+const ITEM_GRAIN: &[(&str, &str)] = &[
+    ("game_mode", "game_mode"),
+    ("match_mode", "match_mode"),
+    ("item_id", "item_id"),
+    ("day", "toDate(start_time)"),
+    ("duration_key", ITEM_DURATION_KEY),
+    ("hero_id", "hero_id"),
+];
+
+/// The [`ITEM_AGG_TABLE`] rows of the matches selected by `since_clause`, at the full grain and
+/// in the table's column order: each player row counts once for every upgrade it owned, the
+/// ownership of the base query's `has(upgrades.item_id, id)`. The refresh job builds the rollup's
+/// days with it.
+pub(crate) fn item_agg_select_body(since_clause: &str) -> String {
+    hero_rows(
+        &EdgeRows::full_grain(ITEM_GRAIN, since_clause),
+        ", duration_s, `upgrades.item_id` AS upgrade_ids",
+        " AND account_id != 0",
+        "\nARRAY JOIN arrayDistinct(upgrade_ids) AS item_id",
+    )
+}
+
 fn mv_rows(edge: &EdgeRows) -> String {
-    hero_rows(edge, "", "")
+    hero_rows(edge, "", "", "")
 }
 
 /// The rows of [`DURATION_AGG_TABLE`]: [`mv_rows`] with the duration the key is computed from,
 /// and without anonymous players, as every rollup build skips them.
 fn duration_rows(edge: &EdgeRows) -> String {
-    hero_rows(edge, ", duration_s", " AND account_id != 0")
+    hero_rows(edge, ", duration_s", " AND account_id != 0", "")
 }
 
 /// The hero-stats rollup rows of the matches `where_clause` selects, grouped by the grain columns
 /// of `grain_select`/`group_by`. `extra_columns` (empty or starting with a comma) are read for
 /// grain expressions beyond [`MV_GRAIN`]'s, `extra_filter` (empty or starting with ` AND`) is
-/// added to the scan's filter.
+/// added to the scan's filter, and `array_join` (empty or an `ARRAY JOIN` clause on its own line)
+/// expands the deduplicated rows before they are grouped.
 fn hero_rows(
     EdgeRows {
         where_clause,
@@ -410,6 +475,7 @@ fn hero_rows(
     }: &EdgeRows,
     extra_columns: &str,
     extra_filter: &str,
+    array_join: &str,
 ) -> String {
     format!(
         "SELECT
@@ -441,7 +507,7 @@ FROM (
     FROM default.match_player
     WHERE match_mode IN ('Ranked', 'Unranked'){extra_filter} AND {where_clause}
     LIMIT 1 BY match_id, account_id
-)
+){array_join}
 GROUP BY {group_by}"
     )
 }
@@ -458,7 +524,8 @@ fn pick_rollup(
 ) -> Option<(Rollup<'static>, EdgeRowsFn, &'static str)> {
     if query.min_duration_s.is_some() || query.max_duration_s.is_some() {
         // A duration filter needs the duration rollup, and bounds its keys can express.
-        let (min_key, max_key) = duration_key_bounds(query.min_duration_s, query.max_duration_s)?;
+        let (min_key, max_key) =
+            duration_key_bounds(DURATION_STEP_S, query.min_duration_s, query.max_duration_s)?;
         filters
             .rollup
             .extend(range_filters("duration_key", min_key, max_key));
@@ -560,14 +627,27 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         .map(|measure| format!("sum({0}) AS {0}", measure.trim()))
         .collect::<Vec<_>>()
         .join(", ");
+    Some(rollup_hero_days(
+        query,
+        &format!(
+            "
+        SELECT hero_id, {bucket_expr} AS bucket, day, {day_sums}
+        FROM {source}
+        GROUP BY hero_id, bucket, day"
+        ),
+        mv_log_comment,
+    ))
+}
 
+/// The response of a rollup read from `day_rows`, rows of [`MV_MEASURES`] per `hero_id`, `bucket`
+/// and `day` (see [`group_hero_days`]).
+fn rollup_hero_days(query: &HeroStatsQuery, day_rows: &str, log_comment: &str) -> String {
     let matches_per_bucket = if query.bucket == BucketQuery::NoBucket {
         "matches"
     } else {
         "sum(sum(n_matches)) OVER (PARTITION BY bucket)"
     };
-
-    Some(group_hero_days(
+    group_hero_days(
         &format!(
             "sum(n_wins) AS wins,
             toUInt64(sum(n_matches) - sum(n_wins)) AS losses,
@@ -592,15 +672,193 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
             sum(sum_first_permanent_buff_time_s) AS total_first_permanent_buff_time_s,
             sum(n_permanent_buff_timing_matches) AS permanent_buff_timing_matches"
         ),
-        &format!(
+        day_rows,
+        log_comment,
+        "",
+    )
+}
+
+/// The one item a request filters on, with `true` when it includes it and `false` when it
+/// excludes it, or `None` without item filters or with several.
+fn single_item_filter(query: &HeroStatsQuery) -> Option<(u32, bool)> {
+    let include = query.include_item_ids.as_deref().unwrap_or_default();
+    let exclude = query.exclude_item_ids.as_deref().unwrap_or_default();
+    match (include, exclude) {
+        ([id], []) => Some((*id, true)),
+        ([], [id]) => Some((*id, false)),
+        _ => None,
+    }
+}
+
+/// Rounds a duration bound to whole minutes, the steps of [`ITEM_DURATION_KEY`]: to the nearest
+/// minute, except that a maximum one second short of a minute (`x59`) stays, as the key already
+/// expresses it exactly.
+fn round_duration_bound(value: u64, is_max: bool) -> Option<u64> {
+    let step = ITEM_DURATION_STEP_S;
+    if is_max && value.checked_add(1)?.checked_rem(step)? == 0 {
+        return Some(value);
+    }
+    value
+        .checked_add(step.checked_div(2)?)?
+        .checked_div(step)?
+        .checked_mul(step)
+}
+
+/// Adds the duration bounds `min`/`max` to `filters`: as a key range for a rollup keyed by
+/// `step` seconds, and on `duration_s` for its base-table rows. `None` when the key can't express
+/// them (see [`duration_key_bounds`]).
+fn push_duration_filters(
+    filters: &mut RollupFilters,
+    step: u64,
+    min: Option<u64>,
+    max: Option<u64>,
+) -> Option<()> {
+    let (min_key, max_key) = duration_key_bounds(step, min, max)?;
+    filters
+        .rollup
+        .extend(range_filters("duration_key", min_key, max_key));
+    filters.base.extend(range_filters("duration_s", min, max));
+    Some(())
+}
+
+/// Day rows (see [`rollup_hero_days`]) of the sums of `all_source` minus those of
+/// `subtracted_source`, two rollup sources of [`MV_MEASURES`] where the second counts a subset of
+/// the first's player rows.
+fn difference_day_rows(bucket_expr: &str, all_source: &str, subtracted_source: &str) -> String {
+    let measures = MV_MEASURES.split(',').map(str::trim).collect::<Vec<_>>();
+    let signed = |sign: &str| {
+        measures
+            .iter()
+            .map(|m| format!("{sign}toInt64({m}) AS {m}"))
+            .collect::<Vec<_>>()
+            .join(", ")
+    };
+    let (plus, minus) = (signed(""), signed("-"));
+    let day_sums = measures
+        .iter()
+        .map(|m| format!("toUInt64(sum({m})) AS {m}"))
+        .collect::<Vec<_>>()
+        .join(", ");
+    // A hero whose players all owned the item that day has no rows in the base query.
+    format!(
+        "
+        SELECT hero_id, bucket, day, {day_sums}
+        FROM (
+            SELECT hero_id, {bucket_expr} AS bucket, day, {plus} FROM {all_source}
+            UNION ALL
+            SELECT hero_id, {bucket_expr} AS bucket, day, {minus} FROM {subtracted_source}
+        )
+        GROUP BY hero_id, bucket, day
+        HAVING n_matches > 0"
+    )
+}
+
+/// Builds a query against [`ITEM_AGG_TABLE`] for a request filtering on one item, which the
+/// caller has checked is an upgrade (shop item): the rollup holds no other items. `None` when the
+/// request needs `match_player`: other per-player filters, a badge filter or bucket (the rollup
+/// has no badge), a window starting before the rollup's horizon or without a whole day.
+///
+/// Its duration bounds are rounded to whole minutes (see [`round_duration_bound`]). An included
+/// item reads the item's rows. An excluded one reads every match from [`DURATION_AGG_TABLE`] minus
+/// the item's rows, which counts exactly the players without the item: every measure is a sum.
+fn build_item_query(query: &HeroStatsQuery) -> Option<String> {
+    let (item_id, include) = single_item_filter(query)?;
+    if query.bucket == BucketQuery::AvgBadge {
+        return None;
+    }
+    let bucket_expr = query.bucket.mv_bucket_expr()?;
+    if query.has_filter_beyond_item_rollup() {
+        return None;
+    }
+    let split = DaySplit::new(query.min_unix_timestamp, query.max_unix_timestamp)?;
+    let item_rollup = Rollup {
+        table: ITEM_AGG_TABLE,
+        grain: ITEM_GRAIN,
+        measures: MV_MEASURES,
+        coverage: Coverage::Incremental {
+            horizon_days: ITEM_AGG_HORIZON_DAYS,
+        },
+    };
+    // Days before the horizon would be read from `match_player` without the FINAL the base
+    // query streams them with.
+    if !item_rollup.serves(query.min_unix_timestamp, Reach::Days(0)) {
+        return None;
+    }
+    let min_duration = match query.min_duration_s {
+        Some(min) => Some(round_duration_bound(min, false)?),
+        None => None,
+    };
+    let max_duration = match query.max_duration_s {
+        Some(max) => Some(round_duration_bound(max, true)?),
+        None => None,
+    };
+    let outer = format!("hero_id, {bucket_expr}, day");
+    let mut item_filters =
+        RollupFilters::new(query.game_mode, query.match_mode.as_deref(), None, None);
+    item_filters.rollup.push(format!("item_id = {item_id}"));
+    item_filters
+        .base
+        .push(format!("has(upgrades.item_id, {item_id})"));
+    push_duration_filters(
+        &mut item_filters,
+        ITEM_DURATION_STEP_S,
+        min_duration,
+        max_duration,
+    )?;
+    // The base-table rows are the item's owners only, so their `item_id` is the item.
+    let item_expr = format!("toUInt32({item_id})");
+    let grain = ITEM_GRAIN
+        .iter()
+        .map(|&(col, expr)| {
+            (
+                col,
+                if col == "item_id" {
+                    item_expr.as_str()
+                } else {
+                    expr
+                },
+            )
+        })
+        .collect::<Vec<_>>();
+    let item_source = Rollup {
+        grain: &grain,
+        ..item_rollup
+    }
+    .source(&split, &item_filters, &outer, duration_rows);
+    let measures = MV_MEASURES.split(',').map(str::trim).collect::<Vec<_>>();
+    let day_rows = if include {
+        let day_sums = measures
+            .iter()
+            .map(|m| format!("sum({m}) AS {m}"))
+            .collect::<Vec<_>>()
+            .join(", ");
+        format!(
             "
         SELECT hero_id, {bucket_expr} AS bucket, day, {day_sums}
-        FROM {source}
+        FROM {item_source}
         GROUP BY hero_id, bucket, day"
-        ),
-        mv_log_comment,
-        "",
-    ))
+        )
+    } else {
+        let mut all_filters =
+            RollupFilters::new(query.game_mode, query.match_mode.as_deref(), None, None);
+        push_duration_filters(
+            &mut all_filters,
+            DURATION_STEP_S,
+            min_duration,
+            max_duration,
+        )?;
+        let all_source = Rollup {
+            table: DURATION_AGG_TABLE,
+            grain: DURATION_GRAIN,
+            measures: MV_MEASURES,
+            coverage: Coverage::Incremental {
+                horizon_days: u32::MAX,
+            },
+        }
+        .source(&split, &all_filters, &outer, duration_rows);
+        difference_day_rows(bucket_expr, &all_source, &item_source)
+    };
+    Some(rollup_hero_days(query, &day_rows, "hero_stats_item_mv"))
 }
 
 #[expect(
@@ -876,12 +1134,19 @@ cached_ch_query! {
     fn run_query(3600) -> Vec<AnalyticsHeroStats>;
 }
 
+/// `item_is_upgrade`: the request's one item filter (see [`single_item_filter`]) is an upgrade, so
+/// [`build_item_query`] may serve it.
 async fn get_hero_stats(
     ch_client: &clickhouse::Client,
     mut query: HeroStatsQuery,
+    item_is_upgrade: bool,
 ) -> APIResult<Arc<Vec<AnalyticsHeroStats>>> {
     round_timestamps(&mut query.min_unix_timestamp, &mut query.max_unix_timestamp);
-    let query_str = build_mv_query(&query).unwrap_or_else(|| build_query(&query));
+    let query_str = item_is_upgrade
+        .then(|| build_item_query(&query))
+        .flatten()
+        .or_else(|| build_mv_query(&query))
+        .unwrap_or_else(|| build_query(&query));
     debug!(?query_str);
     Ok(run_query(ch_client, &query_str).await?)
 }
@@ -914,7 +1179,18 @@ pub(crate) async fn hero_stats(
     validate_hero_matches_total_buckets(&query)?;
     #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     filter_protected_accounts(&state, &mut query.account_ids, query.account_id).await?;
-    get_hero_stats(&state.ch_client_ro, query).await.map(Json)
+    // The item rollup holds upgrades only; without the item list the base query serves.
+    let item_is_upgrade = match single_item_filter(&query) {
+        Some((item_id, _)) => state.assets_client.items().await.is_ok_and(|items| {
+            items
+                .iter()
+                .any(|item| item.id() == item_id && item.item_type() == ItemType::Upgrade)
+        }),
+        None => false,
+    };
+    get_hero_stats(&state.ch_client_ro, query, item_is_upgrade)
+        .await
+        .map(Json)
 }
 
 #[cfg(test)]
@@ -1262,23 +1538,35 @@ mod tests {
 
     #[test]
     fn duration_keys_select_exactly_the_duration_bounds() {
-        assert_eq!(duration_key_bounds(None, None), Some((None, None)));
+        assert_eq!(
+            duration_key_bounds(DURATION_STEP_S, None, None),
+            Some((None, None))
+        );
         // Quarter-minute bounds, both inclusive: matches lasting exactly a bound are their own key.
         assert_eq!(
-            duration_key_bounds(Some(1350), Some(2250)),
+            duration_key_bounds(DURATION_STEP_S, Some(1350), Some(2250)),
             Some((Some(180), Some(300)))
         );
         // `x99` maxima: every key below the next step's.
         assert_eq!(
-            duration_key_bounds(Some(0), Some(1199)),
+            duration_key_bounds(DURATION_STEP_S, Some(0), Some(1199)),
             Some((Some(0), Some(159)))
         );
-        assert_eq!(duration_key_bounds(None, Some(14)), Some((None, Some(1))));
+        assert_eq!(
+            duration_key_bounds(DURATION_STEP_S, None, Some(14)),
+            Some((None, Some(1)))
+        );
         // Bounds inside an open interval of the key, and keys past the cap.
-        assert_eq!(duration_key_bounds(Some(1351), None), None);
-        assert_eq!(duration_key_bounds(None, Some(1201)), None);
-        assert_eq!(duration_key_bounds(Some(491_520), None), None);
-        assert_eq!(duration_key_bounds(None, Some(u64::MAX)), None);
+        assert_eq!(duration_key_bounds(DURATION_STEP_S, Some(1351), None), None);
+        assert_eq!(duration_key_bounds(DURATION_STEP_S, None, Some(1201)), None);
+        assert_eq!(
+            duration_key_bounds(DURATION_STEP_S, Some(491_520), None),
+            None
+        );
+        assert_eq!(
+            duration_key_bounds(DURATION_STEP_S, None, Some(u64::MAX)),
+            None
+        );
         // The key's expression uses the same step.
         assert!(DURATION_KEY.contains(&format!("duration_s % {DURATION_STEP_S} = 0")));
     }
@@ -1343,6 +1631,130 @@ mod tests {
             })
             .is_none()
         );
+    }
+
+    /// Midnight UTC `days` days ago: windows inside the item rollup's horizon.
+    fn days_ago(days: i64) -> i64 {
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("after the epoch")
+            .as_secs()
+            .cast_signed();
+        (now / 86_400 - days) * 86_400
+    }
+
+    #[test]
+    fn item_duration_bounds_round_to_whole_minutes() {
+        assert_eq!(round_duration_bound(1770, false), Some(1800));
+        assert_eq!(round_duration_bound(1749, false), Some(1740));
+        assert_eq!(round_duration_bound(2970, true), Some(3000));
+        // A maximum one second short of a minute is already exact.
+        assert_eq!(round_duration_bound(1799, true), Some(1799));
+        assert_eq!(round_duration_bound(1799, false), Some(1800));
+        assert!(ITEM_DURATION_KEY.contains(&format!("duration_s % {ITEM_DURATION_STEP_S} = 0")));
+    }
+
+    #[test]
+    fn item_rollup_rows_have_the_table_column_order() {
+        let body = item_agg_select_body("TRUE");
+        crate::utils::proptest_utils::assert_parses(&body);
+        assert!(body.contains("`upgrades.item_id` AS upgrade_ids\n"));
+        assert!(body.contains(")\nARRAY JOIN arrayDistinct(upgrade_ids) AS item_id\nGROUP BY"));
+        let outer = body.split("\nFROM (").next().expect("outer select");
+        let columns = outer
+            .split(",\n")
+            .filter_map(|item| item.trim().rsplit_once(" AS "))
+            .map(|(_, col)| col)
+            .collect::<Vec<_>>();
+        let expected = ITEM_GRAIN
+            .iter()
+            .map(|(col, _)| *col)
+            .chain(MV_MEASURES.split(',').map(str::trim))
+            .collect::<Vec<_>>();
+        assert_eq!(columns, expected);
+    }
+
+    #[test]
+    fn one_included_item_reads_the_item_rollup() {
+        let query = HeroStatsQuery {
+            min_unix_timestamp: Some(days_ago(30)),
+            include_item_ids: Some(vec![1_219_329_868]),
+            min_duration_s: Some(1770),
+            ..Default::default()
+        };
+        let sql = build_item_query(&query).expect("routes to the item rollup");
+        assert_valid_sql(&sql);
+        assert!(sql.contains("FROM default.hero_item_stats_agg WHERE "));
+        assert!(sql.contains("item_id = 1219329868 AND duration_key >= 60"));
+        // The late matches come from the item's owners in match_player, rounded like the key.
+        assert!(sql.contains("has(upgrades.item_id, 1219329868) AND duration_s >= 1800"));
+        assert!(sql.contains("toUInt32(1219329868) AS item_id"));
+        assert!(sql.contains("'hero_stats_item_mv'"));
+        assert!(!sql.contains("hero_stats_duration_agg"));
+        assert!(!sql.contains("FINAL"));
+    }
+
+    #[test]
+    fn one_excluded_item_subtracts_the_item_rollup_from_all_matches() {
+        let query = HeroStatsQuery {
+            min_unix_timestamp: Some(days_ago(30)),
+            exclude_item_ids: Some(vec![2_417_568_017]),
+            min_duration_s: Some(2100),
+            bucket: BucketQuery::StartTimeDay,
+            ..Default::default()
+        };
+        let sql = build_item_query(&query).expect("routes to the item rollup");
+        assert_valid_sql(&sql);
+        assert!(sql.contains("FROM default.hero_stats_duration_agg WHERE "));
+        assert!(sql.contains("duration_key >= 280"));
+        assert!(sql.contains("FROM default.hero_item_stats_agg WHERE "));
+        assert!(sql.contains("item_id = 2417568017 AND duration_key >= 70"));
+        assert!(sql.contains("-toInt64(n_matches) AS n_matches"));
+        assert!(sql.contains("HAVING n_matches > 0"));
+    }
+
+    #[test]
+    fn item_rollup_skips_what_it_cannot_serve() {
+        let query = HeroStatsQuery {
+            min_unix_timestamp: Some(days_ago(30)),
+            include_item_ids: Some(vec![1]),
+            ..Default::default()
+        };
+        assert!(build_item_query(&query).is_some());
+        for unservable in [
+            HeroStatsQuery {
+                include_item_ids: Some(vec![1, 2]),
+                ..query.clone()
+            },
+            HeroStatsQuery {
+                exclude_item_ids: Some(vec![2]),
+                ..query.clone()
+            },
+            HeroStatsQuery {
+                min_average_badge: Some(91),
+                ..query.clone()
+            },
+            HeroStatsQuery {
+                bucket: BucketQuery::AvgBadge,
+                ..query.clone()
+            },
+            HeroStatsQuery {
+                min_unix_timestamp: Some(days_ago(200)),
+                ..query.clone()
+            },
+            HeroStatsQuery {
+                min_networth: Some(1),
+                ..query.clone()
+            },
+            HeroStatsQuery {
+                include_item_ids: None,
+                ..query.clone()
+            },
+        ] {
+            assert!(build_item_query(&unservable).is_none(), "{unservable:?}");
+        }
+        // Not a request the duration-less rollups serve either.
+        assert!(build_mv_query(&query).is_none());
     }
 }
 
