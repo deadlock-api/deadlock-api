@@ -49,6 +49,7 @@ export const queryKeys = {
     rankedSeasons: () => ["assets-ranked-seasons"] as const,
     miscEntities: () => ["assets-misc-entities"] as const,
     itemPricePerTier: () => ["assets-item-price-per-tier"] as const,
+    boonLevels: () => ["assets-boon-levels"] as const,
     buildTags: () => ["assets-build-tags"] as const,
     /** The wasm module that reads and writes game build codes. */
     heroBuildCodec: () => ["assets-hero-build-codec"] as const,

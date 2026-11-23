@@ -4,6 +4,7 @@ import type { Ability, Hero, Upgrade } from "deadlock_api_client";
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
 import {
+  fetchBoonLevels,
   fetchSlimAbilities,
   fetchSlimHeroes,
   fetchSlimItemUpgrades,
@@ -133,6 +134,13 @@ export const buffInfoQueryOptions = queryOptions({
 export const itemPricePerTierQueryOptions = queryOptions({
   queryKey: queryKeys.assets.itemPricePerTier(),
   queryFn: async () => (await api.generic_data_api.getGenericData()).data.item_price_per_tier ?? [],
+  staleTime: CACHE_DURATIONS.FOREVER,
+});
+
+/** The souls each boon takes and the ability points and unlocks it brings, the same for every hero. */
+export const boonLevelsQueryOptions = queryOptions({
+  queryKey: queryKeys.assets.boonLevels(),
+  queryFn: () => fetchBoonLevels(),
   staleTime: CACHE_DURATIONS.FOREVER,
 });
 

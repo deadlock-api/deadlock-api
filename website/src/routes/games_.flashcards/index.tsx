@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { motion } from "framer-motion";
-import { GitBranch, ScrollText, ShoppingBag, Swords } from "lucide-react";
+import { Coins, GitBranch, ScrollText, ShoppingBag, Sparkles, Swords } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { GameTile } from "~/components/domain/minigames/GameTile";
@@ -16,7 +16,7 @@ export const Route = createFileRoute("/games_/flashcards/")({
     seo({
       title: pageTitle("Flashcards - Learn Deadlock Heroes and Items"),
       description:
-        "Practice identifying Deadlock heroes, items, and item upgrade paths with multiple-choice flashcards.",
+        "Practice Deadlock heroes, items, item upgrade paths, ability upgrades and boons with multiple-choice flashcards.",
       path: "/games/flashcards",
     }),
 });
@@ -50,6 +50,18 @@ const GAMES: {
     description: "Match upgraded items to the component items they build from.",
     icon: GitBranch,
     path: "/games/flashcards/item-upgrades",
+  },
+  {
+    title: "Ability Upgrades",
+    description: "Match each hero ability upgrade to its tier: 1, 2 or 5 ability points.",
+    icon: Sparkles,
+    path: "/games/flashcards/ability-upgrades",
+  },
+  {
+    title: "Boons",
+    description: "Name the net worth at which your abilities can reach a set of upgrade tiers.",
+    icon: Coins,
+    path: "/games/flashcards/boons",
   },
 ];
 

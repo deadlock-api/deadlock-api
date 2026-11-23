@@ -2,6 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import type { Ability, Hero, HeroImages, Upgrade } from "deadlock_api_client";
 
 import { api } from "~/lib/api";
+import { type BoonLevel, boonLevelsFrom } from "~/lib/boons";
+import { isPlayableHero } from "~/lib/hero-roster";
 
 // The hero, upgrade and ability lists are preloaded into the HTML of most game-data pages, and the full API answers are
 // 1.3 MB, 2 MB and 4 MB of balance tables, tooltips and lore. These lists name the fields the site reads; nothing else leaves the
@@ -98,4 +100,14 @@ export const fetchSlimAbilities = createServerFn({ method: "GET" }).handler(asyn
   return (response.data as Ability[]).map((ability) =>
     Object.assign(pickKeys(ability, ABILITY_FIELDS), { max_level: (ability.upgrades?.length ?? 0) + 1 }),
   );
+});
+
+/**
+ * The boon table (souls per boon, ability points and unlocks), which every hero shares: from the first playable hero,
+ * so the rest of the 1.9 MB hero list stays in the Worker.
+ */
+export const fetchBoonLevels = createServerFn({ method: "GET" }).handler(async (): Promise<BoonLevel[]> => {
+  const response = await api.heroes_api.listHeroes({ onlyActive: true });
+  const hero = response.data.find(isPlayableHero);
+  return hero ? boonLevelsFrom(hero.level_info) : [];
 });

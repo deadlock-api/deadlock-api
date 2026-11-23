@@ -298,21 +298,25 @@ export function FlashcardName() {
 
 const NAME_FACE = <FlashcardName />;
 const OPTION_SIZE = { default: "", lg: "min-h-20 px-3" };
+const OPTION_COLUMNS = { 2: "sm:grid-cols-2", 3: "sm:grid-cols-3" };
 
 /**
  * The answers to pick from, by click or number key; `children` is the face of each (its name by default), keyed by the
- * deck's `optionKey`. `size="lg"` gives a face with pictures (a component path) room for them.
+ * deck's `optionKey`. `size="lg"` gives a face with pictures (a component path) room for them. `columns={3}` lays
+ * three options out in one row.
  */
 export function FlashcardOptions({
   size = "default",
+  columns = 2,
   children = NAME_FACE,
 }: {
   size?: keyof typeof OPTION_SIZE;
+  columns?: keyof typeof OPTION_COLUMNS;
   children?: ReactNode;
 }) {
   const { card, stateOf, choose, revealed, focusFirstOption, optionKey } = useDeck();
   return (
-    <div className="grid w-full grid-cols-1 gap-2 sm:grid-cols-2">
+    <div className={cn("grid w-full grid-cols-1 gap-2", OPTION_COLUMNS[columns])}>
       {card.options.map((option, index) => (
         <AnswerOption
           key={optionKey(option)}

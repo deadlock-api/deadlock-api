@@ -113,6 +113,8 @@ import { Route as GamesDeadlockdleHigherLowerRouteImport } from './routes/games_
 import { Route as GamesDeadlockdleItemStatsRouteImport } from './routes/games_.deadlockdle/item-stats'
 import { Route as GamesDeadlockdleTriviaRouteImport } from './routes/games_.deadlockdle/trivia'
 import { Route as GamesFlashcardsIndexRouteImport } from './routes/games_.flashcards/index'
+import { Route as GamesFlashcardsAbilityUpgradesRouteImport } from './routes/games_.flashcards/ability-upgrades'
+import { Route as GamesFlashcardsBoonsRouteImport } from './routes/games_.flashcards/boons'
 import { Route as GamesFlashcardsHeroesRouteImport } from './routes/games_.flashcards/heroes'
 import { Route as GamesFlashcardsItemEffectsRouteImport } from './routes/games_.flashcards/item-effects'
 import { Route as GamesFlashcardsItemUpgradesRouteImport } from './routes/games_.flashcards/item-upgrades'
@@ -656,6 +658,17 @@ const GamesFlashcardsIndexRoute = GamesFlashcardsIndexRouteImport.update({
   path: '/',
   getParentRoute: () => GamesFlashcardsRoute,
 } as any)
+const GamesFlashcardsAbilityUpgradesRoute =
+  GamesFlashcardsAbilityUpgradesRouteImport.update({
+    id: '/ability-upgrades',
+    path: '/ability-upgrades',
+    getParentRoute: () => GamesFlashcardsRoute,
+  } as any)
+const GamesFlashcardsBoonsRoute = GamesFlashcardsBoonsRouteImport.update({
+  id: '/boons',
+  path: '/boons',
+  getParentRoute: () => GamesFlashcardsRoute,
+} as any)
 const GamesFlashcardsHeroesRoute = GamesFlashcardsHeroesRouteImport.update({
   id: '/heroes',
   path: '/heroes',
@@ -806,6 +819,8 @@ export interface FileRoutesByFullPath {
   '/games/deadlockdle/higher-lower': typeof GamesDeadlockdleHigherLowerRoute
   '/games/deadlockdle/item-stats': typeof GamesDeadlockdleItemStatsRoute
   '/games/deadlockdle/trivia': typeof GamesDeadlockdleTriviaRoute
+  '/games/flashcards/ability-upgrades': typeof GamesFlashcardsAbilityUpgradesRoute
+  '/games/flashcards/boons': typeof GamesFlashcardsBoonsRoute
   '/games/flashcards/heroes': typeof GamesFlashcardsHeroesRoute
   '/games/flashcards/item-effects': typeof GamesFlashcardsItemEffectsRoute
   '/games/flashcards/item-upgrades': typeof GamesFlashcardsItemUpgradesRoute
@@ -910,6 +925,8 @@ export interface FileRoutesByTo {
   '/games/deadlockdle/higher-lower': typeof GamesDeadlockdleHigherLowerRoute
   '/games/deadlockdle/item-stats': typeof GamesDeadlockdleItemStatsRoute
   '/games/deadlockdle/trivia': typeof GamesDeadlockdleTriviaRoute
+  '/games/flashcards/ability-upgrades': typeof GamesFlashcardsAbilityUpgradesRoute
+  '/games/flashcards/boons': typeof GamesFlashcardsBoonsRoute
   '/games/flashcards/heroes': typeof GamesFlashcardsHeroesRoute
   '/games/flashcards/item-effects': typeof GamesFlashcardsItemEffectsRoute
   '/games/flashcards/item-upgrades': typeof GamesFlashcardsItemUpgradesRoute
@@ -1026,6 +1043,8 @@ export interface FileRoutesById {
   '/games_/deadlockdle/higher-lower': typeof GamesDeadlockdleHigherLowerRoute
   '/games_/deadlockdle/item-stats': typeof GamesDeadlockdleItemStatsRoute
   '/games_/deadlockdle/trivia': typeof GamesDeadlockdleTriviaRoute
+  '/games_/flashcards/ability-upgrades': typeof GamesFlashcardsAbilityUpgradesRoute
+  '/games_/flashcards/boons': typeof GamesFlashcardsBoonsRoute
   '/games_/flashcards/heroes': typeof GamesFlashcardsHeroesRoute
   '/games_/flashcards/item-effects': typeof GamesFlashcardsItemEffectsRoute
   '/games_/flashcards/item-upgrades': typeof GamesFlashcardsItemUpgradesRoute
@@ -1143,6 +1162,8 @@ export interface FileRouteTypes {
     | '/games/deadlockdle/higher-lower'
     | '/games/deadlockdle/item-stats'
     | '/games/deadlockdle/trivia'
+    | '/games/flashcards/ability-upgrades'
+    | '/games/flashcards/boons'
     | '/games/flashcards/heroes'
     | '/games/flashcards/item-effects'
     | '/games/flashcards/item-upgrades'
@@ -1247,6 +1268,8 @@ export interface FileRouteTypes {
     | '/games/deadlockdle/higher-lower'
     | '/games/deadlockdle/item-stats'
     | '/games/deadlockdle/trivia'
+    | '/games/flashcards/ability-upgrades'
+    | '/games/flashcards/boons'
     | '/games/flashcards/heroes'
     | '/games/flashcards/item-effects'
     | '/games/flashcards/item-upgrades'
@@ -1362,6 +1385,8 @@ export interface FileRouteTypes {
     | '/games_/deadlockdle/higher-lower'
     | '/games_/deadlockdle/item-stats'
     | '/games_/deadlockdle/trivia'
+    | '/games_/flashcards/ability-upgrades'
+    | '/games_/flashcards/boons'
     | '/games_/flashcards/heroes'
     | '/games_/flashcards/item-effects'
     | '/games_/flashcards/item-upgrades'
@@ -2169,6 +2194,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GamesFlashcardsIndexRouteImport
       parentRoute: typeof GamesFlashcardsRoute
     }
+    '/games_/flashcards/ability-upgrades': {
+      id: '/games_/flashcards/ability-upgrades'
+      path: '/ability-upgrades'
+      fullPath: '/games/flashcards/ability-upgrades'
+      preLoaderRoute: typeof GamesFlashcardsAbilityUpgradesRouteImport
+      parentRoute: typeof GamesFlashcardsRoute
+    }
+    '/games_/flashcards/boons': {
+      id: '/games_/flashcards/boons'
+      path: '/boons'
+      fullPath: '/games/flashcards/boons'
+      preLoaderRoute: typeof GamesFlashcardsBoonsRouteImport
+      parentRoute: typeof GamesFlashcardsRoute
+    }
     '/games_/flashcards/heroes': {
       id: '/games_/flashcards/heroes'
       path: '/heroes'
@@ -2433,6 +2472,8 @@ const GamesDeadlockdleRouteWithChildren =
   GamesDeadlockdleRoute._addFileChildren(GamesDeadlockdleRouteChildren)
 
 interface GamesFlashcardsRouteChildren {
+  GamesFlashcardsAbilityUpgradesRoute: typeof GamesFlashcardsAbilityUpgradesRoute
+  GamesFlashcardsBoonsRoute: typeof GamesFlashcardsBoonsRoute
   GamesFlashcardsHeroesRoute: typeof GamesFlashcardsHeroesRoute
   GamesFlashcardsItemEffectsRoute: typeof GamesFlashcardsItemEffectsRoute
   GamesFlashcardsItemUpgradesRoute: typeof GamesFlashcardsItemUpgradesRoute
@@ -2441,6 +2482,8 @@ interface GamesFlashcardsRouteChildren {
 }
 
 const GamesFlashcardsRouteChildren: GamesFlashcardsRouteChildren = {
+  GamesFlashcardsAbilityUpgradesRoute: GamesFlashcardsAbilityUpgradesRoute,
+  GamesFlashcardsBoonsRoute: GamesFlashcardsBoonsRoute,
   GamesFlashcardsHeroesRoute: GamesFlashcardsHeroesRoute,
   GamesFlashcardsItemEffectsRoute: GamesFlashcardsItemEffectsRoute,
   GamesFlashcardsItemUpgradesRoute: GamesFlashcardsItemUpgradesRoute,

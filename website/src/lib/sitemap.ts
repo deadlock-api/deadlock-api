@@ -48,6 +48,8 @@ const STATIC_ENTRIES: SitemapEntry[] = [
   { path: "/games/flashcards/items" },
   { path: "/games/flashcards/item-effects" },
   { path: "/games/flashcards/item-upgrades" },
+  { path: "/games/flashcards/ability-upgrades" },
+  { path: "/games/flashcards/boons" },
   { path: "/games/guess-the-rank" },
   { path: "/data-dumps" },
   { path: "/live" },
