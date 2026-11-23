@@ -1,8 +1,8 @@
 //! Refreshes every day-partitioned analytics rollup every 30 minutes, not just the cohort ones
 //! the name comes from: `item_stats_agg_v2`, the hero-less and cohort rollups by buy time and net
 //! worth, the enemy-hero rollup, `player_performance_curve_agg_v2`, the item-flow rollups (nodes, edges,
-//! totals; of all players and per included upgrade), the item pair rollup, `game_stats_agg` and
-//! `hero_pair_stats_agg`.
+//! totals; of all players and per included upgrade), the item pair rollup, `game_stats_agg`,
+//! `hero_pair_stats_agg` and `hero_stats_duration_agg`.
 //! Each run rebuilds only the days whose source matches grew past [`rebuild_threshold`] since
 //! their last build, plus the days a [`History`] rollup has due by age, and the include item-flow
 //! rollups a few days per run (see [`include_rollup_due`]).
@@ -19,7 +19,8 @@ use tracing::{debug, error, info};
 use crate::routes::v1::analytics::item_flow_stats::agg as item_flow_agg;
 use crate::routes::v1::analytics::rollup_window::BUILT_THROUGH;
 use crate::routes::v1::analytics::{
-    game_stats, hero_pair_agg, item_permutation_stats, item_stats, player_performance_curve_agg,
+    game_stats, hero_pair_agg, hero_stats, item_permutation_stats, item_stats,
+    player_performance_curve_agg,
 };
 use crate::services::feature_flags::{COHORT_AGG_REFRESH, FeatureFlags};
 
@@ -162,6 +163,9 @@ enum Source {
     GameStats,
     /// Sums the stats of every pair of players per match-level grain (`hero_pair_stats_agg`).
     HeroPairs,
+    /// Sums every player's stats per hero, match-level grain and duration key
+    /// (`hero_stats_duration_agg`).
+    HeroStatsDuration,
     /// One of the item build-flow rollups (`item_flow_*_agg`).
     ItemFlow(item_flow_agg::Agg),
     /// Every pair of upgrades each player owned (`item_permutation_pairs_agg`).
@@ -185,6 +189,20 @@ const ITEM_PAIRS_SPEC: CohortSpec = CohortSpec {
     source: Source::ItemPairs,
     horizon_days: HORIZON_DAYS,
     history: None,
+};
+
+/// The hero-stats rollup by duration: ~2 CPU-s per day. Kept for all of history, like the other
+/// rollups listed after it in [`cohort_specs`], so all-time duration windows are served too.
+const HERO_STATS_DURATION_SPEC: CohortSpec = CohortSpec {
+    table: hero_stats::DURATION_AGG_TABLE,
+    staging: hero_stats::DURATION_AGG_STAGING,
+    source: Source::HeroStatsDuration,
+    horizon_days: hero_stats::DURATION_AGG_HORIZON_DAYS,
+    history: Some(History {
+        first_day: hero_stats::DURATION_AGG_FIRST_DAY,
+        rebuild_after_days: 7,
+        max_days_per_run: 300,
+    }),
 };
 
 // The cohort tables carry uniqCombined(12) player states (v3, 2026-11-13): at precision 14 (v2)
@@ -291,6 +309,7 @@ fn cohort_specs() -> Vec<CohortSpec> {
                 max_days_per_run: 300,
             }),
         },
+        HERO_STATS_DURATION_SPEC,
     ]
 }
 
@@ -360,6 +379,7 @@ fn select_body(spec: &CohortSpec, since_clause: &str, slice: Slice) -> String {
         Source::ItemBuckets(agg) => return agg.select_body(since_clause),
         Source::GameStats => return game_stats::agg_select_body(since_clause),
         Source::HeroPairs => return hero_pair_agg::agg_select_body(since_clause),
+        Source::HeroStatsDuration => return hero_stats::duration_agg_select_body(since_clause),
         Source::ItemFlow(agg) => {
             return item_flow_agg::agg_select_body(agg, since_clause, slice);
         }

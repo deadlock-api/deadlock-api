@@ -311,12 +311,105 @@ const MV_MEASURES: &str = "n_matches, n_wins, sum_kills, sum_deaths, sum_assists
     sum_neutral_damage, sum_max_health, sum_shots_hit, sum_shots_missed, sum_permanent_buffs, \
     n_permanent_buff_timing_matches, sum_first_permanent_buff_time_s";
 
-fn mv_rows(
+/// The hero-stats rollup by match duration, rebuilt per day by `services/cohort_agg_refresh.rs`
+/// from [`duration_agg_select_body`]: [`MV_GRAIN`] plus a duration key, so duration-filtered
+/// requests, a fifth of hero-stats requests and ~1.7 `ClickHouse` cores of 30-day `match_player
+/// FINAL` scans in 2026-11, read ~211k rollup rows a day instead of ~2.5M player rows. Its
+/// columns are [`DURATION_GRAIN`], then [`MV_MEASURES`], then `built_through`.
+pub(crate) const DURATION_AGG_TABLE: &str = "default.hero_stats_duration_agg";
+pub(crate) const DURATION_AGG_STAGING: &str = "default.hero_stats_duration_agg_staging";
+/// Days the refresh job checks for new matches every run. It keeps every day since
+/// [`DURATION_AGG_FIRST_DAY`], rebuilding the rest once their build is a week old.
+pub(crate) const DURATION_AGG_HORIZON_DAYS: u32 = 120;
+/// The first day the rollup keeps: the data has no matches from 2024-04-30 to 2024-05-17, and
+/// reads prune their late-match scans only while the built days form one run.
+pub(crate) const DURATION_AGG_FIRST_DAY: &str = "2024-05-18";
+
+/// Width in seconds of the open duration intervals of [`DURATION_KEY`].
+const DURATION_STEP_S: u64 = 15;
+
+/// The duration key: `2k` for a duration of exactly `k` steps of [`DURATION_STEP_S`], `2k + 1`
+/// for one strictly between `k` and `k + 1` steps. Requests send whole minutes, quarter
+/// minutes and `x99` upper bounds, all inclusive: 99.9% of the duration bounds of 2026-11-22 are a
+/// multiple of 15 s or one less, which this key turns into exact key ranges (see
+/// [`duration_key_bounds`]), where plain 15 s buckets would split the matches lasting exactly a
+/// bound. Capped at [`MAX_DURATION_KEY`], which no real match reaches.
+const DURATION_KEY: &str = "toUInt16(least(if(duration_s % 15 = 0, 2 * intDiv(duration_s, 15), \
+                            2 * intDiv(duration_s, 15) + 1), 65535))";
+const MAX_DURATION_KEY: u64 = 65_535;
+
+/// Grain columns of [`DURATION_AGG_TABLE`], in table order, with the `match_player` expressions
+/// of [`duration_rows`].
+const DURATION_GRAIN: &[(&str, &str)] = &[
+    ("game_mode", "game_mode"),
+    ("match_mode", "match_mode"),
+    ("least_badge", "ifNull(average_badge, 0)"),
+    ("greatest_badge", "ifNull(average_badge, 65535)"),
+    ("day", "toDate(start_time)"),
+    ("duration_key", DURATION_KEY),
+    ("hero_id", "hero_id"),
+];
+
+/// The inclusive `duration_key` bounds selecting exactly the matches with `min <= duration_s <=
+/// max`, or `None` when a bound falls inside an open interval of [`DURATION_KEY`]: a minimum
+/// must be a multiple of [`DURATION_STEP_S`], a maximum a multiple or one less.
+fn duration_key_bounds(min: Option<u64>, max: Option<u64>) -> Option<(Option<u64>, Option<u64>)> {
+    let low = match min {
+        None => None,
+        Some(min) if min.checked_rem(DURATION_STEP_S)? == 0 => {
+            Some(min.checked_div(DURATION_STEP_S)?.checked_mul(2)?)
+        }
+        Some(_) => return None,
+    };
+    let high = match max {
+        None => None,
+        Some(max) if max.checked_rem(DURATION_STEP_S)? == 0 => {
+            Some(max.checked_div(DURATION_STEP_S)?.checked_mul(2)?)
+        }
+        // `duration_s <= max` is `duration_s < max + 1`: every key below the next step's.
+        Some(max) if max.checked_add(1)?.checked_rem(DURATION_STEP_S)? == 0 => Some(
+            max.checked_add(1)?
+                .checked_div(DURATION_STEP_S)?
+                .checked_mul(2)?
+                .checked_sub(1)?,
+        ),
+        Some(_) => return None,
+    };
+    // Past the cap a key no longer tells durations apart.
+    if low.max(high).is_some_and(|key| key >= MAX_DURATION_KEY) {
+        return None;
+    }
+    Some((low, high))
+}
+
+/// The [`DURATION_AGG_TABLE`] rows of the matches selected by `since_clause`, at the full grain
+/// and in the table's column order. The refresh job builds the rollup's days with it.
+pub(crate) fn duration_agg_select_body(since_clause: &str) -> String {
+    duration_rows(&EdgeRows::full_grain(DURATION_GRAIN, since_clause))
+}
+
+fn mv_rows(edge: &EdgeRows) -> String {
+    hero_rows(edge, "", "")
+}
+
+/// The rows of [`DURATION_AGG_TABLE`]: [`mv_rows`] with the duration the key is computed from,
+/// and without anonymous players, as every rollup build skips them.
+fn duration_rows(edge: &EdgeRows) -> String {
+    hero_rows(edge, ", duration_s", " AND account_id != 0")
+}
+
+/// The hero-stats rollup rows of the matches `where_clause` selects, grouped by the grain columns
+/// of `grain_select`/`group_by`. `extra_columns` (empty or starting with a comma) are read for
+/// grain expressions beyond [`MV_GRAIN`]'s, `extra_filter` (empty or starting with ` AND`) is
+/// added to the scan's filter.
+fn hero_rows(
     EdgeRows {
         where_clause,
         grain_select,
         group_by,
     }: &EdgeRows,
+    extra_columns: &str,
+    extra_filter: &str,
 ) -> String {
     format!(
         "SELECT
@@ -344,13 +437,66 @@ FROM (
         game_mode, match_mode, hero_id, match_id, start_time, average_badge, won, kills, deaths,
         assists, net_worth, last_hits, denies, max_player_damage, max_player_damage_taken,
         max_boss_damage, max_creep_damage, max_neutral_damage, max_max_health, max_shots_hit,
-        max_shots_missed, account_id, permanent_buffs, first_permanent_buff_time_s
+        max_shots_missed, account_id, permanent_buffs, first_permanent_buff_time_s{extra_columns}
     FROM default.match_player
-    WHERE match_mode IN ('Ranked', 'Unranked') AND {where_clause}
+    WHERE match_mode IN ('Ranked', 'Unranked'){extra_filter} AND {where_clause}
     LIMIT 1 BY match_id, account_id
 )
 GROUP BY {group_by}"
     )
+}
+
+/// Builds the base-table rows of a rollup's partial days (see [`Rollup::source`]).
+type EdgeRowsFn = fn(&EdgeRows) -> String;
+
+/// The rollup a [`build_mv_query`] request reads, the base-table rows of its partial days and its
+/// log comment, adding its duration filters, if any, to `filters`. `None` when no rollup serves
+/// the request.
+fn pick_rollup(
+    query: &HeroStatsQuery,
+    filters: &mut RollupFilters,
+) -> Option<(Rollup<'static>, EdgeRowsFn, &'static str)> {
+    if query.min_duration_s.is_some() || query.max_duration_s.is_some() {
+        // A duration filter needs the duration rollup, and bounds its keys can express.
+        let (min_key, max_key) = duration_key_bounds(query.min_duration_s, query.max_duration_s)?;
+        filters
+            .rollup
+            .extend(range_filters("duration_key", min_key, max_key));
+        filters.base.extend(range_filters(
+            "duration_s",
+            query.min_duration_s,
+            query.max_duration_s,
+        ));
+        let rollup = Rollup {
+            table: DURATION_AGG_TABLE,
+            grain: DURATION_GRAIN,
+            measures: MV_MEASURES,
+            // The table keeps every day; the horizon only matters for `Reach::Days`.
+            coverage: Coverage::Incremental {
+                horizon_days: u32::MAX,
+            },
+        };
+        return Some((rollup, duration_rows, "hero_stats_duration_mv"));
+    }
+    // Pick the rollup: the hourly 65-day `hero_stats_agg_v2` for windows that start
+    // comfortably inside its horizon (freshest data), else the 6-hourly full-history
+    // `hero_stats_agg_all_v2` (covers all-time / old windows the hot view can't).
+    let oldest_servable = rollup_oldest_servable(MV_HORIZON_DAYS)?;
+    let (mv_table, mv_log_comment) = if query
+        .min_unix_timestamp
+        .is_some_and(|min_ts| min_ts >= oldest_servable)
+    {
+        ("hero_stats_agg_v2", "hero_stats_mv")
+    } else {
+        ("hero_stats_agg_all_v2", "hero_stats_mv_all")
+    };
+    let rollup = Rollup {
+        table: mv_table,
+        grain: MV_GRAIN,
+        measures: MV_MEASURES,
+        coverage: Coverage::Complete,
+    };
+    Some((rollup, mv_rows, mv_log_comment))
 }
 
 /// Builds a query against a pre-aggregated hero-stats rollup when the request falls
@@ -358,8 +504,9 @@ GROUP BY {group_by}"
 /// uses the base-table query). Both rollups are grained on
 /// `(game_mode, day, hero_id, least_badge, greatest_badge)`, so they serve
 /// `game_mode` + time-range + badge-range filters and the non-hourly buckets, but
-/// anything per-player or per-row (account, item set, net worth, duration, match id,
-/// hero match counts) or needing sub-day resolution must use the base table.
+/// anything per-player or per-row (account, item set, net worth, match id, hero match counts)
+/// or needing sub-day resolution must use the base table. Duration filters read
+/// [`DURATION_AGG_TABLE`] instead, when [`duration_key_bounds`] can express their bounds.
 ///
 /// Two rollups back this: the hourly-refreshed last-65-days `hero_stats_agg_v2` and the
 /// 6-hourly full-history `hero_stats_agg_all_v2`. Recent windows use the hot one (freshest
@@ -382,8 +529,6 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
         || is_non_empty(query.exclude_item_ids.as_deref());
     let unsupported_filter = query.min_networth.is_some()
         || query.max_networth.is_some()
-        || query.min_duration_s.is_some()
-        || query.max_duration_s.is_some()
         || query.min_match_id.is_some()
         || query.max_match_id.is_some()
         || query.hero_matches_bounds() != (None, None)
@@ -397,36 +542,18 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
     }
     let split = DaySplit::new(query.min_unix_timestamp, query.max_unix_timestamp)?;
 
-    // Pick the rollup: the hourly 65-day `hero_stats_agg_v2` for windows that start
-    // comfortably inside its horizon (freshest data), else the 6-hourly full-history
-    // `hero_stats_agg_all_v2` (covers all-time / old windows the hot view can't).
-    let oldest_servable = rollup_oldest_servable(MV_HORIZON_DAYS)?;
-    let (mv_table, mv_log_comment) = if query
-        .min_unix_timestamp
-        .is_some_and(|min_ts| min_ts >= oldest_servable)
-    {
-        ("hero_stats_agg_v2", "hero_stats_mv")
-    } else {
-        ("hero_stats_agg_all_v2", "hero_stats_mv_all")
-    };
-
-    let filters = RollupFilters::new(
+    let mut filters = RollupFilters::new(
         query.game_mode,
         query.match_mode.as_deref(),
         query.min_average_badge,
         query.max_average_badge,
     );
-    let rollup = Rollup {
-        table: mv_table,
-        grain: MV_GRAIN,
-        measures: MV_MEASURES,
-        coverage: Coverage::Complete,
-    };
+    let (rollup, edge_rows, mv_log_comment) = pick_rollup(query, &mut filters)?;
     let source = rollup.source(
         &split,
         &filters,
         &format!("hero_id, {bucket_expr}, day"),
-        mv_rows,
+        edge_rows,
     );
     let day_sums = MV_MEASURES
         .split(',')
@@ -1132,6 +1259,91 @@ mod tests {
             sql.contains("arraySlice(arrayDistinct(abilities), 1, 2) = [1999680326, 1842576017]")
         );
     }
+
+    #[test]
+    fn duration_keys_select_exactly_the_duration_bounds() {
+        assert_eq!(duration_key_bounds(None, None), Some((None, None)));
+        // Quarter-minute bounds, both inclusive: matches lasting exactly a bound are their own key.
+        assert_eq!(
+            duration_key_bounds(Some(1350), Some(2250)),
+            Some((Some(180), Some(300)))
+        );
+        // `x99` maxima: every key below the next step's.
+        assert_eq!(
+            duration_key_bounds(Some(0), Some(1199)),
+            Some((Some(0), Some(159)))
+        );
+        assert_eq!(duration_key_bounds(None, Some(14)), Some((None, Some(1))));
+        // Bounds inside an open interval of the key, and keys past the cap.
+        assert_eq!(duration_key_bounds(Some(1351), None), None);
+        assert_eq!(duration_key_bounds(None, Some(1201)), None);
+        assert_eq!(duration_key_bounds(Some(491_520), None), None);
+        assert_eq!(duration_key_bounds(None, Some(u64::MAX)), None);
+        // The key's expression uses the same step.
+        assert!(DURATION_KEY.contains(&format!("duration_s % {DURATION_STEP_S} = 0")));
+    }
+
+    #[test]
+    fn duration_rollup_rows_have_the_table_column_order() {
+        let body = duration_agg_select_body("TRUE");
+        crate::utils::proptest_utils::assert_parses(&body);
+        assert!(body.contains("first_permanent_buff_time_s, duration_s\n"));
+        assert!(body.contains("AND account_id != 0 AND TRUE"));
+        let outer = body.split("\nFROM (").next().expect("outer select");
+        let columns = outer
+            .split(",\n")
+            .filter_map(|item| item.trim().rsplit_once(" AS "))
+            .map(|(_, col)| col)
+            .collect::<Vec<_>>();
+        let expected = DURATION_GRAIN
+            .iter()
+            .map(|(col, _)| *col)
+            .chain(MV_MEASURES.split(',').map(str::trim))
+            .collect::<Vec<_>>();
+        assert_eq!(columns, expected);
+    }
+
+    #[test]
+    fn duration_filters_read_the_duration_rollup() {
+        let query = HeroStatsQuery {
+            // 2026-10-05 14:00 UTC, open-ended.
+            min_unix_timestamp: Some(1_791_208_800),
+            min_duration_s: Some(1350),
+            max_duration_s: Some(2249),
+            min_average_badge: Some(21),
+            max_average_badge: Some(26),
+            ..Default::default()
+        };
+        let sql = build_mv_query(&query).expect("routes to the duration rollup");
+        assert_valid_sql(&sql);
+        assert!(sql.contains("FROM default.hero_stats_duration_agg WHERE "));
+        assert!(sql.contains("duration_key >= 180 AND duration_key <= 299"));
+        assert!(sql.contains("built_through > 0"));
+        assert!(sql.contains("'hero_stats_duration_mv'"));
+        // The partial first day and the late matches come from match_player, with the duration
+        // pushed into the scan.
+        assert!(sql.contains("duration_s >= 1350 AND duration_s <= 2249"));
+        assert!(sql.contains("AND account_id != 0 AND"));
+        assert!(!sql.contains("FINAL"));
+        assert!(!sql.contains("hero_stats_agg_v2"));
+        // Without a duration filter the request keeps the duration-less rollups and SQL.
+        let plain = build_mv_query(&HeroStatsQuery {
+            min_duration_s: None,
+            max_duration_s: None,
+            ..query.clone()
+        })
+        .expect("routes to a rollup");
+        assert!(!plain.contains("duration"));
+        assert!(!plain.contains("account_id != 0"));
+        // A bound the key can't express: the base table.
+        assert!(
+            build_mv_query(&HeroStatsQuery {
+                min_duration_s: Some(1351),
+                ..query
+            })
+            .is_none()
+        );
+    }
 }
 
 #[cfg(test)]
@@ -1176,8 +1388,6 @@ mod proptests {
             query.exclude_item_ids = None;
             query.min_networth = None;
             query.max_networth = None;
-            query.min_duration_s = None;
-            query.max_duration_s = None;
             query.min_match_id = None;
             query.max_match_id = None;
             query.min_hero_matches = None;
