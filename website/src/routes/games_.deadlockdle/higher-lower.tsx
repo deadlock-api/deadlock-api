@@ -136,6 +136,13 @@ const SOURCE_ICON: Record<string, string> = {
   Urn: `${GAME_ICONS}/minimap/soul_jar_marker_psd.png`,
 };
 
+/** The minimap's camp icons, by creep tier. */
+const CAMP_ICON = {
+  1: `${GAME_ICONS}/minimap/neutral_small_psd.png`,
+  2: `${GAME_ICONS}/minimap/neutral_medium_psd.png`,
+  3: `${GAME_ICONS}/minimap/neutral_large_psd.png`,
+} as const;
+
 function ContenderArt({ contender }: { contender: Contender }) {
   if (contender.kind === "hero") {
     return <HeroImage heroId={contender.heroId} title="" className={versusArtImageVariants()} />;
@@ -143,7 +150,7 @@ function ContenderArt({ contender }: { contender: Contender }) {
   if (contender.kind === "ability") {
     return <AbilityImage abilityId={contender.abilityId} title="" className={versusArtImageVariants()} />;
   }
-  const src = SOURCE_ICON[contender.name];
+  const src = contender.kind === "camp" ? CAMP_ICON[contender.tier] : SOURCE_ICON[contender.name];
   return (
     <AssetImage
       asset={src ? { png: src, alt: "" } : undefined}

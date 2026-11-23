@@ -44,6 +44,7 @@ export type Contender = (
   | { kind: "hero"; heroId: number; name: string }
   | { kind: "ability"; abilityId: number; name: string }
   | { kind: "source"; name: string }
+  | { kind: "camp"; tier: CampTier; count: number; minute: number; name: string }
 ) & {
   value: number;
   /** For a rate (a win rate, a share of players): how many matches it is measured over, to test the gap against. */
@@ -132,6 +133,43 @@ export function pickAbilityHeroes(heroIds: readonly number[], date: string): num
   ).slice(0, ABILITY_ROUNDS);
 }
 
+/** A jungle camp creep's size: tier 1 (small) to tier 3 (large). */
+export type CampTier = 1 | 2 | 3;
+
+/** A jungle camp creep's soul bounty, which grows with the match clock. */
+export interface CampCreep {
+  tier: CampTier;
+  souls: number;
+  /** The share of `souls` added per minute of match time (0.0108), counted from the start of the match. */
+  growthPerMinute: number;
+}
+
+const CAMP_CLASS: Record<CampTier, string> = {
+  1: "neutral_trooper_weak",
+  2: "neutral_trooper_normal",
+  3: "neutral_trooper_strong",
+};
+
+/** The three camp creep tiers of the NPC units; a tier the units lack is left out. */
+export function campCreepsFrom(
+  units: readonly {
+    class_name: string;
+    gold_reward?: number | null;
+    gold_reward_bonus_percent_per_minute?: number | null;
+  }[],
+): CampCreep[] {
+  return ([1, 2, 3] as const).flatMap((tier): CampCreep[] => {
+    const unit = units.find((candidate) => candidate.class_name === CAMP_CLASS[tier]);
+    if (!unit?.gold_reward) return [];
+    return [{ tier, souls: unit.gold_reward, growthPerMinute: (unit.gold_reward_bonus_percent_per_minute ?? 0) / 100 }];
+  });
+}
+
+/** The souls `count` creeps of a tier give at `minute`: the bounty grows linearly with the match clock. */
+export function campSouls(creep: CampCreep, count: number, minute: number): number {
+  return count * creep.souls * (1 + creep.growthPerMinute * minute);
+}
+
 export interface HigherLowerData {
   heroes: readonly { id: number; name: string }[];
   /** Hero abilities with a display name, keyed by id. */
@@ -142,6 +180,8 @@ export interface HigherLowerData {
   /** Per hero of `pickAbilityHeroes()`, in the same order: the players who max each ability first, and (`ability_id`
    * null) those who max none. */
   maxFirst: readonly { heroId: number; rows: readonly AnalyticsAbilityMaxFirstStats[] }[];
+  /** The jungle camp creeps, for the camp soul rounds; without them the economy rounds are as before. */
+  camps?: readonly CampCreep[];
 }
 
 /** Heroes with fewer games in the window are left out, so a value is never the noise of a small sample. */
@@ -200,6 +240,7 @@ function isSignificant([a, b]: Pair): boolean {
 function contenderKey(contender: Contender): string {
   if (contender.kind === "hero") return `hero:${contender.heroId}`;
   if (contender.kind === "ability") return `ability:${contender.abilityId}`;
+  if (contender.kind === "camp") return `camp:${contender.tier}:${contender.count}:${contender.minute}`;
   return `source:${contender.name}`;
 }
 
@@ -462,7 +503,68 @@ function soulSourceRound(data: HigherLowerData, picker: Picker): HigherLowerRoun
   };
 }
 
-function economyRound(data: HigherLowerData, picker: Picker): HigherLowerRound | null {
+/** The first puzzle day with camp rounds: the days before keep the runs they were played with. */
+export const CAMP_ROUNDS_FROM = "2026-11-24";
+const CAMP_COUNTS = [1, 2, 3, 4];
+/** Every second minute up to 40. */
+const CAMP_MINUTES = Array.from({ length: 20 }, (_, i) => (i + 1) * 2);
+
+function campName(tier: CampTier, count: number, minute: number): string {
+  return `${count} tier-${tier} creep${count === 1 ? "" : "s"} at minute ${minute}`;
+}
+
+/**
+ * The souls of some camp creeps at one minute against others at another. The two sides always differ in tier and in
+ * time, so neither "later is more" nor "bigger is more" answers it alone.
+ */
+function campRound(data: HigherLowerData, picker: Picker): HigherLowerRound | null {
+  const contenders = (data.camps ?? []).flatMap((creep) =>
+    CAMP_COUNTS.flatMap((count) =>
+      CAMP_MINUTES.map((minute): Contender => ({
+        kind: "camp",
+        tier: creep.tier,
+        count,
+        minute,
+        name: campName(creep.tier, count, minute),
+        value: campSouls(creep, count, minute),
+      })),
+    ),
+  );
+  const isQuestion = (pair: Pair) => {
+    const [a, b] = pair;
+    return a.kind === "camp" && b.kind === "camp" && a.tier !== b.tier && a.minute !== b.minute && isSignificant(pair);
+  };
+  const pair = pickPair(pairsOf(contenders), "camp-souls", picker, isQuestion);
+  if (!pair) return null;
+  const [left, right] = pair;
+  return {
+    category: "economy",
+    kind: "higher-lower",
+    source: { page: "economy" },
+    stat: "Souls for the kills",
+    question: `Are the souls for ${right.name} higher or lower than for ${left.name}?`,
+    format: "number",
+    left,
+    right,
+  };
+}
+
+function economyRound(data: HigherLowerData, picker: Picker, date: string): HigherLowerRound | null {
+  if (date >= CAMP_ROUNDS_FROM && (data.camps?.length ?? 0) > 0) {
+    // A third of the economy rounds are about camp souls, a sixth about where souls come from, the rest compare heroes.
+    const roll = picker.rng();
+    if (roll < 1 / 3) {
+      return (
+        campRound(data, picker) ??
+        heroStatRound(data, "economy", HERO_ECONOMY_STATS, picker) ??
+        soulSourceRound(data, picker)
+      );
+    }
+    if (roll < 1 / 2) {
+      return soulSourceRound(data, picker) ?? heroStatRound(data, "economy", HERO_ECONOMY_STATS, picker);
+    }
+    return heroStatRound(data, "economy", HERO_ECONOMY_STATS, picker) ?? soulSourceRound(data, picker);
+  }
   // One in three economy rounds is about where souls come from, the rest compare heroes.
   if (picker.rng() < 1 / 3) {
     return soulSourceRound(data, picker) ?? heroStatRound(data, "economy", HERO_ECONOMY_STATS, picker);
@@ -533,7 +635,7 @@ export function buildRounds(data: HigherLowerData, date: string): HigherLowerRou
     let round: HigherLowerRound | null = null;
     if (category === "heroes") round = heroStatRound(data, "heroes", HERO_META_STATS, picker);
     else if (category === "matchups") round = matchupRound(data, picker);
-    else if (category === "economy") round = economyRound(data, picker);
+    else if (category === "economy") round = economyRound(data, picker, date);
     else round = abilityRound(data, data.maxFirst[abilityIndex++], picker);
     round ??= heroStatRound(data, "heroes", HERO_META_STATS, picker);
     if (round) rounds.push(round);
@@ -547,6 +649,7 @@ export function buildRounds(data: HigherLowerData, date: string): HigherLowerRou
  * - ability order: "Calico players max Gloom Bombs first 5.7% of the time, 82.2 points below Return to Shadows (87.9%).";
  * - an average: "Abrams: 42,443, 5% below Mirage's 44,906." (relative to the shown value);
  * - a soul source, in the question's phrases: "Souls from jungle camps: 9,120, 12% above those from objectives (8,143).";
+ * - camp creeps: "3 tier-2 creeps at minute 18: 269 souls, 27% above 1 tier-3 creep at minute 6 (212).";
  * - head to head: "Haze wins 54.2% of the matches where Haze and Vindicta face each other."
  */
 export function revealSentence(round: HigherLowerRound): string {
@@ -568,6 +671,9 @@ export function revealSentence(round: HigherLowerRound): string {
     return `${right.name}: ${rightValue}, ${points} ${possessive(left.name)} ${leftValue}.`;
   }
   const relative = left.value === 0 ? 0 : Math.round((Math.abs(right.value - left.value) / Math.abs(left.value)) * 100);
+  if (right.kind === "camp") {
+    return `${right.name}: ${rightValue} souls, ${relative}% ${direction} ${left.name} (${leftValue}).`;
+  }
   if (right.kind === "source") {
     // In the question's words: "jungle camps", not the card's "Jungle neutrals".
     return `Souls from ${soulPhrase(right.name)}: ${rightValue}, ${relative}% ${direction} those from ${soulPhrase(left.name)} (${leftValue}).`;

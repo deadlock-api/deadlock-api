@@ -13,7 +13,7 @@ import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { soundIndexQueryOptions } from "~/queries/sound-queries";
 import { draftCounterStatsQueryOptions } from "~/queries/team-builder-queries";
 
-import { buildRounds, pickAbilityHeroes, STATS_RANKS, statsWindow } from "./higher-lower";
+import { buildRounds, campCreepsFrom, pickAbilityHeroes, STATS_RANKS, statsWindow } from "./higher-lower";
 import { heroPoolOn } from "./roster";
 import { hasDisplayName } from "./trivia-questions";
 
@@ -57,6 +57,7 @@ export function puzzleLoadError(...queries: Pick<UseQueryResult, "data" | "isErr
 export function useHigherLowerRounds(date: string) {
   const heroesQuery = useHeroes();
   const abilitiesQuery = useAbilities();
+  const npcUnitsQuery = useNpcUnits();
   const range = {
     ...statsWindow(date),
     minAverageBadge: STATS_RANKS.min,
@@ -84,7 +85,15 @@ export function useHigherLowerRounds(date: string) {
     queries: abilityHeroes.map((heroId) => abilityMaxFirstQueryOptions({ heroId, ...range, minMatches: 1 })),
   });
 
-  const queries = [heroesQuery, abilitiesQuery, heroStatsQuery, countersQuery, gameStatsQuery, ...maxFirstQueries];
+  const queries = [
+    heroesQuery,
+    abilitiesQuery,
+    npcUnitsQuery,
+    heroStatsQuery,
+    countersQuery,
+    gameStatsQuery,
+    ...maxFirstQueries,
+  ];
   const maxFirstReady = maxFirstQueries.length > 0 && maxFirstQueries.every((query) => query.data);
 
   const rounds = useMemo(() => {
@@ -92,7 +101,10 @@ export function useHigherLowerRounds(date: string) {
     const { data: heroStats } = heroStatsQuery;
     const { data: counters } = countersQuery;
     const { data: gameStats } = gameStatsQuery;
-    if (heroes.length === 0 || !rawAbilities || !heroStats || !counters || !gameStats || !maxFirstReady) return [];
+    const { data: npcUnits } = npcUnitsQuery;
+    if (heroes.length === 0 || !rawAbilities || !heroStats || !counters || !gameStats || !npcUnits || !maxFirstReady) {
+      return [];
+    }
 
     const abilities = new Map<number, { name: string; hero: number }>();
     for (const ability of rawAbilities) {
@@ -108,12 +120,22 @@ export function useHigherLowerRounds(date: string) {
         counters,
         gameStats: gameStats[0],
         maxFirst: abilityHeroes.map((heroId, i) => ({ heroId, rows: maxFirstQueries[i]?.data ?? [] })),
+        camps: campCreepsFrom(npcUnits),
       },
       date,
     );
     // The max-first queries are a fresh array each render; their data is read once all are in.
     // oxlint-disable-next-line react-hooks/exhaustive-deps
-  }, [heroes, abilitiesQuery.data, heroStatsQuery.data, countersQuery.data, gameStatsQuery.data, maxFirstReady, date]);
+  }, [
+    heroes,
+    abilitiesQuery.data,
+    npcUnitsQuery.data,
+    heroStatsQuery.data,
+    countersQuery.data,
+    gameStatsQuery.data,
+    maxFirstReady,
+    date,
+  ]);
 
   return { rounds, queries, isLoading: queries.some((query) => query.isLoading) };
 }

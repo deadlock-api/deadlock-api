@@ -8,6 +8,9 @@ import { possessive } from "~/lib/format";
 import {
   bestStreak,
   buildRounds,
+  CAMP_ROUNDS_FROM,
+  campCreepsFrom,
+  campSouls,
   correctGuess,
   currentStreak,
   type Guess,
@@ -71,6 +74,14 @@ function maxFirstRow(abilityId: number | null, matches: number): AnalyticsAbilit
   return { ability_id: abilityId, wins: 0, losses: 0, matches, players: matches };
 }
 
+// The camp creeps as the game has them (2026-11): 45, 75 and 199 souls, +1.08% of that per minute.
+const CAMPS = campCreepsFrom([
+  { class_name: "neutral_trooper_weak", gold_reward: 45, gold_reward_bonus_percent_per_minute: 1.08 },
+  { class_name: "neutral_trooper_normal", gold_reward: 75, gold_reward_bonus_percent_per_minute: 1.08 },
+  { class_name: "neutral_trooper_strong", gold_reward: 199, gold_reward_bonus_percent_per_minute: 1.08 },
+  { class_name: "neutral_base", gold_reward: 89, gold_reward_bonus_percent_per_minute: 1.08 },
+]);
+
 function data(date: string): HigherLowerData {
   const abilityHeroes = pickAbilityHeroes(HERO_IDS, date);
   const abilities = new Map<number, { name: string; hero: number }>();
@@ -95,6 +106,7 @@ function data(date: string): HigherLowerData {
       avg_gold_breakable: 1800,
       avg_gold_team_bonus: 1300,
     } as HigherLowerData["gameStats"],
+    camps: CAMPS,
     maxFirst: abilityHeroes.map((heroId) => {
       const [a, b, c] = [1, 2, 3].map((slot) => heroId * 10 + slot);
       return {
@@ -315,4 +327,38 @@ test("streaks count correct answers in a row", () => {
   const partial: (Guess | null)[] = [...answers.slice(0, 2), ...rounds.slice(2).map(() => null)];
   assert.equal(bestStreak(rounds, partial), 2);
   assert.equal(bestStreak(rounds, answersFor(rounds, [])), ROUND_COUNT);
+});
+
+test("camp creeps take the three tiers of the NPC units, their bounty growing linearly", () => {
+  assert.deepEqual(
+    CAMPS.map((creep) => creep.tier),
+    [1, 2, 3],
+  );
+  const [, medium, large] = CAMPS;
+  assert.equal(Math.round(campSouls(medium, 3, 18)), 269);
+  assert.equal(Math.round(campSouls(large, 1, 6)), 212);
+  assert.equal(campSouls(large, 2, 0), 398);
+});
+
+test("days before camp rounds keep their runs", () => {
+  const dates = ["2026-11-20", "2026-11-21", "2026-11-22", "2026-11-23"];
+  for (const date of dates) {
+    assert.ok(date < CAMP_ROUNDS_FROM);
+    assert.deepEqual(buildRounds(data(date), date), buildRounds({ ...data(date), camps: undefined }, date));
+  }
+});
+
+test("camp rounds compare creeps of different tiers at different minutes", () => {
+  const dates = Array.from({ length: 30 }, (_, i) => `2026-12-${String(i + 1).padStart(2, "0")}`);
+  const camps = dates.flatMap((date) => buildRounds(data(date), date)).filter((round) => round.left.kind === "camp");
+  assert.ok(camps.length > 0);
+  for (const round of camps) {
+    const { left, right } = round;
+    assert.ok(left.kind === "camp" && right.kind === "camp");
+    assert.notEqual(left.tier, right.tier);
+    assert.notEqual(left.minute, right.minute);
+    assert.equal(round.category, "economy");
+    assert.match(round.question, /^Are the souls for \d tier-\d creeps? at minute \d+ higher or lower than for /);
+    assert.match(revealSentence(round), /^\d tier-\d creeps? at minute \d+: [\d,]+ souls, \d+% (above|below) /);
+  }
 });
