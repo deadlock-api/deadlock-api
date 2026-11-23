@@ -71,6 +71,21 @@ function inFeedbackUi(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest("[data-feedback-ui]") !== null;
 }
 
+/**
+ * A pick ends the picker on mouseup, and its cleanup removes the click listener before the browser dispatches the click
+ * that follows, so a link under the pointer would still navigate. This stops that one click when it lands on a link.
+ * The click comes in the same task as the mouseup, so the listener is gone by the next one if no click follows.
+ */
+function blockNextLinkClick() {
+  const block = (event: MouseEvent) => {
+    if (!(event.target instanceof Element) || !event.target.closest("a[href]") || inFeedbackUi(event.target)) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  document.addEventListener("click", block, { capture: true, once: true });
+  setTimeout(() => document.removeEventListener("click", block, true), 0);
+}
+
 function boxBetween(a: Point, b: Point): Box {
   return {
     left: Math.min(a.x, b.x),
@@ -257,6 +272,7 @@ export function useElementPicker({
       const origin = originRef.current;
       originRef.current = null;
       if (!origin) return;
+      blockNextLinkClick();
 
       const holdingCtrl = event.ctrlKey || event.metaKey;
 
