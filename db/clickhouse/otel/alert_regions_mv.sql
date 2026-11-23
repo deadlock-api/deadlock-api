@@ -1,5 +1,5 @@
 CREATE MATERIALIZED VIEW otel.alert_regions_mv
-REFRESH EVERY 5 MINUTE TO otel.alert_regions
+REFRESH EVERY 15 MINUTE TO otel.alert_regions
 (
     `time` DateTime,
     `timeEnd` DateTime,

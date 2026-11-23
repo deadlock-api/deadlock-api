@@ -69,6 +69,12 @@ const MAX_VALID_MATCH_ID: &str = "4294967295";
 /// 15 minutes) the chance to spare a bot call.
 const MIN_MINUTES_SINCE_END: u32 = 15;
 
+/// Oldest match start, in days, the prio scan looks at. Replays are gone well before this (the
+/// downloader gets 404s on GC salts for matches a week old), so older matches can't be fetched
+/// anyway. Bounding the scan cuts the candidate lookups in `match_salts` and `match_player` from
+/// ~180M rows / 23 CPU-s to ~54M rows / 6 CPU-s per cycle.
+const MAX_DAYS_SINCE_START: u32 = 30;
+
 static SALTS_COOLDOWN_MILLIS: LazyLock<u64> =
     LazyLock::new(|| service_utils::env_or("SALTS_COOLDOWN_MILLIS", 24 * 60 * 60 * 1000 / 50));
 /// Shortest time between the starts of two cycles. Each cycle runs a full-history anti-join,
@@ -149,6 +155,7 @@ async fn main() -> Result<(), Error> {
                   AND match_mode IN ('Ranked', 'Unranked')
                   AND start_time + match_duration_s
                         < now() - INTERVAL {MIN_MINUTES_SINCE_END} MINUTE
+                  AND start_time >= now() - INTERVAL {MAX_DAYS_SINCE_START} DAY
                   AND match_id >= 31247321 AND match_id < {MAX_VALID_MATCH_ID}
             )
             SELECT pmh.match_id, groupArray(pmh.account_id) AS participants
@@ -167,6 +174,7 @@ async fn main() -> Result<(), Error> {
               AND pmh.match_mode IN ('Ranked', 'Unranked')
               AND pmh.start_time + pmh.match_duration_s
                     < now() - INTERVAL {MIN_MINUTES_SINCE_END} MINUTE
+              AND pmh.start_time >= now() - INTERVAL {MAX_DAYS_SINCE_START} DAY
               AND pmh.match_id >= 31247321
             GROUP BY pmh.match_id
             ORDER BY pmh.match_id DESC
