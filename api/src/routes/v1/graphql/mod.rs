@@ -44,17 +44,13 @@ const RATE_LIMIT: RateLimit = RateLimit::new(
 );
 
 /// The rate limit note of the GraphQL docs: both policies apply to every request.
-const GRAPHQL_LIMITS_NOTE: &str = "They apply to `POST /v1/graphql`. Each request counts once against the \
-     request limits, and what it costs the database once it has run, in core-seconds, against \
-     the ClickHouse cost budget shared with all analytics endpoints and `GET /v1/matches/metadata`: \
-     CPU time, plus memory held and data read from disk as their share of the server (holding all \
-     of its memory or reading at the full speed of its disks for a second costs as much as all 64 \
-     CPU cores for a second). A request is admitted while any budget is left, so an expensive one \
-     can take you past the limit until its cost leaves the window; the cost is charged within \
-     about 15 seconds. Select fewer fields, narrow `where` filters or lower `limit` to make a \
-     request cheaper. At most 16 of your requests to these endpoints run at once on each server; \
-     more get a 429 with `Retry-After: 1`. A single query above the complexity limit is rejected \
-     before it runs.";
+const GRAPHQL_LIMITS_NOTE: &str = concat!(
+    "They apply to `POST /v1/graphql`. Each request counts once against the request limits, and \
+     against the ClickHouse read budget shared with all analytics endpoints and \
+     `GET /v1/matches/metadata`. ",
+    clickhouse_budget::cost_docs!(),
+    " A single query above the complexity limit is rejected before it runs."
+);
 
 /// Longest query or variables text kept in `request_logs`; the body limit alone allows 10 MB.
 const MAX_LOGGED_TEXT_BYTES: usize = 64 * 1024;
@@ -145,7 +141,7 @@ Open this endpoint in a browser to access the playground. Send GraphQL queries v
 
     ",
         Limits::from([("Requests", RATE_LIMIT.quotas)])
-            .and_scaled("ClickHouse cost", clickhouse_budget::BUDGET, " core-s", 1000)
+            .and("ClickHouse reads", clickhouse_budget::BUDGET, " MB")
             .note(GRAPHQL_LIMITS_NOTE),
     )
 )]
@@ -177,9 +173,9 @@ async fn graphql_handler(
             id: log.request_id,
             next_query: AtomicU32::new(0),
         });
-    // The batched nested lookups (`steam`, `salts`) run in their batchers' tasks and aren't
-    // charged; neither were they under the old bytes-read budget beyond an even share.
-    let resp = clickhouse_budget::charged(&rate_limit_key, shared_schema().execute(request)).await;
+    let resp = shared_schema().execute(request).await;
+    // Every resolver has run, so all of the request's queries have finished.
+    clickhouse_budget::record(&state, &rate_limit_key).await;
     log.set_cost(&resp);
     let mut response = GraphQLResponse::from(resp).into_response();
     response.extensions_mut().insert(log);

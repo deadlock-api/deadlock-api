@@ -30,15 +30,6 @@ impl RateLimitKey {
             .map_or_else(|| self.client.to_string(), |k| k.to_string())
     }
 
-    /// A client without an API key at `ip`.
-    #[cfg(test)]
-    pub(crate) const fn from_ip(ip: Ipv4Addr) -> Self {
-        Self {
-            api_key: None,
-            client: Client::Ip(ip),
-        }
-    }
-
     /// The same client, counted as if it had sent no API key.
     pub(crate) fn without_api_key(&self) -> Self {
         Self {

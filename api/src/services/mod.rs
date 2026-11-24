@@ -4,7 +4,6 @@ pub(crate) mod build_probe_bans;
 pub(crate) mod ch_admission;
 pub(crate) mod ch_cache;
 pub(crate) mod ch_cost;
-pub(crate) mod ch_usage;
 pub(crate) mod clickhouse_budget;
 pub(crate) mod client_slots;
 pub(crate) mod cohort_agg_refresh;

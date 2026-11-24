@@ -33,8 +33,6 @@ struct Case<'a> {
     label: &'a str,
     quotas: &'a [Quota],
     unit: &'a str,
-    /// Quota units per displayed unit.
-    divisor: u64,
 }
 
 impl<'a> Limits<'a> {
@@ -54,33 +52,6 @@ impl<'a> Limits<'a> {
         self
     }
 
-    /// What the quotas count, shown in units of `divisor` quota units: quotas in core-milliseconds
-    /// shown in core-seconds are `.scaled_unit(" core-s", 1000)`.
-    pub(crate) fn scaled_unit(mut self, unit: &'a str, divisor: u64) -> Self {
-        for case in &mut self.cases {
-            case.unit = unit;
-            case.divisor = divisor;
-        }
-        self
-    }
-
-    /// [`Self::and`] with the quotas shown in units of `divisor` (see [`Self::scaled_unit`]).
-    pub(crate) fn and_scaled(
-        mut self,
-        label: &'a str,
-        limit: RateLimit<'a>,
-        unit: &'a str,
-        divisor: u64,
-    ) -> Self {
-        self.cases.push(Case {
-            label,
-            quotas: limit.quotas,
-            unit,
-            divisor,
-        });
-        self
-    }
-
     /// Adds `limit` as one more labelled case counting `unit`, for endpoints charged against
     /// several policies at once.
     pub(crate) fn and(mut self, label: &'a str, limit: RateLimit<'a>, unit: &'a str) -> Self {
@@ -88,7 +59,6 @@ impl<'a> Limits<'a> {
             label,
             quotas: limit.quotas,
             unit,
-            divisor: 1,
         });
         self
     }
@@ -115,7 +85,6 @@ impl<'a, const N: usize> From<[(&'a str, &'a [Quota]); N]> for Limits<'a> {
                     label,
                     quotas,
                     unit: "req",
-                    divisor: 1,
                 })
                 .collect(),
             note: None,
@@ -147,8 +116,7 @@ impl Display for Limits<'_> {
                     if j > 0 {
                         f.write_str(", ")?;
                     }
-                    let limit = quota.limit.checked_div(case.divisor).unwrap_or(quota.limit);
-                    write!(f, "{limit}{}/{}", case.unit, Period(quota.period))?;
+                    write!(f, "{}{}/{}", quota.limit, case.unit, Period(quota.period))?;
                 }
             }
             writeln!(f, " |")?;
@@ -216,14 +184,6 @@ mod tests {
             .unit(" accounts")
             .to_string();
         assert!(table.contains("| IP | 10 accounts/min |"));
-    }
-
-    #[test]
-    fn renders_a_scaled_cost_unit() {
-        let table = Limits::from(&[Quota::new(Scope::Ip, 7_200_000, Duration::from_hours(1))][..])
-            .scaled_unit(" core-s", 1000)
-            .to_string();
-        assert!(table.contains("| IP | 7200 core-s/h |"), "{table}");
     }
 
     #[test]

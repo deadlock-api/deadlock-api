@@ -410,9 +410,12 @@ where
                 |_, ext| ext.set("code", "SERVICE_BUSY"),
             )
         })?;
-    let mut lines = ch_client
-        .query(sql)
-        .fetch_lines_tracked_as("JSONEachRow", query_id)
+    let mut query = ch_client.query(sql);
+    if let Some(query_id) = query_id {
+        query = query.with_setting("query_id", query_id);
+    }
+    let mut lines = query
+        .fetch_lines_tracked("JSONEachRow")
         .inspect_err(|e| permit.observe(e))
         .map_err(|e| async_graphql::Error::new(format!("ClickHouse error: {e}")))?;
     let mut out: Vec<T> = Vec::new();

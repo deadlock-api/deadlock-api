@@ -1014,17 +1014,16 @@ pub(super) async fn bulk_metadata(
     if let Some((error, retry_after)) = TIMEOUT_COOLDOWN.check(key).await {
         return Err(APIError::ClickhouseTimedOut { error, retry_after });
     }
-    let rows = clickhouse_budget::charged(&rate_limit_key, async {
-        let permit = ch_admission::acquire()
-            .await
-            .map_err(APIError::ClickhouseBusy)?;
-        let lines = fetch_lines(&state.ch_client_ro, &query).inspect_err(|e| permit.observe(e))?;
-        match stream_rows(lines, format, (permit, slot)).await {
-            Ok(rows) => Ok(rows),
-            Err(e) => Err(cool_down_timeout(key, e).await),
-        }
-    })
-    .await?;
+    let permit = ch_admission::acquire()
+        .await
+        .map_err(APIError::ClickhouseBusy)?;
+    let lines = fetch_lines(&state.ch_client_ro, &query).inspect_err(|e| permit.observe(e))?;
+    let rows = match stream_rows(lines, format, (permit, slot)).await {
+        Ok(rows) => rows,
+        Err(e) => return Err(cool_down_timeout(key, e).await),
+    };
+    // The query has finished (`wait_end_of_query`).
+    clickhouse_budget::record(&state, &rate_limit_key).await;
     let Some(body) = rows else {
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
