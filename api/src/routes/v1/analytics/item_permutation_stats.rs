@@ -10,8 +10,9 @@ use tracing::{debug, warn};
 use utoipa::{IntoParams, ToSchema};
 
 use super::common_filters::{
-    MatchScope, PlayerFilters, default_min_matches_u32, filter_protected_accounts, is_non_empty,
-    join_filters, not_corrupted_sql, round_timestamps, with_legacy_id,
+    CORRUPTED_ITEMS_MIN_MATCH_ID, CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP, MatchScope, PlayerFilters,
+    default_min_matches_u32, filter_protected_accounts, is_non_empty, join_filters,
+    not_corrupted_sql, round_timestamps, with_legacy_id,
 };
 use super::item_stats::retry_on_base_table;
 use super::rollup_window::{Coverage, DaySplit, EdgeRows, Reach, Rollup, RollupFilters};
@@ -185,43 +186,14 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
     // without a hero filter. With skip indexes evaluated at planning time
     // (`use_skip_indexes_on_data_read = 0` on the clients) start_time prunes it too: the
     // combinations query reads 36% of the bytes with it (identical results), so it may use the
-    // projection. The hero-less intersect query still keeps it off: 32% fewer bytes but p50
-    // 2.2 s -> 3.4 s.
-    let projection_setting = if hero_ids.is_empty() {
-        ", optimize_use_projections = 0"
-    } else {
-        ""
-    };
+    // projection. The hero-less intersect query keeps it off (see [`intersect_query`]).
     if let Some(item_ids) = &query.item_ids {
-        let items_list = format!("[{}]", id_list(item_ids));
-        // `hasAll(items.item_id, ...)` stays as-is so the bf_items_item_id skip index still
-        // prunes; the corruption-aware check is an extra predicate on the surviving rows.
-        let (owned_items, corrupted_filter) = if include_corrupted {
-            ("items.item_id".to_owned(), String::new())
-        } else {
-            let owned = format!(
-                "arrayFilter((x, u) -> {}, items.item_id, items.upgrade_info)",
-                not_corrupted_sql("u")
-            );
-            let filter = format!("\n            AND hasAll({owned}, {items_list})");
-            (owned, filter)
-        };
-        format!(
-            "
-        SELECT
-            arraySort(arrayIntersect({owned_items}, {items_list})) AS item_ids,
-            countIf(won)      AS wins,
-            countIf(not won)  AS losses,
-            wins + losses AS matches
-        FROM match_player
-        WHERE hasAll(items.item_id, {items_list}){corrupted_filter}
-            AND {scope_filters}
-            {player_filters}
-        GROUP BY item_ids
-        {having_clause}
-        ORDER BY matches DESC
-        SETTINGS log_comment = 'item_permutation_stats_intersect', apply_patch_parts = 0{projection_setting}
-        "
+        intersect_query(
+            query,
+            item_ids,
+            &player_filters,
+            &having_clause,
+            hero_ids.is_empty(),
         )
     } else {
         let comb_size = query.comb_size.or_else(default_comb_size).unwrap_or(2);
@@ -265,6 +237,106 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
         "
         )
     }
+}
+
+/// Skip indexes the intersect query skips on the hero projection. On an all-time single-hero
+/// read (2026-11-24) they pruned 3.5% of the marks for 1-3 CPU-s of planning. Hero, game and
+/// match mode are already in the projection's key, and the item bloom filter can't drop a granule
+/// when the items are popular.
+const INTERSECT_IGNORED_SKIP_INDEXES: &str =
+    "bf_items_item_id,bf_hero_id,idx_match_mode,idx_game_mode";
+
+/// Wins and losses of the players who own every item in `item_ids`. Because of `hasAll`, every
+/// matching player owns the whole list, so the result is at most one row, `item_ids` sorted and
+/// deduplicated.
+///
+/// Only the corrupted-purchase check reads `items.upgrade_info`, which is about half of the bytes.
+/// It is only needed from [`CORRUPTED_ITEMS_MIN_MATCH_ID`] on, so a window that reaches back
+/// before that is split there. On an all-time single-hero read (2026-11-24) the split, plus no
+/// `start_time >= 0` and [`INTERSECT_IGNORED_SKIP_INDEXES`], cut CPU from 12.3 to 6.9 s and bytes
+/// from 3.98 to 1.91 GiB, with identical results. Dropping the check outright would not be exact:
+/// one player row has an item only as a corrupted purchase.
+fn intersect_query(
+    query: &ItemPermutationStatsQuery,
+    item_ids: &[u32],
+    player_filters: &str,
+    having_clause: &str,
+    hero_less: bool,
+) -> String {
+    let items_list = format!("[{}]", id_list(item_ids));
+    let sorted_ids = item_ids
+        .iter()
+        .copied()
+        .sorted_unstable()
+        .dedup()
+        .collect_vec();
+    // `start_time >= 0` (all-time requests) filters nothing out, but still runs the start_time
+    // skip indexes.
+    let mut match_info = query.match_info();
+    match_info.min_unix_timestamp = match_info.min_unix_timestamp.filter(|&v| v > 0);
+    let scope_filters =
+        MatchScope::new(query.match_mode.as_deref(), query.game_mode, match_info).sql();
+    let owned_filter = format!(
+        " AND hasAll(arrayFilter((x, u) -> {}, items.item_id, items.upgrade_info), {items_list})",
+        not_corrupted_sql("u")
+    );
+    let counts = |filter: &str, match_ids: &str| {
+        format!(
+            "SELECT countIf(won) AS w, countIf(NOT won) AS l FROM match_player
+            WHERE hasAll(items.item_id, {items_list}){filter}
+                AND {scope_filters}{player_filters}{match_ids}"
+        )
+    };
+    let may_hold_corrupted = query
+        .max_unix_timestamp
+        .is_none_or(|v| v >= CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP)
+        && query
+            .max_match_id
+            .is_none_or(|v| v >= CORRUPTED_ITEMS_MIN_MATCH_ID);
+    let reaches_before_corruption = query
+        .min_unix_timestamp
+        .is_none_or(|v| v < CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP)
+        && query
+            .min_match_id
+            .is_none_or(|v| v < CORRUPTED_ITEMS_MIN_MATCH_ID);
+    let source = if query.include_corrupted_items == Some(true) || !may_hold_corrupted {
+        counts("", "")
+    } else if reaches_before_corruption {
+        format!(
+            "{}\n            UNION ALL\n            {}",
+            counts(
+                "",
+                &format!(" AND match_id < {CORRUPTED_ITEMS_MIN_MATCH_ID}")
+            ),
+            counts(
+                &owned_filter,
+                &format!(" AND match_id >= {CORRUPTED_ITEMS_MIN_MATCH_ID}")
+            )
+        )
+    } else {
+        counts(&owned_filter, "")
+    };
+    // The hero-less read keeps the projection off: 32% fewer bytes with it, but p50 2.2 s -> 3.4 s.
+    let settings = if hero_less {
+        ", optimize_use_projections = 0".to_owned()
+    } else {
+        format!(", ignore_data_skipping_indices = '{INTERSECT_IGNORED_SKIP_INDEXES}'")
+    };
+    format!(
+        "
+        SELECT CAST([{}] AS Array(UInt32)) AS item_ids,
+            sum(w) AS wins,
+            sum(l) AS losses,
+            wins + losses AS matches
+        FROM (
+            {source}
+        )
+        GROUP BY item_ids
+        {having_clause}
+        SETTINGS log_comment = 'item_permutation_stats_intersect', apply_patch_parts = 0{settings}
+        ",
+        id_list(&sorted_ids)
+    )
 }
 
 /// `u_ids`: the sorted upgrade ids, whose 1-based positions [`upgrade_positions_sql`] maps a
@@ -575,11 +647,9 @@ mod tests {
         });
         let owned =
             "arrayFilter((x, u) -> bitAnd(u, 8388608) = 0, items.item_id, items.upgrade_info)";
+        assert!(intersect.contains("CAST([1, 2] AS Array(UInt32)) AS item_ids"));
         assert!(intersect.contains(&format!(
-            "arraySort(arrayIntersect({owned}, [1, 2])) AS item_ids"
-        )));
-        assert!(intersect.contains(&format!(
-            "WHERE hasAll(items.item_id, [1, 2])\n            AND hasAll({owned}, [1, 2])"
+            "WHERE hasAll(items.item_id, [1, 2]) AND hasAll({owned}, [1, 2])"
         )));
     }
 
@@ -598,7 +668,7 @@ mod tests {
             include_corrupted_items: Some(true),
             ..Default::default()
         });
-        assert!(intersect.contains("arraySort(arrayIntersect(items.item_id, [1, 2])) AS item_ids"));
+        assert!(intersect.contains("CAST([1, 2] AS Array(UInt32)) AS item_ids"));
         assert!(!intersect.contains("upgrade_info"));
     }
 
@@ -835,6 +905,77 @@ mod tests {
         for (col, expr) in PAIRS_AGG.grain {
             assert!(body.contains(&format!("{expr} AS {col},")), "{col}");
         }
+    }
+
+    #[test]
+    fn intersect_reads_upgrade_info_only_where_corruption_can_be() {
+        let owned = "hasAll(arrayFilter(";
+        let before = format!("match_id < {CORRUPTED_ITEMS_MIN_MATCH_ID}");
+        let since = format!("match_id >= {CORRUPTED_ITEMS_MIN_MATCH_ID}");
+        let intersect = |query: ItemPermutationStatsQuery| {
+            build_query(&ItemPermutationStatsQuery {
+                item_ids: Some(vec![2, 1, 2]),
+                hero_ids: Some(vec![13]),
+                ..query
+            })
+        };
+
+        // All time: only the matches since corruption existed pay for the check.
+        let all_time = intersect(ItemPermutationStatsQuery {
+            min_unix_timestamp: Some(0),
+            ..Default::default()
+        });
+        assert_valid_sql(&all_time);
+        assert!(all_time.contains(&before), "{all_time}");
+        assert!(all_time.contains(&since));
+        assert_eq!(all_time.matches(owned).count(), 1);
+        assert!(!all_time.contains("start_time"));
+        assert!(all_time.contains("CAST([1, 2] AS Array(UInt32)) AS item_ids"));
+        assert!(all_time.contains(&format!(
+            "ignore_data_skipping_indices = '{INTERSECT_IGNORED_SKIP_INDEXES}'"
+        )));
+
+        // A window after the first corrupted match: one query, checked throughout.
+        let recent = intersect(ItemPermutationStatsQuery {
+            min_unix_timestamp: Some(last_week()),
+            ..Default::default()
+        });
+        assert_valid_sql(&recent);
+        assert!(!recent.contains("UNION ALL"));
+        assert_eq!(recent.matches(owned).count(), 1);
+        assert!(recent.contains(&format!("start_time >= {}", last_week())));
+
+        // A window that ends before corruption existed: no check at all.
+        for query in [
+            ItemPermutationStatsQuery {
+                max_unix_timestamp: Some(CORRUPTED_ITEMS_MIN_UNIX_TIMESTAMP - 1),
+                ..Default::default()
+            },
+            ItemPermutationStatsQuery {
+                max_match_id: Some(CORRUPTED_ITEMS_MIN_MATCH_ID - 1),
+                ..Default::default()
+            },
+        ] {
+            let old = intersect(query);
+            assert_valid_sql(&old);
+            assert!(!old.contains("upgrade_info"), "{old}");
+            assert!(!old.contains("UNION ALL"));
+        }
+
+        let raw = intersect(ItemPermutationStatsQuery {
+            min_unix_timestamp: Some(0),
+            include_corrupted_items: Some(true),
+            ..Default::default()
+        });
+        assert!(!raw.contains("upgrade_info"));
+        assert!(!raw.contains("UNION ALL"));
+
+        // The hero-less read is not on the hero projection, so it keeps its skip indexes.
+        let hero_less = build_query(&ItemPermutationStatsQuery {
+            item_ids: Some(vec![1, 2]),
+            ..Default::default()
+        });
+        assert!(!hero_less.contains("ignore_data_skipping_indices"));
     }
 
     #[test]
