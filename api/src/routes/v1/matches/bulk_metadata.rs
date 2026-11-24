@@ -1,6 +1,7 @@
 use crate::services::ch_admission;
 use crate::services::ch_cost::{TrackedLines, TrackedQuery as _};
 use crate::services::clickhouse_budget;
+use crate::services::client_slots::ClientSlot;
 use crate::utils::sql::{
     DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, id_list, where_clause,
 };
@@ -967,6 +968,19 @@ pub(super) async fn bulk_metadata(
         query.account_ids = Some(filtered_account_ids);
     }
     clickhouse_budget::admit(&state, &rate_limit_key).await?;
+    let response = fetch_metadata(&state, query, slot).await;
+    // On every outcome, so the column lookups of a rejected request are charged too.
+    clickhouse_budget::record(&state, &rate_limit_key).await;
+    response
+}
+
+/// Validates `query` against the stored columns and runs it, holding `slot` until the response is
+/// built.
+async fn fetch_metadata(
+    state: &AppState,
+    query: BulkMatchMetadataQuery,
+    slot: ClientSlot,
+) -> APIResult<impl IntoResponse + use<>> {
     if query.limit == 0 || query.limit > 10000 {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
@@ -1022,8 +1036,6 @@ pub(super) async fn bulk_metadata(
         Ok(rows) => rows,
         Err(e) => return Err(cool_down_timeout(key, e).await),
     };
-    // The query has finished (`wait_end_of_query`).
-    clickhouse_budget::record(&state, &rate_limit_key).await;
     let Some(body) = rows else {
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
