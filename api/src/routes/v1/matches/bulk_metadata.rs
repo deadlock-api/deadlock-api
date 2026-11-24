@@ -1,6 +1,7 @@
 use crate::services::ch_admission;
 use crate::services::ch_cost::{TrackedLines, TrackedQuery as _};
-use crate::services::match_data_budget;
+use crate::services::clickhouse_budget;
+use crate::services::client_slots::ClientSlot;
 use crate::utils::sql::{
     DURATION_COLUMN, MatchInfoFilters, MatchPoolFilters, id_list, where_clause,
 };
@@ -24,8 +25,8 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::services::pending_matches::queue_unknown_matches;
 use crate::services::protected_accounts::without_protected;
+use crate::services::rate_limiter::describe;
 use crate::services::rate_limiter::extractor::RateLimitKey;
-use crate::services::rate_limiter::{Limits, describe};
 use crate::utils::json_stream::{ResponseFormat, stream_rows};
 use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::match_player_stats::{DUPLICATE_STATS, stats_array_expr, stored_stat};
@@ -945,9 +946,7 @@ When player info is included, each player object contains `hero_build_id` and `p
 > **Note:** The `pregame_hero_id` is the hero the player had locked before the pre-game swap window (`null` if unknown). A player swapped heroes when it differs from their `hero_id`.
 
     ",
-        Limits::from(match_data_budget::BUDGET)
-            .unit(" MB")
-            .note(match_data_budget::DOCS_NOTE),
+        clickhouse_budget::limits(),
     )
 )]
 pub(super) async fn bulk_metadata(
@@ -955,7 +954,7 @@ pub(super) async fn bulk_metadata(
     rate_limit_key: RateLimitKey,
     State(state): State<AppState>,
 ) -> APIResult<impl IntoResponse> {
-    let slot = match_data_budget::acquire_slot(&rate_limit_key)?;
+    let slot = clickhouse_budget::acquire_slot(&rate_limit_key)?;
     reject_brawl_badge_filter(
         query.game_mode,
         query.min_average_badge,
@@ -968,7 +967,20 @@ pub(super) async fn bulk_metadata(
         }
         query.account_ids = Some(filtered_account_ids);
     }
-    match_data_budget::admit(&state, &rate_limit_key).await?;
+    clickhouse_budget::admit(&state, &rate_limit_key).await?;
+    let response = fetch_metadata(&state, query, slot).await;
+    // On every outcome, so the column lookups of a rejected request are charged too.
+    clickhouse_budget::record(&state, &rate_limit_key).await;
+    response
+}
+
+/// Validates `query` against the stored columns and runs it, holding `slot` until the response is
+/// built.
+async fn fetch_metadata(
+    state: &AppState,
+    query: BulkMatchMetadataQuery,
+    slot: ClientSlot,
+) -> APIResult<impl IntoResponse + use<>> {
     if query.limit == 0 || query.limit > 10000 {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
@@ -1024,8 +1036,6 @@ pub(super) async fn bulk_metadata(
         Ok(rows) => rows,
         Err(e) => return Err(cool_down_timeout(key, e).await),
     };
-    // The query has finished (`wait_end_of_query`).
-    match_data_budget::record(&state, &rate_limit_key).await;
     let Some(body) = rows else {
         return Err(APIError::status_msg(
             StatusCode::NOT_FOUND,
