@@ -175,7 +175,12 @@ async fn graphql_handler(
         });
     let resp = shared_schema().execute(request).await;
     // Every resolver has run, so all of the request's queries have finished.
-    clickhouse_budget::record(&state, &rate_limit_key).await;
+    clickhouse_budget::record(
+        &state,
+        &rate_limit_key,
+        clickhouse_budget::Endpoint::GraphQL,
+    )
+    .await;
     log.set_cost(&resp);
     let mut response = GraphQLResponse::from(resp).into_response();
     response.extensions_mut().insert(log);

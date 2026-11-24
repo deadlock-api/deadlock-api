@@ -25,6 +25,11 @@ pub(crate) async fn clickhouse_cost(
         Err(e) => return e.into_response(),
     };
     let response = next.run(request).await;
-    clickhouse_budget::record(&state, &rate_limit_key).await;
+    clickhouse_budget::record(
+        &state,
+        &rate_limit_key,
+        clickhouse_budget::Endpoint::Analytics,
+    )
+    .await;
     (status.map(RateLimitHeaders), response).into_response()
 }

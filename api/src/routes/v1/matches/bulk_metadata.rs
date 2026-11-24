@@ -970,7 +970,12 @@ pub(super) async fn bulk_metadata(
     clickhouse_budget::admit(&state, &rate_limit_key).await?;
     let response = fetch_metadata(&state, query, slot).await;
     // On every outcome, so the column lookups of a rejected request are charged too.
-    clickhouse_budget::record(&state, &rate_limit_key).await;
+    clickhouse_budget::record(
+        &state,
+        &rate_limit_key,
+        clickhouse_budget::Endpoint::BulkMetadata,
+    )
+    .await;
     response
 }
 
