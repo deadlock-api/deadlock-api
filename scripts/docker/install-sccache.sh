@@ -3,7 +3,7 @@
 # See with-sccache.sh for how the builds use it.
 set -eu
 
-version=0.19.0
+version=0.20.0
 arch=$(uname -m)
 case "$arch" in
     x86_64) sha256=aa73c7270c997894038c0d8f0d297865f57569e1687883322bc431713d4bb9dd ;;

@@ -6,7 +6,7 @@ description = "SQL queries over Deadlock demo files and live broadcasts via Apac
 
 [dependencies]
 bytes = { workspace = true }
-datafusion = { version = "55", default-features = false, features = [
+datafusion = { version = "56", default-features = false, features = [
     "sql",
     "parquet",
     "recursive_protection",

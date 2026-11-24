@@ -46,7 +46,7 @@ demofusion = { workspace = true }
 prost = "0.14.6"
 base64 = "0.23.1"
 tryhard = "0.5.2"
-async-compression = { version = "0.4.52", features = ["bzip2", "zstd", "tokio"] }
+async-compression = { version = "0.4.53", features = ["bzip2", "zstd", "tokio"] }
 bzip2 = "0.6"
 zstd = { workspace = true }
 strum = { version = "0.28.0", features = ["derive"] }
@@ -73,7 +73,7 @@ tantivy = { version = "0.27.0", features = ["zstd-compression"] }
 arc-swap = "1.9.5"
 ipnet = "2.12.2"
 xxhash-rust = { workspace = true }
-datafusion = { version = "55", default-features = false, features = [
+datafusion = { version = "56", default-features = false, features = [
     "sql",
     "parquet",
     "recursive_protection",
