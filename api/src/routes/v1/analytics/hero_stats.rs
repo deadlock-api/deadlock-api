@@ -7,6 +7,7 @@ use clickhouse::Row;
 use game_assets::versions::items::types::ItemType;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
+use strum::Display;
 use tracing::debug;
 use utoipa::{IntoParams, ToSchema};
 
@@ -21,13 +22,110 @@ use crate::utils::match_modes::{GameMode, MatchMode, reject_brawl_badge_filter};
 use crate::utils::parse::{comma_separated_deserialize_option, default_last_month_timestamp};
 use crate::utils::sql::{MatchInfoFilters, cached_ch_query, impl_match_info};
 
+/// How hero stats group their rows: [`BucketQuery`]'s match-level buckets, or the player's final
+/// net worth.
+#[derive(Debug, Clone, Copy, Deserialize, ToSchema, Default, Display, PartialEq, Eq, Hash)]
+#[cfg_attr(test, derive(proptest_derive::Arbitrary))]
+#[serde(rename_all = "snake_case")]
+#[strum(serialize_all = "snake_case")]
+pub(crate) enum HeroStatsBucket {
+    /// No Bucketing
+    #[default]
+    NoBucket,
+    /// Bucket By Max Average Badge Level (tier = first digits, subtier = last digit) of both teams involved. See more: <https://api.deadlock-api.com/v1/assets/ranks>
+    AvgBadge,
+    /// Bucket By Start Time (Hour)
+    StartTimeHour,
+    /// Bucket By Start Time (Day)
+    StartTimeDay,
+    /// Bucket By Start Time (Week)
+    StartTimeWeek,
+    /// Bucket By Start Time (Month)
+    StartTimeMonth,
+    /// Bucket By the player's final net worth (grouped by 1000). The bucket is the lower bound.
+    #[serde(rename = "net_worth_by_1000")]
+    #[strum(to_string = "net_worth_by_1000")]
+    NetWorthBy1000,
+    /// Bucket By the player's final net worth (grouped by 2000). The bucket is the lower bound.
+    #[serde(rename = "net_worth_by_2000")]
+    #[strum(to_string = "net_worth_by_2000")]
+    NetWorthBy2000,
+    /// Bucket By the player's final net worth (grouped by 3000). The bucket is the lower bound.
+    #[serde(rename = "net_worth_by_3000")]
+    #[strum(to_string = "net_worth_by_3000")]
+    NetWorthBy3000,
+    /// Bucket By the player's final net worth (grouped by 5000). The bucket is the lower bound.
+    #[serde(rename = "net_worth_by_5000")]
+    #[strum(to_string = "net_worth_by_5000")]
+    NetWorthBy5000,
+    /// Bucket By the player's final net worth (grouped by 10000). The bucket is the lower bound.
+    #[serde(rename = "net_worth_by_10000")]
+    #[strum(to_string = "net_worth_by_10000")]
+    NetWorthBy10000,
+}
+
+impl HeroStatsBucket {
+    /// The match-level bucket, or `None` for the net worth buckets.
+    const fn match_bucket(self) -> Option<BucketQuery> {
+        match self {
+            Self::NoBucket => Some(BucketQuery::NoBucket),
+            Self::AvgBadge => Some(BucketQuery::AvgBadge),
+            Self::StartTimeHour => Some(BucketQuery::StartTimeHour),
+            Self::StartTimeDay => Some(BucketQuery::StartTimeDay),
+            Self::StartTimeWeek => Some(BucketQuery::StartTimeWeek),
+            Self::StartTimeMonth => Some(BucketQuery::StartTimeMonth),
+            Self::NetWorthBy1000
+            | Self::NetWorthBy2000
+            | Self::NetWorthBy3000
+            | Self::NetWorthBy5000
+            | Self::NetWorthBy10000 => None,
+        }
+    }
+
+    /// The width of a net worth bucket, `None` for the match-level buckets.
+    const fn net_worth_step(self) -> Option<u32> {
+        match self {
+            Self::NetWorthBy1000 => Some(1_000),
+            Self::NetWorthBy2000 => Some(2_000),
+            Self::NetWorthBy3000 => Some(3_000),
+            Self::NetWorthBy5000 => Some(5_000),
+            Self::NetWorthBy10000 => Some(10_000),
+            Self::NoBucket
+            | Self::AvgBadge
+            | Self::StartTimeHour
+            | Self::StartTimeDay
+            | Self::StartTimeWeek
+            | Self::StartTimeMonth => None,
+        }
+    }
+
+    /// The bucket expression against `match_player` (or a table with its column names).
+    fn base_expr(self) -> String {
+        match (self.match_bucket(), self.net_worth_step()) {
+            (Some(bucket), _) => bucket.base_expr().to_owned(),
+            (None, Some(step)) => format!("toUInt32(intDiv(net_worth, {step}) * {step})"),
+            (None, None) => "toUInt32(0)".to_owned(),
+        }
+    }
+
+    /// The bucket expression against the day-grained rollups (see
+    /// [`BucketQuery::mv_bucket_expr`]), or `None` when they can't express it: the rollups have no
+    /// per-player net worth, so those buckets read `match_player`.
+    const fn mv_bucket_expr(self) -> Option<&'static str> {
+        match self.match_bucket() {
+            Some(bucket) => bucket.mv_bucket_expr(),
+            None => None,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Deserialize, IntoParams, Eq, PartialEq, Hash, Default)]
 #[cfg_attr(test, derive(proptest_derive::Arbitrary))]
 pub(crate) struct HeroStatsQuery {
     /// Bucket allows you to group the stats by a specific field.
     #[serde(default)]
     #[param(inline)]
-    bucket: BucketQuery,
+    bucket: HeroStatsBucket,
     /// Filter matches based on their game mode. Valid values: `normal`, `street_brawl`. **Default:** `normal`.
     #[serde(
         default = "GameMode::default_option",
@@ -194,11 +292,11 @@ impl HeroStatsQuery {
 
     /// The bucket expression of the base-table query: the lower bound of the player's
     /// entire-history bucket (`n_total`, from `t_players2`) when bucketing by it, else
-    /// [`BucketQuery::base_expr`].
+    /// [`HeroStatsBucket::base_expr`].
     fn bucket_expr(&self) -> String {
         let bounds = self.hero_matches_total_bucket_bounds();
         let Some((&lowest, higher)) = bounds.split_first() else {
-            return self.bucket.base_expr().to_owned();
+            return self.bucket.base_expr();
         };
         if higher.is_empty() {
             return format!("toUInt32({lowest})");
@@ -228,7 +326,7 @@ fn validate_hero_matches_total_buckets(query: &HeroStatsQuery) -> APIResult<()> 
             ),
         ));
     }
-    if !bounds.is_empty() && query.bucket != BucketQuery::NoBucket {
+    if !bounds.is_empty() && query.bucket != HeroStatsBucket::NoBucket {
         return Err(APIError::status_msg(
             StatusCode::BAD_REQUEST,
             "hero_matches_total_buckets only works with bucket=no_bucket".to_owned(),
@@ -642,7 +740,7 @@ fn build_mv_query(query: &HeroStatsQuery) -> Option<String> {
 /// The response of a rollup read from `day_rows`, rows of [`MV_MEASURES`] per `hero_id`, `bucket`
 /// and `day` (see [`group_hero_days`]).
 fn rollup_hero_days(query: &HeroStatsQuery, day_rows: &str, log_comment: &str) -> String {
-    let matches_per_bucket = if query.bucket == BucketQuery::NoBucket {
+    let matches_per_bucket = if query.bucket == HeroStatsBucket::NoBucket {
         "matches"
     } else {
         "sum(sum(n_matches)) OVER (PARTITION BY bucket)"
@@ -763,7 +861,7 @@ fn difference_day_rows(bucket_expr: &str, all_source: &str, subtracted_source: &
 /// the item's rows, which counts exactly the players without the item: every measure is a sum.
 fn build_item_query(query: &HeroStatsQuery) -> Option<String> {
     let (item_id, include) = single_item_filter(query)?;
-    if query.bucket == BucketQuery::AvgBadge {
+    if query.bucket == HeroStatsBucket::AvgBadge {
         return None;
     }
     let bucket_expr = query.bucket.mv_bucket_expr()?;
@@ -1059,7 +1157,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     let with_clause = ctes.join(",\n    ");
     // The distinct count only where a bucket reads it: it costs more than the rest of the aggregation.
     let (matches_per_bucket, distinct_matches) =
-        if query.bucket == BucketQuery::NoBucket && !bucket_by_total {
+        if query.bucket == HeroStatsBucket::NoBucket && !bucket_by_total {
             ("matches", "")
         } else {
             (
@@ -1200,6 +1298,35 @@ mod tests {
     use crate::utils::sql::{MAX_FILTERING_AVERAGE_BADGE, MIN_FILTERING_AVERAGE_BADGE};
 
     #[test]
+    fn net_worth_buckets_read_match_player_by_final_net_worth() {
+        let query = HeroStatsQuery {
+            bucket: HeroStatsBucket::NetWorthBy10000,
+            min_unix_timestamp: Some(1_786_147_200),
+            ..Default::default()
+        };
+        // The rollups have no per-player net worth.
+        assert!(build_mv_query(&query).is_none());
+        let item = HeroStatsQuery {
+            include_item_ids: Some(vec![1_009_965_641]),
+            ..query.clone()
+        };
+        assert!(build_item_query(&item).is_none());
+        let sql = build_query(&query);
+        assert_valid_sql(&sql);
+        assert!(sql.contains("toUInt32(intDiv(net_worth, 10000) * 10000) AS bucket"));
+        // Each bucket counts its own matches.
+        assert!(sql.contains("count(distinct match_id) AS n_distinct_matches"));
+        assert_eq!(
+            serde_json::from_str::<HeroStatsBucket>("\"net_worth_by_2000\"").unwrap(),
+            HeroStatsBucket::NetWorthBy2000
+        );
+        assert_eq!(
+            HeroStatsBucket::NetWorthBy5000.to_string(),
+            "net_worth_by_5000"
+        );
+    }
+
+    #[test]
     fn window_wide_read_dedups_with_final() {
         let sql = build_query(&HeroStatsQuery {
             min_unix_timestamp: Some(1_786_147_200),
@@ -1336,7 +1463,7 @@ mod tests {
         let sql = build_mv_query(&HeroStatsQuery {
             min_unix_timestamp: Some(min),
             max_unix_timestamp: Some(max),
-            bucket: BucketQuery::StartTimeDay,
+            bucket: HeroStatsBucket::StartTimeDay,
             game_mode: Some(GameMode::Normal),
             min_average_badge: Some(50),
             ..Default::default()
@@ -1469,7 +1596,7 @@ mod tests {
         validate_hero_matches_total_buckets(&query).unwrap();
         assert!(
             validate_hero_matches_total_buckets(&HeroStatsQuery {
-                bucket: BucketQuery::StartTimeDay,
+                bucket: HeroStatsBucket::StartTimeDay,
                 ..query.clone()
             })
             .is_err()
@@ -1700,7 +1827,7 @@ mod tests {
             min_unix_timestamp: Some(days_ago(30)),
             exclude_item_ids: Some(vec![2_417_568_017]),
             min_duration_s: Some(2100),
-            bucket: BucketQuery::StartTimeDay,
+            bucket: HeroStatsBucket::StartTimeDay,
             ..Default::default()
         };
         let sql = build_item_query(&query).expect("routes to the item rollup");
@@ -1735,7 +1862,7 @@ mod tests {
                 ..query.clone()
             },
             HeroStatsQuery {
-                bucket: BucketQuery::AvgBadge,
+                bucket: HeroStatsBucket::AvgBadge,
                 ..query.clone()
             },
             HeroStatsQuery {
