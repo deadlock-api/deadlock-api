@@ -96,11 +96,6 @@ pub(crate) async fn track<F: Future>(future: F) -> (F::Output, ChCost) {
     .await
 }
 
-/// The cost recorded so far in the current [`track`] scope; empty outside one.
-pub(crate) fn current() -> ChCost {
-    COST.try_with(Cell::get).unwrap_or_default()
-}
-
 /// Records one query with its summary, if `ClickHouse` sent one; a no-op outside [`track`].
 pub(crate) fn record(summary: Option<&QuerySummary>) {
     _ = COST.try_with(|cost| cost.set(cost.get().add(summary)));
@@ -121,11 +116,17 @@ pub(crate) trait TrackedQuery {
     ) -> clickhouse::error::Result<Option<T>>;
     /// The result in `format`, line by line; records once the first line is read.
     fn fetch_lines_tracked(self, format: &str) -> clickhouse::error::Result<TrackedLines>;
+    /// [`Self::fetch_lines_tracked`] under the given `query_id` rather than a generated one.
+    fn fetch_lines_tracked_as(
+        self,
+        format: &str,
+        query_id: Option<&str>,
+    ) -> clickhouse::error::Result<TrackedLines>;
 }
 
 impl TrackedQuery for Query {
     async fn fetch_all_tracked<T: RowOwned + RowRead>(self) -> clickhouse::error::Result<Vec<T>> {
-        let mut cursor = wait_end_of_query(self).fetch::<T>()?;
+        let mut cursor = prepare(self, None).fetch::<T>()?;
         let mut rows = Vec::new();
         while let Some(row) = cursor.next().await? {
             rows.push(row);
@@ -143,15 +144,23 @@ impl TrackedQuery for Query {
     async fn fetch_optional_tracked<T: RowOwned + RowRead>(
         self,
     ) -> clickhouse::error::Result<Option<T>> {
-        let mut cursor = wait_end_of_query(self).fetch::<T>()?;
+        let mut cursor = prepare(self, None).fetch::<T>()?;
         let row = cursor.next().await?;
         record(cursor.summary());
         Ok(row)
     }
 
     fn fetch_lines_tracked(self, format: &str) -> clickhouse::error::Result<TrackedLines> {
+        self.fetch_lines_tracked_as(format, None)
+    }
+
+    fn fetch_lines_tracked_as(
+        self,
+        format: &str,
+        query_id: Option<&str>,
+    ) -> clickhouse::error::Result<TrackedLines> {
         Ok(TrackedLines {
-            lines: wait_end_of_query(self).fetch_bytes(format)?.lines(),
+            lines: prepare(self, query_id).fetch_bytes(format)?.lines(),
             recorded: false,
         })
     }
@@ -176,9 +185,11 @@ impl TrackedLines {
     }
 }
 
-/// A setting, not SQL, so query cache keys stay the same.
-fn wait_end_of_query(query: Query) -> Query {
-    query.with_setting("wait_end_of_query", "1")
+/// Sets `wait_end_of_query` (a setting, not SQL, so query cache keys stay the same) and tags the
+/// query for [`super::ch_usage`] under `query_id`, generated if `None`, when a client is to be
+/// charged for it.
+fn prepare(query: Query, query_id: Option<&str>) -> Query {
+    super::ch_usage::tag(query.with_setting("wait_end_of_query", "1"), query_id)
 }
 
 #[cfg(test)]

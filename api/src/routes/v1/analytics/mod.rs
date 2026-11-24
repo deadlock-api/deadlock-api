@@ -37,8 +37,9 @@ use utoipa_axum::routes;
 
 use crate::context::AppState;
 use crate::middleware::cache::CacheControlLayer;
-use crate::middleware::rate_limit::{RateLimitState, rate_limit};
-use crate::services::rate_limiter::{self, Limits, Quota, RateLimit, Scope};
+use crate::middleware::cost_limit::clickhouse_cost;
+use crate::services::clickhouse_budget;
+use crate::services::rate_limiter;
 
 #[derive(OpenApi)]
 #[openapi(tags((name = "Analytics", description = "
@@ -48,24 +49,10 @@ Features scoreboards for both heroes and players.
 ")))]
 struct ApiDoc;
 
-/// Shared by all analytics endpoints.
-const RATE_LIMIT: RateLimit = RateLimit::new(
-    "analytics",
-    &[
-        Quota::new(Scope::Ip, 200, Duration::from_mins(1)),
-        Quota::new(Scope::Key, 400, Duration::from_mins(1)),
-        Quota::new(Scope::Key, 2500, Duration::from_hours(1)),
-        Quota::new(Scope::Global, 2000, Duration::from_mins(1)),
-    ],
-);
-
-/// An endpoint description followed by the rate limits all analytics endpoints share.
+/// An endpoint description followed by the limits all analytics endpoints share with bulk
+/// metadata and GraphQL.
 fn describe(description: &str) -> String {
-    rate_limiter::describe(
-        description,
-        Limits::from(RATE_LIMIT)
-            .note("The rate limits below are **shared across all analytics endpoints**."),
-    )
+    rate_limiter::describe(description, clickhouse_budget::limits())
 }
 
 /// Responses are cached for at least 10 minutes, and until the query results behind them expire:
@@ -79,11 +66,6 @@ pub(crate) const CACHE_CONTROL: CacheControlLayer = CacheControlLayer::new(Durat
     reason = "registers the deprecated per-hero hero-build-stats route"
 )]
 pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
-    let rate_limit_state = RateLimitState {
-        client: state.rate_limit_client.clone(),
-        limit: RATE_LIMIT,
-    };
-
     OpenApiRouter::with_openapi(ApiDoc::openapi()).merge(
         OpenApiRouter::new()
             .routes(routes!(ability_order_stats::ability_order_stats))
@@ -115,7 +97,7 @@ pub(super) fn router(state: &AppState) -> OpenApiRouter<AppState> {
                     .routes(routes!(player_scoreboard::player_scoreboard))
                     .routes(routes!(hero_scoreboard::hero_scoreboard)),
             )
-            .layer(from_fn_with_state(rate_limit_state, rate_limit))
+            .layer(from_fn_with_state(state.clone(), clickhouse_cost))
             .layer(CACHE_CONTROL),
     )
 }

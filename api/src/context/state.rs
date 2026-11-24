@@ -278,6 +278,7 @@ impl AppState {
         debug!("Creating MCP snapshot catalog");
         let data_lake = Arc::new(SnapshotCatalog::try_new(&config.mcp_snapshot)?);
         Arc::clone(&data_lake).spawn_refresh_loop();
+        crate::services::ch_usage::spawn_settler(ch_client.clone(), rate_limit_client.clone());
 
         if config.data_dump.enabled {
             debug!("Starting data dump");
