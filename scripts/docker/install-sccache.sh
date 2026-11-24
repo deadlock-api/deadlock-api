@@ -6,8 +6,8 @@ set -eu
 version=0.20.0
 arch=$(uname -m)
 case "$arch" in
-    x86_64) sha256=aa73c7270c997894038c0d8f0d297865f57569e1687883322bc431713d4bb9dd ;;
-    aarch64) sha256=3e47fc4a71b1ddd1b4294a0de9d34498922fdf41e3cd0bda5df3954e3d6deb9d ;;
+    x86_64) sha256=c3c5db9cd7e3be12b7bab350d8fe8ae7dcfb7269d5432b269e0dffa1a87c6ed2 ;;
+    aarch64) sha256=1bd78037804baeb9655f6baf8791f99c43388fae6d6b16944d3d93542fa5711a ;;
     *) echo "install-sccache: no sccache build for $arch" >&2; exit 1 ;;
 esac
 
