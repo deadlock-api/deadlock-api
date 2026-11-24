@@ -91,6 +91,26 @@ pub enum BucketQuery {
     #[serde(rename = "net_worth_by_10000")]
     #[strum(to_string = "net_worth_by_10000")]
     NetWorthBy10000,
+    /// Bucket Item Stats by the buyer's final net worth at the end of the match (grouped by 1000)
+    #[serde(rename = "final_net_worth_by_1000")]
+    #[strum(to_string = "final_net_worth_by_1000")]
+    FinalNetWorthBy1000,
+    /// Bucket Item Stats by the buyer's final net worth at the end of the match (grouped by 2000)
+    #[serde(rename = "final_net_worth_by_2000")]
+    #[strum(to_string = "final_net_worth_by_2000")]
+    FinalNetWorthBy2000,
+    /// Bucket Item Stats by the buyer's final net worth at the end of the match (grouped by 3000)
+    #[serde(rename = "final_net_worth_by_3000")]
+    #[strum(to_string = "final_net_worth_by_3000")]
+    FinalNetWorthBy3000,
+    /// Bucket Item Stats by the buyer's final net worth at the end of the match (grouped by 5000)
+    #[serde(rename = "final_net_worth_by_5000")]
+    #[strum(to_string = "final_net_worth_by_5000")]
+    FinalNetWorthBy5000,
+    /// Bucket Item Stats by the buyer's final net worth at the end of the match (grouped by 10000)
+    #[serde(rename = "final_net_worth_by_10000")]
+    #[strum(to_string = "final_net_worth_by_10000")]
+    FinalNetWorthBy10000,
     /// Bucket Item Stats by the hero ability the item was imbued into. The bucket is the ability's
     /// id. Only purchases imbued into an ability are counted, so only items that imbue an ability
     /// (e.g. Mystic Expansion, Compress Cooldown, Duration Extender) appear.
@@ -139,6 +159,11 @@ impl BucketQuery {
             Self::NetWorthBy3000 => net_worth_bucket(net_worth_expr, 3000),
             Self::NetWorthBy5000 => net_worth_bucket(net_worth_expr, 5000),
             Self::NetWorthBy10000 => net_worth_bucket(net_worth_expr, 10000),
+            Self::FinalNetWorthBy1000 => net_worth_bucket("net_worth", 1000),
+            Self::FinalNetWorthBy2000 => net_worth_bucket("net_worth", 2000),
+            Self::FinalNetWorthBy3000 => net_worth_bucket("net_worth", 3000),
+            Self::FinalNetWorthBy5000 => net_worth_bucket("net_worth", 5000),
+            Self::FinalNetWorthBy10000 => net_worth_bucket("net_worth", 10000),
             Self::ImbuedAbility => "toUInt32(imbued_ability_id)".to_owned(),
         }
     }
@@ -178,6 +203,11 @@ impl BucketQuery {
             | Self::NetWorthBy3000
             | Self::NetWorthBy5000
             | Self::NetWorthBy10000
+            | Self::FinalNetWorthBy1000
+            | Self::FinalNetWorthBy2000
+            | Self::FinalNetWorthBy3000
+            | Self::FinalNetWorthBy5000
+            | Self::FinalNetWorthBy10000
             | Self::ImbuedAbility => None,
         }
     }
@@ -723,6 +753,11 @@ fn build_bucket_mv_query(query: &ItemStatsQuery) -> Option<String> {
         | BucketQuery::StartTimeWeek
         | BucketQuery::StartTimeMonth
         | BucketQuery::GameTimeNormalizedPercentage
+        | BucketQuery::FinalNetWorthBy1000
+        | BucketQuery::FinalNetWorthBy2000
+        | BucketQuery::FinalNetWorthBy3000
+        | BucketQuery::FinalNetWorthBy5000
+        | BucketQuery::FinalNetWorthBy10000
         | BucketQuery::ImbuedAbility => return None,
     };
 
@@ -946,6 +981,11 @@ fn cohort_mv_bucket(bucket: BucketQuery) -> Option<(&'static Rollup<'static>, St
         | BucketQuery::EnemyHero
         | BucketQuery::StartTimeHour
         | BucketQuery::GameTimeNormalizedPercentage
+        | BucketQuery::FinalNetWorthBy1000
+        | BucketQuery::FinalNetWorthBy2000
+        | BucketQuery::FinalNetWorthBy3000
+        | BucketQuery::FinalNetWorthBy5000
+        | BucketQuery::FinalNetWorthBy10000
         | BucketQuery::ImbuedAbility => None,
     }
 }
@@ -1916,6 +1956,28 @@ mod tests {
     use super::*;
     use crate::routes::v1::analytics::rollup_window::{BUILT_THROUGH, UNBUILT_SPLITS_DAYS};
     use crate::utils::proptest_utils::{assert_parses, assert_valid_sql};
+
+    #[test]
+    fn final_net_worth_buckets_read_the_final_net_worth_from_match_player() {
+        let query = ItemStatsQuery {
+            bucket: BucketQuery::FinalNetWorthBy10000,
+            hero_ids: Some(vec![6]),
+            ..Default::default()
+        };
+        let sql = build_query(&query);
+        assert_valid_sql(&sql);
+        assert!(
+            sql.contains("toUInt32(floor((net_worth) / 10000) * 10000)    AS bucket"),
+            "{sql}"
+        );
+        // Not the per-purchase net worth the `net_worth_by_*` buckets use.
+        assert!(!sql.contains("net_worth_at_buy"));
+        assert!(BucketQuery::FinalNetWorthBy10000.mv_bucket_expr().is_none());
+        assert_eq!(
+            serde_json::from_str::<BucketQuery>("\"final_net_worth_by_2000\"").unwrap(),
+            BucketQuery::FinalNetWorthBy2000
+        );
+    }
 
     #[test]
     fn rollup_timeouts_are_not_retried_on_the_base_table() {
