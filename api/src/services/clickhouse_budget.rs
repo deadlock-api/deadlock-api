@@ -24,18 +24,19 @@ use crate::services::rate_limiter::{Limits, Quota, RateLimit, Scope, Status};
 const COST_UNIT_BYTES: u64 = 1_000_000;
 
 /// Budgets of [`COST_UNIT_BYTES`]. Replayed on the week to 2026-11-24, when analytics, bulk
-/// metadata and GraphQL read ~427 TB a day, these reject ~20% of what clients without a key read
-/// (214 of their 128k addresses hit them in at least one hour) and ~24% of what one key reads,
-/// deadlocklabs (~5.8 TB/h on average, the only key that reaches them). For analytics they match
-/// about 1 (without a key) and 8 (with one) of the database's 64 cores averaged over an hour, at
-/// the 6.9 core-ms per MB analytics queries cost; bulk metadata reads cost ~5x more CPU per MB.
+/// metadata and GraphQL read ~427 TB a day, these reject ~37% of what clients without a key read,
+/// and only 344 of their 174k addresses lose more than 5% of their reads (21 of them browsers).
+/// Only one key reaches them, deadlocklabs (~5.8 TB/h on average, ~66% rejected). The per-minute
+/// budgets are generous on purpose: one page firing several uncached ~1 GB analytics queries at
+/// once is a normal burst, and a 50 GB/min budget cut off 119 browsers; the hourly ones are what
+/// hold back sustained sweeps.
 pub(crate) const BUDGET: RateLimit = RateLimit::new(
     "clickhouse_cost",
     &[
-        Quota::new(Scope::Ip, 50_000, Duration::from_mins(1)),
-        Quota::new(Scope::Ip, 500_000, Duration::from_hours(1)),
+        Quota::new(Scope::Ip, 100_000, Duration::from_mins(1)),
+        Quota::new(Scope::Ip, 250_000, Duration::from_hours(1)),
         Quota::new(Scope::Key, 400_000, Duration::from_mins(1)),
-        Quota::new(Scope::Key, 4_000_000, Duration::from_hours(1)),
+        Quota::new(Scope::Key, 2_000_000, Duration::from_hours(1)),
     ],
 );
 
