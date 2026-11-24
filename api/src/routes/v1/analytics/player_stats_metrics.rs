@@ -515,7 +515,7 @@ fn player_filters(query: &PlayerStatsMetricsQuery) -> (String, &'static str) {
     };
     let account_settings = if account_prefilter.is_some() {
         ", optimize_use_projections = 0, ignore_data_skipping_indices = \
-         'idx_account_id,idx_game_mode,idx_match_mode,idx_start_time,idx_start_time_coarse'"
+         'idx_account_id,idx_start_time,idx_start_time_coarse'"
     } else {
         ""
     };

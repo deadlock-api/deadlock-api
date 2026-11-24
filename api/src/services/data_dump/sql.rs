@@ -61,7 +61,7 @@ pub(crate) fn now_hi(lag_secs: u64) -> String {
 
 pub(crate) fn kill_orphans() -> String {
     format!(
-        "KILL QUERY WHERE Settings['log_comment'] = {} ASYNC",
+        "KILL QUERY WHERE Settings['log_comment'] = {} ASYNC SETTINGS kill_throw_if_noop = 0",
         quote(LOG_COMMENT)
     )
 }

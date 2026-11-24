@@ -239,13 +239,6 @@ fn build_query(query: &ItemPermutationStatsQuery) -> String {
     }
 }
 
-/// Skip indexes the intersect query skips on the hero projection. On an all-time single-hero
-/// read (2026-11-24) they pruned 3.5% of the marks for 1-3 CPU-s of planning. Hero, game and
-/// match mode are already in the projection's key, and the item bloom filter can't drop a granule
-/// when the items are popular.
-const INTERSECT_IGNORED_SKIP_INDEXES: &str =
-    "bf_items_item_id,bf_hero_id,idx_match_mode,idx_game_mode";
-
 /// Wins and losses of the players who own every item in `item_ids`. Because of `hasAll`, every
 /// matching player owns the whole list, so the result is at most one row, `item_ids` sorted and
 /// deduplicated.
@@ -318,9 +311,9 @@ fn intersect_query(
     };
     // The hero-less read keeps the projection off: 32% fewer bytes with it, but p50 2.2 s -> 3.4 s.
     let settings = if hero_less {
-        ", optimize_use_projections = 0".to_owned()
+        ", optimize_use_projections = 0"
     } else {
-        format!(", ignore_data_skipping_indices = '{INTERSECT_IGNORED_SKIP_INDEXES}'")
+        ""
     };
     format!(
         "
@@ -931,9 +924,7 @@ mod tests {
         assert_eq!(all_time.matches(owned).count(), 1);
         assert!(!all_time.contains("start_time"));
         assert!(all_time.contains("CAST([1, 2] AS Array(UInt32)) AS item_ids"));
-        assert!(all_time.contains(&format!(
-            "ignore_data_skipping_indices = '{INTERSECT_IGNORED_SKIP_INDEXES}'"
-        )));
+        assert!(!all_time.contains("optimize_use_projections"));
 
         // A window after the first corrupted match: one query, checked throughout.
         let recent = intersect(ItemPermutationStatsQuery {
@@ -970,12 +961,12 @@ mod tests {
         assert!(!raw.contains("upgrade_info"));
         assert!(!raw.contains("UNION ALL"));
 
-        // The hero-less read is not on the hero projection, so it keeps its skip indexes.
+        // The hero-less read keeps the projection off.
         let hero_less = build_query(&ItemPermutationStatsQuery {
             item_ids: Some(vec![1, 2]),
             ..Default::default()
         });
-        assert!(!hero_less.contains("ignore_data_skipping_indices"));
+        assert!(hero_less.contains("optimize_use_projections = 0"));
     }
 
     #[test]

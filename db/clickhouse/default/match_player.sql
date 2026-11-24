@@ -314,7 +314,6 @@ CREATE TABLE default.match_player
     `max_gold_item_trophy_collector` UInt32 MATERIALIZED arrayMax(`stats.gold_source_item_trophy_collector_gold`),
     `max_gold_item_cultist_sacrifice` UInt32 MATERIALIZED arrayMax(`stats.gold_source_item_cultist_sacrifice_gold`),
     `max_gold_item_goose_egg` UInt32 MATERIALIZED arrayMax(`stats.gold_source_item_goose_egg_gold`) CODEC(T64, LZ4),
-    INDEX bf_hero_id hero_id TYPE bloom_filter GRANULARITY 1,
     INDEX idx_account_id_tight account_id TYPE bloom_filter GRANULARITY 1,
     INDEX idx_account_id account_id TYPE bloom_filter GRANULARITY 4,
     INDEX idx_start_time start_time TYPE minmax GRANULARITY 1,
@@ -322,11 +321,8 @@ CREATE TABLE default.match_player
     INDEX idx_duration_s duration_s TYPE minmax GRANULARITY 1,
     INDEX idx_avg_badge_team0 average_badge_team0 TYPE minmax GRANULARITY 1,
     INDEX idx_avg_badge_team1 average_badge_team1 TYPE minmax GRANULARITY 1,
-    INDEX idx_match_mode match_mode TYPE set(16) GRANULARITY 4,
-    INDEX idx_game_mode game_mode TYPE set(16) GRANULARITY 4,
     INDEX idx_created_at created_at TYPE minmax GRANULARITY 1,
     INDEX idx_demo_processed demo_processed TYPE set(2) GRANULARITY 4,
-    INDEX bf_items_item_id items.item_id TYPE bloom_filter GRANULARITY 1,
     PROJECTION hero_stats_by_hero
     (
         SELECT
