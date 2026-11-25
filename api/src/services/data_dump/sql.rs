@@ -68,10 +68,53 @@ pub(crate) fn kill_orphans() -> String {
     )
 }
 
-pub(crate) fn snapshot_export(named_collection: &str, table: &str, key: &str) -> String {
+/// `column >= from AND column < to` for the bounded ends of `chunk`.
+fn chunk_conditions(column: &str, chunk: Chunk) -> Vec<String> {
+    let mut parts = Vec::new();
+    if let Some(from) = chunk.from {
+        parts.push(format!("{column} >= {from}"));
+    }
+    if let Some(to) = chunk.to {
+        parts.push(format!("{column} < {to}"));
+    }
+    parts
+}
+
+/// A snapshot file: the whole table, or the `chunk` of a chunk column.
+pub(crate) fn snapshot_export(
+    named_collection: &str,
+    table: &str,
+    key: &str,
+    chunk: Option<(&str, Chunk)>,
+) -> String {
+    let filter = chunk
+        .map(|(column, chunk)| chunk_conditions(column, chunk))
+        .filter(|c| !c.is_empty())
+        .map_or_else(String::new, |c| format!(" WHERE {}", c.join(" AND ")));
     format!(
-        "INSERT INTO FUNCTION {} SELECT * FROM {} SETTINGS final = 1, {EXPORT_SETTINGS}",
+        "INSERT INTO FUNCTION {} SELECT * FROM {}{filter} SETTINGS final = 1, {EXPORT_SETTINGS}",
         target(named_collection, key),
+        view(table)
+    )
+}
+
+/// Values of `column` that cut `chunk` of a snapshot table into `parts` pieces of about equal
+/// row counts (raw rows, no `FINAL`).
+pub(crate) fn snapshot_chunk_bounds(
+    table: &str,
+    column: &str,
+    chunk: Chunk,
+    parts: usize,
+) -> String {
+    let conditions = chunk_conditions(column, chunk);
+    let filter = if conditions.is_empty() {
+        String::new()
+    } else {
+        format!(" WHERE {}", conditions.join(" AND "))
+    };
+    format!(
+        "SELECT arrayMap(x -> toUInt64(x), quantilesExactLow({})({column})) FROM {}{filter}",
+        quantile_levels(parts),
         view(table)
     )
 }
@@ -111,12 +154,7 @@ impl BaseRange<'_> {
             chunk,
         } = *self;
         let mut parts = vec![format!("{partition_expr} = {partition}")];
-        if let Some(from) = chunk.from {
-            parts.push(format!("{chunk_column} >= {from}"));
-        }
-        if let Some(to) = chunk.to {
-            parts.push(format!("{chunk_column} < {to}"));
-        }
+        parts.extend(chunk_conditions(chunk_column, chunk));
         parts.join(" AND ")
     }
 }
@@ -327,6 +365,38 @@ mod tests {
             bounds.contains("FROM dump.`match_player` WHERE intDiv(match_id, 1000000) = 7 AND")
         );
         assert!(chunk_bounds("t", &range, 2).contains("quantilesExactLow(0.500000)"));
+    }
+
+    #[test]
+    fn snapshots_split_on_their_chunk_column() {
+        let whole = snapshot_export("r2_dump", "steam_profiles", "k", None);
+        assert!(whole.contains("SELECT * FROM dump.`steam_profiles` SETTINGS final = 1,"));
+        assert_eq!(
+            whole,
+            snapshot_export(
+                "r2_dump",
+                "steam_profiles",
+                "k",
+                Some(("account_id", Chunk::default()))
+            )
+        );
+        let chunk = Chunk {
+            from: Some(10),
+            to: Some(20),
+        };
+        let part = snapshot_export(
+            "r2_dump",
+            "steam_profiles",
+            "k",
+            Some(("account_id", chunk)),
+        );
+        assert!(part.contains(
+            "FROM dump.`steam_profiles` WHERE account_id >= 10 AND account_id < 20 SETTINGS final = 1,"
+        ));
+        assert_eq!(
+            snapshot_chunk_bounds("steam_profiles", "account_id", Chunk::default(), 2),
+            "SELECT arrayMap(x -> toUInt64(x), quantilesExactLow(0.500000)(account_id)) FROM dump.`steam_profiles`"
+        );
     }
 
     #[test]

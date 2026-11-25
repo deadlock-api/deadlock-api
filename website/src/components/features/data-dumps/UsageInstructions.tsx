@@ -93,8 +93,8 @@ def urls(table: str, partition: int | None = None) -> list[str]:
         files = [f for f in files if f.get("partition") == partition or str(partition) in f.get("rows_by_partition", {})]
     return [f"{base}/{f['key']}" for f in files]
 
-# Snapshot tables are a single file
-leaderboard = pl.read_parquet(urls("leaderboard")[0])
+# Big snapshot tables (steam_profiles, match_salts) are split into several files
+leaderboard = pl.scan_parquet(urls("leaderboard")).collect()
 print(leaderboard.head())
 
 # match_player: scan lazily, so only the needed columns and row groups are downloaded

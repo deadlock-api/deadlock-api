@@ -283,8 +283,8 @@ impl DataDump {
         for table in TABLES {
             shutdown_check()?;
             let result = match table.policy {
-                Policy::Snapshot { every_hours } => {
-                    self.export_snapshot(&exporter, &mut manifest, table, now_hi, every_hours)
+                Policy::Snapshot { .. } => {
+                    self.export_snapshot(&exporter, &mut manifest, table, now_hi)
                         .await
                 }
                 Policy::Incremental { .. } => {
@@ -386,8 +386,14 @@ impl DataDump {
         manifest: &mut Manifest,
         table: &TablePolicy,
         now_hi: i64,
-        every_hours: i64,
     ) -> Result<(), DumpError> {
+        let Policy::Snapshot {
+            every_hours,
+            chunk_column,
+        } = table.policy
+        else {
+            return Ok(());
+        };
         // Ticks drift by minutes, so a refresh is due a little early rather than a tick late.
         let due_after = every_hours.saturating_mul(HOUR).saturating_sub(HOUR / 2);
         if let Some(state) = manifest.tables.get(table.name)
@@ -398,44 +404,138 @@ impl DataDump {
         {
             return Ok(());
         }
-        let columns = self.fetch_columns(exporter, table.name).await?;
-        let key = self.key(&format!(
-            "tables/{}/snapshot/{}-{}.parquet",
-            table.name,
-            ts(now_hi),
-            exporter.run_id
-        ));
-        let sql = sql::snapshot_export(&self.config.named_collection, table.name, &key);
-        let Some(written) = exporter
-            .export(&sql, &key, &format!("{}-snapshot", table.name))
-            .await?
-        else {
-            warn!(
-                "data dump: {} is empty; keeping the previous snapshot",
-                table.name
-            );
+        let name = table.name;
+        let columns = self.fetch_columns(exporter, name).await?;
+        let estimate: u64 = manifest
+            .tables
+            .get(name)
+            .map_or(0, |s| s.files.iter().map(|f| f.bytes).sum());
+        let files = self
+            .export_snapshot_files(exporter, name, chunk_column, estimate, now_hi)
+            .await?;
+        if files.is_empty() {
+            warn!("data dump: {name} is empty; keeping the previous snapshot");
             return Ok(());
-        };
+        }
         let state = manifest
             .tables
-            .entry(table.name.to_owned())
+            .entry(name.to_owned())
             .or_insert_with(|| TableState::new(PolicyKind::Snapshot, Vec::new()));
         state.columns = columns;
         state.status = TableStatus::Ready;
         state.watermark_hi = Some(now_hi);
-        state.files = vec![FileEntry {
-            key,
-            kind: FileKind::Snapshot,
-            generation: 0,
-            partition: None,
-            lo: None,
-            hi: Some(now_hi),
-            rows: written.rows,
-            bytes: written.bytes,
-            rows_by_partition: BTreeMap::new(),
-            built_at: Utc::now(),
-        }];
+        state.files = files;
         Ok(())
+    }
+
+    /// Exports snapshot table `name` as files of at most `compaction::MAX_FILE_BYTES` when it has
+    /// a `chunk_column` (split by the `estimate`, oversized files re-exported in pieces), else
+    /// as one file.
+    async fn export_snapshot_files(
+        &self,
+        exporter: &Exporter,
+        name: &str,
+        chunk_column: Option<&str>,
+        estimate: u64,
+        now_hi: i64,
+    ) -> Result<Vec<FileEntry>, DumpError> {
+        let step = format!("{name}-snapshot");
+        let mut todo = match chunk_column {
+            Some(column) => {
+                self.split_snapshot(
+                    exporter,
+                    name,
+                    column,
+                    compaction::Chunk::default(),
+                    compaction::chunk_count(estimate),
+                    &step,
+                )
+                .await?
+            }
+            None => vec![compaction::Chunk::default()],
+        };
+        // Popped from the back: export in chunk-column order.
+        todo.reverse();
+        let mut files = Vec::new();
+        let mut seq = 0u32;
+        while let Some(chunk) = todo.pop() {
+            shutdown_check()?;
+            let key = self.key(&format!(
+                "tables/{name}/snapshot/{}-{}-{seq}.parquet",
+                ts(now_hi),
+                exporter.run_id
+            ));
+            let sql = sql::snapshot_export(
+                &self.config.named_collection,
+                name,
+                &key,
+                chunk_column.map(|c| (c, chunk)),
+            );
+            let chunk_step = format!("{step}-{seq}");
+            seq = seq.saturating_add(1);
+            let Some(written) = exporter.export(&sql, &key, &chunk_step).await? else {
+                continue;
+            };
+            if let Some(column) = chunk_column
+                && written.bytes > compaction::MAX_FILE_BYTES
+            {
+                let parts = compaction::chunk_count(written.bytes).max(2);
+                let pieces = self
+                    .split_snapshot(exporter, name, column, chunk, parts, &chunk_step)
+                    .await?;
+                if pieces.len() > 1 {
+                    warn!(
+                        key,
+                        bytes = written.bytes,
+                        "data dump: snapshot file over the size limit; exporting it in {} pieces",
+                        pieces.len()
+                    );
+                    exporter.delete(&key).await?;
+                    todo.extend(pieces.into_iter().rev());
+                    continue;
+                }
+                warn!(
+                    key,
+                    bytes = written.bytes,
+                    "data dump: snapshot file over the size limit cannot be split further"
+                );
+            }
+            files.push(FileEntry {
+                key,
+                kind: FileKind::Snapshot,
+                generation: 0,
+                partition: None,
+                lo: None,
+                hi: Some(now_hi),
+                rows: written.rows,
+                bytes: written.bytes,
+                rows_by_partition: BTreeMap::new(),
+                built_at: Utc::now(),
+            });
+        }
+        Ok(files)
+    }
+
+    /// `chunk` of a snapshot table cut into up to `parts` pieces at row quantiles of `column`.
+    async fn split_snapshot(
+        &self,
+        exporter: &Exporter,
+        name: &str,
+        column: &str,
+        chunk: compaction::Chunk,
+        parts: usize,
+        step: &str,
+    ) -> Result<Vec<compaction::Chunk>, DumpError> {
+        if parts < 2 {
+            return Ok(vec![chunk]);
+        }
+        let bounds = exporter
+            .fetch_u64s(
+                &sql::snapshot_chunk_bounds(name, column, chunk, parts),
+                &format!("{step}-bounds"),
+            )
+            .await?;
+        Ok(chunk.split(&bounds))
     }
 
     /// Takes the table's state out of `manifest` for the export and puts it back however the
