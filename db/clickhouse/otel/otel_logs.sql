@@ -15,15 +15,7 @@ CREATE TABLE otel.otel_logs
     `ScopeVersion` LowCardinality(String) CODEC(ZSTD(3)),
     `ScopeAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(3)),
     `LogAttributes` Map(LowCardinality(String), String) CODEC(ZSTD(3)),
-    `EventName` String CODEC(ZSTD(3)),
-    INDEX idx_trace_id TraceId TYPE text(tokenizer = 'array') GRANULARITY 100000000,
-    INDEX idx_res_attr_key mapKeys(ResourceAttributes) TYPE text(tokenizer = 'array') GRANULARITY 100000000,
-    INDEX idx_res_attr_value mapValues(ResourceAttributes) TYPE text(tokenizer = 'array') GRANULARITY 100000000,
-    INDEX idx_scope_attr_key mapKeys(ScopeAttributes) TYPE text(tokenizer = 'array') GRANULARITY 100000000,
-    INDEX idx_scope_attr_value mapValues(ScopeAttributes) TYPE text(tokenizer = 'array') GRANULARITY 100000000,
-    INDEX idx_log_attr_key mapKeys(LogAttributes) TYPE text(tokenizer = 'array') GRANULARITY 100000000,
-    INDEX idx_log_attr_value mapValues(LogAttributes) TYPE text(tokenizer = 'array') GRANULARITY 100000000,
-    INDEX idx_lower_body lower(Body) TYPE text(tokenizer = 'splitByNonAlpha') GRANULARITY 100000000
+    `EventName` String CODEC(ZSTD(3))
 )
 ENGINE = MergeTree
 PARTITION BY toDate(Timestamp)

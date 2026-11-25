@@ -12,8 +12,7 @@ CREATE TABLE default.steam_profiles
     `avatarfull` String CODEC(ZSTD(1)),
     `friends.account_id` Array(UInt32) DEFAULT [],
     `friends.friend_since` Array(DateTime) DEFAULT [],
-    `personaname_lc` String MATERIALIZED lowerUTF8(personaname),
-    INDEX idx_personaname_ngram personaname_lc TYPE ngrambf_v1(3, 8192, 3, 0) GRANULARITY 4
+    `personaname_lc` String MATERIALIZED lowerUTF8(personaname)
 )
 ENGINE = ReplacingMergeTree
 ORDER BY account_id
