@@ -22,7 +22,7 @@ test("playerPairs counts matches together with their record", () => {
     { accountId: 1, matches: [entry(10, 0, 0), entry(11, 1, 0), entry(12, 1, 1)] },
     { accountId: 2, matches: [entry(10, 0, 0), entry(11, 1, 0), entry(99, 0, 0)] },
   ]);
-  assert.deepEqual(pair.together, { matches: 2, wins: 1 });
+  assert.deepEqual(pair.together, { matches: 2, wins: 1, losses: 1 });
   assert.deepEqual(pair.against, { matches: 0, aWins: 0, bWins: 0 });
   assert.equal(pair.lastMet, 11);
   assert.deepEqual(pair.matchIds, [11, 10]);
@@ -185,7 +185,7 @@ test("pairSynergy: together's win rate against the average of each one's win rat
     { accountId: 1, matches: [...together, entry(1, 0, 0), entry(2, 0, 1)] },
     { accountId: 2, matches: [...together, entry(3, 0, 0), entry(4, 0, 1), entry(5, 0, 1), entry(6, 0, 1)] },
   ]);
-  assert.deepEqual(pair.apart, { aMatches: 2, aWins: 1, bMatches: 4, bWins: 1 });
+  assert.deepEqual(pair.apart, { aMatches: 2, aWins: 1, aLosses: 1, bMatches: 4, bWins: 1, bLosses: 3 });
   assert.ok(Math.abs((pairSynergy(pair) ?? 0) - (0.8 - (0.5 + 0.25) / 2)) < 1e-9);
 });
 
@@ -221,7 +221,7 @@ test("duoHeroPairs counts same-team hero pairings, most played first", () => {
     shared(6, 0, 1, 15),
   ];
   const pairs = duoHeroPairs(a, b, 3, 1);
-  assert.deepEqual(pairs[0], { aHero: 7, bHero: 12, matches: 4, wins: 2 });
+  assert.deepEqual(pairs[0], { aHero: 7, bHero: 12, matches: 4, wins: 2, losses: 2 });
   assert.equal(pairs.length, 2);
   assert.equal(duoHeroPairs(a, b).length, 1);
 });

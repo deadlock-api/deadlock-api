@@ -164,6 +164,8 @@ export interface TrackerMatchPlayer {
   boss_damage: number;
   player_healing: number;
   mvp_rank: number | null;
+  /** Match time the game flagged the player as abandoned, or null when it did not. */
+  abandon_match_time_s: number | null;
   /** Ranked badge going into the match, or null when unknown or unranked. */
   rank_badge: number | null;
   /** Ranked progress the match actually moved, or null when it carried no rank progress. */
@@ -628,6 +630,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number, source: MatchM
             max_player_damage_taken: true,
             max_boss_damage: true,
             mvp_rank: true,
+            abandon_match_time_s: true,
             player_rank_initial_display_rank: true,
             player_rank_initial_flat_progress: true,
             player_rank_final_flat_progress: true,
@@ -695,6 +698,7 @@ export function trackerMatchMetadataQueryOptions(matchId: number, source: MatchM
           boss_damage: player.max_boss_damage ?? 0,
           player_healing: maxStat(player.stats ?? undefined, "player_healing"),
           mvp_rank: player.mvp_rank ?? null,
+          abandon_match_time_s: player.abandon_match_time_s || null,
           rank_badge: player.player_rank_initial_display_rank || null,
           rank_delta: rankDelta(player.player_rank_initial_flat_progress, player.player_rank_final_flat_progress),
           demotion_protected: player.player_rank_consumed_demotion_protection === true,

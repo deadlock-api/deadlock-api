@@ -1,7 +1,7 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
 import type { CompanionRow } from "./companions";
-import { isWin } from "./compute";
+import { isLoss, isWin } from "./compute";
 
 /** A pair needs this many matches with both on the tracked player's team to be listed. */
 export const PAIR_MIN_MATCHES = 2;
@@ -10,7 +10,9 @@ export interface TeammatePairRow {
   /** The two teammates, lower account id first. */
   memberIds: [number, number];
   matches: number;
+  /** Wins and losses among the scored matches. */
   wins: number;
+  losses: number;
   lastPlayedUnix: number;
   matchIds: number[];
 }
@@ -34,16 +36,18 @@ export function computeTeammatePairs(
       const matchIds = [...first.matchIds].filter((matchId) => second.matchIds.has(matchId));
       if (matchIds.length < PAIR_MIN_MATCHES) continue;
       let wins = 0;
+      let losses = 0;
       let lastPlayedUnix = 0;
       for (const matchId of matchIds) {
         const entry = entryByMatchId.get(matchId);
         if (!entry) continue;
         if (isWin(entry)) wins += 1;
+        else if (isLoss(entry)) losses += 1;
         lastPlayedUnix = Math.max(lastPlayedUnix, entry.start_time);
       }
       const memberIds: [number, number] =
         first.accountId < second.accountId ? [first.accountId, second.accountId] : [second.accountId, first.accountId];
-      pairs.push({ memberIds, matches: matchIds.length, wins, lastPlayedUnix, matchIds });
+      pairs.push({ memberIds, matches: matchIds.length, wins, losses, lastPlayedUnix, matchIds });
     }
   }
   return pairs.sort(

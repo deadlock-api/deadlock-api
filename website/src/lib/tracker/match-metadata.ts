@@ -49,6 +49,7 @@ export interface RawMatchMetadata {
       last_hits?: number;
       denies?: number;
       mvp_rank?: number | null;
+      abandon_match_time_s?: number | null;
       ability_stats?: { ability_id?: number; ability_value?: number }[] | null;
       player_rank_data?: {
         initial_display_rank?: number | null;
@@ -241,6 +242,7 @@ export function trackerMatchFromRawMetadata(metadata: RawMatchMetadata): Tracker
       boss_damage: maxStat(player.stats, "boss_damage"),
       player_healing: maxStat(player.stats, "player_healing"),
       mvp_rank: player.mvp_rank ?? null,
+      abandon_match_time_s: player.abandon_match_time_s || null,
       rank_badge: player.player_rank_data?.initial_display_rank || null,
       rank_delta: rankDelta(
         player.player_rank_data?.initial_flat_progress,

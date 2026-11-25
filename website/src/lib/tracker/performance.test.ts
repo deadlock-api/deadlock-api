@@ -17,7 +17,8 @@ function match(matchId: number, overrides: Partial<PlayerMatchHistoryEntry> = {}
     match_mode: 4,
     match_result: 0,
     player_team: 0,
-    player_match_outcome: 1,
+    // 0, as before late July 2026: the result follows the team, so a test sets it with `match_result`.
+    player_match_outcome: 0,
     player_kills: 4,
     player_deaths: 2,
     player_assists: 6,

@@ -20,6 +20,7 @@ import { useSort } from "~/components/ui/hooks/use-sort";
 import { Segmented, SegmentedItem } from "~/components/ui/segmented";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import { formatPercent } from "~/lib/format";
+import { winRateOf } from "~/lib/tracker/compute";
 import { differsFromBaseline, type HeroMatchupRow, rankHeroes, rankingMinimum } from "~/lib/tracker/hero-matchups";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
@@ -35,7 +36,7 @@ const PREVIEW_ROWS = 3;
 /** The smallest number of games a hero needs to be listed in the dialog. */
 const MINIMUM_MATCHES = [1, 5, 10, 20] as const;
 
-const winRate = (row: HeroMatchupRow, side: Side) => row[side].wins / row[side].matches;
+const winRate = (row: HeroMatchupRow, side: Side) => winRateOf(row[side]) ?? 0;
 
 /**
  * The tracked player's win rate with every other hero on their team and against every hero on the other, over the
@@ -55,7 +56,7 @@ export function HeroMatchupsPanel({
     setOpen(false);
     onOpenMatch(matchId);
   };
-  const baseline = matchups && matchups.matches > 0 ? matchups.wins / matchups.matches : undefined;
+  const baseline = (matchups && winRateOf(matchups)) ?? undefined;
   const rankMinimum = rankingMinimum(matchups?.matches ?? 0);
 
   return (

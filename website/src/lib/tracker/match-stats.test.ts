@@ -111,7 +111,7 @@ test("lane summary splits match results by lane outcome, lane and opponent", () 
     laneMatch(3, -600, false, [7, 8], 4),
     { entry: entry(4, 4, true), stats: undefined },
   ]);
-  assert.deepEqual(summary.all, { lanes: 3, won: 2, lost: 1, diffSum: 600, matchWins: 1 });
+  assert.deepEqual(summary.all, { lanes: 3, won: 2, lost: 1, diffSum: 600, matchWins: 1, matchLosses: 2 });
   assert.deepEqual(summary.afterWon, { matches: 2, wins: 1 });
   assert.deepEqual(summary.afterLost, { matches: 1, wins: 0 });
   assert.deepEqual(

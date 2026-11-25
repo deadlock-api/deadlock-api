@@ -750,6 +750,7 @@ export function demoMatchMetadata(
       team: seat.team,
       hero_id: seat.heroId,
       pregame_hero_id: null,
+      abandon_match_time_s: null,
       combat_stats: combatStats([
         {
           time_stamp_s: durationS,

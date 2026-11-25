@@ -32,6 +32,7 @@ export const THEME_STYLES = {
     halo: "text-shadow-sm text-shadow-black/80",
     win: "text-positive",
     loss: "text-negative",
+    not_scored: "text-muted-foreground",
   },
   light: {
     surface: "[background:rgba(255,255,255,var(--bg-opacity))]",
@@ -42,6 +43,7 @@ export const THEME_STYLES = {
     halo: "text-shadow-sm text-shadow-white/90",
     win: "[color:color-mix(in_oklch,var(--positive),black_15%)]",
     loss: "[color:color-mix(in_oklch,var(--negative),black_10%)]",
+    not_scored: "[color:color-mix(in_oklch,var(--muted-foreground),black_45%)]",
   },
   glass: {
     surface: "bg-black/40 backdrop-blur-md",
@@ -51,5 +53,6 @@ export const THEME_STYLES = {
     halo: "text-shadow-sm text-shadow-black/80",
     win: "text-positive",
     loss: "text-negative",
+    not_scored: "text-muted-foreground",
   },
 } as const;

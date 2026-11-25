@@ -1,7 +1,7 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
 import { type GameMode, hasSoulEconomy } from "~/lib/game-mode";
-import { isWin } from "~/lib/tracker/compute";
+import { isLoss, isWin, winRateOf } from "~/lib/tracker/compute";
 
 const DAY = 86_400;
 const WEEK = 7 * DAY;
@@ -32,7 +32,9 @@ export function utcWeek(unix: number, weeks = 1): number {
 export interface WeekTotals {
   week: number;
   matches: number;
+  /** Wins and losses among the scored matches. */
   wins: number;
+  losses: number;
   kills: number;
   deaths: number;
   assists: number;
@@ -49,11 +51,23 @@ export function weeklyTotals(entries: readonly PlayerMatchHistoryEntry[], weeks 
     const week = utcWeek(entry.start_time, weeks);
     let totals = byWeek.get(week);
     if (!totals) {
-      totals = { week, matches: 0, wins: 0, kills: 0, deaths: 0, assists: 0, netWorth: 0, lastHits: 0, seconds: 0 };
+      totals = {
+        week,
+        matches: 0,
+        wins: 0,
+        losses: 0,
+        kills: 0,
+        deaths: 0,
+        assists: 0,
+        netWorth: 0,
+        lastHits: 0,
+        seconds: 0,
+      };
       byWeek.set(week, totals);
     }
     totals.matches++;
     if (isWin(entry)) totals.wins++;
+    else if (isLoss(entry)) totals.losses++;
     totals.kills += entry.player_kills;
     totals.deaths += entry.player_deaths;
     totals.assists += entry.player_assists;
@@ -73,7 +87,7 @@ export function weekValue(totals: WeekTotals, metric: TrendMetric): number | nul
   if (totals.matches === 0) return null;
   switch (metric) {
     case "winRate":
-      return totals.wins / totals.matches;
+      return winRateOf(totals);
     case "kda":
       return (totals.kills + totals.assists) / Math.max(1, totals.deaths);
     case "kills":

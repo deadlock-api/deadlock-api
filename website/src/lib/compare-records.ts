@@ -1,6 +1,6 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
-import { computeStreaks, isWin, soulsPerMinute } from "~/lib/tracker/compute";
+import { computeStreaks, isScored, isWin, soulsPerMinute } from "~/lib/tracker/compute";
 
 /** A single match that holds a record: its value and the match, so the record can link to it. */
 export interface RecordMatch {
@@ -22,7 +22,7 @@ export interface PlayerRecords {
   bestKda: RecordMatch | null;
   /** Matches without a death. */
   deathless: number;
-  /** The hero with the best win rate over at least `BEST_HERO_MIN_MATCHES` matches; more matches break a tie. */
+  /** The hero with the best win rate over at least `BEST_HERO_MIN_MATCHES` scored matches; more matches break a tie. */
   bestHero: { heroId: number; winRate: number; matches: number } | null;
   longestWinStreak: number;
   /** Positive = an ongoing win streak, negative = an ongoing loss streak, 0 without matches. */
@@ -63,6 +63,7 @@ export function playerRecords(entries: readonly PlayerMatchHistoryEntry[]): Play
   for (const entry of entries) {
     days.add(Math.floor(entry.start_time / 86_400));
     if (entry.player_deaths === 0) deathless++;
+    if (!isScored(entry)) continue;
     const hero = byHero.get(entry.hero_id) ?? { matches: 0, wins: 0 };
     hero.matches++;
     if (isWin(entry)) hero.wins++;
@@ -106,6 +107,7 @@ export const MIN_BRACKET_MATCHES = 5;
 
 export interface BracketResult {
   bracket: DurationBracket;
+  /** Scored matches, which `wins` is out of. */
   matches: number;
   wins: number;
   /** Null under `MIN_BRACKET_MATCHES`. */
@@ -121,7 +123,7 @@ export function winRateByDuration(
   for (const entry of entries) {
     const minutes = entry.match_duration_s / 60;
     const index = DURATION_BRACKETS.findIndex((bracket) => minutes >= bracket.from && minutes < bracket.to);
-    if (index < 0) continue;
+    if (index < 0 || !isScored(entry)) continue;
     totals[index].matches++;
     if (isWin(entry)) totals[index].wins++;
   }

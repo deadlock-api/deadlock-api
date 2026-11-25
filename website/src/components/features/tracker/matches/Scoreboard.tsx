@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import type { Rank } from "deadlock_api_client";
-import { ArrowDown, ArrowUp, Crown, ExternalLink, ShieldCheck } from "lucide-react";
+import { ArrowDown, ArrowUp, Crown, ExternalLink, LogOut, ShieldCheck } from "lucide-react";
 import { useMemo } from "react";
 
 import { AbilityImage } from "~/components/domain/assets/AbilityImage";
@@ -607,6 +607,17 @@ export function Scoreboard({
                             <Tooltip content="Match MVP">
                               <TooltipTarget className="shrink-0">
                                 <Crown className="size-3.5 text-warning" aria-label="Match MVP" />
+                              </TooltipTarget>
+                            </Tooltip>
+                          )}
+                          {player.abandon_match_time_s != null && (
+                            // The game's flag, not proof they left: flagged players can reconnect and play it out.
+                            <Tooltip content={`Abandoned at ${formatMatchDuration(player.abandon_match_time_s)}`}>
+                              <TooltipTarget className="shrink-0">
+                                <LogOut
+                                  className="size-3.5 text-muted-foreground"
+                                  aria-label={`Abandoned at ${formatMatchDuration(player.abandon_match_time_s)}`}
+                                />
                               </TooltipTarget>
                             </Tooltip>
                           )}

@@ -20,7 +20,7 @@ import { Tooltip, TooltipTarget } from "~/components/ui/tooltip";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { formatPercent } from "~/lib/format";
 import { type CompanionRow, type CompanionSort, sortCompanionRows } from "~/lib/tracker/companions";
-import type { TrackerFilterValues } from "~/lib/tracker/compute";
+import { type TrackerFilterValues, winRateOf } from "~/lib/tracker/compute";
 
 import { CompanionMatchesDialog } from "./CompanionMatchesDialog";
 import { useEnemyRows, useMateRows } from "./useCompanionRows";
@@ -189,7 +189,7 @@ function CompanionTable({
         <TableBody>
           {paginatedRows.map((row) => {
             const profile = profiles[row.accountId];
-            const winrate = row.matches > 0 ? row.wins / row.matches : 0;
+            const winrate = winRateOf(row) ?? 0;
             return (
               <TableRow key={row.accountId}>
                 <TableRowHeader className="w-full max-w-0">

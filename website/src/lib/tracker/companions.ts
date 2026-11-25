@@ -1,11 +1,12 @@
 import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
-import { isWin } from "./compute";
+import { isLoss, isWin, winRateOf } from "./compute";
 
-/** Games and wins of the tracked player in a set of their matches. */
+/** Games of the tracked player in a set of their matches, and their wins and losses among the scored ones. */
 export interface MatchTally {
   matches: number;
   wins: number;
+  losses: number;
   /** Shared match IDs after intersecting the active history filters, without duplicates. */
   matchIds: number[];
 }
@@ -19,7 +20,7 @@ export type CompanionSort = "matches" | "wins" | "winrate" | "lastPlayedUnix";
 
 /** Keep the source order untouched and prefer larger samples when the chosen metric ties. */
 export function sortCompanionRows(rows: CompanionRow[], key: CompanionSort, direction: "asc" | "desc") {
-  const value = (row: CompanionRow) => (key === "winrate" ? (row.matches > 0 ? row.wins / row.matches : 0) : row[key]);
+  const value = (row: CompanionRow) => (key === "winrate" ? (winRateOf(row) ?? 0) : row[key]);
   return [...rows].sort(
     (a, b) =>
       (direction === "desc" ? value(b) - value(a) : value(a) - value(b)) ||
@@ -40,6 +41,7 @@ export function intersectCompanionRows(
   for (const stat of stats) {
     let matches = 0;
     let wins = 0;
+    let losses = 0;
     let lastPlayedUnix = 0;
     const matchIds: number[] = [];
     for (const matchId of new Set(stat.matches)) {
@@ -48,10 +50,11 @@ export function intersectCompanionRows(
       matches += 1;
       matchIds.push(matchId);
       if (isWin(entry)) wins += 1;
+      else if (isLoss(entry)) losses += 1;
       lastPlayedUnix = Math.max(lastPlayedUnix, entry.start_time);
     }
     if (matches === 0) continue;
-    rows.push({ accountId: stat.id, matches, wins, lastPlayedUnix, matchIds });
+    rows.push({ accountId: stat.id, matches, wins, losses, lastPlayedUnix, matchIds });
   }
   return rows.sort((a, b) => b.matches - a.matches || b.lastPlayedUnix - a.lastPlayedUnix || a.accountId - b.accountId);
 }

@@ -17,6 +17,7 @@ import {
   type PlaytimeHabits,
   PEAK_HOURS_WINDOW,
   PLAYTIME_BUCKET_HOURS,
+  winRateOf,
 } from "~/lib/tracker/compute";
 
 const weekdays = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -24,7 +25,7 @@ const columns = 24 / PLAYTIME_BUCKET_HOURS;
 const hours = Array.from({ length: columns }, (_, index) => index * PLAYTIME_BUCKET_HOURS);
 const hourLabel = (hour: number) => `${String(hour % 24).padStart(2, "0")}:00`;
 const describeCell = (cell: PlaytimeCell) =>
-  `${weekdays[cell.weekday]} ${hourLabel(cell.hour)}–${hourLabel(cell.hour + PLAYTIME_BUCKET_HOURS)} · ${cell.matches} ${cell.matches === 1 ? "match" : "matches"}${cell.matches > 0 ? ` · ${Math.round((cell.wins / cell.matches) * 100)}% wins` : ""}`;
+  `${weekdays[cell.weekday]} ${hourLabel(cell.hour)}–${hourLabel(cell.hour + PLAYTIME_BUCKET_HOURS)} · ${cell.matches} ${cell.matches === 1 ? "match" : "matches"}${cell.wins + cell.losses > 0 ? ` · ${Math.round((winRateOf(cell) ?? 0) * 100)}% wins` : ""}`;
 
 /**
  * Where on the sequential ramp the fewest matches start: its first step stands 3.6:1 off an empty (muted) cell, so a
@@ -72,12 +73,12 @@ export function PlaytimeHeatmap({ habits }: { habits: PlaytimeHabits }) {
                       />
                       <TooltipStats>
                         <TooltipStat label="Matches" value={cell.matches} />
-                        <TooltipStat label="Wins / losses" value={`${cell.wins} / ${cell.matches - cell.wins}`} />
+                        <TooltipStat label="Wins / losses" value={`${cell.wins} / ${cell.losses}`} />
                         <TooltipStat
                           label="Win rate"
                           value={
-                            cell.matches > 0 ? (
-                              `${Math.round((cell.wins / cell.matches) * 100)}%`
+                            cell.wins + cell.losses > 0 ? (
+                              `${Math.round((winRateOf(cell) ?? 0) * 100)}%`
                             ) : (
                               <NoValue label="No matches" />
                             )

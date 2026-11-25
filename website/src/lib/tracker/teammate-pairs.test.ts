@@ -11,14 +11,14 @@ function match(id: number, won: boolean): PlayerMatchHistoryEntry {
 }
 
 function mate(accountId: number, matchIds: number[]): CompanionRow {
-  return { accountId, matches: matchIds.length, wins: 0, lastPlayedUnix: 0, matchIds };
+  return { accountId, matches: matchIds.length, wins: 0, losses: 0, lastPlayedUnix: 0, matchIds };
 }
 
 const entries = [match(1, true), match(2, false), match(3, true), match(4, true), match(5, false)];
 
 test("a pair counts only the matches where both teammates were on the team", () => {
   assert.deepEqual(computeTeammatePairs([mate(20, [2, 3, 5]), mate(10, [1, 2, 3, 4])], entries), [
-    { memberIds: [10, 20], matches: 2, wins: 1, lastPlayedUnix: 3000, matchIds: [2, 3] },
+    { memberIds: [10, 20], matches: 2, wins: 1, losses: 1, lastPlayedUnix: 3000, matchIds: [2, 3] },
   ]);
 });
 

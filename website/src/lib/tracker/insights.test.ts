@@ -96,7 +96,7 @@ test("limits findings to five, ordered by score, with one finding per split cate
         byPosition: [{ label: "1st match", matches: 40, wins: 30 }],
         byPreviousResult: [{ label: "After a loss", matches: 40, wins: 30 }],
       },
-      habits: { ...base.habits, bestWeekday: { weekday: 0, matches: 40, wins: 30 } },
+      habits: { ...base.habits, bestWeekday: { weekday: 0, matches: 40, wins: 30, losses: 10 } },
     }),
   );
   assert.equal(result.length, 5);
@@ -111,7 +111,7 @@ test("limits findings to five, ordered by score, with one finding per split cate
 test("does not describe a weekday below the baseline as the weakest day", () => {
   const base = input();
   const result = computeInsights(
-    input({ habits: { ...base.habits, bestWeekday: { weekday: 0, matches: 20, wins: 8 } } }),
+    input({ habits: { ...base.habits, bestWeekday: { weekday: 0, matches: 20, wins: 8, losses: 12 } } }),
   );
   assert.equal(result[0].headline, "Lower win rate on Monday");
 });

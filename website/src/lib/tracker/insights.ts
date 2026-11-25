@@ -71,7 +71,7 @@ function heroSplits(heroRows: TrackerHeroRow[], baseline: number): (Insight | nu
   const candidates = heroRows.map((row) =>
     fromSplit(
       `hero-${row.heroId}`,
-      { label: "", matches: row.matches, wins: row.wins },
+      { label: "", matches: row.wins + row.losses, wins: row.wins },
       baseline,
       MIN_HERO_MATCHES,
       (tone) => (tone === "good" ? "Higher win rate on this hero" : "Lower win rate on this hero"),
@@ -137,7 +137,11 @@ export function computeInsights({
     habits.bestWeekday
       ? fromSplit(
           "weekday",
-          { label: WEEKDAY_NAMES[habits.bestWeekday.weekday], ...habits.bestWeekday },
+          {
+            label: WEEKDAY_NAMES[habits.bestWeekday.weekday],
+            matches: habits.bestWeekday.wins + habits.bestWeekday.losses,
+            wins: habits.bestWeekday.wins,
+          },
           baseline,
           MIN_SPLIT_MATCHES,
           (tone, label) => (tone === "good" ? `Higher win rate on ${label}` : `Lower win rate on ${label}`),

@@ -2,6 +2,7 @@ import type { PlayerMatchHistoryEntry } from "deadlock_api_client";
 
 import { day } from "~/dayjs";
 import { type GameMode, hasSoulEconomy, type Mode } from "~/lib/game-mode";
+import type { Tone } from "~/lib/tone";
 
 import { TEAMS } from "./teams";
 
@@ -26,13 +27,62 @@ export function matchModeLabel(entry: PlayerMatchHistoryEntry): string {
   return MATCH_MODE_LABELS_BY_ID[entry.match_mode] ?? "Unknown";
 }
 
-/** `match_result` carries the winning team, mirroring the API's own `won()`. */
-export function isWin(entry: PlayerMatchHistoryEntry): boolean {
+/** The fields a player's result is read from. */
+export type ResultFields = Pick<PlayerMatchHistoryEntry, "match_result" | "player_team"> & {
+  player_match_outcome?: number;
+};
+
+/** A player's own result: `not_scored` matches did not count for them and stay out of win rates and streaks. */
+export type PlayerResult = "win" | "loss" | "not_scored";
+
+/**
+ * The player's result as the game scored it (`player_match_outcome`): 1 win, 2 loss, 3 penalized (the player
+ * abandoned), 4 penalized with their party, 5 not scored (a teammate abandoned and the match was voided). Penalized
+ * is a loss even when the team won: the rank drops as for one. Matches before late July 2026 carry 0, so their
+ * result falls back to the team's.
+ */
+export function playerResult(entry: ResultFields): PlayerResult {
+  switch (entry.player_match_outcome) {
+    case 1:
+      return "win";
+    case 2:
+    case 3:
+    case 4:
+      return "loss";
+    case 5:
+      return "not_scored";
+    default:
+      return teamWon(entry) ? "win" : "loss";
+  }
+}
+
+/** Whether the player's team won (`match_result` carries the winning team), whatever the match counted for them. */
+export function teamWon(entry: Pick<PlayerMatchHistoryEntry, "match_result" | "player_team">): boolean {
   return entry.match_result === entry.player_team;
 }
 
-function isLoss(entry: PlayerMatchHistoryEntry): boolean {
-  return !isWin(entry);
+export function isWin(entry: ResultFields): boolean {
+  return playerResult(entry) === "win";
+}
+
+export function isLoss(entry: ResultFields): boolean {
+  return playerResult(entry) === "loss";
+}
+
+export function isScored(entry: ResultFields): boolean {
+  return playerResult(entry) !== "not_scored";
+}
+
+/** How each result reads: its tone, the word for it and how a screen reader says it. */
+export const PLAYER_RESULT_DISPLAY: Record<PlayerResult, { tone: Tone; word: string; spoken: string }> = {
+  win: { tone: "positive", word: "Victory", spoken: "win" },
+  loss: { tone: "negative", word: "Defeat", spoken: "loss" },
+  not_scored: { tone: "muted", word: "Voided", spoken: "not scored" },
+};
+
+/** Wins over scored matches, or null without any. */
+export function winRateOf({ wins, losses }: { wins: number; losses: number }): number | null {
+  return wins + losses > 0 ? wins / (wins + losses) : null;
 }
 
 export type UnscoredOutcome = "penalized" | "party_penalized" | "not_scored";
@@ -335,18 +385,31 @@ export function perHeroRows(entries: PlayerMatchHistoryEntry[]): TrackerHeroRow[
 
 export type FormResult = "win" | "loss";
 
-/** Win/loss sequence of the most recent scored matches, newest first. */
-export function recentForm(entries: PlayerMatchHistoryEntry[], count: number): FormResult[] {
-  return entries.slice(0, count).map((entry) => (isWin(entry) ? "win" : "loss"));
+function formResult(entry: ResultFields): FormResult | null {
+  const result = playerResult(entry);
+  return result === "not_scored" ? null : result;
 }
 
-/** Recent form per hero, newest first. Expects entries sorted newest first. */
+/** Win/loss sequence of the most recent scored matches, newest first. */
+export function recentForm(entries: readonly ResultFields[], count: number): FormResult[] {
+  const form: FormResult[] = [];
+  for (const entry of entries) {
+    if (form.length >= count) break;
+    const result = formResult(entry);
+    if (result) form.push(result);
+  }
+  return form;
+}
+
+/** Recent form of the scored matches per hero, newest first. Expects entries sorted newest first. */
 export function recentFormByHero(entries: PlayerMatchHistoryEntry[], count: number): Map<number, FormResult[]> {
   const byHero = new Map<number, FormResult[]>();
   for (const entry of entries) {
+    const result = formResult(entry);
+    if (!result) continue;
     const form = byHero.get(entry.hero_id);
-    if (!form) byHero.set(entry.hero_id, [isWin(entry) ? "win" : "loss"]);
-    else if (form.length < count) form.push(isWin(entry) ? "win" : "loss");
+    if (!form) byHero.set(entry.hero_id, [result]);
+    else if (form.length < count) form.push(result);
   }
   return byHero;
 }
@@ -358,7 +421,9 @@ export interface StreakInfo {
   longestLoss: number;
 }
 
-export function computeStreaks(entries: PlayerMatchHistoryEntry[]): StreakInfo {
+/** Streaks over the scored matches; a match that did not count neither extends nor breaks one. */
+export function computeStreaks(all: PlayerMatchHistoryEntry[]): StreakInfo {
+  const entries = all.filter(isScored);
   let current = 0;
   for (const entry of entries) {
     const win = isWin(entry);
@@ -530,6 +595,7 @@ export function computePerformanceTrend(entries: PlayerMatchHistoryEntry[], wind
   const chronological = [...entries].sort((a, b) => a.start_time - b.start_time || a.match_id - b.match_id);
   const points: PerformancePoint[] = [];
   let wins = 0;
+  let scored = 0;
   let kills = 0;
   let deaths = 0;
   let assists = 0;
@@ -538,6 +604,7 @@ export function computePerformanceTrend(entries: PlayerMatchHistoryEntry[], wind
   for (let i = 0; i < chronological.length; i++) {
     const entry = chronological[i];
     if (isWin(entry)) wins++;
+    if (isScored(entry)) scored++;
     kills += entry.player_kills;
     deaths += entry.player_deaths;
     assists += entry.player_assists;
@@ -546,6 +613,7 @@ export function computePerformanceTrend(entries: PlayerMatchHistoryEntry[], wind
     if (i >= window) {
       const dropped = chronological[i - window];
       if (isWin(dropped)) wins--;
+      if (isScored(dropped)) scored--;
       kills -= dropped.player_kills;
       deaths -= dropped.player_deaths;
       assists -= dropped.player_assists;
@@ -556,7 +624,7 @@ export function computePerformanceTrend(entries: PlayerMatchHistoryEntry[], wind
     points.push({
       matchNumber: i + 1,
       time: entry.start_time,
-      winrate: wins / window,
+      winrate: scored > 0 ? wins / scored : 0,
       kdaRatio: kdaOf(kills, deaths, assists),
       soulsPerMin: seconds > 0 ? souls / (seconds / 60) : 0,
     });
@@ -641,7 +709,7 @@ function sessionsOf(
     if (isSelected(entry.match_id)) {
       session.matches += 1;
       if (isWin(entry)) session.wins += 1;
-      else session.losses += 1;
+      else if (isLoss(entry)) session.losses += 1;
       session.totalTimeS += entry.match_duration_s;
       if (entry.ranked_delta != null) session.rankDelta = (session.rankDelta ?? 0) + entry.ranked_delta;
       sessionByMatchId.set(entry.match_id, session);
@@ -745,12 +813,14 @@ export interface PlaytimeCell {
   hour: number;
   matches: number;
   wins: number;
+  losses: number;
 }
 
 export interface WeekdayStats {
   weekday: number;
   matches: number;
   wins: number;
+  losses: number;
 }
 
 export interface PlaytimeHabits {
@@ -775,21 +845,29 @@ export function computePlaytimeHabits(entries: PlayerMatchHistoryEntry[], utc = 
   const cells: PlaytimeCell[] = [];
   for (let weekday = 0; weekday < 7; weekday++) {
     for (let bucket = 0; bucket < PLAYTIME_BUCKETS_PER_DAY; bucket++) {
-      cells.push({ weekday, hour: bucket * PLAYTIME_BUCKET_HOURS, matches: 0, wins: 0 });
+      cells.push({ weekday, hour: bucket * PLAYTIME_BUCKET_HOURS, matches: 0, wins: 0, losses: 0 });
     }
   }
-  const weekdays: WeekdayStats[] = Array.from({ length: 7 }, (_, weekday) => ({ weekday, matches: 0, wins: 0 }));
+  const weekdays: WeekdayStats[] = Array.from({ length: 7 }, (_, weekday) => ({
+    weekday,
+    matches: 0,
+    wins: 0,
+    losses: 0,
+  }));
   const hours = new Array<number>(24).fill(0);
   for (const entry of entries) {
     const started = utc ? day.unix(entry.start_time).utc() : day.unix(entry.start_time);
     const weekday = (started.day() + 6) % 7;
     const hour = started.hour();
     const win = isWin(entry) ? 1 : 0;
+    const loss = isLoss(entry) ? 1 : 0;
     const cell = cells[weekday * PLAYTIME_BUCKETS_PER_DAY + Math.floor(hour / PLAYTIME_BUCKET_HOURS)];
     cell.matches++;
     cell.wins += win;
+    cell.losses += loss;
     weekdays[weekday].matches++;
     weekdays[weekday].wins += win;
+    weekdays[weekday].losses += loss;
     hours[hour]++;
   }
 
@@ -803,8 +881,8 @@ export function computePlaytimeHabits(entries: PlayerMatchHistoryEntry[], utc = 
       favoriteWeekday = stats;
     }
     if (
-      stats.matches >= BEST_WEEKDAY_MIN_MATCHES &&
-      (bestWeekday === null || stats.wins / stats.matches > bestWeekday.wins / bestWeekday.matches)
+      stats.wins + stats.losses >= BEST_WEEKDAY_MIN_MATCHES &&
+      (bestWeekday === null || (winRateOf(stats) ?? 0) > (winRateOf(bestWeekday) ?? 0))
     ) {
       bestWeekday = stats;
     }
@@ -824,6 +902,7 @@ export function computePlaytimeHabits(entries: PlayerMatchHistoryEntry[], utc = 
   return { cells, maxMatches, favoriteWeekday, bestWeekday, peakHourStart };
 }
 
+/** A win rate's sample: `matches` counts only the scored matches, which `wins` is out of. */
 export interface OutcomeSplit {
   label: string;
   matches: number;
@@ -855,6 +934,7 @@ export function computeOutcomeSplits(entries: PlayerMatchHistoryEntry[], mode: M
   const byDuration = durationBuckets.map((bucket) => ({ label: bucket.label, matches: 0, wins: 0 }));
   const bySide = TEAMS.map(({ name: label }) => ({ label, matches: 0, wins: 0 }));
   for (const entry of entries) {
+    if (!isScored(entry)) continue;
     const win = isWin(entry) ? 1 : 0;
     const minutes = entry.match_duration_s / 60;
     const bucket = byDuration[durationBuckets.findIndex((candidate) => minutes < candidate.maxMinutes)];
@@ -913,10 +993,15 @@ export function computeSessionMomentum(
     for (let index = newestFirst.length - 1; index >= 0; index--) {
       const entry = newestFirst[index];
       const win = isWin(entry) ? 1 : 0;
+      const scored = isScored(entry);
       if (selectedIds.has(entry.match_id)) {
         selectedMatches += 1;
         totalMatches += 1;
         totalTimeS += entry.match_duration_s;
+      }
+      // A match that did not count still takes its place in the session, but no win rate and no previous result.
+      if (!scored) continue;
+      if (selectedIds.has(entry.match_id)) {
         const position = byPosition[Math.min(newestFirst.length - 1 - index, POSITION_LABELS.length - 1)];
         position.matches += 1;
         position.wins += win;

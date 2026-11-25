@@ -11,8 +11,9 @@ import { TONE_BG, TONE_TEXT } from "~/lib/tone";
 import {
   brawlRounds,
   formatMatchDuration,
-  isWin,
   matchModeLabel,
+  PLAYER_RESULT_DISPLAY,
+  playerResult,
   type MatchSortKey,
   sortValueLabel,
   unscoredOutcome,
@@ -78,7 +79,8 @@ export function MatchListItem({
   onSelect: () => void;
   onKeyDown?: KeyboardEventHandler<HTMLButtonElement>;
 }) {
-  const win = isWin(entry);
+  const result = playerResult(entry);
+  const { tone } = PLAYER_RESULT_DISPLAY[result];
   const rounds = brawlRounds(entry);
   const unscored = unscoredOutcome(entry);
   const abandoned = entry.abandoned_time_s != null && entry.abandoned_time_s > 0;
@@ -109,14 +111,7 @@ export function MatchListItem({
       onMouseLeave={() => clearTimeout(prefetchTimer.current)}
       className="relative h-auto gap-2.5 py-1 ps-3.5 pe-3"
     >
-      <span
-        aria-hidden
-        className={cn(
-          "absolute inset-y-0 inset-s-0",
-          selected ? "w-1" : "w-0.5",
-          TONE_BG[win ? "positive" : "negative"],
-        )}
-      />
+      <span aria-hidden className={cn("absolute inset-y-0 inset-s-0", selected ? "w-1" : "w-0.5", TONE_BG[tone])} />
       <span aria-hidden="true" className="shrink-0">
         <HeroImage heroId={entry.hero_id} shape="circle" className="size-7" />
       </span>
@@ -136,8 +131,8 @@ export function MatchListItem({
           </span>
         </div>
         <div className="flex items-center gap-1 text-xs text-muted-foreground tabular-nums">
-          <span className={cn("font-semibold", TONE_TEXT[win ? "positive" : "negative"])}>
-            {win ? "W" : "L"}
+          <span className={cn("font-semibold", TONE_TEXT[tone])}>
+            {result === "win" ? "W" : result === "loss" ? "L" : "Void"}
             {rounds && ` ${rounds.own}–${rounds.enemy}`}
           </span>
           <span className="truncate" title={modeAndDuration}>

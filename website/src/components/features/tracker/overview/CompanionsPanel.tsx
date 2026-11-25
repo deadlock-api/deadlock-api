@@ -17,7 +17,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRow
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { formatPercent } from "~/lib/format";
 import type { CompanionRow } from "~/lib/tracker/companions";
-import type { TrackerFilterValues } from "~/lib/tracker/compute";
+import { type TrackerFilterValues, winRateOf } from "~/lib/tracker/compute";
 import { computeTeammatePairs } from "~/lib/tracker/teammate-pairs";
 
 export function CompanionsPanel({
@@ -196,9 +196,7 @@ function CompanionPreview({
                       className="text-xs"
                     />
                   </TableCell>
-                  <TableCell className="pe-0 text-end tabular-nums">
-                    {formatPercent(row.wins / row.matches, 0)}
-                  </TableCell>
+                  <TableCell className="pe-0 text-end tabular-nums">{formatPercent(winRateOf(row) ?? 0, 0)}</TableCell>
                 </TableRow>
               );
             })}

@@ -14,6 +14,7 @@ import { Stat, StatGroup } from "~/components/ui/stat";
 import { Table, TableBody, TableCaption, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { formatPercent } from "~/lib/format";
 import { toneOf } from "~/lib/tone";
+import { winRateOf } from "~/lib/tracker/compute";
 import { type LaneRecord, type LaneSummary, type StatMatch, TREND_METRICS } from "~/lib/tracker/match-stats";
 
 const integer = (value: number) => Math.round(value).toLocaleString("en-US");
@@ -214,7 +215,7 @@ function LaneOpponentsTable({ summary }: { summary: LaneSummary }) {
               <Delta value={averageLead(record)} format="number" digits={0} fraction="trim" zero="visible" />
             </TableCell>
             <TableCell className="text-end tabular-nums">
-              {formatPercent(record.lanes ? record.matchWins / record.lanes : 0)}
+              {formatPercent(winRateOf({ wins: record.matchWins, losses: record.matchLosses }) ?? 0)}
             </TableCell>
           </TableRow>
         ))}

@@ -33,9 +33,21 @@ test("allies leave out the tracked player's own hero, enemies may share it", () 
   assert.equal(matches, 2);
   assert.equal(wins, 1);
   assert.deepEqual(rows, [
-    { heroId: 7, with: { matches: 0, wins: 0, matchIds: [] }, against: { matches: 1, wins: 1, matchIds: [1] } },
-    { heroId: 10, with: { matches: 1, wins: 1, matchIds: [1] }, against: { matches: 1, wins: 0, matchIds: [2] } },
-    { heroId: 11, with: { matches: 1, wins: 0, matchIds: [2] }, against: { matches: 1, wins: 1, matchIds: [1] } },
+    {
+      heroId: 7,
+      with: { matches: 0, wins: 0, losses: 0, matchIds: [] },
+      against: { matches: 1, wins: 1, losses: 0, matchIds: [1] },
+    },
+    {
+      heroId: 10,
+      with: { matches: 1, wins: 1, losses: 0, matchIds: [1] },
+      against: { matches: 1, wins: 0, losses: 1, matchIds: [2] },
+    },
+    {
+      heroId: 11,
+      with: { matches: 1, wins: 0, losses: 1, matchIds: [2] },
+      against: { matches: 1, wins: 1, losses: 0, matchIds: [1] },
+    },
   ]);
 });
 
@@ -54,8 +66,8 @@ test("matches without stored players count nowhere", () => {
 test("ranking skips small samples and breaks ties with more games", () => {
   const row = (heroId: number, matches: number, wins: number) => ({
     heroId,
-    with: { matches, wins, matchIds: [] },
-    against: { matches: 0, wins: 0, matchIds: [] },
+    with: { matches, wins, losses: matches - wins, matchIds: [] },
+    against: { matches: 0, wins: 0, losses: 0, matchIds: [] },
   });
   const rows = [row(1, 2, 2), row(2, 10, 6), row(3, 20, 12), row(4, 10, 3)];
   assert.deepEqual(
@@ -72,7 +84,7 @@ test("ranking skips small samples and breaks ties with more games", () => {
 });
 
 test("a win rate differs from the baseline only beyond chance", () => {
-  const tally = (matches: number, wins: number) => ({ matches, wins, matchIds: [] });
+  const tally = (matches: number, wins: number) => ({ matches, wins, losses: matches - wins, matchIds: [] });
   assert.equal(differsFromBaseline(tally(60, 37), 0.56), false);
   assert.equal(differsFromBaseline(tally(60, 45), 0.56), true);
   assert.equal(differsFromBaseline(tally(600, 370), 0.56), true);

@@ -17,7 +17,7 @@ import {
 import { InlineStat } from "~/components/ui/inline-stat";
 import { formatPercent } from "~/lib/format";
 import type { MatchTally } from "~/lib/tracker/companions";
-import { sortMatches } from "~/lib/tracker/compute";
+import { sortMatches, winRateOf } from "~/lib/tracker/compute";
 import { cn } from "~/lib/utils";
 import { heroesQueryOptions } from "~/queries/asset-queries";
 
@@ -165,8 +165,8 @@ export function CompanionMatchesDialog({
           </DialogTitle>
           <DialogDescription className="flex flex-wrap gap-x-3 gap-y-0.5 text-sm">
             <InlineStat value={row.wins.toLocaleString("en-US")} label="wins" />
-            <InlineStat value={(row.matches - row.wins).toLocaleString("en-US")} label="losses" />
-            <InlineStat value={formatPercent(row.wins / row.matches)} label="win rate" />
+            <InlineStat value={row.losses.toLocaleString("en-US")} label="losses" />
+            <InlineStat value={formatPercent(winRateOf(row) ?? 0)} label="win rate" />
           </DialogDescription>
         </DialogHeader>
         <SharedMatches

@@ -29,8 +29,10 @@ import {
   formatMatchDuration,
   hasLanes,
   type HeldRecord,
-  isWin,
   matchModeLabel,
+  PLAYER_RESULT_DISPLAY,
+  playerResult,
+  teamWon,
   type UnscoredOutcome,
   unscoredOutcome,
 } from "~/lib/tracker/compute";
@@ -53,10 +55,11 @@ import { LanesCard } from "./LanesCard";
 import { MatchTimeline } from "./MatchTimeline";
 import { Scoreboard } from "./Scoreboard";
 
+/** Why the match counted differently for the player than for their team, said after the team's result. */
 const UNSCORED_OUTCOME_NOTES: Record<UnscoredOutcome, { icon: typeof Gavel; text: string }> = {
-  penalized: { icon: Gavel, text: "Penalized for this match" },
-  party_penalized: { icon: Gavel, text: "Penalized with the party for this match" },
-  not_scored: { icon: CircleDashed, text: "This match did not count" },
+  penalized: { icon: Gavel, text: "Penalized for abandoning" },
+  party_penalized: { icon: Gavel, text: "Penalized: a party member abandoned" },
+  not_scored: { icon: CircleDashed, text: "Not scored: the game voided the match" },
 };
 
 function Note({ icon: Icon, className, children }: { icon: typeof Gavel; className?: string; children: ReactNode }) {
@@ -143,7 +146,7 @@ function MatchHeader({
   matchLink: () => string;
 }) {
   const matchId = entry.match_id;
-  const win = isWin(entry);
+  const result = PLAYER_RESULT_DISPLAY[playerResult(entry)];
   const rounds = brawlRounds(entry);
   const unscored = unscoredOutcome(entry);
   const abandonedAtS = entry.abandoned_time_s ?? 0;
@@ -163,9 +166,7 @@ function MatchHeader({
               <Heading as={headingLevel} size="lg">
                 {heroName}
               </Heading>
-              <span className={cn("text-sm font-bold", TONE_TEXT[win ? "positive" : "negative"])}>
-                {win ? "Victory" : "Defeat"}
-              </span>
+              <span className={cn("text-sm font-bold", TONE_TEXT[result.tone])}>{result.word}</span>
               {rounds && (
                 <span className="text-sm text-muted-foreground tabular-nums">
                   {rounds.own}–{rounds.enemy} rounds
@@ -179,7 +180,9 @@ function MatchHeader({
                 )}
                 {abandonedAtS > 0 && <Note icon={LogOut}>Abandoned at {formatMatchDuration(abandonedAtS)}</Note>}
                 {unscored && (
-                  <Note icon={UNSCORED_OUTCOME_NOTES[unscored].icon}>{UNSCORED_OUTCOME_NOTES[unscored].text}</Note>
+                  <Note icon={UNSCORED_OUTCOME_NOTES[unscored].icon}>
+                    {teamWon(entry) ? "Your team won" : "Your team lost"} · {UNSCORED_OUTCOME_NOTES[unscored].text}
+                  </Note>
                 )}
                 {demotionProtected && <Note icon={ShieldCheck}>Demotion protection prevented a rank drop</Note>}
                 {calibration && <Note icon={CircleDashed}>Calibration match</Note>}

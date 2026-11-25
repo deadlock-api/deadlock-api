@@ -5,7 +5,7 @@ import { type LaneInfo, LANES } from "~/lib/team-builder/lanes";
 import type { Polarity } from "~/lib/tone";
 import type { TrackerMatchStat } from "~/queries/tracker-queries";
 
-import { isWin } from "./compute";
+import { isScored, isWin, type PlayerResult, playerResult } from "./compute";
 import { LANE_PHASE_END_S, statAt } from "./lane-matchup";
 import { MIN_COMPARISON_MATCHES } from "./overview";
 
@@ -412,23 +412,25 @@ export interface LaneRecord {
   won: number;
   lost: number;
   diffSum: number;
-  /** Matches won, of these lanes. */
+  /** Matches won and lost, of these lanes; a match that did not count is neither. */
   matchWins: number;
+  matchLosses: number;
 }
 
-const emptyRecord = (): LaneRecord => ({ lanes: 0, won: 0, lost: 0, diffSum: 0, matchWins: 0 });
+const emptyRecord = (): LaneRecord => ({ lanes: 0, won: 0, lost: 0, diffSum: 0, matchWins: 0, matchLosses: 0 });
 
-function add(record: LaneRecord, state: TrackerLaneState, won: boolean) {
+function add(record: LaneRecord, state: TrackerLaneState, result: PlayerResult) {
   record.lanes++;
   if (state.diff > 0) record.won++;
   if (state.diff < 0) record.lost++;
   record.diffSum += state.diff;
-  if (won) record.matchWins++;
+  if (result === "win") record.matchWins++;
+  else if (result === "loss") record.matchLosses++;
 }
 
 export interface LaneSummary {
   all: LaneRecord;
-  /** Matches won after winning the lane, and after losing it. */
+  /** Scored matches won after winning the lane, and after losing it. */
   afterWon: { matches: number; wins: number };
   afterLost: { matches: number; wins: number };
   byLane: { lane: LaneInfo; record: LaneRecord }[];
@@ -445,20 +447,20 @@ export function summarizeLanes(matches: readonly StatMatch[]): LaneSummary {
   for (const { entry, stats } of matches) {
     const state = stats?.lane;
     if (!state) continue;
-    const won = isWin(entry);
-    add(all, state, won);
+    const result = playerResult(entry);
+    add(all, state, result);
     const after = state.diff > 0 ? afterWon : state.diff < 0 ? afterLost : null;
-    if (after) {
+    if (after && isScored(entry)) {
       after.matches++;
-      if (won) after.wins++;
+      if (isWin(entry)) after.wins++;
     }
     let laneRecord = byLane.get(state.lane);
     if (!laneRecord) byLane.set(state.lane, (laneRecord = emptyRecord()));
-    add(laneRecord, state, won);
+    add(laneRecord, state, result);
     for (const heroId of new Set(state.enemyHeroIds)) {
       let record = byOpponent.get(heroId);
       if (!record) byOpponent.set(heroId, (record = emptyRecord()));
-      add(record, state, won);
+      add(record, state, result);
     }
   }
   return {

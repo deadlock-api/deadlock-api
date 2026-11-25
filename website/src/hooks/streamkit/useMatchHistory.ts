@@ -11,6 +11,8 @@ export interface Match {
   hero_id: number;
   match_result: number;
   player_team: number;
+  /** The player's own result, read through `playerResult`. */
+  player_match_outcome?: number;
 }
 
 export interface MatchHero {

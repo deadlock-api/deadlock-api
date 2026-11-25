@@ -1,9 +1,13 @@
+import { isLoss, isWin, playerResult, teamWon, winRateOf } from "~/lib/tracker/compute";
+
 /** The fields of a match history entry the pair records read. */
 export interface PairMatchEntry {
   match_id: number;
   player_team: number;
   /** The winning team. */
   match_result: number;
+  /** The player's own result, read through `playerResult`. */
+  player_match_outcome?: number;
   start_time: number;
 }
 
@@ -17,12 +21,19 @@ export interface PlayerPair {
   /** The first player of the pair, in the order the players were compared. */
   a: number;
   b: number;
-  /** Matches on the same team, and how many of them that team won. */
-  together: { matches: number; wins: number };
-  /** Matches on opposite teams, and how many of them each side won. */
+  /** Matches on the same team, and the first player's wins and losses in them (scored matches only). */
+  together: { matches: number; wins: number; losses: number };
+  /** Matches on opposite teams, and how many of them each player won. */
   against: { matches: number; aWins: number; bWins: number };
-  /** Each player's matches without the other (not together, not against), and how many they won. */
-  apart: { aMatches: number; aWins: number; bMatches: number; bWins: number };
+  /** Each player's matches without the other (not together, not against), and their wins and losses in them. */
+  apart: {
+    aMatches: number;
+    aWins: number;
+    aLosses: number;
+    bMatches: number;
+    bWins: number;
+    bLosses: number;
+  };
   /** Unix start time of the newest shared match, together or against; null when they never met. */
   lastMet: number | null;
   /** Every shared match, newest first. */
@@ -54,7 +65,7 @@ function pairRecord(
   bMatches: readonly PairMatchEntry[],
 ): PlayerPair {
   const bById = new Map(bMatches.map((entry) => [entry.match_id, entry]));
-  const together = { matches: 0, wins: 0 };
+  const together = { matches: 0, wins: 0, losses: 0 };
   const against = { matches: 0, aWins: 0, bWins: 0 };
   const shared: { matchId: number; startTime: number }[] = [];
   const seen = new Set<number>();
@@ -63,27 +74,30 @@ function pairRecord(
     if (!other || seen.has(entry.match_id)) continue;
     seen.add(entry.match_id);
     shared.push({ matchId: entry.match_id, startTime: entry.start_time });
-    const aWon = entry.match_result === entry.player_team;
+    const aResult = playerResult(entry);
     if (entry.player_team === other.player_team) {
       together.matches += 1;
-      if (aWon) together.wins += 1;
+      if (aResult === "win") together.wins += 1;
+      else if (aResult === "loss") together.losses += 1;
     } else {
       against.matches += 1;
-      if (aWon) against.aWins += 1;
-      else if (other.match_result === other.player_team) against.bWins += 1;
+      if (aResult === "win") against.aWins += 1;
+      if (isWin(other)) against.bWins += 1;
     }
   }
-  const apart = { aMatches: 0, aWins: 0, bMatches: 0, bWins: 0 };
+  const apart = { aMatches: 0, aWins: 0, aLosses: 0, bMatches: 0, bWins: 0, bLosses: 0 };
   for (const entry of aMatches) {
     if (bById.has(entry.match_id)) continue;
     apart.aMatches += 1;
-    if (entry.match_result === entry.player_team) apart.aWins += 1;
+    if (isWin(entry)) apart.aWins += 1;
+    else if (isLoss(entry)) apart.aLosses += 1;
   }
   const aIds = new Set(aMatches.map((entry) => entry.match_id));
   for (const entry of bMatches) {
     if (aIds.has(entry.match_id)) continue;
     apart.bMatches += 1;
-    if (entry.match_result === entry.player_team) apart.bWins += 1;
+    if (isWin(entry)) apart.bWins += 1;
+    else if (isLoss(entry)) apart.bLosses += 1;
   }
   shared.sort((x, y) => y.startTime - x.startTime);
   return {
@@ -102,14 +116,17 @@ export const MIN_SYNERGY_MATCHES = 5;
 
 /**
  * How much better (or worse) a duo wins together than apart: their win rate as teammates minus the average of each
- * one's win rate in the matches without the other. Null under `MIN_SYNERGY_MATCHES` together, or when either has no
- * match apart.
+ * one's win rate in the matches without the other, over scored matches. Null under `MIN_SYNERGY_MATCHES` scored
+ * together, or when either has no scored match apart.
  */
 export function pairSynergy(pair: PlayerPair): number | null {
   const { together, apart } = pair;
-  if (together.matches < MIN_SYNERGY_MATCHES || apart.aMatches === 0 || apart.bMatches === 0) return null;
-  const apartRate = (apart.aWins / apart.aMatches + apart.bWins / apart.bMatches) / 2;
-  return together.wins / together.matches - apartRate;
+  if (together.wins + together.losses < MIN_SYNERGY_MATCHES) return null;
+  const aRate = winRateOf({ wins: apart.aWins, losses: apart.aLosses });
+  const bRate = winRateOf({ wins: apart.bWins, losses: apart.bLosses });
+  const togetherRate = winRateOf(together);
+  if (aRate === null || bRate === null || togetherRate === null) return null;
+  return togetherRate - (aRate + bRate) / 2;
 }
 
 /**
@@ -187,7 +204,7 @@ export function recentSharedMatches(histories: readonly SharedMatchHistory[], li
     for (const { entry, accountId } of players) {
       let team = teams.find((candidate) => candidate.team === entry.player_team);
       if (!team) {
-        team = { team: entry.player_team, won: entry.match_result === entry.player_team, players: [] };
+        team = { team: entry.player_team, won: teamWon(entry), players: [] };
         teams.push(team);
       }
       team.players.push({
@@ -204,12 +221,13 @@ export function recentSharedMatches(histories: readonly SharedMatchHistory[], li
   });
 }
 
-/** A hero pairing two players queued as: each one's hero, and how the team did. */
+/** A hero pairing two players queued as: each one's hero, and how the first player did (scored matches only). */
 export interface DuoHeroes {
   aHero: number;
   bHero: number;
   matches: number;
   wins: number;
+  losses: number;
 }
 
 /** A pairing played fewer times than this is not a habit. */
@@ -233,13 +251,14 @@ export function duoHeroPairs(
     if (!other || other.player_team !== entry.player_team || seen.has(entry.match_id)) continue;
     seen.add(entry.match_id);
     const key = `${entry.hero_id}-${other.hero_id}`;
-    const pair = byPair.get(key) ?? { aHero: entry.hero_id, bHero: other.hero_id, matches: 0, wins: 0 };
+    const pair = byPair.get(key) ?? { aHero: entry.hero_id, bHero: other.hero_id, matches: 0, wins: 0, losses: 0 };
     pair.matches += 1;
-    if (entry.match_result === entry.player_team) pair.wins += 1;
+    if (isWin(entry)) pair.wins += 1;
+    else if (isLoss(entry)) pair.losses += 1;
     byPair.set(key, pair);
   }
   return [...byPair.values()]
     .filter((pair) => pair.matches >= minMatches)
-    .sort((x, y) => y.matches - x.matches || y.wins / y.matches - x.wins / x.matches)
+    .sort((x, y) => y.matches - x.matches || (winRateOf(y) ?? 0) - (winRateOf(x) ?? 0))
     .slice(0, limit);
 }

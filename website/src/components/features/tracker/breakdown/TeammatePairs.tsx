@@ -9,6 +9,7 @@ import { Heading, useNextHeadingLevel } from "~/components/ui/heading";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, TableRowHeader } from "~/components/ui/table";
 import { useSteamProfiles } from "~/hooks/useSteamProfiles";
 import { formatPercent } from "~/lib/format";
+import { winRateOf } from "~/lib/tracker/compute";
 import type { TeammatePairRow } from "~/lib/tracker/teammate-pairs";
 
 import { CompanionMatchesDialog } from "./CompanionMatchesDialog";
@@ -105,7 +106,7 @@ function PairsTable({
                 className="text-xs"
               />
             </TableCell>
-            <TableCell className="pe-0 text-end tabular-nums">{formatPercent(pair.wins / pair.matches, 0)}</TableCell>
+            <TableCell className="pe-0 text-end tabular-nums">{formatPercent(winRateOf(pair) ?? 0, 0)}</TableCell>
           </TableRow>
         ))}
       </TableBody>
