@@ -107,6 +107,19 @@ struct BaseExport<'a> {
     watermark_hi: i64,
 }
 
+/// One residual window over every partition: what [`DataDump::export_residual`] writes.
+#[derive(Clone, Copy)]
+struct ResidualExport<'a> {
+    name: &'a str,
+    generation: u32,
+    partition_expr: &'a str,
+    watermark: &'a str,
+    lo: i64,
+    hi: i64,
+    /// `residual` (fold), `repack` or `resplit`: names the export steps.
+    label: &'a str,
+}
+
 /// Takes the `dump` view's current `columns` into `state`, starting a new generation when
 /// they changed incompatibly (or when the table has none yet).
 fn adopt_columns(name: &str, state: &mut TableState, columns: Vec<Column>) {
@@ -270,8 +283,8 @@ impl DataDump {
         for table in TABLES {
             shutdown_check()?;
             let result = match table.policy {
-                Policy::Snapshot => {
-                    self.export_snapshot(&exporter, &mut manifest, table, now_hi)
+                Policy::Snapshot { every_hours } => {
+                    self.export_snapshot(&exporter, &mut manifest, table, now_hi, every_hours)
                         .await
                 }
                 Policy::Incremental { .. } => {
@@ -373,7 +386,18 @@ impl DataDump {
         manifest: &mut Manifest,
         table: &TablePolicy,
         now_hi: i64,
+        every_hours: i64,
     ) -> Result<(), DumpError> {
+        // Ticks drift by minutes, so a refresh is due a little early rather than a tick late.
+        let due_after = every_hours.saturating_mul(HOUR).saturating_sub(HOUR / 2);
+        if let Some(state) = manifest.tables.get(table.name)
+            && state.status == TableStatus::Ready
+            && state
+                .watermark_hi
+                .is_some_and(|hi| now_hi.saturating_sub(hi) < due_after)
+        {
+            return Ok(());
+        }
         let columns = self.fetch_columns(exporter, table.name).await?;
         let key = self.key(&format!(
             "tables/{}/snapshot/{}-{}.parquet",
@@ -533,38 +557,20 @@ impl DataDump {
                 };
                 shutdown_check()?;
                 let cutoffs = compaction::residual_cutoffs(state, generation, fold.lo);
-                let key = self.key(&format!(
-                    "tables/{name}/g{generation}/residual/{}-{}-{}.parquet",
-                    ts(fold.lo),
-                    ts(fold.hi),
-                    exporter.run_id
-                ));
-                let sql = sql::residual_export(
-                    nc,
+                let residual = ResidualExport {
                     name,
-                    &key,
-                    &sql::Residual {
-                        partition_expr,
-                        watermark,
-                        lo: fold.lo,
-                        hi: fold.hi,
-                        cutoffs: &cutoffs,
-                    },
-                );
-                let step = format!("{name}-g{generation}-residual");
-                let increment = Increment {
-                    kind: FileKind::Residual,
                     generation,
+                    partition_expr,
+                    watermark,
                     lo: fold.lo,
                     hi: fold.hi,
+                    label: "residual",
                 };
-                if let Some(entry) = exporter
-                    .export_increment(&sql, key, &step, partition_expr, increment)
-                    .await?
-                {
-                    state.files.push(entry);
-                }
+                let files = self
+                    .export_residual(exporter, &residual, &cutoffs, fold.bytes)
+                    .await?;
                 state.files.retain(|f| !fold.keys.contains(&f.key));
+                state.files.extend(files);
                 info!(
                     "data dump: {name} g{generation} folded {} hourly deltas",
                     fold.keys.len()
@@ -577,7 +583,10 @@ impl DataDump {
         let target_gen = state.building.unwrap_or(state.generation);
         let params = Params {
             budget: self.config.rebuild_per_tick,
-            threshold_divisor: 100,
+            // 10%, not 1%: a backfill kept partitions over 1% (~60k rows) every hour and
+            // rewrote their ~10 GB bases almost hourly (2026-11-25). Pending rows are served
+            // from deltas and residuals meanwhile.
+            threshold_divisor: 10,
             threshold_min: 20_000,
             skip_pending_newest: 3,
             max_base_age_secs: self.config.max_base_age_secs,
@@ -639,56 +648,163 @@ impl DataDump {
             f.kind != FileKind::Base || f.partition.is_some_and(|p| actual.contains_key(&p))
         });
 
-        // Re-export residuals that bases now mostly cover with only their uncovered rows.
+        // Re-export residuals that bases now mostly cover with only their uncovered rows, else
+        // one residual over the size limit (from before residuals were split) in pieces.
         for &generation in &generations {
-            let Some(repack) = compaction::plan_repack(
+            let (repack, label) = match compaction::plan_repack(
                 state,
                 generation,
                 compaction::REPACK_MIN_DEAD_BYTES,
                 compaction::TARGET_FILE_BYTES,
-            ) else {
-                continue;
+            ) {
+                Some(repack) => (repack, "repack"),
+                None => match compaction::plan_resplit(state, generation) {
+                    Some(resplit) => (resplit, "resplit"),
+                    None => continue,
+                },
             };
             shutdown_check()?;
             let cutoffs = compaction::residual_cutoffs(state, generation, repack.lo);
-            let key = self.key(&format!(
-                "tables/{name}/g{generation}/residual/{}-{}-{}.parquet",
-                ts(repack.lo),
-                ts(repack.hi),
-                exporter.run_id
-            ));
-            let sql = sql::residual_export(
-                nc,
+            let residual = ResidualExport {
                 name,
-                &key,
-                &sql::Residual {
-                    partition_expr,
-                    watermark,
-                    lo: repack.lo,
-                    hi: repack.hi,
-                    cutoffs: &cutoffs,
-                },
-            );
-            let step = format!("{name}-g{generation}-repack");
-            let increment = Increment {
-                kind: FileKind::Residual,
                 generation,
+                partition_expr,
+                watermark,
                 lo: repack.lo,
                 hi: repack.hi,
+                label,
             };
-            let entry = exporter
-                .export_increment(&sql, key, &step, partition_expr, increment)
+            let files = self
+                .export_residual(exporter, &residual, &cutoffs, repack.live_bytes)
                 .await?;
             state.files.retain(|f| !repack.keys.contains(&f.key));
-            state.files.extend(entry);
             info!(
-                "data dump: {name} g{generation} repacked {} residuals, ~{} MB covered by bases",
+                "data dump: {name} g{generation} {label}: {} residuals into {} files, ~{} MB covered by bases",
                 repack.keys.len(),
+                files.len(),
                 repack.dead_bytes / 1_000_000
             );
+            state.files.extend(files);
             self.checkpoint(manifest, name, state).await;
         }
         Ok(())
+    }
+
+    /// Exports the rows of residual window `r` no base covers (`cutoffs`) as files of at most
+    /// `compaction::MAX_FILE_BYTES`: split into watermark windows of about equal row counts by
+    /// the `estimate`, and any file that still comes out too big is deleted and exported again
+    /// in smaller windows.
+    async fn export_residual(
+        &self,
+        exporter: &Exporter,
+        r: &ResidualExport<'_>,
+        cutoffs: &BTreeMap<u64, i64>,
+        estimate: u64,
+    ) -> Result<Vec<FileEntry>, DumpError> {
+        let ResidualExport {
+            name,
+            generation,
+            partition_expr,
+            watermark,
+            lo,
+            hi,
+            label,
+        } = *r;
+        let window = |lo: i64, hi: i64| sql::Residual {
+            partition_expr,
+            watermark,
+            lo,
+            hi,
+            cutoffs,
+        };
+        let step = format!("{name}-g{generation}-{label}");
+        let mut todo = self
+            .split_residual(
+                exporter,
+                name,
+                &window(lo, hi),
+                compaction::chunk_count(estimate),
+                &step,
+            )
+            .await?;
+        // Popped from the back: export in watermark order.
+        todo.reverse();
+        let mut files = Vec::new();
+        let mut seq = 0u32;
+        while let Some((lo, hi)) = todo.pop() {
+            shutdown_check()?;
+            let residual = window(lo, hi);
+            let key = self.key(&format!(
+                "tables/{name}/g{generation}/residual/{}-{}-{}.parquet",
+                ts(lo),
+                ts(hi),
+                exporter.run_id
+            ));
+            let sql = sql::residual_export(&self.config.named_collection, name, &key, &residual);
+            let window_step = format!("{step}-{seq}");
+            seq = seq.saturating_add(1);
+            let Some(written) = exporter.export(&sql, &key, &window_step).await? else {
+                continue;
+            };
+            if written.bytes > compaction::MAX_FILE_BYTES {
+                let parts = compaction::chunk_count(written.bytes).max(2);
+                let pieces = self
+                    .split_residual(exporter, name, &residual, parts, &window_step)
+                    .await?;
+                if pieces.len() > 1 {
+                    warn!(
+                        key,
+                        bytes = written.bytes,
+                        "data dump: residual file over the size limit; exporting it in {} pieces",
+                        pieces.len()
+                    );
+                    exporter.delete(&key).await?;
+                    todo.extend(pieces.into_iter().rev());
+                    continue;
+                }
+                warn!(
+                    key,
+                    bytes = written.bytes,
+                    "data dump: residual file over the size limit cannot be split further"
+                );
+            }
+            let increment = Increment {
+                kind: FileKind::Residual,
+                generation,
+                lo,
+                hi,
+            };
+            files.push(
+                exporter
+                    .increment_entry(key, &written, &window_step, partition_expr, increment)
+                    .await?,
+            );
+        }
+        Ok(files)
+    }
+
+    /// Residual window `r` cut into up to `parts` windows at row quantiles of the watermark.
+    async fn split_residual(
+        &self,
+        exporter: &Exporter,
+        name: &str,
+        r: &sql::Residual<'_>,
+        parts: usize,
+        step: &str,
+    ) -> Result<Vec<(i64, i64)>, DumpError> {
+        if parts < 2 {
+            return Ok(vec![(r.lo, r.hi)]);
+        }
+        let bounds: Vec<i64> = exporter
+            .fetch_u64s(
+                &sql::residual_bounds(name, r, parts),
+                &format!("{step}-bounds"),
+            )
+            .await?
+            .into_iter()
+            .filter_map(|b| i64::try_from(b).ok())
+            .collect();
+        Ok(compaction::split_window(r.lo, r.hi, &bounds))
     }
 
     /// Exports one partition's base as files of at most `compaction::MAX_FILE_BYTES`: split

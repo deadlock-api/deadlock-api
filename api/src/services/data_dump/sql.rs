@@ -17,12 +17,14 @@ pub(crate) const LOG_COMMENT: &str = "data_dump";
 ///
 /// 8 MiB pages give zstd more context (−1.2%), and 5 bits per bloom filter value (~10% false
 /// positives instead of ~1%) still prunes `account_id` lookups (−1.9%); writer memory +2%.
-/// Higher zstd levels shrink files only 1–3% more at 4–7x the writer CPU.
+/// zstd 3 instead of 9: files +3.3%, export CPU −32% (370 MB base file, `clickhouse local`
+/// 26.11 at 4 threads, 2026-11-25: 14.5 → 9.8 CPU-s; level 5 was 11.4 at +1.6%). Higher
+/// levels shrink files only 1–3% more at 4–7x the writer CPU.
 const EXPORT_SETTINGS: &str = "s3_truncate_on_insert = 1, \
     s3_min_upload_part_size = 67108864, \
     s3_upload_part_size_multiply_parts_count_threshold = 100000, \
     output_format_parquet_compression_method = 'zstd', \
-    output_format_compression_level = 9, \
+    output_format_compression_level = 3, \
     output_format_parquet_data_page_size = 8388608, \
     output_format_parquet_write_page_index = 1, \
     output_format_parquet_write_bloom_filter = 1, \
@@ -137,10 +139,9 @@ pub(crate) fn base_export(
     )
 }
 
-/// Values of the chunk column that cut `range` into `parts` pieces of about equal row counts.
-/// Raw rows (no `FINAL`): one column of one partition, cheap, and duplicates barely shift it.
-pub(crate) fn chunk_bounds(table: &str, range: &BaseRange<'_>, parts: usize) -> String {
-    let levels: Vec<String> = (1..parts)
+/// The quantile levels that cut a column into `parts` pieces of about equal row counts.
+fn quantile_levels(parts: usize) -> String {
+    (1..parts)
         .map(|i| {
             let millionths = i
                 .saturating_mul(1_000_000)
@@ -148,10 +149,16 @@ pub(crate) fn chunk_bounds(table: &str, range: &BaseRange<'_>, parts: usize) -> 
                 .unwrap_or_default();
             format!("0.{millionths:06}")
         })
-        .collect();
+        .collect::<Vec<_>>()
+        .join(", ")
+}
+
+/// Values of the chunk column that cut `range` into `parts` pieces of about equal row counts.
+/// Raw rows (no `FINAL`): one column of one partition, cheap, and duplicates barely shift it.
+pub(crate) fn chunk_bounds(table: &str, range: &BaseRange<'_>, parts: usize) -> String {
     format!(
         "SELECT arrayMap(x -> toUInt64(x), quantilesExactLow({})({})) FROM {} WHERE {}",
-        levels.join(", "),
+        quantile_levels(parts),
         range.chunk_column,
         view(table),
         range.condition()
@@ -168,39 +175,58 @@ pub(crate) struct Residual<'a> {
     pub(crate) cutoffs: &'a BTreeMap<u64, i64>,
 }
 
+impl Residual<'_> {
+    fn condition(&self) -> String {
+        let Residual {
+            partition_expr,
+            watermark,
+            lo,
+            hi,
+            cutoffs,
+        } = *self;
+        let cutoff = if cutoffs.is_empty() {
+            lo.to_string()
+        } else {
+            let (ps, his): (Vec<String>, Vec<String>) = cutoffs
+                .iter()
+                .map(|(p, hi)| (p.to_string(), hi.to_string()))
+                .unzip();
+            format!(
+                "transform(toUInt64({partition_expr}), [{}], [{}], toInt64({lo}))",
+                ps.join(", "),
+                his.join(", ")
+            )
+        };
+        format!(
+            "{watermark} > toDateTime({lo}) AND {watermark} <= toDateTime({hi}) \
+             AND {watermark} > toDateTime({cutoff})"
+        )
+    }
+}
+
 pub(crate) fn residual_export(
     named_collection: &str,
     table: &str,
     key: &str,
     r: &Residual<'_>,
 ) -> String {
-    let Residual {
-        partition_expr,
-        watermark,
-        lo,
-        hi,
-        cutoffs,
-    } = *r;
-    let cutoff = if cutoffs.is_empty() {
-        lo.to_string()
-    } else {
-        let (ps, his): (Vec<String>, Vec<String>) = cutoffs
-            .iter()
-            .map(|(p, hi)| (p.to_string(), hi.to_string()))
-            .unzip();
-        format!(
-            "transform(toUInt64({partition_expr}), [{}], [{}], toInt64({lo}))",
-            ps.join(", "),
-            his.join(", ")
-        )
-    };
     format!(
-        "INSERT INTO FUNCTION {} SELECT * FROM {} \
-         WHERE {watermark} > toDateTime({lo}) AND {watermark} <= toDateTime({hi}) \
-         AND {watermark} > toDateTime({cutoff}) \
-         SETTINGS {EXPORT_SETTINGS}",
+        "INSERT INTO FUNCTION {} SELECT * FROM {} WHERE {} SETTINGS {EXPORT_SETTINGS}",
         target(named_collection, key),
-        view(table)
+        view(table),
+        r.condition()
+    )
+}
+
+/// Watermarks (unix seconds) that cut the rows of residual `r` into `parts` windows of about
+/// equal row counts. Reads the watermark and partition columns of the window only.
+pub(crate) fn residual_bounds(table: &str, r: &Residual<'_>, parts: usize) -> String {
+    format!(
+        "SELECT arrayMap(x -> toUInt64(toUnixTimestamp(x)), quantilesExactLow({})({})) FROM {} WHERE {}",
+        quantile_levels(parts),
+        r.watermark,
+        view(table),
+        r.condition()
     )
 }
 
@@ -255,6 +281,21 @@ mod tests {
         ));
         assert!(sql.contains("created_at > toDateTime(100) AND created_at <= toDateTime(200)"));
         assert!(sql.starts_with("INSERT INTO FUNCTION s3(r2_dump, filename = 'v1/x.parquet')"));
+        let bounds = residual_bounds(
+            "match_player",
+            &Residual {
+                partition_expr: "intDiv(match_id, 1000000)",
+                watermark: "created_at",
+                lo: 100,
+                hi: 200,
+                cutoffs: &BTreeMap::new(),
+            },
+            4,
+        );
+        assert!(bounds.starts_with(
+            "SELECT arrayMap(x -> toUInt64(toUnixTimestamp(x)), quantilesExactLow(0.250000, 0.500000, 0.750000)(created_at)) FROM dump.`match_player` WHERE created_at > toDateTime(100)"
+        ));
+        assert!(bounds.ends_with("AND created_at > toDateTime(100)"));
     }
 
     #[test]

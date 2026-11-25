@@ -219,7 +219,8 @@ pub(crate) struct DataDumpConfig {
     pub(crate) password: String,
     /// Rows younger than this are left for the next tick (inserts still in flight).
     pub(crate) lag_secs: u64,
-    /// Partition rebuilds per hourly tick (~5.5 GiB each for `match_player`).
+    /// Partition rebuilds per hourly tick (~5.5 GiB each for `match_player`); one of them goes
+    /// to the most overdue base whenever one is past `max_base_age_secs`.
     pub(crate) rebuild_per_tick: usize,
     /// Hourly deltas older than this are folded into one residual per day.
     pub(crate) fold_after_secs: i64,
@@ -243,7 +244,7 @@ impl Default for DataDumpConfig {
             username: "dump_user".to_owned(),
             password: String::new(),
             lag_secs: 600,
-            rebuild_per_tick: 2,
+            rebuild_per_tick: 4,
             fold_after_secs: 24 * 3600,
             max_base_age_secs: 13 * 24 * 3600,
             lease_ttl_secs: 15 * 60,

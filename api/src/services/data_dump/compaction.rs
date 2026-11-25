@@ -47,7 +47,27 @@ impl Chunk {
     }
 }
 
-/// How many files `bytes` of base should be split into.
+/// Consecutive `(lo, hi]` windows covering `(lo, hi]`, cut at the `bounds` strictly inside it:
+/// the residual counterpart of [`Chunk::split`], on the watermark.
+pub(crate) fn split_window(lo: i64, hi: i64, bounds: &[i64]) -> Vec<(i64, i64)> {
+    let mut inner: Vec<i64> = bounds
+        .iter()
+        .copied()
+        .filter(|&b| b > lo && b < hi)
+        .collect();
+    inner.sort_unstable();
+    inner.dedup();
+    let mut windows = Vec::with_capacity(inner.len().saturating_add(1));
+    let mut from = lo;
+    for b in inner {
+        windows.push((from, b));
+        from = b;
+    }
+    windows.push((from, hi));
+    windows
+}
+
+/// How many files `bytes` of base (or residual) should be split into.
 pub(crate) fn chunk_count(bytes: u64) -> usize {
     let n = bytes.div_ceil(TARGET_FILE_BYTES).clamp(1, MAX_CHUNKS);
     usize::try_from(n).unwrap_or(1)
@@ -139,6 +159,19 @@ pub(crate) fn plan_rebuilds(
             push(p, Reason::Missing);
         }
     }
+    let mut by_age: Vec<(i64, u64)> = actual
+        .keys()
+        .filter_map(|&p| {
+            let hi = table.base(generation, p)?.hi?;
+            (watermark_hi.saturating_sub(hi) > params.max_base_age_secs).then_some((hi, p))
+        })
+        .collect();
+    by_age.sort_unstable();
+    // The most overdue base gets a slot ahead of the backlog: a backfill can keep enough
+    // partitions over the pending threshold to fill every tick's budget for weeks.
+    if let Some(&(_, p)) = by_age.first() {
+        push(p, Reason::Rolling);
+    }
     // Largest backlog first so hot partitions never starve behind cold ones.
     let newest: Vec<u64> = actual
         .keys()
@@ -176,14 +209,6 @@ pub(crate) fn plan_rebuilds(
             push(p, Reason::Drift);
         }
     }
-    let mut by_age: Vec<(i64, u64)> = actual
-        .keys()
-        .filter_map(|&p| {
-            let hi = table.base(generation, p)?.hi?;
-            (watermark_hi.saturating_sub(hi) > params.max_base_age_secs).then_some((hi, p))
-        })
-        .collect();
-    by_age.sort_unstable();
     for (_, p) in by_age {
         push(p, Reason::Rolling);
     }
@@ -194,6 +219,8 @@ pub(crate) struct Fold {
     pub(crate) lo: i64,
     pub(crate) hi: i64,
     pub(crate) keys: Vec<String>,
+    /// Bytes of the folded deltas: about what the residual holds at most.
+    pub(crate) bytes: u64,
 }
 
 /// Hourly deltas of `generation` whose `hi` is at or before `before` and can be folded into
@@ -212,6 +239,7 @@ pub(crate) fn plan_fold(table: &TableState, generation: u32, before: i64) -> Opt
         lo: deltas.iter().filter_map(|f| f.lo).min()?,
         hi: deltas.iter().filter_map(|f| f.hi).max()?,
         keys: deltas.iter().map(|f| f.key.clone()).collect(),
+        bytes: deltas.iter().map(|f| f.bytes).sum(),
     })
 }
 
@@ -227,6 +255,8 @@ pub(crate) struct Repack {
     pub(crate) keys: Vec<String>,
     /// Estimated bytes the repack frees.
     pub(crate) dead_bytes: u64,
+    /// Estimated bytes the new residual holds (an upper bound: see `residual_bytes`).
+    pub(crate) live_bytes: u64,
 }
 
 /// Residual rows a base of `generation` now covers, as `(live, dead)` bytes estimated from the
@@ -285,11 +315,12 @@ pub(crate) fn plan_repack(
     let mut best: Option<Repack> = None;
     let mut run: Option<(Repack, u64)> = None;
     let mut finish = |run: &mut Option<(Repack, u64)>| {
-        if let Some((r, _)) = run.take()
+        if let Some((mut r, live)) = run.take()
             && r.dead_bytes >= min_dead_bytes
             && deltas.iter().all(|&(lo, hi)| hi <= r.lo || lo >= r.hi)
             && best.as_ref().is_none_or(|b| r.dead_bytes > b.dead_bytes)
         {
+            r.live_bytes = live;
             best = Some(r);
         }
     };
@@ -315,12 +346,42 @@ pub(crate) fn plan_repack(
                 hi,
                 keys: vec![f.key.clone()],
                 dead_bytes: dead,
+                live_bytes: live,
             },
             live,
         ));
     }
     finish(&mut run);
     best
+}
+
+/// Residuals spanning less than this are never re-split: what is left over the size limit
+/// after a split holds rows the watermark quantiles cannot cut further.
+const RESPLIT_MIN_WINDOW_SECS: i64 = 3600;
+
+/// The oldest residual of `generation` over `MAX_FILE_BYTES`, re-exported over its window as
+/// files under the limit. Residuals were one file per fold until 2026-11-25; bigger ones
+/// bypass the edge cache, which answers the first ranged read of such a file with all of it.
+pub(crate) fn plan_resplit(table: &TableState, generation: u32) -> Option<Repack> {
+    let deltas: Vec<(i64, i64)> = table
+        .files_of(generation, FileKind::Delta)
+        .filter_map(|f| Some((f.lo?, f.hi?)))
+        .collect();
+    let (f, lo, hi) = table
+        .files_of(generation, FileKind::Residual)
+        .filter(|f| f.bytes > MAX_FILE_BYTES)
+        .filter_map(|f| Some((f, f.lo?, f.hi?)))
+        .filter(|&(_, lo, hi)| hi.saturating_sub(lo) >= RESPLIT_MIN_WINDOW_SECS)
+        .filter(|&(_, lo, hi)| deltas.iter().all(|&(dlo, dhi)| dhi <= lo || dlo >= hi))
+        .min_by_key(|&(_, lo, _)| lo)?;
+    let (live, dead) = residual_bytes(table, generation, f)?;
+    Some(Repack {
+        lo,
+        hi,
+        keys: vec![f.key.clone()],
+        dead_bytes: dead,
+        live_bytes: live,
+    })
 }
 
 /// Per-partition cutoff for a residual export: rows of partition `p` must be newer than the
@@ -432,6 +493,17 @@ mod tests {
                     to: Some(20)
                 },
             ]
+        );
+    }
+
+    #[test]
+    fn windows_split_inside_their_range_only() {
+        assert_eq!(split_window(10, 20, &[]), vec![(10, 20)]);
+        // Bounds on or outside the edges would produce empty or overlapping windows.
+        assert_eq!(split_window(10, 20, &[5, 10, 20, 30]), vec![(10, 20)]);
+        assert_eq!(
+            split_window(10, 20, &[15, 12, 15]),
+            vec![(10, 12), (12, 15), (15, 20)]
         );
     }
 
@@ -571,6 +643,57 @@ mod tests {
     }
 
     #[test]
+    fn the_most_overdue_base_is_not_starved_by_backlog() {
+        let old = 31 * 86_400;
+        let t = table(vec![
+            file(FileKind::Base, Some(1), 0, 100, 1_000),
+            file(FileKind::Base, Some(2), 0, 200, 1_000),
+            file(FileKind::Base, Some(3), 0, old, 1_000),
+            file(FileKind::Delta, Some(3), old, old + 100, 50_000),
+            file(FileKind::Base, Some(4), 0, old, 1_000),
+            file(FileKind::Delta, Some(4), old, old + 100, 60_000),
+        ]);
+        let actual = BTreeMap::from([(1, 1_000), (2, 1_000), (3, 51_000), (4, 61_000)]);
+        assert_eq!(
+            plan_rebuilds(&t, 1, &actual, old + 100, &params()),
+            vec![
+                Rebuild {
+                    partition: 1,
+                    reason: Reason::Rolling
+                },
+                Rebuild {
+                    partition: 4,
+                    reason: Reason::Pending
+                },
+            ]
+        );
+    }
+
+    #[test]
+    fn resplit_takes_the_oldest_oversized_residual() {
+        let residual = |lo: i64, hi: i64, bytes: u64| {
+            let mut f = file(FileKind::Residual, Some(1), lo, hi, 100);
+            f.bytes = bytes;
+            f
+        };
+        let mut t = table(vec![
+            file(FileKind::Base, Some(1), 0, 0, 1_000),
+            residual(7_200, 90_000, MAX_FILE_BYTES + 1),
+            residual(90_000, 180_000, MAX_FILE_BYTES + 1),
+            // Too short to re-split, and under the limit.
+            residual(0, 1_000, MAX_FILE_BYTES + 1),
+            residual(1_000, 7_200, MAX_FILE_BYTES),
+        ]);
+        let r = plan_resplit(&t, 1).unwrap();
+        assert_eq!((r.lo, r.hi, r.keys.len()), (7_200, 90_000, 1));
+        assert_eq!((r.live_bytes, r.dead_bytes), (MAX_FILE_BYTES + 1, 0));
+        // A delta inside the window blocks it.
+        t.files
+            .push(file(FileKind::Delta, Some(1), 8_000, 9_000, 1));
+        assert_eq!(plan_resplit(&t, 1).map(|r| r.lo), Some(90_000));
+    }
+
+    #[test]
     fn fold_unions_windows_and_cutoffs_follow_bases() {
         let t = table(vec![
             file(FileKind::Base, Some(1), 0, 150, 10),
@@ -581,6 +704,7 @@ mod tests {
         let fold = plan_fold(&t, 1, 300).unwrap();
         assert_eq!((fold.lo, fold.hi), (100, 300));
         assert_eq!(fold.keys.len(), 2);
+        assert_eq!(fold.bytes, 2);
         assert!(plan_fold(&t, 1, 200).is_none());
         assert_eq!(residual_cutoffs(&t, 1, 100), BTreeMap::from([(1, 150)]));
     }
@@ -609,6 +733,7 @@ mod tests {
         let repack = plan_repack(&t, 1, 1, 1_000).unwrap();
         assert_eq!((repack.lo, repack.hi, repack.keys.len()), (100, 300, 2));
         assert_eq!(repack.dead_bytes, 1_700);
+        assert_eq!(repack.live_bytes, 30);
         // Below the minimum, nothing.
         assert!(plan_repack(&t, 1, 1_701, 1_000).is_none());
         // The live cap splits the run; the bigger half wins.

@@ -130,13 +130,27 @@ impl Exporter {
         let Some(written) = self.export(sql, &key, step).await? else {
             return Ok(None);
         };
+        self.increment_entry(key, &written, step, partition_expr, increment)
+            .await
+            .map(Some)
+    }
+
+    /// The manifest entry of an exported increment file, with its rows per partition.
+    pub(crate) async fn increment_entry(
+        &self,
+        key: String,
+        written: &Exported,
+        step: &str,
+        partition_expr: &str,
+        increment: Increment,
+    ) -> Result<FileEntry, DumpError> {
         let rows_by_partition = self
             .partition_counts(
                 &sql::file_partition_counts(&self.named_collection, &key, partition_expr),
                 step,
             )
             .await?;
-        Ok(Some(FileEntry {
+        Ok(FileEntry {
             key,
             kind: increment.kind,
             generation: increment.generation,
@@ -147,6 +161,6 @@ impl Exporter {
             bytes: written.bytes,
             rows_by_partition,
             built_at: Utc::now(),
-        }))
+        })
     }
 }

@@ -328,7 +328,7 @@ impl SnapshotCatalog {
                 let export = match t.policy {
                     PolicyKind::Incremental => "incremental export (hourly deltas plus per-partition base files; \
                         a row can appear twice with different `created_at`, the newest wins)",
-                    PolicyKind::Snapshot => "hourly full snapshot",
+                    PolicyKind::Snapshot => "full snapshot, refreshed every 1 to 6 hours",
                 };
                 let table = TableMeta {
                     comment: format!(

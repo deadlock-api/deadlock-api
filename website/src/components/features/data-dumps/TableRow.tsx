@@ -150,7 +150,7 @@ export function LakeTableRow({ table, matchedColumns }: { table: LakeTable; matc
             <span className="min-w-0 wrap-anywhere">{table.name}</span>
           </span>
           <Badge variant="muted" className="font-mono">
-            {table.policy === "incremental" ? "hourly incremental" : "hourly snapshot"}
+            {table.policy === "incremental" ? "hourly incremental" : "snapshot"}
           </Badge>
           {building && (
             <Badge variant="warning" className="font-mono">

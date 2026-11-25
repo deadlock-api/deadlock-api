@@ -11,8 +11,10 @@ pub(crate) enum Policy {
         /// it, so `FINAL` deduplicates within one file.
         chunk_column: &'static str,
     },
-    /// One full file per hourly tick, exported with `FINAL`.
-    Snapshot,
+    /// One full file, exported with `FINAL` on the first tick at least `every_hours` after the
+    /// previous one. The big, slow-changing tables refresh less often: `steam_profiles` cost
+    /// ~200 CPU-s per hourly export (2026-11-25) to republish 2.6 GB that barely changed.
+    Snapshot { every_hours: i64 },
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -36,30 +38,30 @@ pub(crate) const TABLES: &[TablePolicy] = &[
     },
     TablePolicy {
         name: "match_salts",
-        policy: Policy::Snapshot,
+        policy: Policy::Snapshot { every_hours: 1 },
     },
     TablePolicy {
         name: "leaderboard",
-        policy: Policy::Snapshot,
+        policy: Policy::Snapshot { every_hours: 1 },
     },
     TablePolicy {
         name: "hero_leaderboard",
-        policy: Policy::Snapshot,
+        policy: Policy::Snapshot { every_hours: 1 },
     },
     TablePolicy {
         name: "steam_profiles",
-        policy: Policy::Snapshot,
+        policy: Policy::Snapshot { every_hours: 6 },
     },
     TablePolicy {
         name: "steam_profile_observed_names",
-        policy: Policy::Snapshot,
+        policy: Policy::Snapshot { every_hours: 6 },
     },
     TablePolicy {
         name: "server_clusters",
-        policy: Policy::Snapshot,
+        policy: Policy::Snapshot { every_hours: 1 },
     },
     TablePolicy {
         name: "player_cluster_matches",
-        policy: Policy::Snapshot,
+        policy: Policy::Snapshot { every_hours: 6 },
     },
 ];
