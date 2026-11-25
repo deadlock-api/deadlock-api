@@ -203,15 +203,117 @@ pub(crate) fn query(client: &Client, sql: String, format: Option<&str>) -> Resul
 /// The query that returns the rows of `sql` in a text `format`, one `String` value per row.
 ///
 /// The server formats the rows with its own code and the settings of the query, as it does for
-/// the HTTP interface. A trailing `FORMAT` clause and `;` are removed; a trailing `SETTINGS`
-/// clause stays valid in the subquery. The line breaks around the subquery end a trailing
-/// `--` comment. With only `LowCardinality` columns, `formatRow()` returns
-/// `LowCardinality(String)`, hence the `CAST`.
+/// the HTTP interface. A trailing `FORMAT` clause and `;` are removed. A trailing top-level
+/// `SETTINGS` clause moves after the subquery, so that its settings (e.g. `output_format_*` or
+/// `log_comment`) apply to the whole query, `formatRow()` included, as with the HTTP interface.
+/// The line breaks around the subquery end a trailing `--` comment. With only `LowCardinality`
+/// columns, `formatRow()` returns `LowCardinality(String)`, hence the `CAST`.
 fn format_rows_query(format: &str, sql: &str) -> String {
-    format!(
-        "SELECT CAST(formatRow('{format}', *) AS String) FROM (\n{}\n)",
-        strip_format_clause(sql)
-    )
+    match split_settings_clause(strip_format_clause(sql)) {
+        (inner, Some(settings)) => format!(
+            "SELECT CAST(formatRow('{format}', *) AS String) FROM (\n{inner}\n) SETTINGS {settings}"
+        ),
+        (inner, None) => {
+            format!("SELECT CAST(formatRow('{format}', *) AS String) FROM (\n{inner}\n)")
+        }
+    }
+}
+
+/// Splits a trailing top-level `SETTINGS <name> = <value>, ...` clause off the SQL: the SQL before
+/// the clause and the settings after the keyword.
+///
+/// `SETTINGS` in strings, quoted identifiers, comments and parentheses (subqueries, CTEs) is
+/// skipped, and so is a `settings` word that is not followed by `<name> =`.
+fn split_settings_clause(sql: &str) -> (&str, Option<&str>) {
+    const KEYWORD: &[u8] = b"SETTINGS";
+
+    let bytes = sql.as_bytes();
+    let mut depth = 0_usize;
+    let mut index = 0_usize;
+    let mut last = None;
+
+    while let Some(&byte) = bytes.get(index) {
+        let rest = bytes.get(index..).unwrap_or_default();
+
+        let comment = params::comment_len(rest);
+        if comment > 0 {
+            index = index.saturating_add(comment);
+            continue;
+        }
+
+        match byte {
+            b'\'' | b'"' | b'`' => {
+                index = index.saturating_add(quoted_len(rest, byte));
+                continue;
+            }
+            b'(' | b'[' => depth = depth.saturating_add(1),
+            b')' | b']' => depth = depth.saturating_sub(1),
+            _ if depth == 0 && is_keyword_at(bytes, index, KEYWORD) => last = Some(index),
+            _ => {}
+        }
+
+        index = index.saturating_add(1);
+    }
+
+    let Some(start) = last else {
+        return (sql, None);
+    };
+
+    let (Some(before), Some(after)) = (
+        sql.get(..start),
+        sql.get(start.saturating_add(KEYWORD.len())..),
+    ) else {
+        return (sql, None);
+    };
+
+    let settings = after.trim();
+    let starts_with_name = settings.split_once('=').is_some_and(|(name, _)| {
+        let name = name.trim();
+        !name.is_empty() && name.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'_')
+    });
+
+    if starts_with_name {
+        (before.trim_end(), Some(settings))
+    } else {
+        (sql, None)
+    }
+}
+
+/// The length of the quoted string or identifier at the start of `input`, quotes included.
+/// Quotes are escaped with a backslash or by doubling them.
+fn quoted_len(input: &[u8], quote: u8) -> usize {
+    let mut index = 1_usize;
+
+    while let Some(&byte) = input.get(index) {
+        if byte == b'\\' {
+            index = index.saturating_add(2);
+        } else if byte != quote {
+            index = index.saturating_add(1);
+        } else if input.get(index.saturating_add(1)) == Some(&quote) {
+            index = index.saturating_add(2);
+        } else {
+            return index.saturating_add(1);
+        }
+    }
+
+    input.len()
+}
+
+/// Returns `true` if `keyword` (case-insensitive) is a whole word at `index` of `sql`.
+fn is_keyword_at(sql: &[u8], index: usize, keyword: &[u8]) -> bool {
+    let is_word_byte = |byte: &u8| byte.is_ascii_alphanumeric() || *byte == b'_';
+    let end = index.saturating_add(keyword.len());
+
+    let starts_word = index
+        .checked_sub(1)
+        .and_then(|before| sql.get(before))
+        .is_none_or(|byte| !is_word_byte(byte));
+
+    starts_word
+        && sql
+            .get(index..end)
+            .is_some_and(|word| word.eq_ignore_ascii_case(keyword))
+        && sql.get(end).is_none_or(|byte| !is_word_byte(byte))
 }
 
 /// Returns `true` if the statement can be a subquery: `SELECT`, `WITH`, `EXPLAIN` or a
@@ -974,6 +1076,59 @@ mod tests {
         assert_eq!(
             format_rows_query("CSV", "SELECT 1 -- comment\nFORMAT TSV;"),
             "SELECT CAST(formatRow('CSV', *) AS String) FROM (\nSELECT 1 -- comment\n)"
+        );
+    }
+
+    #[test]
+    fn hoists_settings_clause() {
+        assert_eq!(
+            format_rows_query(
+                "JSONEachRow",
+                "SELECT a FROM t SETTINGS log_comment = 'x', output_format_json_skip_null_value_in_named_tuples = 1"
+            ),
+            "SELECT CAST(formatRow('JSONEachRow', *) AS String) FROM (\nSELECT a FROM t\n) \
+             SETTINGS log_comment = 'x', output_format_json_skip_null_value_in_named_tuples = 1"
+        );
+
+        let split = |sql| split_settings_clause(sql);
+        assert_eq!(split("SELECT 1"), ("SELECT 1", None));
+        assert_eq!(
+            split("select 1 settings max_threads=1"),
+            ("select 1", Some("max_threads=1"))
+        );
+        // Only the trailing top-level clause.
+        assert_eq!(
+            split("SELECT * FROM (SELECT 1 SETTINGS max_threads = 1) SETTINGS log_comment = 'a'"),
+            (
+                "SELECT * FROM (SELECT 1 SETTINGS max_threads = 1)",
+                Some("log_comment = 'a'")
+            )
+        );
+        assert_eq!(
+            split("SELECT * FROM (SELECT 1 SETTINGS max_threads = 1)"),
+            ("SELECT * FROM (SELECT 1 SETTINGS max_threads = 1)", None)
+        );
+        // Not a clause: strings, identifiers, comments, a column named `settings`.
+        for sql in [
+            "SELECT 'SETTINGS a = 1'",
+            "SELECT \"SETTINGS\" FROM t WHERE x = 1",
+            "SELECT `settings` FROM t WHERE x = 1",
+            "SELECT 1 -- SETTINGS a = 1",
+            "SELECT 1 /* SETTINGS a = 1 */",
+            "SELECT settings FROM t WHERE a = 1",
+            "SELECT my_settings = 1",
+            "SELECT 'it''s SETTINGS a = 1'",
+        ] {
+            assert_eq!(split(sql), (sql, None), "{sql}");
+        }
+        assert_eq!(
+            split("SELECT 'a\\'b' SETTINGS log_comment = 'c'"),
+            ("SELECT 'a\\'b'", Some("log_comment = 'c'"))
+        );
+        // A comment after the settings stays with them, at the end of the query.
+        assert_eq!(
+            split("SELECT 1 SETTINGS max_threads = 1 -- c"),
+            ("SELECT 1", Some("max_threads = 1 -- c"))
         );
     }
 
