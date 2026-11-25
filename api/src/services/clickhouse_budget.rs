@@ -36,24 +36,29 @@ pub(crate) enum Endpoint {
 }
 
 impl Endpoint {
-    /// How many units a compressed megabyte read counts for, in tenths. On the queries of three
-    /// hours of 2026-11-24/25 a compressed megabyte read cost ~22 core-ms of `ClickHouse` CPU on
-    /// analytics, ~48 on bulk metadata and ~29 on GraphQL (few queries): those read wide columns
+    /// How many units a compressed megabyte read counts for, in tenths. Over three hours of
+    /// 2026-11-25 on the native protocol, a compressed megabyte read cost 15-22 core-ms of
+    /// `ClickHouse` CPU on the analytics endpoints, 47-58 on bulk metadata (~2.7x) and ~28 on
+    /// GraphQL (~1.5x, few queries): those read wide columns
     /// of scattered matches, which are decompressed a whole block at a time, while analytics read
     /// narrow, recent and cached columns. Weighting them relative to analytics charges a
     /// core-second the same everywhere.
     const fn weight_tenths(self) -> u64 {
         match self {
             Self::Analytics => 10,
-            Self::BulkMetadata => 22,
-            Self::GraphQL => 13,
+            Self::BulkMetadata => 27,
+            Self::GraphQL => 15,
         }
     }
 }
 
 /// Budgets of [`COST_UNIT_BYTES`]: the budgets of uncompressed megabytes (100 GB/min and
-/// 250 GB/h per address, 400 GB/min and 2 TB/h per key) times 0.34, the share of compressed
-/// bytes in what analytics read on 2026-11-24/25, so analytics clients keep their limits.
+/// 250 GB/h per address, 400 GB/min and 2 TB/h per key) times 0.26. Replaying the requests of
+/// 2026-11-25 under both formulas, analytics clients are charged 0.26x (median per client-hour
+/// 0.25x) of what the uncompressed formula charged them, so they keep their limits; the
+/// requests that reach `ClickHouse` read much from its columns cache, so their compressed
+/// share is below the ~0.33 of all its analytics queries. Bulk metadata ends up ~1.4x looser
+/// than before, in line with its CPU per compressed megabyte.
 /// Replayed on the week to 2026-11-24, when analytics, bulk metadata and GraphQL read ~427 TB a
 /// day, the uncompressed budgets rejected ~37% of what clients without a key read, and only 344
 /// of their 174k addresses lost more than 5% of their reads (21 of them browsers). Only one key
@@ -64,10 +69,10 @@ impl Endpoint {
 pub(crate) const BUDGET: RateLimit = RateLimit::new(
     "clickhouse_cost",
     &[
-        Quota::new(Scope::Ip, 34_000, Duration::from_mins(1)),
-        Quota::new(Scope::Ip, 85_000, Duration::from_hours(1)),
-        Quota::new(Scope::Key, 136_000, Duration::from_mins(1)),
-        Quota::new(Scope::Key, 680_000, Duration::from_hours(1)),
+        Quota::new(Scope::Ip, 26_000, Duration::from_mins(1)),
+        Quota::new(Scope::Ip, 65_000, Duration::from_hours(1)),
+        Quota::new(Scope::Key, 104_000, Duration::from_mins(1)),
+        Quota::new(Scope::Key, 520_000, Duration::from_hours(1)),
     ],
 );
 
@@ -76,7 +81,7 @@ macro_rules! cost_docs {
     () => {
         "Requests are charged the megabytes of compressed data ClickHouse reads to answer them \
          (see the `X-CH-Read-Compressed-Bytes` response header), once they have run. A megabyte \
-         counts once on the analytics endpoints, 2.2 times on `GET /v1/matches/metadata` and 1.3 \
+         counts once on the analytics endpoints, 2.7 times on `GET /v1/matches/metadata` and 1.5 \
          times on `POST /v1/graphql`, as much as it costs the database there. Responses served from a cache \
          cost next to nothing. A request is admitted while any budget is left, so an expensive one \
          can take you past the limit until its cost leaves the window. Narrow time ranges and \
@@ -153,14 +158,14 @@ mod tests {
     fn weighs_megabytes_by_endpoint() {
         assert_eq!(
             cost_units(2_500_000_000, Endpoint::BulkMetadata).get(),
-            5_500
+            6_750
         );
-        assert_eq!(cost_units(2_500_000_000, Endpoint::GraphQL).get(), 3_250);
-        // 0.1 MB of bulk metadata counts as 0.22 units, rounded up.
+        assert_eq!(cost_units(2_500_000_000, Endpoint::GraphQL).get(), 3_750);
+        // 0.1 MB of bulk metadata counts as 0.27 units, rounded up.
         assert_eq!(cost_units(100_000, Endpoint::BulkMetadata).get(), 1);
         assert_eq!(
             cost_units(u64::MAX, Endpoint::BulkMetadata).get(),
-            u64::try_from((u128::from(u64::MAX) * 22).div_ceil(10_000_000)).unwrap()
+            u64::try_from((u128::from(u64::MAX) * 27).div_ceil(10_000_000)).unwrap()
         );
     }
 }
