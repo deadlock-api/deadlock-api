@@ -173,9 +173,9 @@ pub(crate) struct HeroStatsQuery {
     min_hero_matches: Option<u64>,
     /// Filter players based on the number of matches they have played with a specific hero within the filtered time range (all durations, even with a duration filter).
     max_hero_matches: Option<u64>,
-    /// Filter players based on the number of matches they have played with a specific hero in their entire history, counting only matches of the selected `game_mode`.
+    /// Filter players based on the number of matches they have played with a specific hero in their entire history, counting only matches of the selected `game_mode`. The counts are refreshed every 30 minutes.
     min_hero_matches_total: Option<u64>,
-    /// Filter players based on the number of matches they have played with a specific hero in their entire history, counting only matches of the selected `game_mode`.
+    /// Filter players based on the number of matches they have played with a specific hero in their entire history, counting only matches of the selected `game_mode`. The counts are refreshed every 30 minutes.
     max_hero_matches_total: Option<u64>,
     /// Comma separated list of entire-history hero match counts, each the lower bound of a bucket that ends where the next one starts (the last one is open-ended), e.g. `1,25,100` for 1-24, 25-99 and 100+ matches. Groups each player's matches by their entire-history match count on the hero (counted like `min_hero_matches_total`), and the `bucket` of each row is the lower bound of its bucket. Players below the first bound are left out. Only with `bucket=no_bucket`, at most 10 bounds.
     #[serde(default, deserialize_with = "comma_separated_deserialize_option")]
@@ -959,23 +959,100 @@ fn build_item_query(query: &HeroStatsQuery) -> Option<String> {
     Some(rollup_hero_days(query, &day_rows, "hero_stats_item_mv"))
 }
 
+/// A player and hero as one integer, the key of the entire-history count lookups: sets and hash
+/// tables over one `UInt64` build about twice as fast as over `(account_id, hero_id)` tuples.
+/// Hero ids fit in a byte (`player_hero_match_counts.hero_id` is `UInt8`).
+const PLAYER_HERO_KEY: &str = "toUInt64(account_id) * 256 + hero_id";
+
+/// How the window's rows meet `t_players2`, the looked-up entire-history counts.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TotalLookup {
+    /// Keep the pairs in it.
+    In,
+    /// Drop the pairs in it.
+    NotIn,
+    /// Join it for `n_total`, keeping only the pairs in it.
+    Inner,
+    /// Join it for `n_total`; a pair missing from it counts as 0, the lowest bucket.
+    Left,
+}
+
+impl TotalLookup {
+    /// Whether the window reads `n_total` from it, for the bucket expression.
+    const fn reads_count(self) -> bool {
+        matches!(self, Self::Inner | Self::Left)
+    }
+}
+
+/// The entire-history hero match count bounds of a request: the filter
+/// (`min/max_hero_matches_total`, the lowest `hero_matches_total_buckets` bound) and the
+/// second-lowest bucket bound, the first one that needs a player's count.
+#[derive(Debug, Clone, Copy)]
+struct HeroTotalCounts {
+    min: Option<u64>,
+    max: Option<u64>,
+    second_bucket: Option<u64>,
+}
+
+impl HeroTotalCounts {
+    fn new(query: &HeroStatsQuery) -> Self {
+        let (min, max) = query.hero_matches_total_bounds();
+        let second_bucket = query
+            .hero_matches_total_bucket_bounds()
+            .get(1)
+            .map(|&bound| u64::from(bound));
+        Self {
+            min,
+            max,
+            second_bucket,
+        }
+    }
+
+    /// Which pairs to read from `player_hero_match_counts` (a `matches` predicate) and how the window
+    /// meets them; `None` when no bound filters or buckets.
+    ///
+    /// Every player in the window has played the hero at least once, so without a minimum above 1
+    /// a pair needs a lookup only from the second bucket bound or above the maximum: the rest is
+    /// in the lowest bucket. That reads the few pairs with many matches (5.5M of 73M normal-mode
+    /// pairs have 25+) instead of all of them. A pair that is missing because the player started on
+    /// the hero after the last refresh counts as having fewer matches than any bound above 1.
+    fn lookup(&self) -> Option<(String, TotalLookup)> {
+        match (self.min, self.second_bucket) {
+            (Some(min), second) => {
+                let lookup = if second.is_some() {
+                    TotalLookup::Inner
+                } else {
+                    TotalLookup::In
+                };
+                Some((
+                    range_filters("matches", Some(min), self.max).join(" AND "),
+                    lookup,
+                ))
+            }
+            (None, Some(second)) => {
+                let lowest = self
+                    .max
+                    .map_or(second, |max| second.min(max.saturating_add(1)));
+                Some((format!("matches >= {lowest}"), TotalLookup::Left))
+            }
+            (None, None) => self
+                .max
+                .map(|max| (format!("matches > {max}"), TotalLookup::NotIn)),
+        }
+    }
+}
+
 #[expect(
     clippy::too_many_lines,
     reason = "one linear query builder reads clearer than split helpers"
 )]
 fn build_query(query: &HeroStatsQuery) -> String {
     let (min_hero_matches, max_hero_matches) = query.hero_matches_bounds();
-    let (min_hero_matches_total, max_hero_matches_total) = query.hero_matches_total_bounds();
-    // Only used by the CTEs below, which exist only when a bound is set.
+    let total_counts = HeroTotalCounts::new(query);
+    let total_lookup = total_counts.lookup();
+    // Only used by the CTE below, which exists only when a bound is set.
     let player_hero_filters =
         range_filters("uniq(match_id)", min_hero_matches, max_hero_matches).join(" AND ");
-    // player_match_history holds a match twice until both sources' inserts merge.
-    let player_hero_total_filters = range_filters(
-        "uniqExact(match_id)",
-        min_hero_matches_total,
-        max_hero_matches_total,
-    )
-    .join(" AND ");
     let bucket_by_total = !query.hero_matches_total_bucket_bounds().is_empty();
     let bucket = query.bucket_expr();
     let scope = MatchScope::new(
@@ -997,8 +1074,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
     };
     let window_match_filters = format!("AND {}", window_scope.sql());
     let has_player_hero_cte = min_hero_matches.is_some() || max_hero_matches.is_some();
-    let has_player_hero_total_cte =
-        min_hero_matches_total.is_some() || max_hero_matches_total.is_some() || bucket_by_total;
+    let has_player_hero_total_cte = total_lookup.is_some();
     #[expect(deprecated, reason = "reads the deprecated legacy query parameters")]
     let has_account_filter =
         query.account_id.is_some() || is_non_empty(query.account_ids.as_deref());
@@ -1089,36 +1165,33 @@ fn build_query(query: &HeroStatsQuery) -> String {
         )"
         ));
     }
-    // Only the players and heroes in the window can pass the filter, so the history count is
-    // limited to them: a primary-key range on player_match_history instead of grouping all of it
-    // (500M rows into a 2-4 GiB hash table), and only the heroes each player played in the
-    // window go into the aggregation (half the memory of counting all their heroes). Experience
-    // counts in the selected game mode only, so Street Brawl or bot games don't lift a player
-    // into a higher bucket of the normal-mode stats.
-    if has_player_hero_total_cte {
-        let n_total = if bucket_by_total {
-            ", uniqExact(match_id) AS n_total"
+    // The entire-history counts come from player_hero_match_counts, rebuilt every 30 minutes
+    // from player_match_history. Counting the window's pairs there at request time took 26 s on a
+    // season window (32M pairs probed against 550M rows) and timed out. Only the pairs that
+    // `HeroTotalCounts::lookup` needs are read, keyed by one packed integer: the IN sets and hash
+    // tables over them are built single-threaded, so the smaller the faster.
+    if let Some((matches_filter, lookup)) = &total_lookup {
+        let n_total = if lookup.reads_count() {
+            ", matches AS n_total"
         } else {
             ""
         };
-        let having = if player_hero_total_filters.is_empty() {
-            String::new()
+        // Experience counts in the selected game mode only, so Street Brawl or bot games don't
+        // lift a player into a higher bucket of the normal-mode stats. Without a game mode
+        // (`game_mode=`), the modes add up.
+        let counts = if query.game_mode.is_some() {
+            format!(
+                "player_hero_match_counts\n            WHERE {game_mode_filter} AND {matches_filter}"
+            )
         } else {
-            format!("HAVING {player_hero_total_filters}")
+            format!(
+                "(SELECT account_id, hero_id, toUInt32(sum(matches)) AS matches FROM player_hero_match_counts GROUP BY account_id, hero_id)\n            WHERE {matches_filter}"
+            )
         };
         ctes.push(format!(
             "t_players2 AS (
-            SELECT account_id, hero_id{n_total}
-            FROM player_match_history
-            WHERE {game_mode_filter} AND (account_id, hero_id) IN (
-                SELECT account_id, hero_id
-                FROM {source_table}
-                WHERE TRUE
-                    {player_filters}
-                    {match_filters}
-            )
-            GROUP BY account_id, hero_id
-            {having}
+            SELECT {PLAYER_HERO_KEY} AS player_hero{n_total}
+            FROM {counts}
         )"
         ));
     }
@@ -1129,10 +1202,25 @@ fn build_query(query: &HeroStatsQuery) -> String {
     };
     // Bucketing by the history count needs it on every row, so it joins instead of filtering:
     // one read of the window serves every bucket, where a request per bucket re-read it each time.
-    let (hero_total_join, n_total_join) = match (has_player_hero_total_cte, bucket_by_total) {
-        (true, false) => ("AND (account_id, hero_id) IN t_players2", ""),
-        (true, true) => ("", " INNER JOIN t_players2 USING (account_id, hero_id)"),
-        (false, _) => ("", ""),
+    let (hero_total_join, n_total_join) = match total_lookup.as_ref().map(|(_, lookup)| lookup) {
+        Some(TotalLookup::In) => ("AND player_hero IN t_players2", String::new()),
+        Some(TotalLookup::NotIn) => ("AND player_hero NOT IN t_players2", String::new()),
+        Some(TotalLookup::Inner) => ("", " INNER JOIN t_players2 USING (player_hero)".to_owned()),
+        Some(TotalLookup::Left) => (
+            "",
+            format!(
+                " LEFT JOIN t_players2 USING (player_hero){}",
+                total_counts
+                    .max
+                    .map_or_default(|max| format!(" WHERE ifNull(n_total, 0) <= {max}"))
+            ),
+        ),
+        None => ("", String::new()),
+    };
+    let player_hero_column = if has_player_hero_total_cte {
+        format!(", {PLAYER_HERO_KEY} AS player_hero")
+    } else {
+        String::new()
     };
     // Both tables carry the per-row buff scalars (see `power_up_buffs`); on player_match_stats
     // they are NULL for rows ingested before the columns existed, hence the `count(...)`
@@ -1143,7 +1231,7 @@ fn build_query(query: &HeroStatsQuery) -> String {
             hero_id, account_id, match_id, won, kills, deaths, assists, net_worth, last_hits, denies,
             max_player_damage, max_player_damage_taken, max_boss_damage, max_creep_damage,
             max_neutral_damage, max_max_health, max_shots_hit, max_shots_missed,
-            start_time, average_badge, permanent_buffs, first_permanent_buff_time_s
+            start_time, average_badge, permanent_buffs, first_permanent_buff_time_s{player_hero_column}
         FROM {source_table}{final_clause}
         {prewhere_clause}
         WHERE TRUE
@@ -1155,16 +1243,21 @@ fn build_query(query: &HeroStatsQuery) -> String {
     )"
     ));
     let with_clause = ctes.join(",\n    ");
-    // The distinct count only where a bucket reads it: it costs more than the rest of the aggregation.
-    let (matches_per_bucket, distinct_matches) =
-        if query.bucket == HeroStatsBucket::NoBucket && !bucket_by_total {
-            ("matches", "")
-        } else {
-            (
-                "sum(sum(n_distinct_matches)) OVER (PARTITION BY bucket)",
-                "count(distinct match_id) AS n_distinct_matches,",
-            )
-        };
+    // The distinct count only where a time or badge bucket reads it: it costs more than the rest
+    // of the aggregation. Experience buckets count rows instead: a (hero, day) group holds a match
+    // once per player on that hero, so the two differ only when two players had the same hero in a
+    // match (7 of 174M season rows). On a season window the distinct count took 40-80 of 120-200
+    // CPU-s and 4 of 6 GiB.
+    let (matches_per_bucket, distinct_matches) = if bucket_by_total {
+        ("sum(sum(n_matches)) OVER (PARTITION BY bucket)", "")
+    } else if query.bucket == HeroStatsBucket::NoBucket {
+        ("matches", "")
+    } else {
+        (
+            "sum(sum(n_distinct_matches)) OVER (PARTITION BY bucket)",
+            "count(distinct match_id) AS n_distinct_matches,",
+        )
+    };
 
     group_hero_days(
         &format!(
@@ -1531,9 +1624,10 @@ mod tests {
         let sql = build_query(&query);
         assert_valid_sql(&sql);
         assert!(sql.contains("HAVING uniq(match_id) <= 5\n"));
-        assert!(sql.contains("HAVING uniqExact(match_id) <= 24\n"));
         assert!(sql.contains("IN t_players\n"));
-        assert!(sql.contains("IN t_players2\n"));
+        // Without a game mode the counts of every mode add up.
+        assert!(sql.contains("GROUP BY account_id, hero_id)\n            WHERE matches > 24\n"));
+        assert!(sql.contains("AND player_hero NOT IN t_players2\n"));
     }
 
     #[test]
@@ -1545,9 +1639,12 @@ mod tests {
             ..Default::default()
         });
         assert_valid_sql(&sql);
+        // A maximum alone drops the few players above it instead of keeping everyone below.
         assert!(sql.contains(
-            "FROM player_match_history\n            WHERE game_mode = 1 AND (account_id, hero_id) IN (\n                SELECT account_id, hero_id\n"
+            "SELECT toUInt64(account_id) * 256 + hero_id AS player_hero\n            FROM player_hero_match_counts\n            WHERE game_mode = 1 AND matches > 24\n"
         ));
+        assert!(sql.contains("AND player_hero NOT IN t_players2\n"));
+        assert!(!sql.contains("player_match_history"));
         assert!(sql.contains("FROM match_player FINAL"));
         assert!(!sql.contains("LIMIT 1 BY"));
     }
@@ -1564,27 +1661,70 @@ mod tests {
         assert!(build_mv_query(&query).is_none());
         let sql = build_query(&query);
         assert_valid_sql(&sql);
-        assert!(sql.contains("SELECT account_id, hero_id, uniqExact(match_id) AS n_total\n"));
-        // A lowest bound of 1 filters nothing: every player in the window has a match.
-        assert!(!sql.contains("HAVING"));
-        assert!(!sql.contains("hero_id) IN t_players2"));
-        assert!(sql.contains("FROM mp INNER JOIN t_players2 USING (account_id, hero_id)\n"));
+        assert!(sql.contains(
+            "SELECT toUInt64(account_id) * 256 + hero_id AS player_hero, matches AS n_total\n"
+        ));
+        // A lowest bound of 1 filters nothing: every player in the window has a match, so only
+        // the players from the second bound up are looked up and the rest are the lowest bucket.
+        assert!(sql.contains("WHERE game_mode = 1 AND matches >= 25\n"));
+        assert!(!sql.contains("player_hero IN t_players2"));
+        assert!(sql.contains("FROM mp LEFT JOIN t_players2 USING (player_hero)\n"));
+        assert!(
+            sql.contains("sum(sum(n_matches)) OVER (PARTITION BY bucket) AS matches_per_bucket")
+        );
+        assert!(!sql.contains("count(distinct match_id)"));
+        assert!(sql.contains(
+            "first_permanent_buff_time_s, toUInt64(account_id) * 256 + hero_id AS player_hero\n"
+        ));
         assert!(
             sql.contains("toUInt32(multiIf(n_total >= 100, 100, n_total >= 25, 25, 1)) AS bucket")
         );
         assert!(sql.contains("FROM match_player FINAL"));
-        assert_eq!(sql.matches("FROM match_player").count(), 2);
+        // The window is read once: the counts are looked up without a set of the window's players.
+        assert_eq!(sql.matches("FROM match_player").count(), 1);
 
         // The lowest bound and the bounds parameters are both minimums.
         let sql = build_query(&HeroStatsQuery {
             hero_matches_total_buckets: Some(vec![10]),
             min_hero_matches_total: Some(5),
             max_hero_matches_total: Some(50),
+            ..query.clone()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains("WHERE game_mode = 1 AND matches >= 10 AND matches <= 50\n"));
+        assert!(sql.contains("AND player_hero IN t_players2\n"));
+        assert!(sql.contains("toUInt32(10) AS bucket"));
+
+        // A lowest bound above 1 keeps only the players looked up.
+        let sql = build_query(&HeroStatsQuery {
+            hero_matches_total_buckets: Some(vec![10, 50]),
+            ..query.clone()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains("WHERE game_mode = 1 AND matches >= 10\n"));
+        assert!(sql.contains("FROM mp INNER JOIN t_players2 USING (player_hero)\n"));
+        assert!(sql.contains("toUInt32(multiIf(n_total >= 50, 50, 10)) AS bucket"));
+
+        // A maximum below the second bound: the lookup starts above the maximum, which drops them.
+        let sql = build_query(&HeroStatsQuery {
+            max_hero_matches_total: Some(20),
+            ..query.clone()
+        });
+        assert_valid_sql(&sql);
+        assert!(sql.contains("WHERE game_mode = 1 AND matches >= 21\n"));
+        assert!(sql.contains(
+            "FROM mp LEFT JOIN t_players2 USING (player_hero) WHERE ifNull(n_total, 0) <= 20\n"
+        ));
+
+        // One bound of 1 neither filters nor needs a count.
+        let sql = build_query(&HeroStatsQuery {
+            hero_matches_total_buckets: Some(vec![1]),
             ..query
         });
         assert_valid_sql(&sql);
-        assert!(sql.contains("HAVING uniqExact(match_id) >= 10 AND uniqExact(match_id) <= 50\n"));
-        assert!(sql.contains("toUInt32(10) AS bucket"));
+        assert!(!sql.contains("t_players2"));
+        assert!(!sql.contains("player_hero"));
+        assert!(sql.contains("toUInt32(1) AS bucket"));
     }
 
     #[test]
