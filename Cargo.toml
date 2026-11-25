@@ -52,7 +52,8 @@ async-compression = "0.4.53"
 base64 = "0.23.1"
 cached = "4.1"
 clap = { version = "4.6.9", features = ["derive", "env"] }
-clickhouse = { version = "0.15.3" }
+# Fork with the native TCP transport (`tcp` feature, `tcp://` URLs).
+clickhouse = { git = "https://github.com/raimannma/clickhouse-rs", rev = "8f79854a6cb2702c0d6d8f536e1453287faa73cf", features = ["tcp"] }
 futures = "0.3.34"
 itertools = "0.15.0"
 metrics = "0.24.6"

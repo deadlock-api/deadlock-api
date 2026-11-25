@@ -131,6 +131,7 @@ pub(crate) async fn track_requests(
             ch_elapsed_ns: ch_cost.elapsed_ns,
             ch_read_rows: ch_cost.read_rows,
             ch_read_bytes: ch_cost.read_bytes,
+            ch_read_compressed_bytes: ch_cost.read_compressed_bytes,
             ch_peak_memory_bytes: ch_cost.peak_memory_bytes,
         };
         state.request_logger.try_insert(vec![log]);

@@ -28,6 +28,7 @@ CREATE TABLE default.request_logs
     `ch_elapsed_ns` UInt64 DEFAULT 0,
     `ch_read_rows` UInt64 DEFAULT 0,
     `ch_read_bytes` UInt64 DEFAULT 0,
+    `ch_read_compressed_bytes` UInt64 DEFAULT 0,
     `ch_peak_memory_bytes` UInt64 DEFAULT 0,
     INDEX idx_path path TYPE bloom_filter GRANULARITY 4,
     INDEX idx_api_key api_key TYPE bloom_filter GRANULARITY 4,

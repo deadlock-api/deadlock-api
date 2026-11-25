@@ -318,6 +318,11 @@ impl AppState {
 
 const CH_HEALTH_CHECK: &str = "SELECT 1 SETTINGS log_comment = 'startup_health_check'";
 
+/// Idle native protocol connections the API keeps open to `ClickHouse`, shared by its clients
+/// (they log in as the same user). The admission limiter's maximum of concurrent queries, so a busy
+/// replica reuses a connection for each query instead of closing and reopening them.
+const CH_MAX_IDLE_CONNECTIONS: usize = 256;
+
 /// The `ClickHouse` clients of [`AppStateInner`].
 struct ClickhouseClients {
     main: clickhouse::Client,
@@ -331,6 +336,9 @@ impl ClickhouseClients {
         // The main client never uses the query cache: it backs writes and freshness
         // sensitive background/work-queue reads, which must never serve stale results.
         let ch_client = clickhouse::Client::default()
+            .with_tcp_pool(
+                clickhouse::TcpPoolOptions::default().with_max_idle_connections(CH_MAX_IDLE_CONNECTIONS),
+            )
             .with_url(config.clickhouse.url())
             .with_user(&config.clickhouse.username)
             .with_password(&config.clickhouse.password)
@@ -413,9 +421,8 @@ fn spawn_data_dump(
         .with_password(&config.data_dump.password)
         .with_database("dump")
         .with_compression(clickhouse::Compression::None)
-        // Exports run for up to two hours; keep the HTTP connection busy meanwhile.
-        .with_setting("send_progress_in_http_headers", "1")
-        .with_setting("http_headers_progress_interval_ms", "10000")
+        // Exports run for up to two hours; the native protocol's progress packets keep the
+        // connection busy meanwhile.
         .with_setting("wait_end_of_query", "1");
     DataDump {
         config: config.data_dump.clone(),

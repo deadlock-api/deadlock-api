@@ -1,7 +1,7 @@
 //! What the `ClickHouse` queries behind a response cost.
 //!
 //! Inside [`track`] (scoped per request by [`crate::middleware::ch_cost::ch_cost_headers`]),
-//! every query run through [`TrackedQuery`] adds its `X-ClickHouse-Summary` to a task-local
+//! every query run through [`TrackedQuery`] adds its summary to a task-local
 //! [`ChCost`], which the middleware reports as `X-CH-*` response headers and hands to
 //! `track_requests` for `request_logs`. Tracked queries run with `wait_end_of_query=1`:
 //! `ClickHouse` sends the summary before the body, so without it the summary only covers the
@@ -33,6 +33,10 @@ pub(crate) struct ChCost {
     pub(crate) elapsed_ns: u64,
     pub(crate) read_rows: u64,
     pub(crate) read_bytes: u64,
+    /// Compressed bytes read from disk or the page cache (see
+    /// [`clickhouse_utils::read_compressed_bytes`]); what [`crate::services::clickhouse_budget`]
+    /// charges.
+    pub(crate) read_compressed_bytes: u64,
     /// The highest peak memory of any one query; queries mostly run one after the other.
     pub(crate) peak_memory_bytes: u64,
 }
@@ -50,6 +54,10 @@ impl ChCost {
             self.elapsed_ns = sum(self.elapsed_ns, summary.elapsed_ns());
             self.read_rows = sum(self.read_rows, summary.read_rows());
             self.read_bytes = sum(self.read_bytes, summary.read_bytes());
+            self.read_compressed_bytes = sum(
+                self.read_compressed_bytes,
+                clickhouse_utils::read_compressed_bytes(summary),
+            );
             self.peak_memory_bytes = self
                 .peak_memory_bytes
                 .max(summary.memory_usage().unwrap_or(0));
@@ -63,6 +71,9 @@ impl ChCost {
             elapsed_ns: self.elapsed_ns.saturating_add(share.elapsed_ns),
             read_rows: self.read_rows.saturating_add(share.read_rows),
             read_bytes: self.read_bytes.saturating_add(share.read_bytes),
+            read_compressed_bytes: self
+                .read_compressed_bytes
+                .saturating_add(share.read_compressed_bytes),
             peak_memory_bytes: self.peak_memory_bytes.max(share.peak_memory_bytes),
         }
     }
@@ -82,6 +93,10 @@ impl ChCost {
         }
         insert("x-ch-read-rows", self.read_rows.into());
         insert("x-ch-read-bytes", self.read_bytes.into());
+        insert(
+            "x-ch-read-compressed-bytes",
+            self.read_compressed_bytes.into(),
+        );
         insert("x-ch-peak-memory-bytes", self.peak_memory_bytes.into());
     }
 }
@@ -194,8 +209,7 @@ mod tests {
         n: u64,
     }
 
-    const SUMMARY: &str =
-        r#"{"read_rows":"100","read_bytes":"800","elapsed_ns":"2500000","memory_usage":"4096"}"#;
+    const SUMMARY: &str = r#"{"read_rows":"100","read_bytes":"800","ReadCompressedBytes":"300","elapsed_ns":"2500000","memory_usage":"4096"}"#;
 
     fn client(mock: &Mock) -> clickhouse::Client {
         clickhouse::Client::default()
@@ -212,7 +226,7 @@ mod tests {
         ));
         mock.add(handlers::provide_with_summary(
             [Number { n: 3 }],
-            r#"{"read_rows":"5","read_bytes":"40","elapsed_ns":"1000","memory_usage":"1024"}"#,
+            r#"{"read_rows":"5","read_bytes":"40","ReadCompressedBytes":"20","elapsed_ns":"1000","memory_usage":"1024"}"#,
         ));
         let client = client(&mock);
 
@@ -232,6 +246,7 @@ mod tests {
                 elapsed_ns: 2_501_000,
                 read_rows: 105,
                 read_bytes: 840,
+                read_compressed_bytes: 320,
                 peak_memory_bytes: 4096,
             }
         );
@@ -311,6 +326,7 @@ mod tests {
             elapsed_ns: 12_345_678,
             read_rows: 7,
             read_bytes: 56,
+            read_compressed_bytes: 21,
             peak_memory_bytes: 1024,
         }
         .insert_headers(&mut headers);
@@ -319,6 +335,7 @@ mod tests {
         assert_eq!(get("x-ch-elapsed-ms"), "12.345");
         assert_eq!(get("x-ch-read-rows"), "7");
         assert_eq!(get("x-ch-read-bytes"), "56");
+        assert_eq!(get("x-ch-read-compressed-bytes"), "21");
         assert_eq!(get("x-ch-peak-memory-bytes"), "1024");
     }
 }

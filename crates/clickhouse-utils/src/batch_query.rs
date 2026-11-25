@@ -50,6 +50,8 @@ pub struct BatchCost {
     pub elapsed_ns: u64,
     pub read_rows: u64,
     pub read_bytes: u64,
+    /// Compressed bytes read from disk or the page cache (`ReadCompressedBytes`).
+    pub read_compressed_bytes: u64,
     /// The highest peak memory of the batch queries, unsplit: it can't be divided among the
     /// lookups a query served.
     pub peak_memory_bytes: u64,
@@ -63,6 +65,7 @@ impl BatchCost {
             elapsed_ns: value(QuerySummary::elapsed_ns),
             read_rows: value(QuerySummary::read_rows),
             read_bytes: value(QuerySummary::read_bytes),
+            read_compressed_bytes: value(read_compressed_bytes),
             peak_memory_bytes: value(QuerySummary::memory_usage),
         }
     }
@@ -80,6 +83,7 @@ impl BatchCost {
             elapsed_ns: split(self.elapsed_ns),
             read_rows: split(self.read_rows),
             read_bytes: split(self.read_bytes),
+            read_compressed_bytes: split(self.read_compressed_bytes),
             peak_memory_bytes: self.peak_memory_bytes,
         }
     }
@@ -90,9 +94,21 @@ impl BatchCost {
             elapsed_ns: self.elapsed_ns.saturating_add(other.elapsed_ns),
             read_rows: self.read_rows.saturating_add(other.read_rows),
             read_bytes: self.read_bytes.saturating_add(other.read_bytes),
+            read_compressed_bytes: self
+                .read_compressed_bytes
+                .saturating_add(other.read_compressed_bytes),
             peak_memory_bytes: self.peak_memory_bytes.max(other.peak_memory_bytes),
         }
     }
+}
+
+/// The compressed bytes a query read from disk or the page cache (`ReadCompressedBytes`).
+///
+/// Only the native protocol's summary has this profile event. Parts the query found in the
+/// uncompressed or columns cache are not counted.
+#[must_use]
+pub fn read_compressed_bytes(summary: &QuerySummary) -> Option<u64> {
+    summary.get("ReadCompressedBytes")?.parse().ok()
 }
 
 static COST_HOOK: OnceLock<fn(BatchCost)> = OnceLock::new();
@@ -751,8 +767,7 @@ mod tests {
         }
     }
 
-    const SUMMARY: &str =
-        r#"{"read_rows":"5","read_bytes":"41","elapsed_ns":"1001","memory_usage":"4096"}"#;
+    const SUMMARY: &str = r#"{"read_rows":"5","read_bytes":"41","ReadCompressedBytes":"17","elapsed_ns":"1001","memory_usage":"4096"}"#;
 
     fn client(mock: &Mock) -> clickhouse::Client {
         clickhouse::Client::default()
@@ -767,6 +782,7 @@ mod tests {
             elapsed_ns: 1001,
             read_rows: 5,
             read_bytes: 41,
+            read_compressed_bytes: 17,
             peak_memory_bytes: 4096,
         };
         let shares: Vec<_> = (0..3).map(|i| cost.share(i, 3)).collect();
@@ -797,6 +813,10 @@ mod tests {
         assert_eq!(two_cost.queries, 1);
         assert_eq!(one_cost.read_rows + two_cost.read_rows, 5);
         assert_eq!(one_cost.read_bytes + two_cost.read_bytes, 41);
+        assert_eq!(
+            one_cost.read_compressed_bytes + two_cost.read_compressed_bytes,
+            17
+        );
         assert_eq!(one_cost.elapsed_ns + two_cost.elapsed_ns, 1001);
         assert_eq!(one_cost.peak_memory_bytes, 4096);
     }
@@ -820,6 +840,7 @@ mod tests {
                 elapsed_ns: 1001,
                 read_rows: 5,
                 read_bytes: 41,
+                read_compressed_bytes: 17,
                 peak_memory_bytes: 4096,
             }
         );

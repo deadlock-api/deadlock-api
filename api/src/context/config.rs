@@ -83,8 +83,8 @@ fn default_clickhouse_host() -> String {
     "localhost".to_owned()
 }
 
-const fn default_clickhouse_http_port() -> u16 {
-    8123
+const fn default_clickhouse_native_port() -> u16 {
+    9000
 }
 
 fn default_clickhouse_username() -> String {
@@ -99,8 +99,8 @@ fn default_clickhouse_dbname() -> String {
 pub(crate) struct ClickhouseConfig {
     #[serde(default = "default_clickhouse_host")]
     pub(super) host: String,
-    #[serde(default = "default_clickhouse_http_port")]
-    pub(super) http_port: u16,
+    #[serde(default = "default_clickhouse_native_port")]
+    pub(super) native_port: u16,
     #[serde(default = "default_clickhouse_username")]
     pub(super) username: String,
     pub(super) password: String,
@@ -111,9 +111,9 @@ pub(crate) struct ClickhouseConfig {
 }
 
 impl ClickhouseConfig {
-    /// HTTP URL of the `ClickHouse` server.
+    /// Native protocol (TCP) URL of the `ClickHouse` server.
     pub(super) fn url(&self) -> String {
-        format!("http://{}:{}", self.host, self.http_port)
+        format!("tcp://{}:{}", self.host, self.native_port)
     }
 }
 

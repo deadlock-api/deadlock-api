@@ -23,7 +23,7 @@ pub enum ClientError {
 
 pub fn get_ch_client() -> Result<clickhouse::Client, VarError> {
     Ok(clickhouse::Client::default()
-        .with_url(env::var("CLICKHOUSE_URL").unwrap_or_else(|_| "http://127.0.0.1:8123".to_owned()))
+        .with_url(env::var("CLICKHOUSE_URL").unwrap_or_else(|_| "tcp://127.0.0.1:9000".to_owned()))
         .with_user(env::var("CLICKHOUSE_USER")?)
         .with_password(env::var("CLICKHOUSE_PASSWORD")?)
         .with_database(env::var("CLICKHOUSE_DB")?)

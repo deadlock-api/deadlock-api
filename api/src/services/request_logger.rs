@@ -69,6 +69,8 @@ pub(crate) struct RequestLog {
     pub ch_read_rows: u64,
     /// Summed bytes read by the `ClickHouse` queries
     pub ch_read_bytes: u64,
+    /// Summed compressed bytes the `ClickHouse` queries read from disk or the page cache
+    pub ch_read_compressed_bytes: u64,
     /// Highest peak memory of any one `ClickHouse` query, in bytes
     pub ch_peak_memory_bytes: u64,
 }
