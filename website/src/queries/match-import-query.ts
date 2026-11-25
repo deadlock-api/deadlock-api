@@ -18,6 +18,8 @@ export interface ImportedPlayer {
 
 export interface ImportedMatch {
   gameMode: GameMode;
+  /** Undefined for a match outside ranked and unranked (a lobby, a bot game). */
+  matchMode: "ranked" | "unranked" | undefined;
   /** Average badge of the team currently shown on each side. */
   badges: { ally?: number; enemy?: number };
   players: ImportedPlayer[];
@@ -35,6 +37,12 @@ const GAME_MODE_IDS: Record<GameMode, number> = { normal: 1, street_brawl: 4 };
 
 const gameModeOf = (id: number | undefined): GameMode =>
   id === GAME_MODE_IDS.street_brawl ? "street_brawl" : "normal";
+
+/** `match_mode` as the match endpoints number it (`ECitadelMatchMode`: Unranked 1, Ranked 4). */
+const MATCH_MODE_IDS = { unranked: 1, ranked: 4 } as const;
+
+const matchModeOf = (id: number | undefined): ImportedMatch["matchMode"] =>
+  id === MATCH_MODE_IDS.ranked ? "ranked" : id === MATCH_MODE_IDS.unranked ? "unranked" : undefined;
 
 /**
  * Lane assignment drives the slot, since slot position *is* the lane on the board. Players the game
@@ -82,6 +90,7 @@ export function parseImportedMatch(metadata: RawMatchMetadata, allyTeam: 0 | 1):
 
   return {
     gameMode,
+    matchMode: matchModeOf(info?.match_mode),
     badges: { ally: badgeOf(allyTeam), enemy: badgeOf(enemyTeam) },
     players: [
       ...toSlots(
@@ -104,8 +113,8 @@ async function fetchMatchMetadata(matchId: number): Promise<RawMatchMetadata> {
   return metadata;
 }
 
-/** Ranked, normal game mode: the only combination a random comp is seeded from. `ECitadelMatchMode`: Ranked is 4. */
-const RANDOM_MATCH_MODE = 4;
+/** Ranked, normal game mode: the only combination a random comp is seeded from. */
+const RANDOM_MATCH_MODE = MATCH_MODE_IDS.ranked;
 const RANDOM_GAME_MODE = GAME_MODE_IDS.normal;
 
 /** Matches fetched in the last ten minutes. The endpoint takes no filters, so modes are cut here. */

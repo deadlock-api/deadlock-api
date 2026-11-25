@@ -1,5 +1,6 @@
 import { HeroImage } from "~/components/domain/assets/HeroImage";
 import { CHART_COLOR } from "~/components/patterns/charts/theme";
+import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Card } from "~/components/ui/card";
 import { IconTile } from "~/components/ui/icon-tile";
 import { SplitBar } from "~/components/ui/rate-bar";
@@ -78,14 +79,19 @@ export function LaneCards({
   index,
   loading,
   soulCurves,
-  curveLoading,
+  curveStatus,
+  onCurveRetry,
+  emptyCurveLabel,
 }: {
   lanes: LaneRow[];
   index: StatsIndex;
   loading: boolean;
   soulCurves: SoulCurves;
   /** Tracked apart from `loading`: the curve is a separate request and lands after the rest. */
-  curveLoading: boolean;
+  curveStatus: "loading" | "error" | "success";
+  onCurveRetry: () => void;
+  /** Shown where a lane has no curve; names the filters, since games outside them are not counted. */
+  emptyCurveLabel: string;
 }) {
   return (
     <div className="grid items-start gap-3 lg:grid-cols-3">
@@ -160,8 +166,12 @@ export function LaneCards({
                     <div className="min-h-0 flex-1">
                       {curve && curve.length > 1 ? (
                         <LaneSoulCurve points={curve} />
-                      ) : curveLoading ? (
+                      ) : curveStatus === "loading" ? (
                         <Skeleton className="h-full min-h-16 w-full" />
+                      ) : curveStatus === "error" ? (
+                        <Card tone="outline" size="xs" radius="md" className="h-full min-h-16 justify-center px-2">
+                          <ErrorState variant="inline" title="Could not load the soul lead" onRetry={onCurveRetry} />
+                        </Card>
                       ) : (
                         <Card
                           tone="outline"
@@ -169,7 +179,7 @@ export function LaneCards({
                           radius="md"
                           className="h-full min-h-16 items-center justify-center px-2 text-center text-xs text-muted-foreground"
                         >
-                          No souls recorded for this pairing
+                          {emptyCurveLabel}
                         </Card>
                       )}
                     </div>

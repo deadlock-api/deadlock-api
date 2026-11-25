@@ -27,6 +27,8 @@ export interface RawMatchMetadata {
   match_info?: {
     /** `ECitadelGameMode`: Normal 1, StreetBrawl 4. */
     game_mode?: number;
+    /** `ECitadelMatchMode`: Unranked 1, Ranked 4; other values are lobbies and bot games. */
+    match_mode?: number;
     custom_user_stats?: { id?: number; name?: string }[];
     winning_team?: number | null;
     average_badge_team0?: number | null;

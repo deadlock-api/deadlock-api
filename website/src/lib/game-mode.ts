@@ -81,6 +81,18 @@ export function modeFromParams(gameMode: GameMode, matchMode: MatchMode): Mode {
   return gameMode === "street_brawl" ? "street_brawl" : NORMAL_MODE_BY_MATCH_MODE[matchMode];
 }
 
+/**
+ * The mode a page moves to so its filters include a match played in `gameMode` / `matchMode`: `current` when it
+ * already does, otherwise the match's own mode. A match outside ranked and unranked (a lobby, a bot game) is in no
+ * mode, so only its game mode is followed.
+ */
+export function modeIncluding(current: Mode, gameMode: GameMode, matchMode: "ranked" | "unranked" | undefined): Mode {
+  const config = MODE_CONFIG[current];
+  if (config.gameMode !== gameMode) return modeFromParams(gameMode, matchMode ?? DEFAULT_MATCH_MODE);
+  if (matchMode === undefined || config.matchMode.split(",").includes(matchMode)) return current;
+  return modeFromParams(gameMode, matchMode);
+}
+
 export function getEffectiveRankRange(
   mode: Mode,
   minRankId: number | null | undefined,

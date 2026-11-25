@@ -27,7 +27,7 @@ import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useDraft, DRAFT_URL_UPDATES } from "~/hooks/useDraft";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { DEFAULT_MATCH_MODE, type Mode, MODE_CONFIG, modeFromParams } from "~/lib/game-mode";
+import { type Mode, MODE_CONFIG, modeIncluding } from "~/lib/game-mode";
 import { MAX_BADGE } from "~/lib/rank-utils";
 import { pageTitle, seo } from "~/lib/seo";
 import {
@@ -233,6 +233,13 @@ function TeamBuilderPage() {
 
   const dateSummary = formatDateRange(startDate, endDate);
   const filterSummary = `${MODE_CONFIG[mode].label}${dateSummary ? ` · ${dateSummary}` : ""}`;
+  // Names the filters the curve is read under: the imported match counts only if it passes them, and
+  // only games where these duos met in this lane count, so "no souls" alone read as missing data.
+  const gamesLabel =
+    MODE_CONFIG[mode].matchMode === "ranked,unranked" ? "games" : `${MODE_CONFIG[mode].matchMode} games`;
+  const rankLabel =
+    sharedFilters.minAverageBadge !== undefined || sharedFilters.maxAverageBadge !== undefined ? " at these ranks" : "";
+  const emptyCurveLabel = `No ${gamesLabel}${rankLabel} with this pairing in this lane${dateSummary ? ` ${dateSummary}` : ""}`;
 
   const draftFromMatch = useCallback(
     (match: ImportedMatch, options?: Options) => {
@@ -252,14 +259,19 @@ function TeamBuilderPage() {
   useEffect(() => {
     if (imported === null || totalPicked > 0) return;
     const replace = { history: "replace" } as const;
-    if (imported.gameMode !== gameMode) setMode(modeFromParams(imported.gameMode, DEFAULT_MATCH_MODE), replace);
+    const next = modeIncluding(mode, imported.gameMode, imported.matchMode);
+    if (next !== mode) setMode(next, replace);
     draftFromMatch(imported, replace);
-  }, [imported, totalPicked, gameMode, setMode, draftFromMatch]);
+  }, [imported, totalPicked, mode, setMode, draftFromMatch]);
 
-  /** Puts a fetched match on the board, moving the page to that match's game mode if it is in the other one. */
+  /**
+   * Puts a fetched match on the board, moving the page to a mode that includes the match: an unranked
+   * match under Ranked was filtered out of every number shown for it.
+   */
   const adoptMatch = (matchId: number, metadata: RawMatchMetadata) => {
     const match = parseImportedMatch(metadata, 0);
-    if (match.gameMode !== gameMode) setMode(modeFromParams(match.gameMode, DEFAULT_MATCH_MODE));
+    const next = modeIncluding(mode, match.gameMode, match.matchMode);
+    if (next !== mode) setMode(next);
     void setSidesSwapped(null);
     void setImportedMatchId(matchId);
     draftFromMatch(match);
@@ -445,7 +457,9 @@ function TeamBuilderPage() {
                   index={index}
                   loading={isPending}
                   soulCurves={soulCurves}
-                  curveLoading={soulCurveQuery.isFetching}
+                  curveStatus={soulCurveQuery.isFetching ? "loading" : soulCurveQuery.isError ? "error" : "success"}
+                  onCurveRetry={() => void soulCurveQuery.refetch()}
+                  emptyCurveLabel={emptyCurveLabel}
                 />
               )}
 
