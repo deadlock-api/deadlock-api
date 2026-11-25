@@ -1,0 +1,2550 @@
+use crate::error::TypesError;
+use core::fmt::{Display, Formatter};
+use std::borrow::Cow;
+use std::collections::HashMap;
+
+/// A definition of a column in the result set,
+/// taken out of the `RowBinaryWithNamesAndTypes` header.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Column {
+    /// The name of the column.
+    pub name: String,
+    /// The data type of the column.
+    pub data_type: DataTypeNode,
+}
+
+impl Column {
+    #[expect(missing_docs, reason = "a plain constructor")]
+    #[must_use]
+    pub const fn new(name: String, data_type: DataTypeNode) -> Self {
+        Self { name, data_type }
+    }
+}
+
+impl Display for Column {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}: {}", self.name, self.data_type)
+    }
+}
+
+/// Represents a data type in `ClickHouse`.
+/// See <https://clickhouse.com/docs/sql-reference/data-types>
+#[derive(Debug, Clone, PartialEq)]
+#[non_exhaustive]
+#[expect(
+    missing_docs,
+    reason = "the variants are named after the ClickHouse types"
+)]
+pub enum DataTypeNode {
+    Bool,
+
+    UInt8,
+    UInt16,
+    UInt32,
+    UInt64,
+    UInt128,
+    UInt256,
+
+    Int8,
+    Int16,
+    Int32,
+    Int64,
+    Int128,
+    Int256,
+
+    Float32,
+    Float64,
+    BFloat16,
+
+    /// Scale, Precision, 32 | 64 | 128 | 256
+    Decimal(u8, u8, DecimalType),
+
+    String,
+    FixedString(usize),
+    UUID,
+
+    Date,
+    Date32,
+
+    /// Optional timezone
+    DateTime(Option<String>),
+    /// Precision and optional timezone
+    DateTime64(DateTimePrecision, Option<String>),
+
+    /// Time-of-day, no timezone (timezone is ignored in value operations)
+    Time,
+    /// Precision and optional timezone (timezone is ignored in value operations)
+    Time64(DateTimePrecision),
+
+    Interval(IntervalType),
+
+    IPv4,
+    IPv6,
+
+    Nullable(Box<Self>),
+    LowCardinality(Box<Self>),
+
+    Array(Box<Self>),
+    Tuple(Vec<Self>),
+    Enum(EnumType, HashMap<i16, String>),
+
+    /// Key-Value pairs are defined as an array, so it can be used as a slice
+    Map([Box<Self>; 2]),
+
+    /// Function name and its arguments
+    AggregateFunction(String, Vec<Self>),
+
+    /// Function name and the inner type.
+    /// The wire format is identical to the inner type; the function name is
+    /// metadata for the `MergeTree` engine, not the client protocol.
+    SimpleAggregateFunction(String, Box<Self>),
+
+    /// Contains all possible types for this variant
+    Variant(Vec<Self>),
+
+    Dynamic,
+    JSON,
+
+    // TODO: Rename for better representation
+    JsonWithHint(Vec<(String, Box<Self>)>),
+    Point,
+    Ring,
+    LineString,
+    MultiLineString,
+    Polygon,
+    MultiPolygon,
+    /// The type of `NULL` without another type, e.g. `Nullable(Nothing)` or `Array(Nothing)`.
+    Nothing,
+}
+
+impl DataTypeNode {
+    /// Parses a data type from a string that is received
+    /// in the `RowBinaryWithNamesAndTypes` and `Native` formats headers.
+    /// See also: <https://clickhouse.com/docs/interfaces/formats/RowBinaryWithNamesAndTypes#description>
+    pub fn new(name: &str) -> Result<Self, TypesError> {
+        match name {
+            "UInt8" => Ok(Self::UInt8),
+            "UInt16" => Ok(Self::UInt16),
+            "UInt32" => Ok(Self::UInt32),
+            "UInt64" => Ok(Self::UInt64),
+            "UInt128" => Ok(Self::UInt128),
+            "UInt256" => Ok(Self::UInt256),
+            "Int8" => Ok(Self::Int8),
+            "Int16" => Ok(Self::Int16),
+            "Int32" => Ok(Self::Int32),
+            "Int64" => Ok(Self::Int64),
+            "Int128" => Ok(Self::Int128),
+            "Int256" => Ok(Self::Int256),
+            "Float32" => Ok(Self::Float32),
+            "Float64" => Ok(Self::Float64),
+            "BFloat16" => Ok(Self::BFloat16),
+            "String" => Ok(Self::String),
+            "UUID" => Ok(Self::UUID),
+            "Date" => Ok(Self::Date),
+            "Date32" => Ok(Self::Date32),
+            "IPv4" => Ok(Self::IPv4),
+            "IPv6" => Ok(Self::IPv6),
+            "Bool" => Ok(Self::Bool),
+            "Dynamic" => Ok(Self::Dynamic),
+            "JSON" => Ok(Self::JSON),
+            "Point" => Ok(Self::Point),
+            "Ring" => Ok(Self::Ring),
+            "LineString" => Ok(Self::LineString),
+            "MultiLineString" => Ok(Self::MultiLineString),
+            "Polygon" => Ok(Self::Polygon),
+            "MultiPolygon" => Ok(Self::MultiPolygon),
+            "Nothing" => Ok(Self::Nothing),
+
+            str if str.starts_with("JSON(") => parse_json(str),
+
+            str if str.starts_with("Decimal") => parse_decimal(str),
+            str if str.starts_with("DateTime64") => parse_datetime64(str),
+            str if str.starts_with("DateTime") => parse_datetime(str),
+            str if str.starts_with("Time64") => parse_time64(str),
+            str if str.starts_with("Time") => Ok(Self::Time),
+            str if str.starts_with("Interval") => {
+                Ok(Self::Interval(str.get(8..).unwrap_or_default().parse()?))
+            }
+
+            str if str.starts_with("Nullable") => parse_nullable(str),
+            str if str.starts_with("LowCardinality") => parse_low_cardinality(str),
+            str if str.starts_with("FixedString") => parse_fixed_string(str),
+
+            str if str.starts_with("Array") => parse_array(str),
+            str if str.starts_with("Enum") => parse_enum(str),
+            str if str.starts_with("Map") => parse_map(str),
+            str if str.starts_with("Tuple") => parse_tuple(str),
+            str if str.starts_with("Nested(") => parse_nested(str),
+            str if str.starts_with("Variant") => parse_variant(str),
+
+            str if str.starts_with("SimpleAggregateFunction(") => {
+                parse_simple_aggregate_function(str)
+            }
+
+            // ...
+            str => Err(TypesError::TypeParsingError(format!(
+                "Unknown data type: {str}"
+            ))),
+        }
+    }
+
+    /// LowCardinality(T) -> T
+    #[must_use]
+    pub fn remove_low_cardinality(&self) -> &Self {
+        match self {
+            Self::LowCardinality(inner) => inner,
+            _ => self,
+        }
+    }
+
+    /// SimpleAggregateFunction(fn, T) -> T
+    ///
+    /// The wire format of a `SimpleAggregateFunction` column is identical to
+    /// its inner type. This method strips the wrapper so that (de)serialization
+    /// validation can treat it as the inner type.
+    #[must_use]
+    pub fn remove_simple_aggregate_function(&self) -> &Self {
+        match self {
+            Self::SimpleAggregateFunction(_, inner) => inner,
+            _ => self,
+        }
+    }
+
+    /// Remove wrapper types that are semantically identical from a data consumer's perspective.
+    ///
+    /// N.B. `Nullable` is not a valid lift here as nullable column data is not compatible with
+    /// a non-nullable Rust type and vice versa
+    /// (e.g. `Nullable(UInt64)` is not strictly compatible with `u64`).
+    ///
+    /// Current types covered:
+    /// * `LowCardinality`
+    /// * `SimpleAggregateFunction`
+    #[must_use]
+    pub fn remove_compatible_wrappers(&self) -> &Self {
+        match self {
+            Self::LowCardinality(inner) | Self::SimpleAggregateFunction(_, inner) => inner,
+            _ => self,
+        }
+    }
+
+    /// If `self` has a static string representation (e.g. `"UInt8"`), return it.
+    ///
+    /// Returns `None` for polymorphic types (e.g. `Array(T)` or `Decimal(P, S)`).
+    #[must_use]
+    pub const fn as_str(&self) -> Option<&'static str> {
+        use DataTypeNode::{
+            BFloat16, Bool, Date, Date32, DateTime, Dynamic, Float32, Float64, IPv4, IPv6, Int8,
+            Int16, Int32, Int64, Int128, Int256, JSON, LineString, MultiLineString, MultiPolygon,
+            Nothing, Point, Polygon, Ring, String, Time, UInt8, UInt16, UInt32, UInt64, UInt128,
+            UInt256, UUID,
+        };
+
+        Some(match self {
+            UInt8 => "UInt8",
+            UInt16 => "UInt16",
+            UInt32 => "UInt32",
+            UInt64 => "UInt64",
+            UInt128 => "UInt128",
+            UInt256 => "UInt256",
+            Int8 => "Int8",
+            Int16 => "Int16",
+            Int32 => "Int32",
+            Int64 => "Int64",
+            Int128 => "Int128",
+            Int256 => "Int256",
+            Float32 => "Float32",
+            Float64 => "Float64",
+            BFloat16 => "BFloat16",
+            String => "String",
+            UUID => "UUID",
+            Date => "Date",
+            Date32 => "Date32",
+            DateTime(None) => "DateTime",
+            Time => "Time",
+            IPv4 => "IPv4",
+            IPv6 => "IPv6",
+            Bool => "Bool",
+            JSON => "JSON",
+            Dynamic => "Dynamic",
+            Point => "Point",
+            Ring => "Ring",
+            LineString => "LineString",
+            MultiLineString => "MultiLineString",
+            Polygon => "Polygon",
+            MultiPolygon => "MultiPolygon",
+            Nothing => "Nothing",
+            _ => return None,
+        })
+    }
+
+    /// Return the string representation for this type, without allocating if possible.
+    pub fn to_str(&self) -> Cow<'static, str> {
+        self.as_str()
+            .map_or_else(|| self.to_string().into(), Cow::Borrowed)
+    }
+}
+
+impl From<DataTypeNode> for String {
+    fn from(value: DataTypeNode) -> Self {
+        value.to_string()
+    }
+}
+
+impl Display for DataTypeNode {
+    #[expect(clippy::too_many_lines, reason = "one arm per data type")]
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        use DataTypeNode::{
+            AggregateFunction, Array, BFloat16, Bool, Date, Date32, DateTime, DateTime64, Decimal,
+            Dynamic, Enum, FixedString, Float32, Float64, IPv4, IPv6, Int8, Int16, Int32, Int64,
+            Int128, Int256, Interval, JSON, JsonWithHint, LineString, LowCardinality, Map,
+            MultiLineString, MultiPolygon, Nothing, Nullable, Point, Polygon, Ring,
+            SimpleAggregateFunction, String, Time, Time64, Tuple, UInt8, UInt16, UInt32, UInt64,
+            UInt128, UInt256, UUID, Variant,
+        };
+        match self {
+            UInt8 => write!(f, "UInt8"),
+            UInt16 => write!(f, "UInt16"),
+            UInt32 => write!(f, "UInt32"),
+            UInt64 => write!(f, "UInt64"),
+            UInt128 => write!(f, "UInt128"),
+            UInt256 => write!(f, "UInt256"),
+            Int8 => write!(f, "Int8"),
+            Int16 => write!(f, "Int16"),
+            Int32 => write!(f, "Int32"),
+            Int64 => write!(f, "Int64"),
+            Int128 => write!(f, "Int128"),
+            Int256 => write!(f, "Int256"),
+            Float32 => write!(f, "Float32"),
+            Float64 => write!(f, "Float64"),
+            BFloat16 => write!(f, "BFloat16"),
+            Decimal(precision, scale, _) => {
+                write!(f, "Decimal({precision}, {scale})")
+            }
+            String => write!(f, "String"),
+            UUID => write!(f, "UUID"),
+            Date => write!(f, "Date"),
+            Date32 => write!(f, "Date32"),
+            DateTime(None) => write!(f, "DateTime"),
+            DateTime(Some(tz)) => write!(f, "DateTime('{tz}')"),
+            DateTime64(precision, None) => write!(f, "DateTime64({precision})"),
+            DateTime64(precision, Some(tz)) => write!(f, "DateTime64({precision}, '{tz}')"),
+            Time => write!(f, "Time"),
+            Time64(precision) => write!(f, "Time64({precision})"),
+            Interval(interval) => write!(f, "Interval{interval}"),
+            IPv4 => write!(f, "IPv4"),
+            IPv6 => write!(f, "IPv6"),
+            Bool => write!(f, "Bool"),
+            Nullable(inner) => write!(f, "Nullable({inner})"),
+            Array(inner) => write!(f, "Array({inner})"),
+            Tuple(elements) => {
+                write!(f, "Tuple(")?;
+                for (i, element) in elements.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{element}")?;
+                }
+                write!(f, ")")
+            }
+            Map([key, value]) => {
+                write!(f, "Map({key}, {value})")
+            }
+            LowCardinality(inner) => {
+                write!(f, "LowCardinality({inner})")
+            }
+            Enum(enum_type, values) => {
+                let mut values_vec = values.iter().collect::<Vec<_>>();
+                values_vec.sort_by(|(i1, _), (i2, _)| (*i1).cmp(*i2));
+                write!(f, "{enum_type}(")?;
+                for (i, (index, name)) in values_vec.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "'{}' = {index}", escape_enum_name(name))?;
+                }
+                write!(f, ")")
+            }
+            AggregateFunction(func_name, args) => {
+                write!(f, "AggregateFunction({func_name}, ")?;
+                for (i, element) in args.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{element}")?;
+                }
+                write!(f, ")")
+            }
+            SimpleAggregateFunction(func_name, inner) => {
+                write!(f, "SimpleAggregateFunction({func_name}, {inner})")
+            }
+            FixedString(size) => {
+                write!(f, "FixedString({size})")
+            }
+            Variant(types) => {
+                write!(f, "Variant(")?;
+                for (i, element) in types.iter().enumerate() {
+                    if i > 0 {
+                        write!(f, ", ")?;
+                    }
+                    write!(f, "{element}")?;
+                }
+                write!(f, ")")
+            }
+            JSON => write!(f, "JSON"),
+            Dynamic => write!(f, "Dynamic"),
+            Point => write!(f, "Point"),
+            Ring => write!(f, "Ring"),
+            LineString => write!(f, "LineString"),
+            MultiLineString => write!(f, "MultiLineString"),
+            Polygon => write!(f, "Polygon"),
+            MultiPolygon => write!(f, "MultiPolygon"),
+            Nothing => write!(f, "Nothing"),
+            JsonWithHint(json) => format_json_with_hint(json, f),
+        }
+    }
+}
+
+fn format_json_with_hint(
+    json: &[(String, Box<DataTypeNode>)],
+    f: &mut Formatter<'_>,
+) -> Result<(), core::fmt::Error> {
+    write!(f, "JSON(")?;
+
+    for (i, (name, ty)) in json.iter().enumerate() {
+        if i > 0 {
+            write!(f, ", ")?;
+        }
+        write!(f, "{name} {ty}")?;
+    }
+
+    write!(f, ")")
+}
+
+/// Represents the underlying integer size of an Enum type.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum EnumType {
+    /// Stored as an `Int8`
+    Enum8,
+    /// Stored as an `Int16`
+    Enum16,
+}
+
+impl Display for EnumType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Enum8 => write!(f, "Enum8"),
+            Self::Enum16 => write!(f, "Enum16"),
+        }
+    }
+}
+
+/// `DateTime64` precision.
+/// Defined as an enum, as it is valid only in the range from 0 to 9.
+/// See also: <https://clickhouse.com/docs/sql-reference/data-types/datetime64>
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(missing_docs, reason = "the variants are the precision digits")]
+pub enum DateTimePrecision {
+    Precision0,
+    Precision1,
+    Precision2,
+    Precision3,
+    Precision4,
+    Precision5,
+    Precision6,
+    Precision7,
+    Precision8,
+    Precision9,
+}
+
+impl DateTimePrecision {
+    pub(crate) fn new(char: char) -> Result<Self, TypesError> {
+        match char {
+            '0' => Ok(Self::Precision0),
+            '1' => Ok(Self::Precision1),
+            '2' => Ok(Self::Precision2),
+            '3' => Ok(Self::Precision3),
+            '4' => Ok(Self::Precision4),
+            '5' => Ok(Self::Precision5),
+            '6' => Ok(Self::Precision6),
+            '7' => Ok(Self::Precision7),
+            '8' => Ok(Self::Precision8),
+            '9' => Ok(Self::Precision9),
+            _ => Err(TypesError::TypeParsingError(format!(
+                "Invalid DateTime64 precision, expected to be within [0, 9] interval, got {char}"
+            ))),
+        }
+    }
+}
+
+/// Represents the underlying integer type for a Decimal.
+/// See also: <https://clickhouse.com/docs/sql-reference/data-types/decimal>
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum DecimalType {
+    /// Stored as an `Int32`
+    Decimal32,
+    /// Stored as an `Int64`
+    Decimal64,
+    /// Stored as an `Int128`
+    Decimal128,
+    /// Stored as an `Int256`
+    Decimal256,
+}
+
+impl Display for DecimalType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Decimal32 => write!(f, "Decimal32"),
+            Self::Decimal64 => write!(f, "Decimal64"),
+            Self::Decimal128 => write!(f, "Decimal128"),
+            Self::Decimal256 => write!(f, "Decimal256"),
+        }
+    }
+}
+
+impl DecimalType {
+    pub(crate) fn new(precision: u8) -> Result<Self, TypesError> {
+        if precision <= 9 {
+            Ok(Self::Decimal32)
+        } else if precision <= 18 {
+            Ok(Self::Decimal64)
+        } else if precision <= 38 {
+            Ok(Self::Decimal128)
+        } else if precision <= 76 {
+            Ok(Self::Decimal256)
+        } else {
+            Err(TypesError::TypeParsingError(format!(
+                "Invalid Decimal precision: {precision}"
+            )))
+        }
+    }
+}
+
+impl Display for DateTimePrecision {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Precision0 => write!(f, "0"),
+            Self::Precision1 => write!(f, "1"),
+            Self::Precision2 => write!(f, "2"),
+            Self::Precision3 => write!(f, "3"),
+            Self::Precision4 => write!(f, "4"),
+            Self::Precision5 => write!(f, "5"),
+            Self::Precision6 => write!(f, "6"),
+            Self::Precision7 => write!(f, "7"),
+            Self::Precision8 => write!(f, "8"),
+            Self::Precision9 => write!(f, "9"),
+        }
+    }
+}
+
+/// Represents the type of an interval.
+/// See also: <https://clickhouse.com/docs/sql-reference/data-types/special-data-types/interval>
+#[derive(Debug, Clone, PartialEq, Eq)]
+#[expect(
+    missing_docs,
+    reason = "the variants are named after the ClickHouse interval units"
+)]
+pub enum IntervalType {
+    Nanosecond,
+    Microsecond,
+    Millisecond,
+    Second,
+    Minute,
+    Hour,
+    Day,
+    Week,
+    Month,
+    Quarter,
+    Year,
+}
+
+impl core::str::FromStr for IntervalType {
+    type Err = TypesError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "Nanosecond" => Ok(Self::Nanosecond),
+            "Microsecond" => Ok(Self::Microsecond),
+            "Millisecond" => Ok(Self::Millisecond),
+            "Second" => Ok(Self::Second),
+            "Minute" => Ok(Self::Minute),
+            "Hour" => Ok(Self::Hour),
+            "Day" => Ok(Self::Day),
+            "Week" => Ok(Self::Week),
+            "Month" => Ok(Self::Month),
+            "Quarter" => Ok(Self::Quarter),
+            "Year" => Ok(Self::Year),
+            _ => Err(TypesError::TypeParsingError(format!(
+                "Unknown interval type: {s}"
+            ))),
+        }
+    }
+}
+
+impl Display for IntervalType {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Self::Nanosecond => write!(f, "Nanosecond"),
+            Self::Microsecond => write!(f, "Microsecond"),
+            Self::Millisecond => write!(f, "Millisecond"),
+            Self::Second => write!(f, "Second"),
+            Self::Minute => write!(f, "Minute"),
+            Self::Hour => write!(f, "Hour"),
+            Self::Day => write!(f, "Day"),
+            Self::Week => write!(f, "Week"),
+            Self::Month => write!(f, "Month"),
+            Self::Quarter => write!(f, "Quarter"),
+            Self::Year => write!(f, "Year"),
+        }
+    }
+}
+
+/// `input[start..input.len() - end]`, or an error when the range is out of bounds or off a char boundary.
+fn inner_slice(input: &str, start: usize, end: usize) -> Result<&str, TypesError> {
+    input
+        .len()
+        .checked_sub(end)
+        .and_then(|stop| input.get(start..stop))
+        .ok_or_else(|| invalid_type(input))
+}
+
+fn invalid_type(input: &str) -> TypesError {
+    TypesError::TypeParsingError(format!("Invalid data type format, got {input}"))
+}
+
+fn parse_fixed_string(input: &str) -> Result<DataTypeNode, TypesError> {
+    if input.len() >= 14 {
+        let size_str = inner_slice(input, 12, 1)?;
+        let size = size_str.parse::<usize>().map_err(|err| {
+            TypesError::TypeParsingError(format!(
+                "Invalid FixedString size, expected a valid number. Underlying error: {err}, input: {input}, size_str: {size_str}"
+            ))
+        })?;
+        if size == 0 {
+            return Err(TypesError::TypeParsingError(format!(
+                "Invalid FixedString size, expected a positive number, got zero. Input: {input}"
+            )));
+        }
+        return Ok(DataTypeNode::FixedString(size));
+    }
+    Err(TypesError::TypeParsingError(format!(
+        "Invalid FixedString format, expected FixedString(N), got {input}"
+    )))
+}
+
+fn parse_array(input: &str) -> Result<DataTypeNode, TypesError> {
+    if input.len() >= 8 {
+        let inner_type_str = inner_slice(input, 6, 1)?;
+        let inner_type = DataTypeNode::new(inner_type_str)?;
+        return Ok(DataTypeNode::Array(Box::new(inner_type)));
+    }
+    Err(TypesError::TypeParsingError(format!(
+        "Invalid Array format, expected Array(InnerType), got {input}"
+    )))
+}
+
+fn parse_enum(input: &str) -> Result<DataTypeNode, TypesError> {
+    if input.len() >= 9 {
+        let (enum_type, prefix_len) = if input.starts_with("Enum8") {
+            (EnumType::Enum8, 6)
+        } else if input.starts_with("Enum16") {
+            (EnumType::Enum16, 7)
+        } else {
+            return Err(TypesError::TypeParsingError(format!(
+                "Invalid Enum type, expected Enum8 or Enum16, got {input}"
+            )));
+        };
+        let enum_values_map_str = inner_slice(input, prefix_len, 1)?;
+        let enum_values_map = parse_enum_values_map(enum_values_map_str)?;
+        return Ok(DataTypeNode::Enum(enum_type, enum_values_map));
+    }
+    Err(TypesError::TypeParsingError(format!(
+        "Invalid Enum format, expected Enum8('name' = value), got {input}"
+    )))
+}
+
+fn parse_datetime(input: &str) -> Result<DataTypeNode, TypesError> {
+    if input == "DateTime" {
+        return Ok(DataTypeNode::DateTime(None));
+    }
+    if input.len() >= 12 {
+        let timezone = inner_slice(input, 10, 2)?.to_owned();
+        return Ok(DataTypeNode::DateTime(Some(timezone)));
+    }
+    Err(TypesError::TypeParsingError(format!(
+        "Invalid DateTime format, expected DateTime('timezone'), got {input}"
+    )))
+}
+
+fn parse_decimal(input: &str) -> Result<DataTypeNode, TypesError> {
+    if input.len() >= 10 {
+        let precision_and_scale_str = inner_slice(input, 8, 1)?.split(", ").collect::<Vec<_>>();
+        if precision_and_scale_str.len() != 2 {
+            return Err(TypesError::TypeParsingError(format!(
+                "Invalid Decimal format, expected Decimal(P, S), got {input}"
+            )));
+        }
+        let parsed = precision_and_scale_str
+            .iter()
+            .map(|s| s.parse::<u8>())
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|err| {
+                TypesError::TypeParsingError(format!(
+                    "Invalid Decimal format, expected Decimal(P, S), got {input}. Underlying error: {err}"
+                ))
+            })?;
+        let &[precision, scale] = parsed.as_slice() else {
+            return Err(TypesError::TypeParsingError(format!(
+                "Invalid Decimal format, expected Decimal(P, S), got {input}"
+            )));
+        };
+        if precision == 0 {
+            return Err(TypesError::TypeParsingError(format!(
+                "Invalid Decimal format, expected Decimal(P, S) with P > 0, got {input}"
+            )));
+        }
+        if precision < scale {
+            return Err(TypesError::TypeParsingError(format!(
+                "Invalid Decimal format, expected Decimal(P, S) with P >= S, got {input}"
+            )));
+        }
+        let size = DecimalType::new(precision)?;
+        return Ok(DataTypeNode::Decimal(precision, scale, size));
+    }
+    Err(TypesError::TypeParsingError(format!(
+        "Invalid Decimal format, expected Decimal(P), got {input}"
+    )))
+}
+
+fn parse_datetime64(input: &str) -> Result<DataTypeNode, TypesError> {
+    if input.len() >= 13 {
+        let mut chars = inner_slice(input, 11, 1)?.chars();
+        let precision_char = chars.next().ok_or_else(|| {
+            TypesError::TypeParsingError(format!(
+                "Invalid DateTime64 precision, expected a positive number. Input: {input}"
+            ))
+        })?;
+        let precision = DateTimePrecision::new(precision_char)?;
+        let maybe_tz = match chars.as_str() {
+            str if str.len() > 2 => Some(inner_slice(str, 3, 1)?.to_owned()),
+            _ => None,
+        };
+        return Ok(DataTypeNode::DateTime64(precision, maybe_tz));
+    }
+    Err(TypesError::TypeParsingError(format!(
+        "Invalid DateTime format, expected DateTime('timezone'), got {input}"
+    )))
+}
+
+fn parse_time64(input: &str) -> Result<DataTypeNode, TypesError> {
+    if input.len() >= 8 {
+        let mut chars = inner_slice(input, 7, 1)?.chars();
+        let precision_char = chars.next().ok_or_else(|| {
+            TypesError::TypeParsingError(format!(
+                "Invalid Time64 precision, expected a positive number. Input: {input}"
+            ))
+        })?;
+        let precision = DateTimePrecision::new(precision_char)?;
+
+        return Ok(DataTypeNode::Time64(precision));
+    }
+    Err(TypesError::TypeParsingError(format!(
+        "Invalid Time64 format, expected Time64(precision, 'timezone'), got {input}"
+    )))
+}
+
+fn parse_low_cardinality(input: &str) -> Result<DataTypeNode, TypesError> {
+    if input.len() >= 16 {
+        let inner_type_str = inner_slice(input, 15, 1)?;
+        let inner_type = DataTypeNode::new(inner_type_str)?;
+        return Ok(DataTypeNode::LowCardinality(Box::new(inner_type)));
+    }
+    Err(TypesError::TypeParsingError(format!(
+        "Invalid LowCardinality format, expected LowCardinality(InnerType), got {input}"
+    )))
+}
+
+/// `SimpleAggregateFunction(func_name, InnerType)` is a transparent wrapper.
+/// The wire format is identical to `InnerType`; the function name is
+/// metadata for the `MergeTree` engine, not the client protocol.
+/// We preserve the full type so that it is correctly serialized back
+/// when sending column type headers during INSERT (RBWNAT format).
+fn parse_simple_aggregate_function(input: &str) -> Result<DataTypeNode, TypesError> {
+    let prefix = "SimpleAggregateFunction(";
+    let inner = inner_slice(input, prefix.len(), 1)?;
+    // Find the first top-level comma (not inside parentheses) to split
+    // the function name from the inner type.
+    let mut depth = 0u32;
+    let mut comma_pos = None;
+    for (i, b) in inner.bytes().enumerate() {
+        match b {
+            b'(' => depth = depth.saturating_add(1),
+            b')' => depth = depth.saturating_sub(1),
+            b',' if depth == 0 => {
+                comma_pos = Some(i);
+                break;
+            }
+            _ => {}
+        }
+    }
+    let comma_pos = comma_pos.ok_or_else(|| {
+        TypesError::TypeParsingError(format!("Invalid SimpleAggregateFunction: {input}"))
+    })?;
+    // `comma_pos` is the index of an ASCII comma, so both splits are on char boundaries.
+    let (func_name, rest) = inner
+        .split_at_checked(comma_pos)
+        .ok_or_else(|| invalid_type(input))?;
+    let func_name = func_name.trim().to_owned();
+    let inner_type_str = rest
+        .get(1..)
+        .ok_or_else(|| invalid_type(input))?
+        .trim_start();
+    let inner_type = DataTypeNode::new(inner_type_str)?;
+    Ok(DataTypeNode::SimpleAggregateFunction(
+        func_name,
+        Box::new(inner_type),
+    ))
+}
+
+fn parse_nullable(input: &str) -> Result<DataTypeNode, TypesError> {
+    if input.len() >= 10 {
+        let inner_type_str = inner_slice(input, 9, 1)?;
+        let inner_type = DataTypeNode::new(inner_type_str)?;
+        return Ok(DataTypeNode::Nullable(Box::new(inner_type)));
+    }
+    Err(TypesError::TypeParsingError(format!(
+        "Invalid Nullable format, expected Nullable(InnerType), got {input}"
+    )))
+}
+
+fn parse_map(input: &str) -> Result<DataTypeNode, TypesError> {
+    if input.len() >= 5 {
+        let inner_types_str = inner_slice(input, 4, 1)?;
+        let inner_types = parse_inner_types(inner_types_str)?;
+        let Ok([key_type, value_type]) = <[DataTypeNode; 2]>::try_from(inner_types) else {
+            return Err(TypesError::TypeParsingError(format!(
+                "Expected two inner elements in a Map from input {input}"
+            )));
+        };
+        return Ok(DataTypeNode::Map([
+            Box::new(key_type),
+            Box::new(value_type),
+        ]));
+    }
+    Err(TypesError::TypeParsingError(format!(
+        "Invalid Map format, expected Map(KeyType, ValueType), got {input}"
+    )))
+}
+
+fn parse_json(input: &str) -> Result<DataTypeNode, TypesError> {
+    let hints = remove_json_header(input)?;
+
+    let mut columns = Vec::new();
+    let mut last_element_index = 0;
+    // The positions are of ASCII commas, so the ranges are on char boundaries.
+    for i in top_level_positions(hints, b',') {
+        columns.push(
+            hints
+                .get(last_element_index..i)
+                .ok_or_else(|| invalid_type(input))?,
+        );
+        last_element_index = i.saturating_add(1);
+    }
+    columns.push(
+        hints
+            .get(last_element_index..)
+            .ok_or_else(|| invalid_type(input))?,
+    );
+
+    let inner_types = columns
+        .into_iter()
+        .map(str::trim)
+        .filter(|column| {
+            top_level_positions(column, b'=').next().is_none() && !column.starts_with("SKIP ")
+        })
+        .map(|column| {
+            let separator_index = top_level_positions(column, b' ').next().ok_or_else(|| {
+                TypesError::TypeParsingError(format!(
+                    "Invalid JSON type hint, expected `path Type`, got {column} in {input}"
+                ))
+            })?;
+            // `separator_index` is the index of an ASCII space.
+            let (key_type, value_type) = column
+                .split_at_checked(separator_index)
+                .ok_or_else(|| invalid_type(input))?;
+            let value_type = value_type.get(1..).ok_or_else(|| invalid_type(input))?;
+            let key_type = key_type.to_owned();
+            let value_type = DataTypeNode::new(value_type.trim_start())?;
+
+            Ok((key_type, Box::new(value_type)))
+        })
+        .collect::<Result<Vec<(String, Box<DataTypeNode>)>, TypesError>>()?;
+
+    if inner_types.is_empty() {
+        return Ok(DataTypeNode::JSON);
+    }
+
+    Ok(DataTypeNode::JsonWithHint(inner_types))
+}
+
+/// Yields the indices of every `separator` byte in `input` that is neither inside
+/// a quoted span nor inside parentheses. A JSON path name is back-quoted by the
+/// server when it contains a character that requires quoting, a hint type can
+/// have its own arguments, and a `SKIP REGEXP` pattern is a string literal, so
+/// both the separator between the hints and the one between a path and its type
+/// have to skip such spans:
+/// ```text
+///  let input = "`a,b` Int64, c Map(String, Int32), SKIP REGEXP 'd,e'"; // three entries
+/// ```
+/// A quote escaped with a backslash does not end the span.
+fn top_level_positions(input: &str, separator: u8) -> impl Iterator<Item = usize> + '_ {
+    let mut open_quote = None;
+    let mut open_parens = 0i32;
+    let mut char_escaped = false;
+
+    input.bytes().enumerate().filter_map(move |(i, byte)| {
+        if char_escaped {
+            char_escaped = false;
+        } else if byte == b'\\' {
+            char_escaped = true;
+        } else if let Some(quote) = open_quote {
+            if byte == quote {
+                open_quote = None;
+            }
+        } else if byte == b'`' || byte == b'\'' {
+            open_quote = Some(byte);
+        } else if byte == b'(' {
+            open_parens = open_parens.saturating_add(1);
+        } else if byte == b')' {
+            open_parens = open_parens.saturating_sub(1);
+        } else if byte == separator && open_parens == 0 {
+            return Some(i);
+        }
+        None
+    })
+}
+
+/// Strips `JSON(` and exactly one closing `)`, so that a hint type ending with
+/// its own parentheses, such as `JSON(a Nullable(String))`, is kept intact.
+fn remove_json_header(input: &str) -> Result<&str, TypesError> {
+    input
+        .strip_prefix("JSON(")
+        .and_then(|hints| hints.strip_suffix(')'))
+        .map(str::trim)
+        .ok_or_else(|| {
+            TypesError::TypeParsingError(format!(
+                "Invalid JSON format, expected JSON(Type), got {input}"
+            ))
+        })
+}
+
+fn parse_tuple(input: &str) -> Result<DataTypeNode, TypesError> {
+    if input.len() > 7 {
+        let inner_types_str = inner_slice(input, 6, 1)?;
+        let inner_types = parse_inner_types_with(inner_types_str, parse_tuple_element)?;
+        if inner_types.is_empty() {
+            return Err(TypesError::TypeParsingError(format!(
+                "Expected at least one inner element in a Tuple from input {input}"
+            )));
+        }
+        return Ok(DataTypeNode::Tuple(inner_types));
+    }
+    Err(TypesError::TypeParsingError(format!(
+        "Invalid Tuple format, expected Tuple(Type1, Type2, ...), got {input}"
+    )))
+}
+
+fn parse_variant(input: &str) -> Result<DataTypeNode, TypesError> {
+    if input.len() >= 9 {
+        let inner_types_str = inner_slice(input, 8, 1)?;
+        let inner_types = parse_inner_types(inner_types_str)?;
+        return Ok(DataTypeNode::Variant(inner_types));
+    }
+    Err(TypesError::TypeParsingError(format!(
+        "Invalid Variant format, expected Variant(Type1, Type2, ...), got {input}"
+    )))
+}
+
+/// Considers the element type parsed once we reach a comma outside of parens AND after an unescaped tick.
+/// The most complicated cases are values names in the self-defined Enum types:
+/// ```
+///  let input1 = "Tuple(Enum8('f\'()' = 1))";  // the result is  `f\'()`
+///  let input2 = "Tuple(Enum8('(' = 1))";       // the result is  `(`
+/// ```
+fn parse_inner_types(input: &str) -> Result<Vec<DataTypeNode>, TypesError> {
+    parse_inner_types_with(input, DataTypeNode::new)
+}
+
+/// `Nested(a T, b U)` is `Array(Tuple(a T, b U))`.
+fn parse_nested(input: &str) -> Result<DataTypeNode, TypesError> {
+    let inner = input
+        .strip_prefix("Nested(")
+        .and_then(|inner| inner.strip_suffix(')'))
+        .filter(|inner| !inner.is_empty())
+        .ok_or_else(|| {
+            TypesError::TypeParsingError(format!(
+                "Invalid Nested format, expected Nested(name1 Type1, ...), got {input}"
+            ))
+        })?;
+
+    Ok(DataTypeNode::Array(Box::new(parse_tuple(&format!(
+        "Tuple({inner})"
+    ))?)))
+}
+
+/// An element of a `Tuple`, which can have a name: `a UInt8` or ``` `a b` UInt8 ```.
+fn parse_tuple_element(input: &str) -> Result<DataTypeNode, TypesError> {
+    let error = match DataTypeNode::new(input) {
+        Ok(data_type) => return Ok(data_type),
+        Err(error) => error,
+    };
+
+    let name_len = if input.starts_with('`') {
+        // A quoted name ends with an unescaped backquote.
+        let mut escaped = false;
+        input
+            .char_indices()
+            .skip(1)
+            .find(|&(_, c)| {
+                let end = !escaped && c == '`';
+                escaped = !escaped && c == '\\';
+                end
+            })
+            .map(|(index, _)| index.saturating_add(1))
+    } else {
+        input
+            .find(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+            .filter(|&len| len > 0)
+    };
+
+    name_len
+        .and_then(|len| input.get(len..))
+        .and_then(|rest| rest.strip_prefix(' '))
+        .map_or_else(|| Err(error), DataTypeNode::new)
+}
+
+fn parse_inner_types_with(
+    input: &str,
+    parse_element: fn(&str) -> Result<DataTypeNode, TypesError>,
+) -> Result<Vec<DataTypeNode>, TypesError> {
+    let mut inner_types: Vec<DataTypeNode> = Vec::new();
+
+    let input_bytes = input.as_bytes();
+
+    let mut open_parens = 0i32;
+    let mut quote_open = false;
+    let mut char_escaped = false;
+    let mut last_element_index = 0;
+
+    // A slice of the valid UTF-8 `input` is valid UTF-8 iff it is on char boundaries.
+    let element = |range: core::ops::Range<usize>| {
+        input.get(range).ok_or_else(|| {
+            TypesError::TypeParsingError(format!(
+                "Invalid UTF-8 sequence in input for the inner data type: {input}"
+            ))
+        })
+    };
+
+    let mut i = 0;
+    while let Some(&byte) = input_bytes.get(i) {
+        if char_escaped {
+            char_escaped = false;
+        } else if byte == b'\\' {
+            char_escaped = true;
+        } else if byte == b'\'' {
+            quote_open = !quote_open; // unescaped quote
+        } else if !quote_open {
+            if byte == b'(' {
+                open_parens = open_parens.saturating_add(1);
+            } else if byte == b')' {
+                open_parens = open_parens.saturating_sub(1);
+            } else if byte == b',' && open_parens == 0 {
+                let data_type = parse_element(element(last_element_index..i)?)?;
+                inner_types.push(data_type);
+                // Skip ', ' (comma and space)
+                if input_bytes.get(i.saturating_add(1)) == Some(&b' ') {
+                    i = i.saturating_add(2);
+                } else {
+                    i = i.saturating_add(1);
+                }
+                last_element_index = i;
+                continue; // Skip the normal increment at the end of the loop
+            }
+        }
+        i = i.saturating_add(1);
+    }
+
+    // Push the remaining part of the type if it seems to be valid (at least all parentheses are closed)
+    if open_parens == 0 && last_element_index < input_bytes.len() {
+        let data_type = parse_element(element(last_element_index..input_bytes.len())?)?;
+        inner_types.push(data_type);
+    }
+
+    Ok(inner_types)
+}
+
+#[inline]
+fn parse_enum_index(input_bytes: &[u8], input: &str) -> Result<i16, TypesError> {
+    core::str::from_utf8(input_bytes)
+        .map_err(|err| {
+            TypesError::TypeParsingError(format!(
+                "Invalid UTF-8 sequence in input for the enum index: {input}. Underlying error: {err}"
+            ))
+        })?
+        .parse::<i16>()
+        .map_err(|err| {
+            TypesError::TypeParsingError(format!(
+                "Invalid Enum index, expected a valid number. Input: {input}. Underlying error: {err}"
+            ))
+        })
+}
+
+fn escape_enum_name(name: &str) -> String {
+    let mut escaped = String::with_capacity(name.len());
+    for character in name.chars() {
+        match character {
+            '\0' => escaped.push_str("\\0"),
+            '\x08' => escaped.push_str("\\b"),
+            '\x0c' => escaped.push_str("\\f"),
+            '\n' => escaped.push_str("\\n"),
+            '\r' => escaped.push_str("\\r"),
+            '\t' => escaped.push_str("\\t"),
+            '\\' => escaped.push_str("\\\\"),
+            '\'' => escaped.push_str("\\'"),
+            _ => escaped.push(character),
+        }
+    }
+    escaped
+}
+
+fn unescape_enum_name(input: &[u8], source: &str) -> Result<String, TypesError> {
+    let mut name = Vec::with_capacity(input.len());
+    let mut char_escaped = false;
+
+    for &byte in input {
+        if char_escaped {
+            match byte {
+                b'0' => name.push(b'\0'),
+                b'b' => name.push(0x08),
+                b'f' => name.push(0x0c),
+                b'n' => name.push(b'\n'),
+                b'r' => name.push(b'\r'),
+                b't' => name.push(b'\t'),
+                b'\\' => name.push(b'\\'),
+                b'\'' => name.push(b'\''),
+                _ => {
+                    name.push(b'\\');
+                    name.push(byte);
+                }
+            }
+            char_escaped = false;
+        } else if byte == b'\\' {
+            char_escaped = true;
+        } else {
+            name.push(byte);
+        }
+    }
+
+    String::from_utf8(name).map_err(|err| {
+        TypesError::TypeParsingError(format!(
+            "Invalid UTF-8 sequence in input for the enum name: {source}. Underlying error: {err}"
+        ))
+    })
+}
+
+fn parse_enum_values_map(input: &str) -> Result<HashMap<i16, String>, TypesError> {
+    let mut names: Vec<String> = Vec::new();
+    let mut indices: Vec<i16> = Vec::new();
+    let mut parsing_name = true; // false when parsing the index
+    let mut char_escaped = false; // we should ignore escaped ticks
+    let mut start_index = 1; // Skip the first '
+
+    let mut i = 1;
+    let input_bytes = input.as_bytes();
+    let bytes_between = |start: usize, end: usize| {
+        input_bytes.get(start..end).ok_or_else(|| {
+            TypesError::TypeParsingError(format!("Invalid Enum format, input: {input}"))
+        })
+    };
+    while let Some(&byte) = input_bytes.get(i) {
+        if parsing_name {
+            if char_escaped {
+                char_escaped = false;
+            } else if byte == b'\\' {
+                char_escaped = true;
+            } else if byte == b'\'' {
+                // non-escaped closing tick - push the name
+                let name_bytes = bytes_between(start_index, i)?;
+                let source = input.get(start_index..i).unwrap_or(input);
+                let name = unescape_enum_name(name_bytes, source)?;
+                names.push(name);
+
+                // Skip ` = ` and the first digit, as it will always have at least one
+                if i.saturating_add(4) >= input_bytes.len() {
+                    return Err(TypesError::TypeParsingError(format!(
+                        "Invalid Enum format - expected ` = ` after name, input: {input}",
+                    )));
+                }
+                i = i.saturating_add(4);
+                start_index = i;
+                parsing_name = false;
+            }
+        }
+        // Parsing the index, skipping next iterations until the first non-digit one
+        else if !byte.is_ascii_digit() {
+            let index = parse_enum_index(bytes_between(start_index, i)?, input)?;
+            indices.push(index);
+
+            // the char at this index should be comma
+            // Skip `, '`, but not the first char - ClickHouse allows something like Enum8('foo' = 0, '' = 42)
+            if i.saturating_add(2) >= input_bytes.len() {
+                break; // At the end of the enum, no more entries
+            }
+            i = i.saturating_add(2);
+            start_index = i.saturating_add(1);
+            parsing_name = true;
+            char_escaped = false;
+        }
+
+        i = i.saturating_add(1);
+    }
+
+    let index = parse_enum_index(bytes_between(start_index, i)?, input)?;
+    indices.push(index);
+
+    if names.len() != indices.len() {
+        return Err(TypesError::TypeParsingError(format!(
+            "Invalid Enum format - expected the same number of names and indices, got names: {}, indices: {}",
+            names.join(", "),
+            indices
+                .iter()
+                .map(std::string::ToString::to_string)
+                .collect::<Vec<String>>()
+                .join(", "),
+        )));
+    }
+
+    Ok(indices
+        .into_iter()
+        .zip(names)
+        .collect::<HashMap<i16, String>>())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_aggregate_function_display() {
+        let simple = DataTypeNode::AggregateFunction("sum".to_owned(), vec![DataTypeNode::UInt64]);
+        assert_eq!(simple.to_string(), "AggregateFunction(sum, UInt64)");
+
+        let complex = DataTypeNode::AggregateFunction(
+            "groupArray".to_owned(),
+            vec![
+                DataTypeNode::String,
+                DataTypeNode::UInt32,
+                DataTypeNode::Nullable(Box::new(DataTypeNode::Float64)),
+            ],
+        );
+        assert_eq!(
+            complex.to_string(),
+            "AggregateFunction(groupArray, String, UInt32, Nullable(Float64))"
+        );
+    }
+
+    #[test]
+    fn test_tuple_display() {
+        let empty = DataTypeNode::Tuple(vec![]);
+        assert_eq!(empty.to_string(), "Tuple()");
+
+        let single = DataTypeNode::Tuple(vec![DataTypeNode::String]);
+        assert_eq!(single.to_string(), "Tuple(String)");
+
+        let multiple = DataTypeNode::Tuple(vec![
+            DataTypeNode::UInt64,
+            DataTypeNode::String,
+            DataTypeNode::DateTime(None),
+            DataTypeNode::Array(Box::new(DataTypeNode::Int32)),
+        ]);
+        assert_eq!(
+            multiple.to_string(),
+            "Tuple(UInt64, String, DateTime, Array(Int32))"
+        );
+    }
+
+    #[test]
+    fn test_json_with_hint_display() {
+        let json_with_hint = DataTypeNode::JsonWithHint(vec![
+            ("foo".to_owned(), Box::new(DataTypeNode::String)),
+            ("bar".to_owned(), Box::new(DataTypeNode::Int32)),
+        ]);
+        assert_eq!(
+            json_with_hint.to_string(),
+            "JSON(foo String, bar Int32)".to_owned()
+        );
+    }
+
+    #[test]
+    fn test_enum_display() {
+        let mut values1 = HashMap::new();
+        values1.insert(1, "one".to_owned());
+        values1.insert(2, "two".to_owned());
+        values1.insert(3, "three".to_owned());
+
+        let simple_enum = DataTypeNode::Enum(EnumType::Enum8, values1);
+        assert_eq!(
+            simple_enum.to_string(),
+            "Enum8('one' = 1, 'two' = 2, 'three' = 3)"
+        );
+
+        // Enum with unordered values (should sort by index)
+        let mut values2 = HashMap::new();
+        values2.insert(10, "ten".to_owned());
+        values2.insert(1, "one".to_owned());
+        values2.insert(5, "five".to_owned());
+
+        let ordered_enum = DataTypeNode::Enum(EnumType::Enum16, values2);
+        assert_eq!(
+            ordered_enum.to_string(),
+            "Enum16('one' = 1, 'five' = 5, 'ten' = 10)"
+        );
+    }
+
+    #[test]
+    fn test_variant_display() {
+        // Empty variant
+        let empty = DataTypeNode::Variant(vec![]);
+        assert_eq!(empty.to_string(), "Variant()");
+
+        // Single type variant
+        let single = DataTypeNode::Variant(vec![DataTypeNode::String]);
+        assert_eq!(single.to_string(), "Variant(String)");
+
+        // Multiple types variant
+        let multiple = DataTypeNode::Variant(vec![
+            DataTypeNode::UInt64,
+            DataTypeNode::String,
+            DataTypeNode::Nullable(Box::new(DataTypeNode::DateTime(None))),
+            DataTypeNode::Array(Box::new(DataTypeNode::Int32)),
+        ]);
+        assert_eq!(
+            multiple.to_string(),
+            "Variant(UInt64, String, Nullable(DateTime), Array(Int32))"
+        );
+
+        // Nested variant
+        let nested = DataTypeNode::Variant(vec![
+            DataTypeNode::Tuple(vec![DataTypeNode::String, DataTypeNode::UInt64]),
+            DataTypeNode::Map([
+                Box::new(DataTypeNode::String),
+                Box::new(DataTypeNode::Int32),
+            ]),
+        ]);
+        assert_eq!(
+            nested.to_string(),
+            "Variant(Tuple(String, UInt64), Map(String, Int32))"
+        );
+    }
+
+    #[test]
+    fn test_data_type_new_simple() {
+        assert_eq!(DataTypeNode::new("UInt8").unwrap(), DataTypeNode::UInt8);
+        assert_eq!(DataTypeNode::new("UInt16").unwrap(), DataTypeNode::UInt16);
+        assert_eq!(DataTypeNode::new("UInt32").unwrap(), DataTypeNode::UInt32);
+        assert_eq!(DataTypeNode::new("UInt64").unwrap(), DataTypeNode::UInt64);
+        assert_eq!(DataTypeNode::new("UInt128").unwrap(), DataTypeNode::UInt128);
+        assert_eq!(DataTypeNode::new("UInt256").unwrap(), DataTypeNode::UInt256);
+        assert_eq!(DataTypeNode::new("Int8").unwrap(), DataTypeNode::Int8);
+        assert_eq!(DataTypeNode::new("Int16").unwrap(), DataTypeNode::Int16);
+        assert_eq!(DataTypeNode::new("Int32").unwrap(), DataTypeNode::Int32);
+        assert_eq!(DataTypeNode::new("Int64").unwrap(), DataTypeNode::Int64);
+        assert_eq!(DataTypeNode::new("Int128").unwrap(), DataTypeNode::Int128);
+        assert_eq!(DataTypeNode::new("Int256").unwrap(), DataTypeNode::Int256);
+        assert_eq!(DataTypeNode::new("Float32").unwrap(), DataTypeNode::Float32);
+        assert_eq!(DataTypeNode::new("Float64").unwrap(), DataTypeNode::Float64);
+        assert_eq!(
+            DataTypeNode::new("BFloat16").unwrap(),
+            DataTypeNode::BFloat16
+        );
+        assert_eq!(DataTypeNode::new("String").unwrap(), DataTypeNode::String);
+        assert_eq!(DataTypeNode::new("UUID").unwrap(), DataTypeNode::UUID);
+        assert_eq!(DataTypeNode::new("Date").unwrap(), DataTypeNode::Date);
+        assert_eq!(DataTypeNode::new("Date32").unwrap(), DataTypeNode::Date32);
+        assert_eq!(DataTypeNode::new("IPv4").unwrap(), DataTypeNode::IPv4);
+        assert_eq!(DataTypeNode::new("IPv6").unwrap(), DataTypeNode::IPv6);
+        assert_eq!(DataTypeNode::new("Bool").unwrap(), DataTypeNode::Bool);
+        assert_eq!(DataTypeNode::new("Dynamic").unwrap(), DataTypeNode::Dynamic);
+        assert_eq!(DataTypeNode::new("JSON").unwrap(), DataTypeNode::JSON);
+        assert_eq!(
+            DataTypeNode::new(
+                "JSON(max_dynamic_types=8, max_dynamic_paths=64, SKIP internal_metrics)"
+            )
+            .unwrap(),
+            DataTypeNode::JSON
+        );
+        assert_eq!(
+            DataTypeNode::new(
+                "JSON(max_dynamic_types=8, max_dynamic_paths=64, SKIP internal_metrics, foo String, bar Int32)"
+            )
+            .unwrap(),
+            DataTypeNode::JsonWithHint(vec![
+                ("foo".to_owned(), Box::new(DataTypeNode::String)),
+                ("bar".to_owned(), Box::new(DataTypeNode::Int32))
+            ])
+        );
+        DataTypeNode::new("SomeUnknownType").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_fixed_string() {
+        assert_eq!(
+            DataTypeNode::new("FixedString(1)").unwrap(),
+            DataTypeNode::FixedString(1)
+        );
+        assert_eq!(
+            DataTypeNode::new("FixedString(16)").unwrap(),
+            DataTypeNode::FixedString(16)
+        );
+        assert_eq!(
+            DataTypeNode::new("FixedString(255)").unwrap(),
+            DataTypeNode::FixedString(255)
+        );
+        assert_eq!(
+            DataTypeNode::new("FixedString(65535)").unwrap(),
+            DataTypeNode::FixedString(65_535)
+        );
+        DataTypeNode::new("FixedString()").unwrap_err();
+        DataTypeNode::new("FixedString(0)").unwrap_err();
+        DataTypeNode::new("FixedString(-1)").unwrap_err();
+        DataTypeNode::new("FixedString(abc)").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_array() {
+        assert_eq!(
+            DataTypeNode::new("Array(UInt8)").unwrap(),
+            DataTypeNode::Array(Box::new(DataTypeNode::UInt8))
+        );
+        assert_eq!(
+            DataTypeNode::new("Array(String)").unwrap(),
+            DataTypeNode::Array(Box::new(DataTypeNode::String))
+        );
+        assert_eq!(
+            DataTypeNode::new("Array(FixedString(16))").unwrap(),
+            DataTypeNode::Array(Box::new(DataTypeNode::FixedString(16)))
+        );
+        assert_eq!(
+            DataTypeNode::new("Array(Nullable(Int32))").unwrap(),
+            DataTypeNode::Array(Box::new(DataTypeNode::Nullable(Box::new(
+                DataTypeNode::Int32
+            ))))
+        );
+        DataTypeNode::new("Array()").unwrap_err();
+        DataTypeNode::new("Array(abc)").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_decimal() {
+        assert_eq!(
+            DataTypeNode::new("Decimal(7, 2)").unwrap(),
+            DataTypeNode::Decimal(7, 2, DecimalType::Decimal32)
+        );
+        assert_eq!(
+            DataTypeNode::new("Decimal(12, 4)").unwrap(),
+            DataTypeNode::Decimal(12, 4, DecimalType::Decimal64)
+        );
+        assert_eq!(
+            DataTypeNode::new("Decimal(27, 6)").unwrap(),
+            DataTypeNode::Decimal(27, 6, DecimalType::Decimal128)
+        );
+        assert_eq!(
+            DataTypeNode::new("Decimal(42, 8)").unwrap(),
+            DataTypeNode::Decimal(42, 8, DecimalType::Decimal256)
+        );
+        assert_eq!(
+            DataTypeNode::new("Decimal(25, 0)").unwrap(),
+            DataTypeNode::Decimal(25, 0, DecimalType::Decimal128)
+        );
+        DataTypeNode::new("Decimal").unwrap_err();
+        DataTypeNode::new("Decimal(").unwrap_err();
+        DataTypeNode::new("Decimal()").unwrap_err();
+        DataTypeNode::new("Decimal(1)").unwrap_err();
+        DataTypeNode::new("Decimal(1,)").unwrap_err();
+        DataTypeNode::new("Decimal(1, )").unwrap_err();
+        DataTypeNode::new("Decimal(0, 0)").unwrap_err(); // Precision must be > 0
+        DataTypeNode::new("Decimal(x, 0)").unwrap_err(); // Non-numeric precision
+        DataTypeNode::new("Decimal(', ')").unwrap_err();
+        DataTypeNode::new("Decimal(77, 1)").unwrap_err(); // Max precision is 76
+        DataTypeNode::new("Decimal(1, 2)").unwrap_err(); // Scale must be less than precision
+        DataTypeNode::new("Decimal(1, x)").unwrap_err(); // Non-numeric scale
+        DataTypeNode::new("Decimal(42, ,)").unwrap_err();
+        DataTypeNode::new("Decimal(42, ')").unwrap_err();
+        DataTypeNode::new("Decimal(foobar)").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_datetime() {
+        assert_eq!(
+            DataTypeNode::new("DateTime").unwrap(),
+            DataTypeNode::DateTime(None)
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime('UTC')").unwrap(),
+            DataTypeNode::DateTime(Some("UTC".to_owned()))
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime('America/New_York')").unwrap(),
+            DataTypeNode::DateTime(Some("America/New_York".to_owned()))
+        );
+        DataTypeNode::new("DateTime()").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_datetime64() {
+        assert_eq!(
+            DataTypeNode::new("DateTime64(0)").unwrap(),
+            DataTypeNode::DateTime64(DateTimePrecision::Precision0, None)
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(1)").unwrap(),
+            DataTypeNode::DateTime64(DateTimePrecision::Precision1, None)
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(2)").unwrap(),
+            DataTypeNode::DateTime64(DateTimePrecision::Precision2, None)
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(3)").unwrap(),
+            DataTypeNode::DateTime64(DateTimePrecision::Precision3, None)
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(4)").unwrap(),
+            DataTypeNode::DateTime64(DateTimePrecision::Precision4, None)
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(5)").unwrap(),
+            DataTypeNode::DateTime64(DateTimePrecision::Precision5, None)
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(6)").unwrap(),
+            DataTypeNode::DateTime64(DateTimePrecision::Precision6, None)
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(7)").unwrap(),
+            DataTypeNode::DateTime64(DateTimePrecision::Precision7, None)
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(8)").unwrap(),
+            DataTypeNode::DateTime64(DateTimePrecision::Precision8, None)
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(9)").unwrap(),
+            DataTypeNode::DateTime64(DateTimePrecision::Precision9, None)
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(0, 'UTC')").unwrap(),
+            DataTypeNode::DateTime64(DateTimePrecision::Precision0, Some("UTC".to_owned()))
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(3, 'America/New_York')").unwrap(),
+            DataTypeNode::DateTime64(
+                DateTimePrecision::Precision3,
+                Some("America/New_York".to_owned())
+            )
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(6, 'America/New_York')").unwrap(),
+            DataTypeNode::DateTime64(
+                DateTimePrecision::Precision6,
+                Some("America/New_York".to_owned())
+            )
+        );
+        assert_eq!(
+            DataTypeNode::new("DateTime64(9, 'Europe/Amsterdam')").unwrap(),
+            DataTypeNode::DateTime64(
+                DateTimePrecision::Precision9,
+                Some("Europe/Amsterdam".to_owned())
+            )
+        );
+        DataTypeNode::new("DateTime64()").unwrap_err();
+        DataTypeNode::new("DateTime64(x)").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_time() {
+        assert_eq!(DataTypeNode::new("Time").unwrap(), DataTypeNode::Time);
+        assert_eq!(
+            DataTypeNode::new("Time('UTC')").unwrap(),
+            DataTypeNode::Time
+        );
+        assert_eq!(
+            DataTypeNode::new("Time('America/New_York')").unwrap(),
+            DataTypeNode::Time
+        );
+        assert_eq!(DataTypeNode::new("Time()").unwrap(), DataTypeNode::Time);
+    }
+
+    #[test]
+    fn test_data_type_new_time64() {
+        assert_eq!(
+            DataTypeNode::new("Time64(0)").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision0)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(1)").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision1)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(2)").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision2)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(3)").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision3)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(4)").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision4)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(5)").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision5)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(6)").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision6)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(7)").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision7)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(8)").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision8)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(9)").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision9)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(0, 'UTC')").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision0)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(3, 'America/New_York')").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision3)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(6, 'America/New_York')").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision6)
+        );
+        assert_eq!(
+            DataTypeNode::new("Time64(9, 'Europe/Amsterdam')").unwrap(),
+            DataTypeNode::Time64(DateTimePrecision::Precision9)
+        );
+        DataTypeNode::new("Time64()").unwrap_err();
+        DataTypeNode::new("Time64(x)").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_interval() {
+        assert_eq!(
+            DataTypeNode::new("IntervalNanosecond").unwrap(),
+            DataTypeNode::Interval(IntervalType::Nanosecond)
+        );
+        assert_eq!(
+            DataTypeNode::new("IntervalMicrosecond").unwrap(),
+            DataTypeNode::Interval(IntervalType::Microsecond)
+        );
+        assert_eq!(
+            DataTypeNode::new("IntervalMillisecond").unwrap(),
+            DataTypeNode::Interval(IntervalType::Millisecond)
+        );
+        assert_eq!(
+            DataTypeNode::new("IntervalSecond").unwrap(),
+            DataTypeNode::Interval(IntervalType::Second)
+        );
+        assert_eq!(
+            DataTypeNode::new("IntervalMinute").unwrap(),
+            DataTypeNode::Interval(IntervalType::Minute)
+        );
+        assert_eq!(
+            DataTypeNode::new("IntervalHour").unwrap(),
+            DataTypeNode::Interval(IntervalType::Hour)
+        );
+        assert_eq!(
+            DataTypeNode::new("IntervalDay").unwrap(),
+            DataTypeNode::Interval(IntervalType::Day)
+        );
+        assert_eq!(
+            DataTypeNode::new("IntervalWeek").unwrap(),
+            DataTypeNode::Interval(IntervalType::Week)
+        );
+        assert_eq!(
+            DataTypeNode::new("IntervalMonth").unwrap(),
+            DataTypeNode::Interval(IntervalType::Month)
+        );
+        assert_eq!(
+            DataTypeNode::new("IntervalQuarter").unwrap(),
+            DataTypeNode::Interval(IntervalType::Quarter)
+        );
+        assert_eq!(
+            DataTypeNode::new("IntervalYear").unwrap(),
+            DataTypeNode::Interval(IntervalType::Year)
+        );
+    }
+
+    #[test]
+    fn test_data_type_new_low_cardinality() {
+        assert_eq!(
+            DataTypeNode::new("LowCardinality(UInt8)").unwrap(),
+            DataTypeNode::LowCardinality(Box::new(DataTypeNode::UInt8))
+        );
+        assert_eq!(
+            DataTypeNode::new("LowCardinality(String)").unwrap(),
+            DataTypeNode::LowCardinality(Box::new(DataTypeNode::String))
+        );
+        assert_eq!(
+            DataTypeNode::new("LowCardinality(Array(Int32))").unwrap(),
+            DataTypeNode::LowCardinality(Box::new(DataTypeNode::Array(Box::new(
+                DataTypeNode::Int32
+            ))))
+        );
+        assert_eq!(
+            DataTypeNode::new("LowCardinality(Nullable(Int32))").unwrap(),
+            DataTypeNode::LowCardinality(Box::new(DataTypeNode::Nullable(Box::new(
+                DataTypeNode::Int32
+            ))))
+        );
+        DataTypeNode::new("LowCardinality").unwrap_err();
+        DataTypeNode::new("LowCardinality()").unwrap_err();
+        DataTypeNode::new("LowCardinality(X)").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_nullable() {
+        assert_eq!(
+            DataTypeNode::new("Nullable(UInt8)").unwrap(),
+            DataTypeNode::Nullable(Box::new(DataTypeNode::UInt8))
+        );
+        assert_eq!(
+            DataTypeNode::new("Nullable(String)").unwrap(),
+            DataTypeNode::Nullable(Box::new(DataTypeNode::String))
+        );
+        DataTypeNode::new("Nullable").unwrap_err();
+        DataTypeNode::new("Nullable()").unwrap_err();
+        DataTypeNode::new("Nullable(X)").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_map() {
+        assert_eq!(
+            DataTypeNode::new("Map(UInt8, String)").unwrap(),
+            DataTypeNode::Map([
+                Box::new(DataTypeNode::UInt8),
+                Box::new(DataTypeNode::String)
+            ])
+        );
+        assert_eq!(
+            DataTypeNode::new("Map(String, Int32)").unwrap(),
+            DataTypeNode::Map([
+                Box::new(DataTypeNode::String),
+                Box::new(DataTypeNode::Int32)
+            ])
+        );
+        assert_eq!(
+            DataTypeNode::new("Map(String, Map(Int32, Array(Nullable(String))))").unwrap(),
+            DataTypeNode::Map([
+                Box::new(DataTypeNode::String),
+                Box::new(DataTypeNode::Map([
+                    Box::new(DataTypeNode::Int32),
+                    Box::new(DataTypeNode::Array(Box::new(DataTypeNode::Nullable(
+                        Box::new(DataTypeNode::String)
+                    ))))
+                ]))
+            ])
+        );
+        DataTypeNode::new("Map()").unwrap_err();
+        DataTypeNode::new("Map").unwrap_err();
+        DataTypeNode::new("Map(K)").unwrap_err();
+        DataTypeNode::new("Map(K, V)").unwrap_err();
+        DataTypeNode::new("Map(Int32, V)").unwrap_err();
+        DataTypeNode::new("Map(K, Int32)").unwrap_err();
+        DataTypeNode::new("Map(String, Int32").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_json_with_quoted_paths() {
+        // ClickHouse back-quotes a JSON path when its name contains a character
+        // that requires quoting, such as a space or a comma
+        assert_eq!(
+            DataTypeNode::new("JSON(`a b` Int64)").unwrap(),
+            DataTypeNode::JsonWithHint(vec![("`a b`".to_owned(), Box::new(DataTypeNode::Int64))])
+        );
+        assert_eq!(
+            DataTypeNode::new("JSON(`a,b` Int64)").unwrap(),
+            DataTypeNode::JsonWithHint(vec![("`a,b`".to_owned(), Box::new(DataTypeNode::Int64))])
+        );
+        // an escaped back-quote does not end the quoted path
+        assert_eq!(
+            DataTypeNode::new("JSON(`a\\`,b` Int64)").unwrap(),
+            DataTypeNode::JsonWithHint(vec![(
+                "`a\\`,b`".to_owned(),
+                Box::new(DataTypeNode::Int64)
+            )])
+        );
+        assert_eq!(
+            DataTypeNode::new("JSON(`a,b` Int64, `c d` String, e UInt8)").unwrap(),
+            DataTypeNode::JsonWithHint(vec![
+                ("`a,b`".to_owned(), Box::new(DataTypeNode::Int64)),
+                ("`c d`".to_owned(), Box::new(DataTypeNode::String)),
+                ("e".to_owned(), Box::new(DataTypeNode::UInt8)),
+            ])
+        );
+        // settings are still skipped, and a quoted path is not mistaken for one
+        assert_eq!(
+            DataTypeNode::new("JSON(max_dynamic_types=8, SKIP a, `b=c` Int64)").unwrap(),
+            DataTypeNode::JsonWithHint(vec![("`b=c`".to_owned(), Box::new(DataTypeNode::Int64))])
+        );
+        // a hint without a type is an error instead of a panic
+        DataTypeNode::new("JSON(`a,b`)").unwrap_err();
+        // the parsed type is sent back to the server as is, so quoting must survive
+        for input in [
+            "JSON(`a b` Int64)",
+            "JSON(`a,b` Int64)",
+            "JSON(`a,b` Int64, `c d` String, e UInt8)",
+        ] {
+            assert_eq!(DataTypeNode::new(input).unwrap().to_string(), input);
+        }
+    }
+
+    #[test]
+    fn test_data_type_new_json_with_skip_prefixed_paths() {
+        for path in [
+            "SKIPper",
+            "SKIP_REGEXP",
+            "SKIP2",
+            "`SKIPped.nested`",
+            "`SKIP name`",
+        ] {
+            let input = format!("JSON({path} String)");
+            let expected =
+                DataTypeNode::JsonWithHint(vec![(path.to_owned(), Box::new(DataTypeNode::String))]);
+            let parsed = DataTypeNode::new(&input).unwrap();
+            assert_eq!(parsed, expected, "Input: {input}");
+            assert_eq!(parsed.to_string(), input);
+        }
+    }
+
+    #[test]
+    fn test_data_type_new_json_with_skip_instructions_and_hints() {
+        assert_eq!(
+            DataTypeNode::new(
+                "JSON(max_dynamic_paths=10, SKIP ignored, SKIP REGEXP '^drop.*', SKIPper String, SKIP_REGEXP Int64, regular UInt8)"
+            )
+            .unwrap(),
+            DataTypeNode::JsonWithHint(vec![
+                ("SKIPper".to_owned(), Box::new(DataTypeNode::String)),
+                ("SKIP_REGEXP".to_owned(), Box::new(DataTypeNode::Int64)),
+                ("regular".to_owned(), Box::new(DataTypeNode::UInt8)),
+            ])
+        );
+    }
+
+    #[test]
+    fn test_data_type_new_json_with_nested_hint_types() {
+        // a hint type with its own parentheses keeps its closing ones
+        assert_eq!(
+            DataTypeNode::new("JSON(a Nullable(String))").unwrap(),
+            DataTypeNode::JsonWithHint(vec![(
+                "a".to_owned(),
+                Box::new(DataTypeNode::Nullable(Box::new(DataTypeNode::String)))
+            )])
+        );
+        // commas inside a hint type do not separate the hints
+        assert_eq!(
+            DataTypeNode::new("JSON(a Map(String, Int32), b Array(Tuple(UInt8, String)))").unwrap(),
+            DataTypeNode::JsonWithHint(vec![
+                (
+                    "a".to_owned(),
+                    Box::new(DataTypeNode::Map([
+                        Box::new(DataTypeNode::String),
+                        Box::new(DataTypeNode::Int32)
+                    ]))
+                ),
+                (
+                    "b".to_owned(),
+                    Box::new(DataTypeNode::Array(Box::new(DataTypeNode::Tuple(vec![
+                        DataTypeNode::UInt8,
+                        DataTypeNode::String
+                    ]))))
+                ),
+            ])
+        );
+        // an `=` inside a hint type does not make it a setting
+        assert_eq!(
+            DataTypeNode::new("JSON(a Enum8('x' = 1, 'y' = 2))").unwrap(),
+            DataTypeNode::JsonWithHint(vec![(
+                "a".to_owned(),
+                Box::new(DataTypeNode::Enum(
+                    EnumType::Enum8,
+                    HashMap::from([(1, "x".to_owned()), (2, "y".to_owned())])
+                ))
+            )])
+        );
+        // settings and skipped paths are still ignored
+        assert_eq!(
+            DataTypeNode::new(
+                "JSON(max_dynamic_paths=10, a.b Nullable(Int64), SKIP a.c, SKIP REGEXP 'x,(y', `d,(e` LowCardinality(Nullable(String)))"
+            )
+            .unwrap(),
+            DataTypeNode::JsonWithHint(vec![
+                (
+                    "a.b".to_owned(),
+                    Box::new(DataTypeNode::Nullable(Box::new(DataTypeNode::Int64)))
+                ),
+                (
+                    "`d,(e`".to_owned(),
+                    Box::new(DataTypeNode::LowCardinality(Box::new(
+                        DataTypeNode::Nullable(Box::new(DataTypeNode::String))
+                    )))
+                ),
+            ])
+        );
+        // unbalanced parentheses are an error
+        DataTypeNode::new("JSON(a Nullable(String)").unwrap_err();
+        DataTypeNode::new("JSON(a Nullable(String)))").unwrap_err();
+        // the parsed type is sent back to the server as is
+        for input in [
+            "JSON(a Nullable(String))",
+            "JSON(a Map(String, Int32), b Array(Tuple(UInt8, String)))",
+        ] {
+            assert_eq!(DataTypeNode::new(input).unwrap().to_string(), input);
+        }
+    }
+
+    #[test]
+    fn test_data_type_new_variant() {
+        assert_eq!(
+            DataTypeNode::new("Variant(UInt8, String)").unwrap(),
+            DataTypeNode::Variant(vec![DataTypeNode::UInt8, DataTypeNode::String])
+        );
+        assert_eq!(
+            DataTypeNode::new("Variant(String, Int32)").unwrap(),
+            DataTypeNode::Variant(vec![DataTypeNode::String, DataTypeNode::Int32])
+        );
+        assert_eq!(
+            DataTypeNode::new("Variant(Int32, Array(Nullable(String)), Map(Int32, String))")
+                .unwrap(),
+            DataTypeNode::Variant(vec![
+                DataTypeNode::Int32,
+                DataTypeNode::Array(Box::new(DataTypeNode::Nullable(Box::new(
+                    DataTypeNode::String
+                )))),
+                DataTypeNode::Map([
+                    Box::new(DataTypeNode::Int32),
+                    Box::new(DataTypeNode::String)
+                ])
+            ])
+        );
+        DataTypeNode::new("Variant").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_named_tuple() {
+        assert_eq!(
+            DataTypeNode::new("Tuple(a UInt8, b String)").unwrap(),
+            DataTypeNode::Tuple(vec![DataTypeNode::UInt8, DataTypeNode::String])
+        );
+        assert_eq!(
+            DataTypeNode::new("Tuple(`a b` Nullable(String), `c\\`d` Array(Tuple(x UInt8)))")
+                .unwrap(),
+            DataTypeNode::Tuple(vec![
+                DataTypeNode::Nullable(Box::new(DataTypeNode::String)),
+                DataTypeNode::Array(Box::new(DataTypeNode::Tuple(vec![DataTypeNode::UInt8]))),
+            ])
+        );
+        assert_eq!(
+            DataTypeNode::new("Tuple(e Enum8('a b' = 1), d DateTime('UTC'))").unwrap(),
+            DataTypeNode::Tuple(vec![
+                DataTypeNode::Enum(EnumType::Enum8, HashMap::from([(1, "a b".to_owned())])),
+                DataTypeNode::DateTime(Some("UTC".to_owned())),
+            ])
+        );
+        // A name without a type, or an unknown type, is still an error.
+        DataTypeNode::new("Tuple(a)").unwrap_err();
+        DataTypeNode::new("Tuple(a Foo)").unwrap_err();
+        DataTypeNode::new("Tuple(`a UInt8)").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_nested() {
+        assert_eq!(
+            DataTypeNode::new("Nested(id UInt32, value String)").unwrap(),
+            DataTypeNode::Array(Box::new(DataTypeNode::Tuple(vec![
+                DataTypeNode::UInt32,
+                DataTypeNode::String
+            ])))
+        );
+        DataTypeNode::new("Nested()").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_nothing() {
+        assert_eq!(DataTypeNode::new("Nothing").unwrap(), DataTypeNode::Nothing);
+        assert_eq!(
+            DataTypeNode::new("Nullable(Nothing)").unwrap(),
+            DataTypeNode::Nullable(Box::new(DataTypeNode::Nothing))
+        );
+        assert_eq!(DataTypeNode::Nothing.to_string(), "Nothing");
+    }
+
+    #[test]
+    fn test_data_type_new_tuple() {
+        assert_eq!(
+            DataTypeNode::new("Tuple(UInt8, String)").unwrap(),
+            DataTypeNode::Tuple(vec![DataTypeNode::UInt8, DataTypeNode::String])
+        );
+        assert_eq!(
+            DataTypeNode::new("Tuple(String, Int32)").unwrap(),
+            DataTypeNode::Tuple(vec![DataTypeNode::String, DataTypeNode::Int32])
+        );
+        assert_eq!(
+            DataTypeNode::new("Tuple(Bool,Int32)").unwrap(),
+            DataTypeNode::Tuple(vec![DataTypeNode::Bool, DataTypeNode::Int32])
+        );
+        assert_eq!(
+            DataTypeNode::new(
+                "Tuple(Int32, Array(Nullable(String)), Map(Int32, Tuple(String, Array(UInt8))))"
+            )
+            .unwrap(),
+            DataTypeNode::Tuple(vec![
+                DataTypeNode::Int32,
+                DataTypeNode::Array(Box::new(DataTypeNode::Nullable(Box::new(
+                    DataTypeNode::String
+                )))),
+                DataTypeNode::Map([
+                    Box::new(DataTypeNode::Int32),
+                    Box::new(DataTypeNode::Tuple(vec![
+                        DataTypeNode::String,
+                        DataTypeNode::Array(Box::new(DataTypeNode::UInt8))
+                    ]))
+                ])
+            ])
+        );
+        assert_eq!(
+            DataTypeNode::new(&format!("Tuple(String, {ENUM_WITH_ESCAPING_STR})")).unwrap(),
+            DataTypeNode::Tuple(vec![DataTypeNode::String, enum_with_escaping()])
+        );
+        DataTypeNode::new("Tuple").unwrap_err();
+        DataTypeNode::new("Tuple(").unwrap_err();
+        DataTypeNode::new("Tuple()").unwrap_err();
+        DataTypeNode::new("Tuple(,)").unwrap_err();
+        DataTypeNode::new("Tuple(X)").unwrap_err();
+        DataTypeNode::new("Tuple(Int32, X)").unwrap_err();
+        DataTypeNode::new("Tuple(Int32, String, X)").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_enum() {
+        assert_eq!(
+            DataTypeNode::new("Enum8('A' = -42)").unwrap(),
+            DataTypeNode::Enum(EnumType::Enum8, HashMap::from([(-42, "A".to_owned())]))
+        );
+        assert_eq!(
+            DataTypeNode::new("Enum16('A' = -144)").unwrap(),
+            DataTypeNode::Enum(EnumType::Enum16, HashMap::from([(-144, "A".to_owned())]))
+        );
+        assert_eq!(
+            DataTypeNode::new("Enum8('A' = 1, 'B' = 2)").unwrap(),
+            DataTypeNode::Enum(
+                EnumType::Enum8,
+                HashMap::from([(1, "A".to_owned()), (2, "B".to_owned())])
+            )
+        );
+        assert_eq!(
+            DataTypeNode::new("Enum16('A' = 1, 'B' = 2)").unwrap(),
+            DataTypeNode::Enum(
+                EnumType::Enum16,
+                HashMap::from([(1, "A".to_owned()), (2, "B".to_owned())])
+            )
+        );
+        let parsed = DataTypeNode::new(ENUM_WITH_ESCAPING_STR).unwrap();
+        assert_eq!(parsed, enum_with_escaping());
+        assert_eq!(parsed.to_string(), ENUM_WITH_ESCAPING_STR);
+        assert_eq!(
+            DataTypeNode::new(r"Enum8('unknown\%value' = 1)").unwrap(),
+            DataTypeNode::Enum(
+                EnumType::Enum8,
+                HashMap::from([(1, "unknown\\%value".to_owned())])
+            )
+        );
+        assert_eq!(
+            DataTypeNode::new("Enum8('foo' = 0, '' = 42)").unwrap(),
+            DataTypeNode::Enum(
+                EnumType::Enum8,
+                HashMap::from([(0, "foo".to_owned()), (42, String::new())])
+            )
+        );
+
+        DataTypeNode::new("Enum()").unwrap_err();
+        DataTypeNode::new("Enum8()").unwrap_err();
+        DataTypeNode::new("Enum16()").unwrap_err();
+        DataTypeNode::new("Enum32('A' = 1, 'B' = 2)").unwrap_err();
+        DataTypeNode::new("Enum32('A','B')").unwrap_err();
+        DataTypeNode::new("Enum32('A' = 1, 'B')").unwrap_err();
+        DataTypeNode::new("Enum32('A' = 1, 'B' =)").unwrap_err();
+        DataTypeNode::new("Enum32('A' = 1, 'B' = )").unwrap_err();
+        DataTypeNode::new("Enum32('A'= 1,'B' =)").unwrap_err();
+    }
+
+    #[test]
+    fn test_data_type_new_geo() {
+        assert_eq!(DataTypeNode::new("Point").unwrap(), DataTypeNode::Point);
+        assert_eq!(DataTypeNode::new("Ring").unwrap(), DataTypeNode::Ring);
+        assert_eq!(
+            DataTypeNode::new("LineString").unwrap(),
+            DataTypeNode::LineString
+        );
+        assert_eq!(DataTypeNode::new("Polygon").unwrap(), DataTypeNode::Polygon);
+        assert_eq!(
+            DataTypeNode::new("MultiLineString").unwrap(),
+            DataTypeNode::MultiLineString
+        );
+        assert_eq!(
+            DataTypeNode::new("MultiPolygon").unwrap(),
+            DataTypeNode::MultiPolygon
+        );
+    }
+
+    #[test]
+    fn test_data_type_to_string_simple() {
+        // Simple types
+        assert_eq!(DataTypeNode::UInt8.to_string(), "UInt8");
+        assert_eq!(DataTypeNode::UInt16.to_string(), "UInt16");
+        assert_eq!(DataTypeNode::UInt32.to_string(), "UInt32");
+        assert_eq!(DataTypeNode::UInt64.to_string(), "UInt64");
+        assert_eq!(DataTypeNode::UInt128.to_string(), "UInt128");
+        assert_eq!(DataTypeNode::UInt256.to_string(), "UInt256");
+        assert_eq!(DataTypeNode::Int8.to_string(), "Int8");
+        assert_eq!(DataTypeNode::Int16.to_string(), "Int16");
+        assert_eq!(DataTypeNode::Int32.to_string(), "Int32");
+        assert_eq!(DataTypeNode::Int64.to_string(), "Int64");
+        assert_eq!(DataTypeNode::Int128.to_string(), "Int128");
+        assert_eq!(DataTypeNode::Int256.to_string(), "Int256");
+        assert_eq!(DataTypeNode::Float32.to_string(), "Float32");
+        assert_eq!(DataTypeNode::Float64.to_string(), "Float64");
+        assert_eq!(DataTypeNode::BFloat16.to_string(), "BFloat16");
+        assert_eq!(DataTypeNode::UUID.to_string(), "UUID");
+        assert_eq!(DataTypeNode::Date.to_string(), "Date");
+        assert_eq!(DataTypeNode::Date32.to_string(), "Date32");
+        assert_eq!(DataTypeNode::IPv4.to_string(), "IPv4");
+        assert_eq!(DataTypeNode::IPv6.to_string(), "IPv6");
+        assert_eq!(DataTypeNode::Bool.to_string(), "Bool");
+        assert_eq!(DataTypeNode::Dynamic.to_string(), "Dynamic");
+        assert_eq!(DataTypeNode::JSON.to_string(), "JSON");
+        assert_eq!(DataTypeNode::String.to_string(), "String");
+    }
+
+    #[test]
+    fn test_data_types_to_string_complex() {
+        assert_eq!(DataTypeNode::DateTime(None).to_string(), "DateTime");
+        assert_eq!(
+            DataTypeNode::DateTime(Some("UTC".to_owned())).to_string(),
+            "DateTime('UTC')"
+        );
+        assert_eq!(
+            DataTypeNode::DateTime(Some("America/New_York".to_owned())).to_string(),
+            "DateTime('America/New_York')"
+        );
+
+        assert_eq!(
+            DataTypeNode::Nullable(Box::new(DataTypeNode::UInt64)).to_string(),
+            "Nullable(UInt64)"
+        );
+        assert_eq!(
+            DataTypeNode::LowCardinality(Box::new(DataTypeNode::String)).to_string(),
+            "LowCardinality(String)"
+        );
+        assert_eq!(
+            DataTypeNode::Array(Box::new(DataTypeNode::String)).to_string(),
+            "Array(String)"
+        );
+        assert_eq!(
+            DataTypeNode::Array(Box::new(DataTypeNode::Nullable(Box::new(
+                DataTypeNode::String
+            ))))
+            .to_string(),
+            "Array(Nullable(String))"
+        );
+        assert_eq!(
+            DataTypeNode::Tuple(vec![
+                DataTypeNode::String,
+                DataTypeNode::UInt32,
+                DataTypeNode::Float64
+            ])
+            .to_string(),
+            "Tuple(String, UInt32, Float64)"
+        );
+        assert_eq!(
+            DataTypeNode::Map([
+                Box::new(DataTypeNode::String),
+                Box::new(DataTypeNode::UInt32)
+            ])
+            .to_string(),
+            "Map(String, UInt32)"
+        );
+        assert_eq!(
+            DataTypeNode::Decimal(10, 2, DecimalType::Decimal32).to_string(),
+            "Decimal(10, 2)"
+        );
+        assert_eq!(
+            DataTypeNode::Enum(
+                EnumType::Enum8,
+                HashMap::from([(1, "A".to_owned()), (2, "B".to_owned())]),
+            )
+            .to_string(),
+            "Enum8('A' = 1, 'B' = 2)"
+        );
+        assert_eq!(
+            DataTypeNode::Enum(
+                EnumType::Enum16,
+                HashMap::from([(42, "foo".to_owned()), (144, "bar".to_owned())]),
+            )
+            .to_string(),
+            "Enum16('foo' = 42, 'bar' = 144)"
+        );
+        assert_eq!(enum_with_escaping().to_string(), ENUM_WITH_ESCAPING_STR);
+        assert_eq!(
+            DataTypeNode::AggregateFunction("sum".to_owned(), vec![DataTypeNode::UInt64])
+                .to_string(),
+            "AggregateFunction(sum, UInt64)"
+        );
+        assert_eq!(DataTypeNode::FixedString(16).to_string(), "FixedString(16)");
+        assert_eq!(
+            DataTypeNode::Variant(vec![DataTypeNode::UInt8, DataTypeNode::Bool]).to_string(),
+            "Variant(UInt8, Bool)"
+        );
+    }
+
+    #[test]
+    fn test_datetime64_to_string() {
+        let test_cases = [
+            (
+                DataTypeNode::DateTime64(DateTimePrecision::Precision0, None),
+                "DateTime64(0)",
+            ),
+            (
+                DataTypeNode::DateTime64(DateTimePrecision::Precision1, None),
+                "DateTime64(1)",
+            ),
+            (
+                DataTypeNode::DateTime64(DateTimePrecision::Precision2, None),
+                "DateTime64(2)",
+            ),
+            (
+                DataTypeNode::DateTime64(DateTimePrecision::Precision3, None),
+                "DateTime64(3)",
+            ),
+            (
+                DataTypeNode::DateTime64(DateTimePrecision::Precision4, None),
+                "DateTime64(4)",
+            ),
+            (
+                DataTypeNode::DateTime64(DateTimePrecision::Precision5, None),
+                "DateTime64(5)",
+            ),
+            (
+                DataTypeNode::DateTime64(DateTimePrecision::Precision6, None),
+                "DateTime64(6)",
+            ),
+            (
+                DataTypeNode::DateTime64(DateTimePrecision::Precision7, None),
+                "DateTime64(7)",
+            ),
+            (
+                DataTypeNode::DateTime64(DateTimePrecision::Precision8, None),
+                "DateTime64(8)",
+            ),
+            (
+                DataTypeNode::DateTime64(DateTimePrecision::Precision9, None),
+                "DateTime64(9)",
+            ),
+            (
+                DataTypeNode::DateTime64(DateTimePrecision::Precision0, Some("UTC".to_owned())),
+                "DateTime64(0, 'UTC')",
+            ),
+            (
+                DataTypeNode::DateTime64(
+                    DateTimePrecision::Precision3,
+                    Some("America/New_York".to_owned()),
+                ),
+                "DateTime64(3, 'America/New_York')",
+            ),
+            (
+                DataTypeNode::DateTime64(
+                    DateTimePrecision::Precision6,
+                    Some("Europe/Amsterdam".to_owned()),
+                ),
+                "DateTime64(6, 'Europe/Amsterdam')",
+            ),
+            (
+                DataTypeNode::DateTime64(
+                    DateTimePrecision::Precision9,
+                    Some("Asia/Tokyo".to_owned()),
+                ),
+                "DateTime64(9, 'Asia/Tokyo')",
+            ),
+        ];
+        for (data_type, expected_str) in &test_cases {
+            assert_eq!(
+                &data_type.to_string(),
+                expected_str,
+                "Expected data type {data_type} to be formatted as {expected_str}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_interval_to_string() {
+        assert_eq!(
+            DataTypeNode::Interval(IntervalType::Nanosecond).to_string(),
+            "IntervalNanosecond"
+        );
+        assert_eq!(
+            DataTypeNode::Interval(IntervalType::Microsecond).to_string(),
+            "IntervalMicrosecond"
+        );
+        assert_eq!(
+            DataTypeNode::Interval(IntervalType::Millisecond).to_string(),
+            "IntervalMillisecond"
+        );
+        assert_eq!(
+            DataTypeNode::Interval(IntervalType::Second).to_string(),
+            "IntervalSecond"
+        );
+        assert_eq!(
+            DataTypeNode::Interval(IntervalType::Minute).to_string(),
+            "IntervalMinute"
+        );
+        assert_eq!(
+            DataTypeNode::Interval(IntervalType::Hour).to_string(),
+            "IntervalHour"
+        );
+        assert_eq!(
+            DataTypeNode::Interval(IntervalType::Day).to_string(),
+            "IntervalDay"
+        );
+        assert_eq!(
+            DataTypeNode::Interval(IntervalType::Week).to_string(),
+            "IntervalWeek"
+        );
+        assert_eq!(
+            DataTypeNode::Interval(IntervalType::Month).to_string(),
+            "IntervalMonth"
+        );
+        assert_eq!(
+            DataTypeNode::Interval(IntervalType::Quarter).to_string(),
+            "IntervalQuarter"
+        );
+        assert_eq!(
+            DataTypeNode::Interval(IntervalType::Year).to_string(),
+            "IntervalYear"
+        );
+    }
+
+    #[test]
+    fn test_data_type_node_into_string() {
+        let data_type = DataTypeNode::new("Array(Int32)").unwrap();
+        let data_type_string: String = data_type.into();
+        assert_eq!(data_type_string, "Array(Int32)");
+    }
+
+    #[test]
+    fn test_data_type_to_string_geo() {
+        assert_eq!(DataTypeNode::Point.to_string(), "Point");
+        assert_eq!(DataTypeNode::Ring.to_string(), "Ring");
+        assert_eq!(DataTypeNode::LineString.to_string(), "LineString");
+        assert_eq!(DataTypeNode::Polygon.to_string(), "Polygon");
+        assert_eq!(DataTypeNode::MultiLineString.to_string(), "MultiLineString");
+        assert_eq!(DataTypeNode::MultiPolygon.to_string(), "MultiPolygon");
+    }
+
+    #[test]
+    fn test_display_column() {
+        let column = Column::new("col".to_owned(), DataTypeNode::new("Array(Int32)").unwrap());
+        assert_eq!(column.to_string(), "col: Array(Int32)");
+    }
+
+    #[test]
+    fn test_display_decimal_size() {
+        assert_eq!(DecimalType::Decimal32.to_string(), "Decimal32");
+        assert_eq!(DecimalType::Decimal64.to_string(), "Decimal64");
+        assert_eq!(DecimalType::Decimal128.to_string(), "Decimal128");
+        assert_eq!(DecimalType::Decimal256.to_string(), "Decimal256");
+    }
+
+    #[test]
+    fn test_time_time64_roundtrip_and_edges() {
+        use super::DateTimePrecision::*;
+
+        // Valid "Time" type (no precision, no timezone)
+        assert_eq!(DataTypeNode::new("Time").unwrap(), DataTypeNode::Time);
+
+        // "Time" should ignore timezones – they are parsed but discarded
+        assert_eq!(
+            DataTypeNode::new("Time('UTC')").unwrap(),
+            DataTypeNode::Time
+        );
+        assert_eq!(
+            DataTypeNode::new("Time('Europe/Moscow')").unwrap(),
+            DataTypeNode::Time
+        );
+
+        // Time64 with precision 0 (seconds)
+        assert_eq!(
+            DataTypeNode::new("Time64(0)").unwrap(),
+            DataTypeNode::Time64(Precision0)
+        );
+
+        // Time64 with precision 9 and a timezone (timezone ignored)
+        assert_eq!(
+            DataTypeNode::new("Time64(9, 'Europe/Amsterdam')").unwrap(),
+            DataTypeNode::Time64(Precision9)
+        );
+
+        // Time64 with precision 0 and timezone (again, timezone ignored)
+        assert_eq!(
+            DataTypeNode::new("Time64(0, 'UTC')").unwrap(),
+            DataTypeNode::Time64(Precision0)
+        );
+
+        // Time64 with precision 3 (milliseconds), no timezone
+        assert_eq!(
+            DataTypeNode::new("Time64(3)").unwrap(),
+            DataTypeNode::Time64(Precision3)
+        );
+
+        // Time64 with precision 6 (microseconds), timezone present but ignored
+        assert_eq!(
+            DataTypeNode::new("Time64(6, 'America/New_York')").unwrap(),
+            DataTypeNode::Time64(Precision6)
+        );
+
+        // Invalid: Empty argument list
+        DataTypeNode::new("Time64()").unwrap_err();
+
+        // Invalid: Non-numeric precision
+        DataTypeNode::new("Time64(x)").unwrap_err();
+    }
+
+    const ENUM_WITH_ESCAPING_STR: &str = "Enum8('quote\\'' = 1, 'slash\\\\value' = 2, 'tab\\tvalue' = 3, 'line\\nvalue' = 4, 'cr\\rvalue' = 5, 'back\\bvalue' = 6, 'form\\fvalue' = 7, 'null\\0value' = 8, 'unknown\\\\%value' = 9)";
+
+    fn enum_with_escaping() -> DataTypeNode {
+        DataTypeNode::Enum(
+            EnumType::Enum8,
+            HashMap::from([
+                (1, "quote'".to_owned()),
+                (2, "slash\\value".to_owned()),
+                (3, "tab\tvalue".to_owned()),
+                (4, "line\nvalue".to_owned()),
+                (5, "cr\rvalue".to_owned()),
+                (6, "back\x08value".to_owned()),
+                (7, "form\x0cvalue".to_owned()),
+                (8, "null\0value".to_owned()),
+                (9, "unknown\\%value".to_owned()),
+            ]),
+        )
+    }
+
+    #[test]
+    fn simple_aggregate_function_min_uint32() {
+        let dt = DataTypeNode::new("SimpleAggregateFunction(min, UInt32)").unwrap();
+        match dt {
+            DataTypeNode::SimpleAggregateFunction(func, inner) => {
+                assert_eq!(func, "min");
+                assert_eq!(*inner, DataTypeNode::UInt32);
+            }
+            other => panic!("expected SimpleAggregateFunction, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn simple_aggregate_function_max_uint64() {
+        let dt = DataTypeNode::new("SimpleAggregateFunction(max, UInt64)").unwrap();
+        match dt {
+            DataTypeNode::SimpleAggregateFunction(func, inner) => {
+                assert_eq!(func, "max");
+                assert_eq!(*inner, DataTypeNode::UInt64);
+            }
+            other => panic!("expected SimpleAggregateFunction, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn simple_aggregate_function_sum_float64() {
+        let dt = DataTypeNode::new("SimpleAggregateFunction(sum, Float64)").unwrap();
+        match dt {
+            DataTypeNode::SimpleAggregateFunction(func, inner) => {
+                assert_eq!(func, "sum");
+                assert_eq!(*inner, DataTypeNode::Float64);
+            }
+            other => panic!("expected SimpleAggregateFunction, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn simple_aggregate_function_group_bit_and_uint8() {
+        let dt = DataTypeNode::new("SimpleAggregateFunction(groupBitAnd, UInt8)").unwrap();
+        match dt {
+            DataTypeNode::SimpleAggregateFunction(func, inner) => {
+                assert_eq!(func, "groupBitAnd");
+                assert_eq!(*inner, DataTypeNode::UInt8);
+            }
+            other => panic!("expected SimpleAggregateFunction, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn simple_aggregate_function_with_array_inner() {
+        let dt =
+            DataTypeNode::new("SimpleAggregateFunction(groupArrayArray, Array(UInt32))").unwrap();
+        match dt {
+            DataTypeNode::SimpleAggregateFunction(func, inner) => {
+                assert_eq!(func, "groupArrayArray");
+                assert_eq!(*inner, DataTypeNode::Array(Box::new(DataTypeNode::UInt32)));
+            }
+            other => panic!("expected SimpleAggregateFunction, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn simple_aggregate_function_invalid_format() {
+        let result = DataTypeNode::new("SimpleAggregateFunction(min)");
+        result.unwrap_err();
+    }
+
+    #[test]
+    fn simple_aggregate_function_display_roundtrip() {
+        let input = "SimpleAggregateFunction(min, UInt32)";
+        let dt = DataTypeNode::new(input).unwrap();
+        assert_eq!(dt.to_string(), input);
+
+        let input2 = "SimpleAggregateFunction(groupArrayArray, Array(UInt32))";
+        let dt2 = DataTypeNode::new(input2).unwrap();
+        assert_eq!(dt2.to_string(), input2);
+    }
+
+    #[test]
+    fn simple_aggregate_function_remove() {
+        let dt = DataTypeNode::new("SimpleAggregateFunction(min, UInt32)").unwrap();
+        assert_eq!(*dt.remove_simple_aggregate_function(), DataTypeNode::UInt32);
+
+        // Non-SimpleAggregateFunction should return self
+        let dt2 = DataTypeNode::UInt64;
+        assert_eq!(
+            *dt2.remove_simple_aggregate_function(),
+            DataTypeNode::UInt64
+        );
+    }
+}

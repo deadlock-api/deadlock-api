@@ -1,0 +1,1100 @@
+use bytes::Bytes;
+use core::fmt::Display;
+#[cfg(any(feature = "lz4", feature = "zstd"))]
+use hyper::header::ACCEPT_ENCODING;
+use hyper::{
+    Method, Request,
+    header::{CONTENT_LENGTH, CONTENT_TYPE, HeaderValue, TRANSFER_ENCODING},
+};
+use rand::distr::{Alphanumeric, SampleString as _};
+use serde::Serialize;
+use tracing::Instrument as _;
+use url::Url;
+
+use crate::{
+    Client, Compression,
+    error::{Error, Result},
+    formats,
+    headers::with_request_headers,
+    request_body::RequestBody,
+    response::Response,
+    row::{Row, RowOwned, RowRead},
+    sql::{Bind, SqlBuilder, ser},
+};
+
+pub use crate::cursors::{BytesCursor, NativeCursor, RowCursor};
+use crate::headers::with_authentication;
+use crate::settings;
+use crate::settings::CLIENT_PROTOCOL_VERSION;
+
+#[must_use]
+#[derive(Clone, Debug)]
+pub struct Query {
+    client: Client,
+    sql: SqlBuilder,
+}
+
+impl Query {
+    pub(crate) fn new(client: &Client, template: &str) -> Self {
+        Self {
+            client: client.clone(),
+            sql: SqlBuilder::new(template),
+        }
+    }
+
+    pub(crate) fn raw(client: &Client, query: &str) -> Self {
+        Self {
+            client: client.clone(),
+            sql: SqlBuilder::raw(query),
+        }
+    }
+
+    /// Display SQL query as string.
+    #[must_use]
+    pub fn sql_display(&self) -> &impl Display {
+        &self.sql
+    }
+
+    /// Binds `value` to the next `?` in the query.
+    ///
+    /// The `value`, which must either implement [`Serialize`] or be an
+    /// [`Identifier`], will be appropriately escaped.
+    ///
+    /// All possible errors will be returned as [`Error::InvalidParams`]
+    /// during query execution (`execute()`, `fetch()`, etc.).
+    ///
+    /// WARNING: This means that the query must not have any extra `?`, even if
+    /// they are in a string literal! Use `??` to have plain `?` in query.
+    ///
+    /// [`Serialize`]: serde::Serialize
+    /// [`Identifier`]: crate::sql::Identifier
+    #[track_caller]
+    pub fn bind(mut self, value: impl Bind) -> Self {
+        self.sql.bind_arg(value);
+        self
+    }
+
+    /// Executes the query.
+    pub async fn execute(self) -> Result<()> {
+        // Enter the span for the `self.do_execute()` call
+        let span = self.make_span(None);
+
+        async {
+            let mut response = self
+                .do_execute(None)
+                .inspect_err(|e| e.record_in_current_span("error executing query"))?;
+
+            response
+                .finish()
+                .await
+                .inspect_err(|e| e.record_in_current_span("response error"))
+        }
+        .instrument(span)
+        .await
+    }
+
+    /// Executes the query, returning a [`RowCursor`] to obtain results.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # async fn example() -> clickhouse::error::Result<()> {
+    /// #[derive(clickhouse::Row, serde::Deserialize)]
+    /// struct MyRow<'a> {
+    ///     no: u32,
+    ///     name: &'a str,
+    /// }
+    ///
+    /// let mut cursor = clickhouse::Client::default()
+    ///     .query("SELECT ?fields FROM some WHERE no BETWEEN 0 AND 1")
+    ///     .fetch::<MyRow<'_>>()?;
+    ///
+    /// while let Some(MyRow { name, no }) = cursor.next().await? {
+    ///     println!("{name}: {no}");
+    /// }
+    /// # Ok(()) }
+    /// ```
+    pub fn fetch<T: Row>(mut self) -> Result<RowCursor<T>> {
+        let validation = self.client.get_validation();
+        let format = if validation {
+            formats::ROW_BINARY_WITH_NAMES_AND_TYPES
+        } else {
+            formats::ROW_BINARY
+        };
+
+        let span = self.make_span(Some(format)).entered();
+
+        self.sql.bind_fields::<T>();
+
+        let response = self
+            .do_execute(Some(format))
+            .inspect_err(|e| e.record_in_current_span("error executing fetch"))?;
+
+        Ok(RowCursor::new(response, validation, span.exit()))
+    }
+
+    /// Executes the query and returns just a single row.
+    ///
+    /// Note that `T` must be owned.
+    pub async fn fetch_one<T>(self) -> Result<T>
+    where
+        T: RowOwned + RowRead,
+    {
+        match self.fetch::<T>()?.next().await {
+            Ok(Some(row)) => Ok(row),
+            Ok(None) => Err(Error::RowNotFound),
+            Err(err) => Err(err),
+        }
+    }
+
+    /// Executes the query and returns at most one row.
+    ///
+    /// Note that `T` must be owned.
+    pub async fn fetch_optional<T>(self) -> Result<Option<T>>
+    where
+        T: RowOwned + RowRead,
+    {
+        self.fetch::<T>()?.next().await
+    }
+
+    /// Executes the query and returns all the generated results,
+    /// collected into a Vec.
+    ///
+    /// Note that `T` must be owned.
+    pub async fn fetch_all<T>(self) -> Result<Vec<T>>
+    where
+        T: RowOwned + RowRead,
+    {
+        let mut result = Vec::new();
+        let mut cursor = self.fetch::<T>()?;
+
+        while let Some(row) = cursor.next().await? {
+            result.push(row);
+        }
+
+        Ok(result)
+    }
+
+    /// Executes the query, returning a [`BytesCursor`] to obtain results as raw
+    /// bytes containing data in the [provided format].
+    ///
+    /// [provided format]: https://clickhouse.com/docs/en/interfaces/formats
+    pub fn fetch_bytes(self, format: impl AsRef<str>) -> Result<BytesCursor> {
+        let format = format.as_ref();
+
+        let span = self.make_span(Some(format)).entered();
+
+        let response = self.do_execute(Some(format))?;
+        Ok(BytesCursor::new(response, span.exit()))
+    }
+
+    pub fn fetch_native(mut self) -> Result<NativeCursor> {
+        let span = self.make_span(Some("Native")).entered();
+
+        let client_protocol_version = self.client.settings.get(CLIENT_PROTOCOL_VERSION);
+
+        // Setting `client_protocol_version` to a nonzero value changes the Native response format
+        // in ways we are unable to handle, and we would have no way to detect a nonzero version
+        // in the response. Return an error if the user is messing around with this setting
+        // (which they should not be).
+        //
+        // https://clickhouse.com/docs/reference/interfaces/specs/NativeFormat#revision-output
+        // Original report: https://github.com/ClickHouse/clickhouse-rs/pull/464
+        if let Some(version) = client_protocol_version
+            && version != "0"
+        {
+            return Err(Error::Other(format!(
+                "Client does not support a nonzero `{CLIENT_PROTOCOL_VERSION}` setting ({version:?}), \
+                 please set this setting to \"0\" or leave it unset"
+            ).into()));
+        }
+
+        // The native TCP transport gives the blocks to the cursor without encoding them.
+        #[cfg(feature = "tcp")]
+        if self.client.uses_tcp() {
+            let sql = self.sql.finish()?;
+            let blocks = crate::tcp::query_blocks(&self.client, sql)?;
+            return Ok(NativeCursor::from_blocks(blocks, span.exit()));
+        }
+
+        // FIXME: use HTTP body compression instead of block-level compression
+        self.client = self.client.with_compression(Compression::None);
+
+        let response = self.do_execute(Some("Native"))?;
+
+        Ok(NativeCursor::new(response, span.exit()))
+    }
+
+    pub(crate) fn make_span(&self, response_format: Option<&str>) -> tracing::Span {
+        // https://opentelemetry.io/docs/specs/semconv/db/sql/
+        // TODO: write our own Semantic Conventions for ClickHouse
+        tracing::info_span!(
+            "clickhouse.query",
+            // OTel conventional fields
+            // Note that `Empty` or `Option::None` fields are not reported,
+            // so we can avoid adding noise to logs when the `opentelemetry` feature is disabled.
+            otel.status_code = tracing::field::Empty,
+            otel.kind = cfg!(feature = "opentelemetry").then_some("client"),
+            error.type = tracing::field::Empty,
+            db.system.name = cfg!(feature = "opentelemetry").then_some("clickhouse"),
+            // Only log full query text at TRACE level
+            // Important that this is taken before client-side parameters are populated
+            // FIXME: we can't use `enabled!` due to https://github.com/tokio-rs/tracing/issues/2448
+            // but we don't want to log the full query at all verbosity levels.
+            // db.query.text = tracing::enabled!(tracing::Level::TRACE).then(|| self.sql.to_string()),
+            // TODO: generate summary
+            db.query.summary = tracing::field::Empty,
+            db.response.status_code = tracing::field::Empty,
+            db.response.returned_rows = tracing::field::Empty,
+            // ClickHouse-specific extension fields
+            clickhouse.request.session_id = self.client.get_setting(settings::SESSION_ID),
+            clickhouse.request.query_id = self.client.get_setting(settings::QUERY_ID),
+            clickhouse.response.received_bytes = tracing::field::Empty,
+            clickhouse.response.decoded_bytes = tracing::field::Empty,
+            clickhouse.response.format = response_format,
+        )
+    }
+
+    pub(crate) fn do_execute(self, default_format: Option<&str>) -> Result<Response> {
+        let query = self.sql.finish()?;
+
+        self.client.check_transport()?;
+
+        #[cfg(feature = "tcp")]
+        if self.client.uses_tcp() {
+            return crate::tcp::query(&self.client, query, default_format)
+                .inspect_err(|err| err.record_in_current_span("error executing query"));
+        }
+
+        let mut url =
+            Url::parse(&self.client.url).map_err(|err| Error::InvalidParams(Box::new(err)))?;
+        let mut pairs = url.query_pairs_mut();
+        pairs.clear();
+
+        if let Some(format) = default_format {
+            pairs.append_pair(settings::DEFAULT_FORMAT, format);
+        }
+
+        if let Some(database) = &self.client.database {
+            pairs.append_pair(settings::DATABASE, database);
+        }
+
+        let mut parameters = Vec::new();
+        for (name, value) in &self.client.settings {
+            if name.starts_with("param_") {
+                parameters.push((name.as_str(), value.as_str()));
+            } else {
+                pairs.append_pair(name, value);
+            }
+        }
+
+        pairs.extend_pairs(self.client.roles.iter().map(|role| (settings::ROLE, role)));
+
+        drop(pairs);
+
+        let multipart = (!parameters.is_empty())
+            .then(|| multipart_query_body(&query, &parameters))
+            .transpose()
+            .inspect_err(|err| err.record_in_current_span("invalid params in query"))?;
+
+        let mut builder = Request::builder().method(Method::POST).uri(url.as_str());
+
+        // Note: setting `enable_http_compression` or `http_zlib_compression_level` may fail
+        // under a readonly user: https://github.com/ClickHouse/clickhouse-rs/issues/486
+        match self.client.compression {
+            #[expect(deprecated, reason = "`Lz4Hc` is still accepted and handled as LZ4")]
+            #[cfg(feature = "lz4")]
+            Compression::Lz4 | Compression::Lz4Hc(_) => {
+                builder = builder.header(ACCEPT_ENCODING, HeaderValue::from_static("lz4"));
+            }
+            #[cfg(feature = "zstd")]
+            Compression::Zstd(_) => {
+                builder = builder.header(ACCEPT_ENCODING, HeaderValue::from_static("zstd"));
+            }
+            _ => (),
+        }
+
+        builder = with_request_headers(
+            builder,
+            &self.client.headers,
+            &self.client.app_product_info,
+            &self.client.stack_product_info,
+        );
+        builder = with_authentication(builder, &self.client.authentication);
+
+        let body = if let Some(multipart) = multipart {
+            // The client controls headers that frame this body. `headers_mut()` is
+            // `None` if a caller-provided header has already invalidated the builder;
+            // leave that error intact for `builder.body()` below.
+            if let Some(headers) = builder.headers_mut() {
+                headers.remove(CONTENT_LENGTH);
+                headers.remove(TRANSFER_ENCODING);
+                headers.insert(CONTENT_TYPE, multipart.content_type);
+            }
+
+            RequestBody::full(multipart.body)
+        } else {
+            // Retain the raw SQL request format for parameter-free queries.
+            builder = builder.header(CONTENT_LENGTH, query.len().to_string());
+            RequestBody::full(query)
+        };
+
+        let request = builder.body(body).map_err(|err| {
+            let err = Error::InvalidParams(Box::new(err));
+            err.record_in_current_span("invalid params in query");
+            err
+        })?;
+
+        let future = self.client.http.request(request);
+        Ok(Response::new(future))
+    }
+
+    /// Configure the [roles] to use when executing this query.
+    ///
+    /// Overrides any roles previously set by this method, [`Query::with_setting`],
+    /// [`Client::with_roles`] or [`Client::with_setting`].
+    ///
+    /// An empty iterator may be passed to clear the set roles.
+    ///
+    /// [roles]: https://clickhouse.com/docs/operations/access-rights#role-management
+    pub fn with_roles(self, roles: impl IntoIterator<Item = impl Into<String>>) -> Self {
+        Self {
+            client: self.client.with_roles(roles),
+            ..self
+        }
+    }
+
+    /// Clear any explicit [roles] previously set on this `Query` or inherited from [`Client`].
+    ///
+    /// Overrides any roles previously set by [`Query::with_roles`], [`Query::with_setting`],
+    /// [`Client::with_roles`] or [`Client::with_setting`].
+    ///
+    /// [roles]: https://clickhouse.com/docs/operations/access-rights#role-management
+    pub fn with_default_roles(self) -> Self {
+        Self {
+            client: self.client.with_default_roles(),
+            ..self
+        }
+    }
+
+    /// Similar to [`Client::with_option`], but for this particular query only.
+    #[deprecated(since = "0.14.3", note = "please use `with_setting` instead")]
+    pub fn with_option(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
+        self.client.set_setting(name, value);
+        self
+    }
+
+    /// Similar to [`Client::with_setting`], but for this particular query only.
+    pub fn with_setting(mut self, name: impl Into<String>, value: impl Into<String>) -> Self {
+        self.client.set_setting(name, value);
+        self
+    }
+
+    /// Similar to [`Client::with_product_info()`], but for this query only.
+    pub fn with_product_info(
+        self,
+        product_name: impl Into<String>,
+        product_version: impl Into<String>,
+    ) -> Self {
+        Self {
+            client: self.client.with_product_info(product_name, product_version),
+            ..self
+        }
+    }
+
+    /// NOTE: not meant for general use; prefer `.with_product_info()`.
+    /// Used in `clickhouse-ext-arrow` to track Arrow adoption.
+    /// A separate method is necessary to ensure this doesn't end up ahead of the end-user's
+    /// product info in the user agent string.
+    #[doc(hidden)]
+    pub fn with_stack_product_info(
+        self,
+        product_name: impl Into<String>,
+        product_version: impl Into<String>,
+    ) -> Self {
+        Self {
+            client: self
+                .client
+                .with_stack_product_info(product_name, product_version),
+            ..self
+        }
+    }
+
+    /// Specify a `ClickHouse` server-side query parameter.
+    ///
+    /// This creates a `ClickHouse` `param_<name>` request parameter. In queries,
+    /// you can reference parameters as `{name: Type}`, for example
+    /// `{val: Int32}`. `name` must match the supported bare identifier grammar:
+    /// `[A-Za-z_][A-Za-z0-9_]*`. An invalid name returns [`Error::InvalidParams`]
+    /// during execution.
+    ///
+    /// A query with parameters is sent as a `multipart/form-data` body. The server
+    /// limits each form field to `http_max_field_value_size` bytes (128 KiB by default).
+    /// The SQL text is split across several fields as needed, so the limit applies
+    /// only to each serialized parameter value. The server takes this setting from its
+    /// default settings profile; setting it per query or per user has no effect.
+    pub fn param(mut self, name: &str, value: impl Serialize) -> Self {
+        let mut param = String::new();
+        if let Err(err) = ser::write_param(&mut param, &value) {
+            self.sql = SqlBuilder::Failed(format!("invalid param: {err}"));
+            self
+        } else {
+            self.with_setting(format!("param_{name}"), param)
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::error::Error;
+    use crate::{Client, settings};
+
+    #[test]
+    fn fetch_native_errors_nonzero_client_protocol_version() {
+        let client = Client::default().with_url("http://localhost:8123");
+
+        // Assert that it does not error by default.
+        let _cursor = client.query("SELECT * FROM foo").fetch_native().unwrap();
+
+        let err = client
+            .query("SELECT * FROM foo")
+            .with_setting(settings::CLIENT_PROTOCOL_VERSION, "54492")
+            .fetch_native()
+            .err()
+            .unwrap_or_else(|| panic!("expected error"));
+
+        let Error::Other(e) = err else {
+            panic!("unexpected error kind: {err:?}");
+        };
+
+        let err_str = e.to_string();
+
+        assert!(
+            err_str.contains("client_protocol_version"),
+            "unexpected error: {err_str:?}"
+        );
+    }
+
+    #[test]
+    fn insert_metadata_query_derives_query_id() {
+        let client = Client::default()
+            .with_url("http://localhost:8123")
+            .with_setting(settings::QUERY_ID, "my-insert")
+            .with_setting(settings::SESSION_ID, "my-session")
+            .with_setting("max_block_size", "1000");
+
+        let query = client.insert_metadata_query("foo");
+
+        assert_eq!(
+            query.client.get_setting(settings::QUERY_ID),
+            Some("my-insert-describe")
+        );
+        assert_eq!(
+            query.client.get_setting(settings::SESSION_ID),
+            Some("my-session")
+        );
+        assert_eq!(query.client.get_setting("max_block_size"), Some("1000"));
+        assert_eq!(
+            query.client.get_setting("describe_include_subcolumns"),
+            Some("0")
+        );
+
+        // The client itself (and so the `INSERT`) keeps the `query_id`.
+        assert_eq!(client.get_setting(settings::QUERY_ID), Some("my-insert"));
+    }
+
+    #[test]
+    fn insert_metadata_query_preserves_generated_query_ids() {
+        for query_id in [None, Some("")] {
+            let mut client = Client::default();
+            if let Some(query_id) = query_id {
+                client = client.with_setting(settings::QUERY_ID, query_id);
+            }
+            let query = client.insert_metadata_query("foo");
+            assert_eq!(query.client.get_setting(settings::QUERY_ID), query_id);
+        }
+    }
+}
+
+const MULTIPART_BOUNDARY_PREFIX: &str = "clickhouse-rs-boundary-";
+
+struct MultipartQueryBody {
+    body: Bytes,
+    content_type: HeaderValue,
+}
+
+fn multipart_query_body(query: &str, parameters: &[(&str, &str)]) -> Result<MultipartQueryBody> {
+    for (field_name, _) in parameters {
+        if !is_valid_parameter_field_name(field_name) {
+            return Err(invalid_params(format!(
+                "invalid ClickHouse query parameter name: {field_name:?}"
+            )));
+        }
+    }
+
+    let suffix = Alphanumeric.sample_string(&mut rand::rng(), 16);
+    let boundary = format!("{MULTIPART_BOUNDARY_PREFIX}{suffix}");
+    let fields = query_fields(query)
+        .map(|field| ("query", field))
+        .chain(parameters.iter().copied());
+    // Include each field's boundary, header and trailing CRLF, plus the closing boundary.
+    let field_overhead = boundary
+        .len()
+        .saturating_add(b"--\r\nContent-Disposition: form-data; name=\"\"\r\n\r\n\r\n".len());
+    let body_capacity = fields.clone().fold(
+        boundary.len().saturating_add(b"----\r\n".len()),
+        |capacity, (name, value)| {
+            capacity
+                .saturating_add(field_overhead)
+                .saturating_add(name.len())
+                .saturating_add(value.len())
+        },
+    );
+    let mut body = Vec::with_capacity(body_capacity);
+
+    for (name, value) in fields {
+        append_multipart_field(&mut body, &boundary, name, value)?;
+    }
+    body.extend_from_slice(b"--");
+    body.extend_from_slice(boundary.as_bytes());
+    body.extend_from_slice(b"--\r\n");
+
+    let content_type = format!("multipart/form-data; boundary={boundary}");
+    let content_type = HeaderValue::from_str(&content_type).map_err(|err| {
+        Error::Other(
+            format!(
+                "BUG: generated invalid `Content-Type` header for request ({err:?}): {content_type:?}"
+            )
+            .into(),
+        )
+    })?;
+
+    Ok(MultipartQueryBody {
+        body: Bytes::from(body),
+        content_type,
+    })
+}
+
+/// The largest `query` field to send: the default of the server's
+/// `http_max_field_value_size`, which limits each form field.
+const MAX_QUERY_FIELD_LEN: usize = 128 * 1024;
+
+/// Splits `query` into fields of at most [`MAX_QUERY_FIELD_LEN`] bytes, never inside
+/// a character. A query that fits produces one field.
+///
+/// The server joins the values of all `query` fields in order, without a separator
+/// (`DynamicQueryHandler::getQuery` in `ClickHouse`'s `src/Server/HTTPHandler.cpp`).
+fn query_fields(query: &str) -> impl Iterator<Item = &str> + Clone {
+    let mut rest = Some(query);
+    core::iter::from_fn(move || {
+        let query = rest?;
+        if query.len() <= MAX_QUERY_FIELD_LEN {
+            rest = None;
+            return Some(query);
+        }
+
+        // A character is at most 4 bytes long, so this steps back at most 3 bytes.
+        // Index 0 is always a char boundary, so the loop ends.
+        let mut end = MAX_QUERY_FIELD_LEN;
+        while !query.is_char_boundary(end) {
+            end = end.saturating_sub(1);
+        }
+        let (field, tail) = query.split_at_checked(end)?;
+        rest = Some(tail);
+        Some(field)
+    })
+}
+
+fn is_valid_parameter_field_name(field_name: &str) -> bool {
+    let Some(name) = field_name.strip_prefix("param_") else {
+        return false;
+    };
+    let mut chars = name.bytes();
+    matches!(chars.next(), Some(b'a'..=b'z' | b'A'..=b'Z' | b'_'))
+        && chars.all(|byte| byte.is_ascii_alphanumeric() || byte == b'_')
+}
+
+fn append_multipart_field(
+    body: &mut Vec<u8>,
+    boundary: &str,
+    name: &str,
+    value: &str,
+) -> Result<()> {
+    if value.contains(boundary) {
+        return Err(invalid_params(format!(
+            "multipart boundary occurs in field {name:?}"
+        )));
+    }
+
+    body.extend_from_slice(b"--");
+    body.extend_from_slice(boundary.as_bytes());
+    body.extend_from_slice(b"\r\nContent-Disposition: form-data; name=\"");
+    body.extend_from_slice(name.as_bytes());
+    body.extend_from_slice(b"\"\r\n\r\n");
+    body.extend_from_slice(value.as_bytes());
+    body.extend_from_slice(b"\r\n");
+    Ok(())
+}
+
+fn invalid_params(message: impl Into<String>) -> Error {
+    Error::InvalidParams(Box::new(std::io::Error::new(
+        std::io::ErrorKind::InvalidInput,
+        message.into(),
+    )))
+}
+
+#[cfg(test)]
+mod multipart_tests {
+    use super::*;
+    use core::fmt::Write as _;
+
+    fn boundary(multipart: &MultipartQueryBody) -> &str {
+        multipart
+            .content_type
+            .to_str()
+            .unwrap()
+            .strip_prefix("multipart/form-data; boundary=")
+            .unwrap()
+    }
+
+    #[test]
+    fn post_query_params_multipart_body() {
+        let query = "SELECT {a: String}";
+        let parameters = [("param_z", "last"), ("param_a", "first")];
+
+        let multipart = multipart_query_body(query, &parameters).unwrap();
+        let boundary = boundary(&multipart);
+        let expected = format!(
+            "--{boundary}\r\nContent-Disposition: form-data; name=\"query\"\r\n\r\n{query}\r\n\
+             --{boundary}\r\nContent-Disposition: form-data; name=\"param_z\"\r\n\r\nlast\r\n\
+             --{boundary}\r\nContent-Disposition: form-data; name=\"param_a\"\r\n\r\nfirst\r\n\
+             --{boundary}--\r\n"
+        );
+
+        assert_eq!(multipart.body, expected);
+    }
+
+    #[test]
+    fn post_query_params_large_query_multipart_body() {
+        const MAX: usize = MAX_QUERY_FIELD_LEN;
+        let query = format!("SELECT '{}'", "x".repeat(2 * MAX));
+        let parameters = [("param_a", "first")];
+
+        let multipart = multipart_query_body(&query, &parameters).unwrap();
+        let boundary = boundary(&multipart);
+        let mut expected = String::new();
+        for field in [&query[..MAX], &query[MAX..2 * MAX], &query[2 * MAX..]] {
+            write!(
+                expected,
+                "--{boundary}\r\nContent-Disposition: form-data; name=\"query\"\r\n\r\n{field}\r\n"
+            )
+            .unwrap();
+        }
+        write!(
+            expected,
+            "--{boundary}\r\nContent-Disposition: form-data; name=\"param_a\"\r\n\r\nfirst\r\n\
+             --{boundary}--\r\n"
+        )
+        .unwrap();
+
+        assert_eq!(multipart.body, expected);
+    }
+
+    #[test]
+    fn post_query_params_query_fields() {
+        const MAX: usize = MAX_QUERY_FIELD_LEN;
+        let x = |len| "x".repeat(len);
+        for (query, field_lens) in [
+            (String::new(), vec![0]),
+            ("SELECT 1".to_owned(), vec![8]),
+            (x(MAX), vec![MAX]),
+            (x(MAX + 1), vec![MAX, 1]),
+            (x(3 * MAX), vec![MAX, MAX, MAX]),
+            // A 4-byte character that crosses the limit moves whole to the next field.
+            (format!("{}😀", x(MAX - 4)), vec![MAX]),
+            (format!("{}😀", x(MAX - 3)), vec![MAX - 3, 4]),
+            (format!("{}😀", x(MAX - 2)), vec![MAX - 2, 4]),
+            (format!("{}😀", x(MAX - 1)), vec![MAX - 1, 4]),
+            (format!("{}😀{}", x(MAX - 1), x(MAX)), vec![MAX - 1, MAX, 4]),
+        ] {
+            let fields = query_fields(&query).collect::<Vec<_>>();
+            let lens = fields.iter().map(|field| field.len()).collect::<Vec<_>>();
+            assert_eq!(lens, field_lens, "query of {} bytes", query.len());
+            assert_eq!(fields.concat(), query);
+        }
+    }
+
+    #[test]
+    fn post_query_params_random_boundary() {
+        let parameters = [("param_value", "value")];
+        let first = multipart_query_body("SELECT {value: String}", &parameters).unwrap();
+        let second = multipart_query_body("SELECT {value: String}", &parameters).unwrap();
+        assert_ne!(first.content_type, second.content_type);
+
+        for multipart in [first, second] {
+            let suffix = boundary(&multipart)
+                .strip_prefix(MULTIPART_BOUNDARY_PREFIX)
+                .unwrap();
+            assert_eq!(suffix.len(), 16);
+            assert!(suffix.bytes().all(|byte| byte.is_ascii_alphanumeric()));
+        }
+    }
+
+    #[test]
+    fn post_query_params_boundary_collisions() {
+        let boundary = format!("{MULTIPART_BOUNDARY_PREFIX}0123456789abcdef");
+        for name in ["query", "param_value"] {
+            for value in [
+                boundary.clone(),
+                format!("--{boundary}at-the-start"),
+                format!("before\r\n--{boundary}after"),
+                format!("before\n--{boundary}after"),
+                format!("before{boundary}after"),
+            ] {
+                let mut body = b"existing field\r\n".to_vec();
+                let original = body.clone();
+                let error = append_multipart_field(&mut body, &boundary, name, &value).unwrap_err();
+                assert!(matches!(error, Error::InvalidParams(_)));
+                assert_eq!(body, original);
+            }
+        }
+    }
+
+    #[test]
+    fn post_query_params_capacity_includes_framing() {
+        for count in [0, 1, 1_000] {
+            let names = (0..count)
+                .map(|index| format!("param_p{index}"))
+                .collect::<Vec<_>>();
+            let parameters = names
+                .iter()
+                .enumerate()
+                .map(|(index, name)| (name.as_str(), if index % 2 == 0 { "" } else { "雪" }))
+                .collect::<Vec<_>>();
+            let query = "SELECT 'é'";
+            let multipart = multipart_query_body(query, &parameters).unwrap();
+            let boundary = boundary(&multipart);
+            let mut expected = format!(
+                "--{boundary}\r\nContent-Disposition: form-data; name=\"query\"\r\n\r\n{query}\r\n"
+            );
+            for (name, value) in parameters {
+                write!(
+                    expected,
+                    "--{boundary}\r\nContent-Disposition: form-data; name=\"{name}\"\r\n\r\n{value}\r\n"
+                )
+                .unwrap();
+            }
+            write!(expected, "--{boundary}--\r\n").unwrap();
+            assert_eq!(multipart.body, expected);
+        }
+    }
+
+    #[test]
+    fn post_query_params_identifier_validation() {
+        for name in ["param_a", "param_A9", "param__"] {
+            assert!(is_valid_parameter_field_name(name), "{name}");
+        }
+        for name in [
+            "param_",
+            "param_9a",
+            "param_a-b",
+            "param_a\nb",
+            "param_a\rb",
+            "param_a\0b",
+            "param_a\"b",
+            "param_a\\b",
+        ] {
+            assert!(!is_valid_parameter_field_name(name), "{name:?}");
+            assert!(multipart_query_body("SELECT 1", &[(name, "value")]).is_err());
+        }
+    }
+}
+
+#[cfg(all(test, feature = "test-util"))]
+mod transport_tests {
+    use super::*;
+    use crate::test;
+
+    fn parse_multipart_fields(request: &Request<Bytes>) -> Vec<(String, Vec<u8>)> {
+        let content_type = request
+            .headers()
+            .get_all(CONTENT_TYPE)
+            .iter()
+            .map(|value| value.to_str().unwrap())
+            .collect::<Vec<_>>();
+        assert_eq!(content_type.len(), 1);
+        let boundary = content_type[0]
+            .strip_prefix("multipart/form-data; boundary=")
+            .expect("multipart content type");
+        let opening = format!("--{boundary}\r\n");
+        let marker = format!("\r\n--{boundary}");
+        let closing = b"--\r\n";
+        let mut input = request
+            .body()
+            .strip_prefix(opening.as_bytes())
+            .expect("opening boundary");
+        let mut fields = Vec::new();
+
+        loop {
+            let header_end = find_bytes(input, b"\r\n\r\n").expect("field headers");
+            let headers = core::str::from_utf8(&input[..header_end]).expect("UTF-8 headers");
+            let name = headers
+                .strip_prefix("Content-Disposition: form-data; name=\"")
+                .and_then(|header| header.strip_suffix('"'))
+                .expect("only a Content-Disposition header")
+                .to_owned();
+            input = &input[header_end + 4..];
+
+            let value_end = find_bytes(input, marker.as_bytes()).expect("next boundary");
+            fields.push((name, input[..value_end].to_vec()));
+            input = &input[value_end + marker.len()..];
+
+            if input.starts_with(closing) {
+                assert_eq!(&input[closing.len()..], b"");
+                return fields;
+            }
+            input = input
+                .strip_prefix(b"\r\n")
+                .expect("field boundary terminator");
+        }
+    }
+
+    fn find_bytes(haystack: &[u8], needle: &[u8]) -> Option<usize> {
+        haystack
+            .windows(needle.len())
+            .position(|window| window == needle)
+    }
+
+    fn assert_single_content_length(request: &Request<Bytes>) {
+        let content_length = request
+            .headers()
+            .get_all(CONTENT_LENGTH)
+            .iter()
+            .collect::<Vec<_>>();
+        assert_eq!(content_length.len(), 1);
+        assert_eq!(
+            content_length[0]
+                .to_str()
+                .unwrap()
+                .parse::<usize>()
+                .unwrap(),
+            request.body().len()
+        );
+    }
+
+    #[tokio::test]
+    async fn post_query_params_transport() {
+        let mock = test::Mock::new();
+        let record = mock.add(test::handlers::record_request());
+        let client = Client::default()
+            .with_mock(&mock)
+            .with_database("test_db")
+            .with_roles(["reader", "writer"])
+            .with_setting("max_block_size", "123")
+            .with_setting("param_z", "last");
+        #[cfg(feature = "lz4")]
+        let client = client.with_compression(Compression::Lz4);
+
+        let mut cursor = client
+            .query("SELECT {a: UInt8}, {z: String}")
+            .param("a", 42)
+            .fetch::<String>()
+            .unwrap();
+        assert!(cursor.next().await.unwrap().is_none());
+
+        let request = record.request().await;
+        assert_eq!(request.method(), Method::POST);
+        assert_single_content_length(&request);
+
+        let pairs = url::form_urlencoded::parse(request.uri().query().unwrap().as_bytes())
+            .map(|(name, value)| (name.into_owned(), value.into_owned()))
+            .collect::<Vec<_>>();
+        for expected in [
+            ("database", "test_db"),
+            ("default_format", "RowBinary"),
+            ("max_block_size", "123"),
+            ("role", "reader"),
+            ("role", "writer"),
+        ] {
+            assert!(
+                pairs
+                    .iter()
+                    .any(|(name, value)| name == expected.0 && value == expected.1),
+                "missing {expected:?} in {pairs:?}"
+            );
+        }
+        assert!(!pairs.iter().any(|(name, _)| name.starts_with("param_")));
+        assert!(!pairs.iter().any(|(name, _)| name == "compress"));
+        #[cfg(feature = "lz4")]
+        {
+            assert_eq!(
+                request.headers().get(ACCEPT_ENCODING),
+                Some(&HeaderValue::from_static("lz4"))
+            );
+        }
+
+        let mut fields = parse_multipart_fields(&request);
+        assert_eq!(
+            fields.remove(0),
+            (
+                "query".to_owned(),
+                b"SELECT {a: UInt8}, {z: String}".to_vec()
+            )
+        );
+        fields.sort_unstable_by(|(left, _), (right, _)| left.cmp(right));
+        assert_eq!(
+            fields,
+            vec![
+                ("param_a".to_owned(), b"42".to_vec()),
+                ("param_z".to_owned(), b"last".to_vec()),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn post_query_params_transport_controls_framing_headers() {
+        let mock = test::Mock::new();
+        let record = mock.add(test::handlers::record_request());
+        let client = Client::default()
+            .with_mock(&mock)
+            .with_header("Content-Type", "text/plain")
+            .with_header("content-type", "application/json")
+            .with_header("Content-Length", "1")
+            .with_header("content-length", "2")
+            .with_header("Transfer-Encoding", "chunked");
+
+        client
+            .query("SELECT {value: UInt8}")
+            .param("value", 1)
+            .execute()
+            .await
+            .unwrap();
+
+        let request = record.request().await;
+        let content_types = request
+            .headers()
+            .get_all(CONTENT_TYPE)
+            .iter()
+            .collect::<Vec<_>>();
+        assert_eq!(content_types.len(), 1);
+        assert!(
+            content_types[0]
+                .to_str()
+                .unwrap()
+                .starts_with("multipart/form-data; boundary=")
+        );
+        assert_single_content_length(&request);
+        assert!(request.headers().get(TRANSFER_ENCODING).is_none());
+    }
+
+    #[cfg(feature = "zstd")]
+    #[tokio::test]
+    async fn post_query_params_transport_keeps_zstd_negotiation() {
+        let mock = test::Mock::new();
+        let record = mock.add(test::handlers::record_request());
+
+        Client::default()
+            .with_mock(&mock)
+            .with_compression(Compression::Zstd(7))
+            .query("SELECT {value: UInt8}")
+            .param("value", 1)
+            .execute()
+            .await
+            .unwrap();
+
+        let request = record.request().await;
+        assert_eq!(
+            request.headers().get(ACCEPT_ENCODING),
+            Some(&HeaderValue::from_static("zstd"))
+        );
+        assert_eq!(
+            parse_multipart_fields(&request),
+            vec![
+                ("query".to_owned(), b"SELECT {value: UInt8}".to_vec()),
+                ("param_value".to_owned(), b"1".to_vec()),
+            ]
+        );
+    }
+
+    #[tokio::test]
+    async fn post_query_params_transport_rejects_invalid_names_and_headers() {
+        for suffix in ["", "a\nb", "a\rb", "a\0b", "a\"b", "a\\b"] {
+            let mut mock = test::Mock::new();
+            mock.add(test::handlers::failure(test::status::INTERNAL_SERVER_ERROR));
+            mock.non_exhaustive();
+            let error = Client::default()
+                .with_mock(&mock)
+                .query("SELECT {value: String}")
+                .with_setting(format!("param_{suffix}"), "value")
+                .execute()
+                .await
+                .unwrap_err();
+            assert!(
+                matches!(error, Error::InvalidParams(_)),
+                "{suffix:?}: {error:?}"
+            );
+        }
+
+        for (name, value) in [("invalid header", "value"), ("X-Test", "bad\nvalue")] {
+            let mut mock = test::Mock::new();
+            mock.add(test::handlers::failure(test::status::INTERNAL_SERVER_ERROR));
+            mock.non_exhaustive();
+            let error = Client::default()
+                .with_mock(&mock)
+                .with_header(name, value)
+                .query("SELECT {value: UInt8}")
+                .param("value", 1)
+                .execute()
+                .await
+                .unwrap_err();
+            assert!(
+                matches!(error, Error::InvalidParams(_)),
+                "{name:?}: {error:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn post_query_params_transport_keeps_raw_queries_unchanged() {
+        let mock = test::Mock::new();
+        let record = mock.add(test::handlers::record_request());
+
+        Client::default()
+            .with_mock(&mock)
+            .query("SELECT 1")
+            .execute()
+            .await
+            .unwrap();
+
+        let request = record.request().await;
+        assert_eq!(request.body(), &Bytes::from_static(b"SELECT 1"));
+        assert!(request.headers().get(CONTENT_TYPE).is_none());
+        assert_single_content_length(&request);
+    }
+
+    #[tokio::test]
+    async fn post_query_params_transport_preserves_last_write_wins() {
+        let mock = test::Mock::new();
+        let record = mock.add(test::handlers::record_request());
+        let client = Client::default()
+            .with_mock(&mock)
+            .with_setting("param_value", "client");
+
+        client
+            .query("SELECT {value: String}")
+            .param("value", "query-param")
+            .with_setting("param_value", "query-setting")
+            .execute()
+            .await
+            .unwrap();
+
+        let request = record.request().await;
+        assert_eq!(
+            parse_multipart_fields(&request),
+            vec![
+                ("query".to_owned(), b"SELECT {value: String}".to_vec()),
+                ("param_value".to_owned(), b"query-setting".to_vec()),
+            ]
+        );
+    }
+}

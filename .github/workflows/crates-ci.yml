@@ -1,7 +1,7 @@
 name: Crates CI
 
-# Checks for the shared library crates (crates/*, including valveprotos and haste with its
-# dungers crates) and the website's wasm modules (website/wasm/*). Their consumers (api, workers,
+# Checks for the shared library crates (crates/*, including valveprotos, clickhouse with its
+# macros/types crates and haste with its dungers crates) and the website's wasm modules (website/wasm/*). Their consumers (api, workers,
 # live-events, website) are checked by their own workflows, which also trigger on changes to
 # these crates.
 
@@ -40,7 +40,7 @@ jobs:
     uses: ./.github/workflows/rust-checks.yml
     with:
       packages: >-
-        assets-client clickhouse-utils crosshair db-clients demofusion game-assets keyvalues rate-limit
+        assets-client clickhouse clickhouse-macros clickhouse-types clickhouse-utils crosshair db-clients demofusion game-assets keyvalues rate-limit
         service-utils steam-id steam-proxy telemetry valveprotos
         haste haste_core haste_broadcast haste_vartype
         dungers dungers_bitbuf dungers_charsor dungers_varint

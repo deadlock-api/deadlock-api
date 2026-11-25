@@ -1,0 +1,300 @@
+use core::pin::Pin;
+use core::task::{Context, Poll, ready};
+
+use crate::compression::native_framing;
+use crate::error::{Error, Result};
+use crate::response::Chunk;
+use bytes::{Buf as _, Bytes, BytesMut};
+use futures_util::stream::Stream;
+use zstd::stream::raw::Operation as _;
+
+const OUTPUT_BUFFER_SIZE: usize = 64 * 1024;
+
+// ClickHouse native compression framing.
+pub(crate) const ZSTD_MAGIC: u8 = 0x90;
+
+pub(crate) fn compress(uncompressed: &[u8], level: Option<i32>) -> Result<Bytes> {
+    let level = level.unwrap_or(zstd::DEFAULT_COMPRESSION_LEVEL);
+    let max_compressed_size = zstd::zstd_safe::compress_bound(uncompressed.len());
+
+    let mut buffer = BytesMut::new();
+    buffer.resize(
+        native_framing::META_SIZE.saturating_add(max_compressed_size),
+        0,
+    );
+
+    let output = buffer
+        .get_mut(native_framing::META_SIZE..)
+        .ok_or_else(|| Error::Compression("ZSTD output buffer is too small".into()))?;
+    let compressed_data_size = zstd::zstd_safe::compress(output, uncompressed, level)
+        .map_err(|code| Error::Compression(zstd::zstd_safe::get_error_name(code).into()))?;
+
+    buffer.truncate(native_framing::META_SIZE.saturating_add(compressed_data_size));
+
+    native_framing::write_meta(&mut buffer, ZSTD_MAGIC, uncompressed.len())?;
+
+    Ok(buffer.freeze())
+}
+
+/// Streaming decoder for HTTP-level `Content-Encoding: zstd` responses.
+/// Does not expect `ClickHouse`'s native compression framing.
+pub(crate) struct ZstdHttpDecoder<S> {
+    stream: S,
+    /// `None` if the decoder could not be created (out of memory); reported on the first poll.
+    decoder: Option<zstd::stream::raw::Decoder<'static>>,
+    input: BytesMut,
+    output: BytesMut,
+    stream_ended: bool,
+    frame_open: bool,
+}
+
+impl<S> ZstdHttpDecoder<S> {
+    pub(crate) fn new(stream: S) -> Self {
+        Self {
+            stream,
+            decoder: zstd::stream::raw::Decoder::new().ok(),
+            input: BytesMut::new(),
+            output: BytesMut::zeroed(OUTPUT_BUFFER_SIZE),
+            stream_ended: false,
+            frame_open: false,
+        }
+    }
+}
+
+impl<S> Stream for ZstdHttpDecoder<S>
+where
+    S: Stream<Item = Result<Bytes>> + Unpin,
+{
+    type Item = Result<Chunk>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+
+        loop {
+            // Try to decompress any buffered input.
+            if !this.input.is_empty() {
+                // Ensure the output buffer has enough initialized space.
+                let spare = this.output.capacity().saturating_sub(this.output.len());
+                if spare < OUTPUT_BUFFER_SIZE {
+                    this.output
+                        .reserve(OUTPUT_BUFFER_SIZE.saturating_sub(spare));
+                }
+                this.output.resize(OUTPUT_BUFFER_SIZE, 0);
+
+                let decoder = this
+                    .decoder
+                    .as_mut()
+                    .ok_or_else(|| Error::Decompression("failed to create ZSTD decoder".into()))?;
+                let status = decoder
+                    .run_on_buffers(&this.input, &mut this.output)
+                    .map_err(|err| Error::Decompression(err.into()))?;
+
+                this.frame_open = status.remaining != 0;
+
+                let net_size = status.bytes_read;
+                let bytes_written = status.bytes_written;
+
+                this.input.advance(net_size.min(this.input.len()));
+
+                if bytes_written > 0 {
+                    let data = this.output.split_to(bytes_written).freeze();
+                    return Poll::Ready(Some(Ok(Chunk { data, net_size })));
+                }
+
+                // Consume a buffered following frame before asking for more input.
+                if net_size > 0 {
+                    continue;
+                }
+            }
+
+            if this.stream_ended {
+                return Poll::Ready(None);
+            }
+
+            // Pull more data from the inner stream.
+            match ready!(Pin::new(&mut this.stream).poll_next(cx)) {
+                Some(Ok(chunk)) => {
+                    this.input.extend_from_slice(&chunk);
+                }
+                Some(Err(err)) => return Poll::Ready(Some(Err(err))),
+                None => {
+                    this.stream_ended = true;
+
+                    // Flush any remaining buffered output from the decoder.
+                    if !this.input.is_empty() || this.frame_open {
+                        return Poll::Ready(Some(Err(Error::Decompression(
+                            "unexpected end of ZSTD stream".into(),
+                        ))));
+                    }
+
+                    return Poll::Ready(None);
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::compression::native_framing;
+    use crate::compression::zstd::{ZSTD_MAGIC, ZstdHttpDecoder, compress};
+    use crate::error::Error;
+    use bytes::Bytes;
+    use core::pin::Pin;
+    use core::task::{Context, Poll, Waker};
+    use futures_util::{Stream as _, stream};
+
+    fn decode_http_zstd(chunks: &[&[u8]]) -> crate::error::Result<Vec<u8>> {
+        let stream = stream::iter(
+            chunks
+                .iter()
+                .map(|chunk| Ok::<_, Error>(Bytes::copy_from_slice(chunk))),
+        );
+        let mut decoder = ZstdHttpDecoder::new(stream);
+        let mut output = Vec::new();
+
+        loop {
+            match Pin::new(&mut decoder).poll_next(&mut Context::from_waker(Waker::noop())) {
+                Poll::Ready(Some(Ok(chunk))) => {
+                    output.extend_from_slice(&chunk.data);
+                }
+                Poll::Ready(Some(Err(error))) => return Err(error),
+                Poll::Ready(None) => break,
+                Poll::Pending => panic!("immediately ready frame chunks returned Pending"),
+            }
+        }
+
+        Ok(output)
+    }
+
+    fn assert_http_zstd_frame(compressed: &[u8], expected: &[u8]) {
+        for split in 0..=compressed.len() {
+            let halves = <[&[u8]; 2]>::from(compressed.split_at(split));
+            let actual = decode_http_zstd(&halves).unwrap();
+            assert_eq!(actual, expected, "unexpected output at split {split}");
+        }
+    }
+
+    fn assert_http_zstd_error(compressed: &[u8]) {
+        for split in 0..=compressed.len() {
+            let halves = <[&[u8]; 2]>::from(compressed.split_at(split));
+            let error = decode_http_zstd(&halves)
+                .expect_err("malformed ZSTD frame must be rejected after draining to EOF");
+            assert!(
+                matches!(error, Error::Decompression(_)),
+                "unexpected error at split {split}: {error}"
+            );
+        }
+    }
+
+    const HTTP_ZSTD_PLAIN: &[u8] = &[0x44, 0x33, 0x22, 0x11, 0, 0, 0, 0];
+
+    const HTTP_ZSTD_COMPLETE: &[u8] = &[
+        0x28, 0xb5, 0x2f, 0xfd, 0x20, 0x08, 0x41, 0, 0, 0x44, 0x33, 0x22, 0x11, 0, 0, 0, 0,
+    ];
+
+    const HTTP_ZSTD_EMPTY: &[u8] = &[0x28, 0xb5, 0x2f, 0xfd, 0x20, 0, 0x01, 0, 0];
+
+    #[test]
+    fn it_decompresses_http_zstd() {
+        let original = vec![
+            1u8, 0, 2, 255, 255, 255, 255, 0, 1, 1, 1, 115, 6, 83, 116, 114, 105, 110, 103, 3, 97,
+            98, 99,
+        ];
+
+        // Compress with raw ZSTD (no ClickHouse framing).
+        let compressed = zstd::bulk::compress(&original, zstd::DEFAULT_COMPRESSION_LEVEL)
+            .expect("failed to compress");
+
+        assert_http_zstd_frame(&compressed, &original);
+    }
+
+    #[test]
+    fn it_rejects_nonfinal_http_zstd_frame_at_eof() {
+        assert_http_zstd_frame(HTTP_ZSTD_COMPLETE, HTTP_ZSTD_PLAIN);
+        let decoded = decode_http_zstd(&[HTTP_ZSTD_COMPLETE]).unwrap();
+        assert_eq!(u64::from_le_bytes(decoded.try_into().unwrap()), 0x1122_3344);
+
+        let mut nonfinal = HTTP_ZSTD_COMPLETE.to_vec();
+        nonfinal[6] = 0x40;
+        assert_http_zstd_error(&nonfinal);
+    }
+
+    #[test]
+    fn it_decompresses_empty_and_concatenated_http_zstd_frames() {
+        assert_eq!(decode_http_zstd(&[]).unwrap(), [] as [u8; 0]);
+        assert_http_zstd_frame(HTTP_ZSTD_EMPTY, &[]);
+
+        let frames = [HTTP_ZSTD_COMPLETE, HTTP_ZSTD_COMPLETE].concat();
+        let expected = [HTTP_ZSTD_PLAIN, HTTP_ZSTD_PLAIN].concat();
+        assert_http_zstd_frame(&frames, &expected);
+
+        let frames = [HTTP_ZSTD_EMPTY, HTTP_ZSTD_COMPLETE].concat();
+        assert_http_zstd_frame(&frames, HTTP_ZSTD_PLAIN);
+    }
+
+    #[test]
+    fn it_rejects_nonfinal_http_zstd_frame_after_empty_frame() {
+        let mut nonfinal = HTTP_ZSTD_COMPLETE.to_vec();
+        nonfinal[6] = 0x40;
+        let frames = [HTTP_ZSTD_EMPTY, &nonfinal].concat();
+
+        assert_http_zstd_error(&frames);
+    }
+
+    #[test]
+    fn it_rejects_malformed_http_zstd_block() {
+        let mut malformed = HTTP_ZSTD_COMPLETE.to_vec();
+        // Block type 3 is reserved; retain the final bit and the eight-byte size.
+        malformed[6] = 0x47;
+
+        assert_http_zstd_error(&malformed);
+    }
+
+    #[test]
+    fn it_validates_http_zstd_checksum() {
+        let mut compressor = zstd::bulk::Compressor::new(zstd::DEFAULT_COMPRESSION_LEVEL).unwrap();
+        compressor.include_checksum(true).unwrap();
+        let mut compressed = compressor.compress(HTTP_ZSTD_PLAIN).unwrap();
+        assert_http_zstd_frame(&compressed, HTTP_ZSTD_PLAIN);
+
+        *compressed.last_mut().unwrap() ^= 1;
+        assert_http_zstd_error(&compressed);
+    }
+
+    #[test]
+    fn it_decompresses_large_http_zstd_frame() {
+        let original: Vec<_> = (0..3 * 65_536 + 17)
+            .map(|index| u8::try_from(index % 251).unwrap())
+            .collect();
+        let compressed = zstd::bulk::compress(&original, zstd::DEFAULT_COMPRESSION_LEVEL).unwrap();
+        assert_eq!(decode_http_zstd(&[&compressed]).unwrap(), original);
+
+        for split in [1, compressed.len() / 2, compressed.len() - 1] {
+            let halves = <[&[u8]; 2]>::from(compressed.split_at(split));
+            assert_eq!(
+                decode_http_zstd(&halves).unwrap(),
+                original,
+                "unexpected large output at split {split}"
+            );
+        }
+    }
+
+    #[test]
+    fn it_compresses_and_decompresses() {
+        let source = vec![
+            1u8, 0, 2, 255, 255, 255, 255, 0, 1, 1, 1, 115, 6, 83, 116, 114, 105, 110, 103, 3, 97,
+            98, 99,
+        ];
+
+        let compressed = compress(&source, None).unwrap();
+
+        // Verify the magic byte.
+        assert_eq!(compressed[native_framing::CHECKSUM_SIZE], ZSTD_MAGIC);
+
+        // Verify decompression of the payload.
+        let decompressed =
+            zstd::bulk::decompress(&compressed[native_framing::META_SIZE..], source.len()).unwrap();
+        assert_eq!(decompressed, source);
+    }
+}
