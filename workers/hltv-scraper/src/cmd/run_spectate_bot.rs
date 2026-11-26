@@ -9,15 +9,14 @@ use axum::extract::State;
 use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use base64::prelude::*;
 use itertools::Itertools as _;
 use jiff::{Timestamp, ToSpan as _};
 use lru::LruCache;
-use prost::Message as _;
 use redis::aio::ConnectionManager;
 use redis::{AsyncCommands as _, ExpireOption};
-use reqwest::{Client, StatusCode};
+use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
+use steam_proxy::{SteamProxyClient, SteamProxyError, SteamProxyOptions};
 use tokio::time::sleep;
 use tracing::{Span, debug, error, field, info, warn};
 use valveprotos::deadlock::c_msg_client_to_gc_spectate_user_response::EResponse;
@@ -31,6 +30,8 @@ use crate::easy_poll::{PollError, start_polling_text};
 const BOT_RUNTIME_HOURS: u64 = 6;
 const SPECTATE_COOLDOWN: Duration = Duration::from_millis(10);
 const ERROR_COOLDOWN: Duration = Duration::from_secs(5);
+/// How long a bot rests after a spectate job; twice as long after a Steam rate limit.
+const SPECTATE_JOB_COOLDOWN: Duration = Duration::from_secs(24 * 60 * 60 / 50);
 const MAX_GAP_SIZE: usize = 100;
 const REDIS_SPEC_KEY: &str = "spectated_matches";
 const REDIS_FAILED_KEY: &str = "failed_spectated_matches";
@@ -56,11 +57,7 @@ pub(crate) enum SpectateBotError {
     #[error(transparent)]
     Http(#[from] reqwest::Error),
     #[error(transparent)]
-    Encode(#[from] prost::EncodeError),
-    #[error(transparent)]
-    Base64(#[from] base64::DecodeError),
-    #[error(transparent)]
-    Decode(#[from] prost::DecodeError),
+    SteamProxy(#[from] SteamProxyError),
     #[error(transparent)]
     Poll(#[from] PollError),
     #[error(transparent)]
@@ -87,18 +84,6 @@ impl IntoResponse for SpectateBotError {
         error!("Request failed: {}", service_utils::ErrorChain(&self));
         (StatusCode::INTERNAL_SERVER_ERROR, self.to_string()).into_response()
     }
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct PoolLimitInfo {
-    ready_bots: u32,
-}
-
-#[derive(Serialize, Deserialize, Debug, Clone)]
-struct InvokeResponse {
-    data: String,
-    username: String,
-    pool_limit_info: PoolLimitInfo,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -146,10 +131,8 @@ impl SpectatedMatchInfo {
 }
 
 struct SpectatorBot {
-    client: Client,
+    proxy: SteamProxyClient,
     redis: ConnectionManager,
-    api_token: String,
-    proxy_url: String,
     failed_spectates: Mutex<LruCache<u64, bool>>,
     current_patch: Mutex<Option<u32>>,
 }
@@ -159,10 +142,12 @@ impl SpectatorBot {
         let redis = db_clients::get_redis_client().await?;
 
         Ok(Self {
-            client: service_utils::http_client()?,
+            proxy: SteamProxyClient::new(
+                service_utils::http_client()?,
+                vec![proxy_api_url],
+                api_token,
+            ),
             redis,
-            api_token,
-            proxy_url: proxy_api_url,
             failed_spectates: Mutex::new(LruCache::new(
                 NonZeroUsize::new(1000).unwrap_or(NonZeroUsize::MIN),
             )),
@@ -313,30 +298,27 @@ impl SpectatorBot {
             lobby_id,
         };
 
-        let mut data = Vec::new();
-        spectate_message.encode(&mut data)?;
-
         let response = self
-            .client
-            .post(&self.proxy_url)
-            .header("Authorization", format!("Bearer {}", self.api_token))
-            .json(&serde_json::json!({
-                "message_kind": EgcCitadelClientMessages::KEMsgClientToGcSpectateLobby as u32,
-                "bot_in_all_groups": ["SpectateLobby"],
-                "rate_limit_cooldown_millis": 2 * 24 * 60 * 60 * 1000 / 50,
-                "job_cooldown_millis": 24 * 60 * 60 * 1000 / 50,
-                "soft_cooldown_millis": 24 * 60 * 60 * 1000 / 50,
-                "data": BASE64_STANDARD.encode(data),
-            }))
-            .send()
-            .await?;
+            .proxy
+            .call_raw(
+                EgcCitadelClientMessages::KEMsgClientToGcSpectateLobby,
+                &spectate_message,
+                SteamProxyOptions {
+                    in_all_groups: Some(&["SpectateLobby"]),
+                    in_any_groups: None,
+                    cooldown: SPECTATE_JOB_COOLDOWN,
+                    soft_cooldown: Some(SPECTATE_JOB_COOLDOWN),
+                    // The shared HTTP client's timeout, which applied before.
+                    request_timeout: Duration::from_mins(1),
+                    username: None,
+                },
+            )
+            .await;
 
-        match response.status() {
-            StatusCode::OK => {
-                let body: InvokeResponse = response.json().await?;
-                let buf = BASE64_STANDARD.decode(body.data)?;
-                let spectate_response =
-                    CMsgClientToGcSpectateLobbyResponse::decode(buf.as_slice())?;
+        match response {
+            Ok(body) => {
+                let spectate_response: CMsgClientToGcSpectateLobbyResponse =
+                    body.decode::<_, SteamProxyError>()?;
 
                 let Some(ref res) = spectate_response.result else {
                     warn!("[{label} {match_id}] No result in response");
@@ -360,7 +342,9 @@ impl SpectatorBot {
                     None,
                 );
                 Span::current().record("account", &body.username);
-                Span::current().record("ready_bots", body.pool_limit_info.ready_bots);
+                if let Some(pool) = body.pool_limit_info {
+                    Span::current().record("ready_bots", pool.ready_bots);
+                }
 
                 let did_succeed = match result {
                     EResponse::KESuccess => {
@@ -401,21 +385,23 @@ impl SpectatorBot {
                 Ok(did_succeed)
             }
 
-            StatusCode::TOO_MANY_REQUESTS => {
+            Err(SteamProxyError::Cooldown { .. }) => {
                 warn!("Got proxy rate limit, waiting 10s before continuing");
                 sleep(Duration::from_secs(10)).await;
 
                 Ok(false)
             }
-            _ => {
-                warn!(
-                    "[{label}] {match_id} Failed to spectate match: {:?}",
-                    response.status()
-                );
+            Err(
+                e @ (SteamProxyError::NoAliveBots(_)
+                | SteamProxyError::Failed(..)
+                | SteamProxyError::Rejected(..)),
+            ) => {
+                warn!("[{label}] {match_id} Failed to spectate match: {e}");
                 self.mark_failed_locally(match_id);
                 sleep(ERROR_COOLDOWN).await;
                 Ok(false)
             }
+            Err(e) => Err(e.into()),
         }
     }
 

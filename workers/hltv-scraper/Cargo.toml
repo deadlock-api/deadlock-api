@@ -6,7 +6,6 @@ edition = "2024"
 [dependencies]
 async-compression = { workspace = true, features = ["tokio", "bzip2", "zstd"] }
 axum = "0.8.9"
-base64 = { workspace = true }
 bytes = { workspace = true }
 cached = { workspace = true, features = ["async"] }
 clap = { workspace = true, features = ["env"] }
@@ -27,6 +26,7 @@ redis = { workspace = true }
 reqwest = { workspace = true, features = ["json"] }
 serde = { workspace = true }
 serde_json = { workspace = true }
+steam-proxy = { workspace = true }
 strum = { version = "0.28.0", features = ["derive"] }
 thiserror = { workspace = true }
 tokio = { workspace = true }
