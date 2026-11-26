@@ -205,6 +205,7 @@ impl FieldInfo {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::assert_matches;
 
     #[test]
     fn test_build_simple_schema() {
@@ -295,9 +296,9 @@ mod tests {
         // One entity field, two columns, keyed at the base, materialized as a dynamic list.
         assert_eq!(schema.field_keys, vec![42]);
         assert_eq!(schema.field_column_counts, vec![2]);
-        assert!(matches!(
+        assert_matches!(
             schema.field_kinds.as_slice(),
             [FieldKind::DynList { extracts, .. }] if extracts.len() == 2
-        ));
+        );
     }
 }

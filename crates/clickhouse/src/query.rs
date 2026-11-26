@@ -646,6 +646,7 @@ fn invalid_params(message: impl Into<String>) -> Error {
 #[cfg(test)]
 mod multipart_tests {
     use super::*;
+    use core::assert_matches;
     use core::fmt::Write as _;
 
     fn boundary(multipart: &MultipartQueryBody) -> &str {
@@ -754,7 +755,7 @@ mod multipart_tests {
                 let mut body = b"existing field\r\n".to_vec();
                 let original = body.clone();
                 let error = append_multipart_field(&mut body, &boundary, name, &value).unwrap_err();
-                assert!(matches!(error, Error::InvalidParams(_)));
+                assert_matches!(error, Error::InvalidParams(_));
                 assert_eq!(body, original);
             }
         }
@@ -814,6 +815,7 @@ mod multipart_tests {
 mod transport_tests {
     use super::*;
     use crate::test;
+    use core::assert_matches;
 
     fn parse_multipart_fields(request: &Request<Bytes>) -> Vec<(String, Vec<u8>)> {
         let content_type = request
@@ -1029,10 +1031,7 @@ mod transport_tests {
                 .execute()
                 .await
                 .unwrap_err();
-            assert!(
-                matches!(error, Error::InvalidParams(_)),
-                "{suffix:?}: {error:?}"
-            );
+            assert_matches!(error, Error::InvalidParams(_), "{suffix:?}");
         }
 
         for (name, value) in [("invalid header", "value"), ("X-Test", "bad\nvalue")] {
@@ -1047,10 +1046,7 @@ mod transport_tests {
                 .execute()
                 .await
                 .unwrap_err();
-            assert!(
-                matches!(error, Error::InvalidParams(_)),
-                "{name:?}: {error:?}"
-            );
+            assert_matches!(error, Error::InvalidParams(_), "{name:?}");
         }
     }
 

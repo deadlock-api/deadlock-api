@@ -110,6 +110,7 @@ mod tests {
     use crate::compression::test_util::test_decoder;
     use crate::error::Error;
     use bytes::Bytes;
+    use core::assert_matches;
     use core::pin::Pin;
     use core::task::{Context, Poll, Waker};
     use futures_util::stream::{self, Stream as _};
@@ -158,7 +159,7 @@ mod tests {
                     Poll::Pending => panic!("immediately ready frame chunks returned Pending"),
                 }
             };
-            assert!(matches!(error, Error::Decompression(_)));
+            assert_matches!(error, Error::Decompression(_));
             assert!(
                 error.to_string().contains(expected),
                 "unexpected error at split {split}: {error}"
@@ -245,7 +246,7 @@ mod tests {
         let payload_end = 7 + 4 + payload.len();
         let mut decoder = super::frame::Lz4FramePushDecoder::new();
         decoder.push(Bytes::copy_from_slice(&independent[..payload_end]));
-        assert!(matches!(decoder.drain().unwrap(), ControlFlow::Continue(4)));
+        assert_matches!(decoder.drain().unwrap(), ControlFlow::Continue(4));
 
         decoder.push(Bytes::copy_from_slice(
             &independent[payload_end..payload_end + 4],
@@ -254,10 +255,10 @@ mod tests {
             panic!("complete raw block checksum must permit its payload");
         };
         assert_eq!(chunk.data.as_ref(), payload.as_slice());
-        assert!(matches!(decoder.drain().unwrap(), ControlFlow::Continue(4)));
+        assert_matches!(decoder.drain().unwrap(), ControlFlow::Continue(4));
 
         decoder.push(Bytes::copy_from_slice(&independent[payload_end + 4..]));
-        assert!(matches!(decoder.drain().unwrap(), ControlFlow::Continue(_)));
+        assert_matches!(decoder.drain().unwrap(), ControlFlow::Continue(_));
         decoder.finish().unwrap();
 
         let frame = http_frame(0x50, 0x40, &[(b"hello", true), (b"world", true)]);

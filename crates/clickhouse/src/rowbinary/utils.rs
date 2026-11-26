@@ -69,10 +69,7 @@ fn it_rejects_unsigned_leb128_overflow() {
         let mut buf = vec![0xFFu8; 9];
         buf.push(last_byte);
 
-        assert!(matches!(
-            get_unsigned_leb128(buf.as_slice()),
-            Err(Error::Custom(_))
-        ));
+        core::assert_matches!(get_unsigned_leb128(buf.as_slice()), Err(Error::Custom(_)));
     }
 }
 
@@ -80,8 +77,8 @@ fn it_rejects_unsigned_leb128_overflow() {
 fn it_rejects_truncated_unsigned_leb128() {
     let buf = vec![0xFFu8; 9];
 
-    assert!(matches!(
+    core::assert_matches!(
         get_unsigned_leb128(buf.as_slice()),
         Err(Error::NotEnoughData)
-    ));
+    );
 }

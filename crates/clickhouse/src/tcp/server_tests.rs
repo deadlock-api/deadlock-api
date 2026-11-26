@@ -8,6 +8,7 @@ use crate::native::{Block, block_encoder, to_row_binary, varuint};
 use crate::tcp::connection::{Connection, Hello, HelloAuth, QueryPacket, ServerPacket};
 use crate::tcp::protocol::{self, CLIENT_REVISION, ClientInfo};
 use bytes::BytesMut;
+use core::assert_matches;
 use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _, DuplexStream};
 
 pub(super) struct Server {
@@ -251,7 +252,7 @@ async fn parameters_need_a_new_server() {
     let error = conn
         .write_query(&query("SELECT {x:UInt8}", &[("x", "1")]))
         .unwrap_err();
-    assert!(matches!(error, Error::Unsupported(_)), "{error:?}");
+    assert_matches!(error, Error::Unsupported(_));
 }
 
 #[tokio::test]
@@ -447,7 +448,7 @@ async fn nested_exception_and_reuse() {
         message.contains("Code: 1000. Poco::Exception: inner. (POCO_EXCEPTION)"),
         "{message}"
     );
-    assert!(matches!(second, ServerPacket::Pong));
+    assert_matches!(second, ServerPacket::Pong);
 }
 
 #[tokio::test]
@@ -456,7 +457,7 @@ async fn corrupted_data_is_an_error() {
 
     // Unknown packet type
     let ((), result) = tokio::join!(server.write(&[99]), conn.read_packet(false));
-    assert!(matches!(result, Err(Error::BadResponse(_))));
+    assert_matches!(result, Err(Error::BadResponse(_)));
 
     // A string longer than the limit
     let (mut conn, mut server) = connect(CLIENT_REVISION).await;
@@ -464,15 +465,12 @@ async fn corrupted_data_is_an_error() {
     varuint(&mut packet, 17);
     varuint(&mut packet, 1 << 40);
     let ((), result) = tokio::join!(server.write(&packet), conn.read_packet(false));
-    assert!(matches!(result, Err(Error::BadResponse(_))));
+    assert_matches!(result, Err(Error::BadResponse(_)));
 
     // The connection is closed in the middle of a packet
     let (mut conn, server) = connect(CLIENT_REVISION).await;
     drop(server);
-    assert!(matches!(
-        conn.read_packet(false).await,
-        Err(Error::Network(_))
-    ));
+    assert_matches!(conn.read_packet(false).await, Err(Error::Network(_)));
 }
 
 #[cfg(feature = "lz4")]

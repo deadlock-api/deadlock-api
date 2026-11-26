@@ -7,6 +7,8 @@ disallowed-macros = [
     { path = "std::debug_assert", reason = "panics in debug builds; return an error instead" },
     { path = "std::debug_assert_eq", reason = "panics in debug builds; return an error instead" },
     { path = "std::debug_assert_ne", reason = "panics in debug builds; return an error instead" },
+    { path = "std::assert_matches", reason = "panics; return an error instead" },
+    { path = "std::debug_assert_matches", reason = "panics in debug builds; return an error instead" },
 ]
 disallowed-methods = [
     { path = "std::vec::Vec::insert", reason = "panics when index > len" },

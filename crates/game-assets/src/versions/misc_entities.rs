@@ -606,6 +606,7 @@ pub async fn fetch_misc_entities(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::assert_matches;
 
     fn fixture() -> String {
         let manifest = env!("CARGO_MANIFEST_DIR");
@@ -721,13 +722,13 @@ mod tests {
         assert_eq!(snack_spawner.spawn_delay, Some(180.0));
         assert_eq!(snack_spawner.respawn_time, Some(180.0));
         let snack = get("citadel_pickup_health_float_in_world");
-        assert!(matches!(
+        assert_matches!(
             snack.regen_max_health_percent,
             Some(CurveOrFloat::Curve(Curve {
                 base: Some(10.0),
                 ..
             }))
-        ));
+        );
         assert_eq!(snack.regen_duration, Some(4.0));
         assert_eq!(snack.regen_duration_troopers, Some(8.0));
         assert_eq!(snack.collection_method.as_deref(), Some("VacuumTrigger"));

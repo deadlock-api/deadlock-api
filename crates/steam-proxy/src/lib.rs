@@ -330,6 +330,7 @@ impl SteamProxyClient {
 
 #[cfg(test)]
 mod tests {
+    use core::assert_matches;
     use valveprotos::deadlock::CMsgClientToGcGetMatchMetaData;
 
     use super::*;
@@ -379,26 +380,23 @@ mod tests {
             StatusCode::TOO_MANY_REQUESTS,
             r#"{"message": "busy", "pool_limit_info": {"wait_for_millis": 2300}}"#.to_owned(),
         );
-        assert!(matches!(
+        assert_matches!(
             cooldown,
             SteamProxyError::Cooldown { ref message, wait_for: Some(w) }
                 if message == "busy" && w == Duration::from_millis(2300)
-        ));
+        );
         assert!(!cooldown.is_retryable());
-        assert!(matches!(
+        assert_matches!(
             SteamProxyError::from_status(StatusCode::SERVICE_UNAVAILABLE, "down".to_owned()),
             SteamProxyError::NoAliveBots(m) if m == "down"
-        ));
+        );
         let failed = SteamProxyError::from_status(StatusCode::BAD_GATEWAY, String::new());
-        assert!(matches!(
-            failed,
-            SteamProxyError::Failed(StatusCode::BAD_GATEWAY, _)
-        ));
+        assert_matches!(failed, SteamProxyError::Failed(StatusCode::BAD_GATEWAY, _));
         assert!(failed.is_retryable());
-        assert!(matches!(
+        assert_matches!(
             SteamProxyError::from_status(StatusCode::UNAUTHORIZED, "no".to_owned()),
             SteamProxyError::Rejected(StatusCode::UNAUTHORIZED, m) if m == "no"
-        ));
+        );
     }
 
     #[tokio::test]
@@ -418,6 +416,6 @@ mod tests {
                 },
             )
             .await;
-        assert!(matches!(result, Err(SteamProxyError::NoProxyUrl)));
+        assert_matches!(result, Err(SteamProxyError::NoProxyUrl));
     }
 }

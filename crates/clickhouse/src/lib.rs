@@ -988,6 +988,7 @@ mod client_tests {
     use crate::row_metadata::{AccessType, RowMetadata};
     use crate::{Authentication, Client, Compression, Row};
     use clickhouse_types::{Column, DataTypeNode};
+    use core::assert_matches;
 
     #[test]
     fn it_can_use_credentials_auth() {
@@ -1067,9 +1068,10 @@ mod client_tests {
     #[track_caller]
     fn assert_config_error(client: &Client, expected: &str) {
         let err = client.check_transport().unwrap_err();
-        assert!(
-            matches!(&err, crate::error::Error::InvalidParams(msg) if msg.to_string() == expected),
-            "unexpected error: {err:?}"
+        assert_matches!(
+            &err,
+            crate::error::Error::InvalidParams(msg) if msg.to_string() == expected,
+            "expected {expected:?}"
         );
     }
 

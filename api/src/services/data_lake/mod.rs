@@ -140,6 +140,7 @@ impl Drop for Snapshot {
     }
 }
 
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct QueryOutput {
     pub(crate) schema: SchemaRef,
     /// At most the `max_rows` the query ran with, and about `MAX_RESULT_BYTES`.
@@ -710,6 +711,7 @@ fn check_cancelled(cancelled: &AtomicBool) -> Result<(), QueryError> {
 
 #[cfg(test)]
 mod tests {
+    use core::assert_matches;
     use duckdb::arrow::array::AsArray as _;
     use duckdb::arrow::datatypes::Int64Type;
 
@@ -780,7 +782,7 @@ mod tests {
         // Waits for the query to drop the snapshot and its directory, but not forever for a
         // query that was never interrupted.
         runtime.shutdown_timeout(Duration::from_secs(10));
-        assert!(matches!(result, Err(QueryError::Cancelled)));
+        assert_matches!(result, Err(QueryError::Cancelled));
         assert!(released, "the cancelled query kept its slot");
     }
 
@@ -799,7 +801,7 @@ mod tests {
     fn a_cancelled_query_runs_no_further_statement() {
         let conn = Connection::open_in_memory().unwrap();
         let result = run_cancellable_query(&conn, ENDLESS_QUERY, MAX_ROWS, &AtomicBool::new(true));
-        assert!(matches!(result, Err(QueryError::Cancelled)));
+        assert_matches!(result, Err(QueryError::Cancelled));
     }
 
     #[tokio::test]
@@ -809,7 +811,7 @@ mod tests {
         cancel.cancel();
         // Without the cancellation the query would be turned away as busy after waiting.
         let result = catalog.query("SELECT 1".to_owned(), MAX_ROWS, cancel).await;
-        assert!(matches!(result, Err(QueryError::Cancelled)));
+        assert_matches!(result, Err(QueryError::Cancelled));
     }
 
     #[test]
@@ -1006,10 +1008,10 @@ mod tests {
     #[test]
     fn multiple_statements_are_rejected() {
         let conn = Connection::open_in_memory().unwrap();
-        assert!(matches!(
+        assert_matches!(
             run_query(&conn, "SELECT 1; SELECT 2"),
             Err(QueryError::MultipleStatements)
-        ));
+        );
     }
 
     #[test]

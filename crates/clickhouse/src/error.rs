@@ -182,6 +182,7 @@ impl Error {
 #[cfg(test)]
 mod tests {
     use crate::error::Error;
+    use core::assert_matches;
     use std::io;
 
     #[test]
@@ -196,7 +197,7 @@ mod tests {
 
         // io::Error -> Error
         let orig = Error::from(io);
-        assert!(matches!(orig, Error::NotEnoughData));
+        assert_matches!(orig, Error::NotEnoughData);
     }
 
     #[test]

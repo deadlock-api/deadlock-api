@@ -140,6 +140,7 @@ mod tests {
     use crate::compression::zstd::{ZSTD_MAGIC, ZstdHttpDecoder, compress};
     use crate::error::Error;
     use bytes::Bytes;
+    use core::assert_matches;
     use core::pin::Pin;
     use core::task::{Context, Poll, Waker};
     use futures_util::{Stream as _, stream};
@@ -180,10 +181,7 @@ mod tests {
             let halves = <[&[u8]; 2]>::from(compressed.split_at(split));
             let error = decode_http_zstd(&halves)
                 .expect_err("malformed ZSTD frame must be rejected after draining to EOF");
-            assert!(
-                matches!(error, Error::Decompression(_)),
-                "unexpected error at split {split}: {error}"
-            );
+            assert_matches!(error, Error::Decompression(_), "at split {split}");
         }
     }
 
