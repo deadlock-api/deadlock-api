@@ -68,6 +68,8 @@ pub(crate) struct AppStateInner {
     /// different deadline override it per request with `RequestBuilder::timeout`.
     pub(crate) http_client: reqwest::Client,
     pub(crate) s3_client: AmazonS3,
+    /// Read after `s3_client`, see `S3Config::archive_bucket`.
+    pub(crate) s3_archive_client: Option<AmazonS3>,
     pub(crate) file_cache: Option<LocalFileSystem>,
     pub(crate) r2_client: AmazonS3,
     pub(crate) redis_client: redis::aio::ConnectionManager,
@@ -111,6 +113,29 @@ impl AppState {
             &config.s3.endpoint,
             retry_config(Duration::from_secs(5)),
         )?;
+        let s3_archive_client = config
+            .s3
+            .archive_bucket
+            .as_ref()
+            .map(|bucket| {
+                s3_store(
+                    config
+                        .s3
+                        .archive_region
+                        .as_ref()
+                        .unwrap_or(&config.s3.region),
+                    bucket,
+                    &config.s3.access_key_id,
+                    &config.s3.secret_access_key,
+                    config
+                        .s3
+                        .archive_endpoint
+                        .as_ref()
+                        .unwrap_or(&config.s3.endpoint),
+                    retry_config(Duration::from_secs(5)),
+                )
+            })
+            .transpose()?;
 
         // The metadata file cache is optional: a missing directory (e.g. a lost mount) must not
         // take the API down, the reads only fall back to S3.
@@ -294,6 +319,7 @@ impl AppState {
             config,
             http_client,
             s3_client,
+            s3_archive_client,
             file_cache,
             r2_client,
             redis_client,

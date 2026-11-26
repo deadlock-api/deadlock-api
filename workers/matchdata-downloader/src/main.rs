@@ -291,9 +291,16 @@ async fn main() -> Result<(), Error> {
     let ch_client = db_clients::get_ch_client()?;
     let store: Arc<dyn ObjectStore> = Arc::new(db_clients::get_store()?);
     let cache_store: Arc<dyn ObjectStore> = Arc::new(db_clients::get_cache_store()?);
+    let archive_store: Option<Arc<dyn ObjectStore>> =
+        db_clients::get_archive_store()?.map(|s| -> Arc<dyn ObjectStore> { Arc::new(s) });
+    let stores = Stores {
+        main: store,
+        archive: archive_store,
+        cache: cache_store,
+    };
 
     if let Some(ref file_path) = cli.match_ids_file {
-        return download_from_file(&ch_client, &store, &cache_store, file_path).await;
+        return download_from_file(&ch_client, &stores, file_path).await;
     }
 
     let state = State::new();
@@ -305,7 +312,7 @@ async fn main() -> Result<(), Error> {
     let shutdown = service_utils::shutdown_token();
     while !shutdown.is_cancelled() {
         let started = tokio::time::Instant::now();
-        let pause = match run_iteration(&ch_client, &store, &cache_store, &state, &mut scan).await {
+        let pause = match run_iteration(&ch_client, &stores, &state, &mut scan).await {
             Ok(()) => {
                 if last_gc.elapsed() >= GC_INTERVAL && !shutdown.is_cancelled() {
                     last_gc = tokio::time::Instant::now();
@@ -330,10 +337,34 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
+/// The buckets a download touches.
+struct Stores {
+    /// Gets every upload (`ingest/`) and, from the ingest worker, `processed/`.
+    main: Arc<dyn ObjectStore>,
+    /// The previous main bucket (see [`db_clients::get_archive_store`]): its `processed/` still
+    /// counts as downloaded, nothing is written to it.
+    archive: Option<Arc<dyn ObjectStore>>,
+    cache: Arc<dyn ObjectStore>,
+}
+
+impl Stores {
+    async fn process_batch(
+        &self,
+        salts: &[MatchCandidates],
+    ) -> Vec<(u64, Result<Option<MatchSalts>, DownloadError>)> {
+        process_batch(
+            self.main.as_ref(),
+            self.archive.as_deref(),
+            self.cache.as_ref(),
+            salts,
+        )
+        .await
+    }
+}
+
 async fn download_from_file(
     ch_client: &Client,
-    store: &Arc<dyn ObjectStore>,
-    cache_store: &Arc<dyn ObjectStore>,
+    stores: &Stores,
     file_path: &str,
 ) -> Result<(), Error> {
     let content = tokio::fs::read_to_string(file_path)
@@ -373,7 +404,7 @@ async fn download_from_file(
         match_ids.len().saturating_sub(salts.len()),
     );
 
-    let results = process_batch(store.as_ref(), cache_store.as_ref(), &salts).await;
+    let results = stores.process_batch(&salts).await;
     let failed = results.iter().filter(|(_, r)| r.is_err()).count();
     let verdicts = Verdicts {
         verified: results
@@ -404,8 +435,7 @@ struct Scan {
 )]
 async fn run_iteration(
     ch_client: &Client,
-    store: &Arc<dyn ObjectStore>,
-    cache_store: &Arc<dyn ObjectStore>,
+    stores: &Stores,
     state: &State,
     scan: &mut Scan,
 ) -> Result<(), Error> {
@@ -462,7 +492,7 @@ async fn run_iteration(
         to_fetch.len().saturating_sub(n_fresh),
     );
 
-    let results = process_batch(store.as_ref(), cache_store.as_ref(), &to_fetch).await;
+    let results = stores.process_batch(&to_fetch).await;
     stamp(
         ch_client,
         &handle_results(state, &to_fetch, results, unix_now()),
@@ -531,6 +561,7 @@ async fn collect_garbage(ch_client: &Client) -> Result<(), Error> {
 /// by position.
 async fn process_batch<B, C>(
     bucket: &B,
+    archive: Option<&B>,
     cache_bucket: &C,
     salts: &[MatchCandidates],
 ) -> Vec<(u64, Result<Option<MatchSalts>, DownloadError>)>
@@ -544,7 +575,7 @@ where
     futures::stream::iter(salts.iter())
         .take_until(shutdown.cancelled())
         .map(|s| async move {
-            let r = download_match(bucket, cache_bucket, s).await;
+            let r = download_match(bucket, archive, cache_bucket, s).await;
             match &r {
                 Ok(_) => gauge!("matchdata_downloader.matches_to_download").decrement(1),
                 Err(e) => error!(
@@ -736,9 +767,10 @@ impl State {
 
 /// Returns the candidate that produced the file, or `None` when the metadata was already in
 /// the bucket and no candidate was exercised.
-#[instrument(skip(bucket, cache_bucket))]
+#[instrument(skip(bucket, archive, cache_bucket))]
 async fn download_match<B, C>(
     bucket: &B,
+    archive: Option<&B>,
     cache_bucket: &C,
     salts: &MatchCandidates,
 ) -> Result<Option<MatchSalts>, DownloadError>
@@ -754,12 +786,18 @@ where
 
     // The ingest worker moves the file to `processed/`, so `ingest/` alone misses every match
     // that was ingested before a restart emptied [`State::uploaded`].
-    let (in_ingest, in_processed) = tokio::try_join!(
+    let (in_ingest, in_processed, in_archive) = tokio::try_join!(
         key_exists(bucket, &main_key),
         key_exists(bucket, &processed_key),
+        async {
+            match archive {
+                Some(archive) => key_exists(archive, &processed_key).await,
+                None => Ok(false),
+            }
+        },
     )
     .map_err(DownloadError::CheckExisting)?;
-    if in_ingest || in_processed {
+    if in_ingest || in_processed || in_archive {
         return Ok(None);
     }
 
@@ -1031,7 +1069,23 @@ mod tests {
             .await
             .unwrap();
 
-        let result = download_match(&bucket, &cache_bucket, &salts(1)).await;
+        let result = download_match(&bucket, None, &cache_bucket, &salts(1)).await;
+
+        assert!(matches!(result, Ok(None)), "{result:?}");
+    }
+
+    /// Matches ingested before the bucket switch are only in the archive's `processed/`.
+    #[tokio::test]
+    async fn a_match_in_the_archive_is_not_downloaded_again() {
+        let bucket = object_store::memory::InMemory::new();
+        let archive = object_store::memory::InMemory::new();
+        let cache_bucket = object_store::memory::InMemory::new();
+        archive
+            .put(&processed_metadata_key(1), PutPayload::from_static(b"meta"))
+            .await
+            .unwrap();
+
+        let result = download_match(&bucket, Some(&archive), &cache_bucket, &salts(1)).await;
 
         assert!(matches!(result, Ok(None)), "{result:?}");
     }

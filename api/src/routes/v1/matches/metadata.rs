@@ -229,6 +229,16 @@ async fn fetch_match_metadata_raw(
     {
         return Ok(data);
     }
+    // Matches ingested before the switch to `s3` are only in the archive bucket.
+    if let Some(archive) = &state.s3_archive_client
+        && let Some(data) =
+            fetch_salt_or_hltv(match_id, "processed/metadata/", "hetzner-archive", |key| {
+                fetch_from_s3(archive, key)
+            })
+            .await
+    {
+        return Ok(data);
+    }
 
     // If not in S3, fetch from Steam
     let salts = fetch_match_salts(state, rate_limit_key, match_id, is_custom, disable_steam)

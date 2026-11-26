@@ -53,7 +53,7 @@ fn build_s3_client(
         .build()?)
 }
 
-pub fn get_store() -> Result<impl object_store::ObjectStore, ClientError> {
+pub fn get_store() -> Result<object_store::aws::AmazonS3, ClientError> {
     build_s3_client(
         "S3_REGION",
         "S3_BUCKET_NAME",
@@ -61,6 +61,31 @@ pub fn get_store() -> Result<impl object_store::ObjectStore, ClientError> {
         "S3_SECRET_ACCESS_KEY",
         "S3_ENDPOINT_URL",
     )
+}
+
+/// The bucket filled before [`get_store`]'s, read as a fallback and never written.
+///
+/// A Hetzner bucket holds at most 50M objects, so a full one is kept for its `processed/`
+/// metadata while new files go to the next. Late uploads of old matches go to the new bucket too,
+/// so a match can be in either and readers try [`get_store`]'s first. `None` when
+/// `S3_ARCHIVE_BUCKET_NAME` is unset; `S3_ARCHIVE_ENDPOINT_URL` and `S3_ARCHIVE_REGION` default to
+/// the main bucket's, the credentials are always its.
+pub fn get_archive_store() -> Result<Option<object_store::aws::AmazonS3>, ClientError> {
+    let Ok(bucket) = env::var("S3_ARCHIVE_BUCKET_NAME") else {
+        return Ok(None);
+    };
+    let region = env::var("S3_ARCHIVE_REGION").or_else(|_| env::var("S3_REGION"))?;
+    let endpoint = env::var("S3_ARCHIVE_ENDPOINT_URL").or_else(|_| env::var("S3_ENDPOINT_URL"))?;
+    Ok(Some(
+        AmazonS3Builder::new()
+            .with_region(region)
+            .with_bucket_name(bucket)
+            .with_access_key_id(env::var("S3_ACCESS_KEY_ID")?)
+            .with_secret_access_key(env::var("S3_SECRET_ACCESS_KEY")?)
+            .with_endpoint(endpoint)
+            .with_allow_http(true)
+            .build()?,
+    ))
 }
 
 /// The R2 bucket with the versioned game assets, from the same `R2_*` variables as the API

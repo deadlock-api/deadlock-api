@@ -306,8 +306,10 @@ async fn main() -> Result<(), Error> {
     let store = Arc::new(db_clients::get_store()?);
 
     if let Some(ref file_path) = cli.reingest_file {
+        let archive = db_clients::get_archive_store()?;
         reingest_from_file(
             &*store,
+            archive.as_ref(),
             &ch_client,
             file_path,
             cli.reingest_parallelism,
@@ -577,8 +579,10 @@ const FAILED_PREFIX: &str = "failed/metadata";
 /// Concurrency for S3 moves after a successful batch flush.
 const POST_FLUSH_MOVE_CONCURRENCY: usize = 16;
 
-async fn reingest_from_file(
-    store: &impl ObjectStore,
+/// `archive` is searched after `store`, see [`db_clients::get_archive_store`].
+async fn reingest_from_file<S: ObjectStore>(
+    store: &S,
+    archive: Option<&S>,
     ch_client: &clickhouse::Client,
     file_path: &str,
     parallelism: usize,
@@ -616,7 +620,7 @@ async fn reingest_from_file(
                 if inserters.has_failed() {
                     return;
                 }
-                match fetch_and_parse_match(store, match_id).await {
+                match fetch_and_parse_match(store, archive, match_id).await {
                     Ok(parsed) => {
                         if inserters.insert(parsed).await.is_none() {
                             warn!("Batch inserters have shut down — stopping producers");
@@ -661,11 +665,12 @@ async fn reingest_from_file(
 }
 
 /// Fetch a match from S3, decompress, parse, and convert to ``ClickHouse`` types.
-async fn fetch_and_parse_match(
-    store: &impl ObjectStore,
+async fn fetch_and_parse_match<S: ObjectStore>(
+    store: &S,
+    archive: Option<&S>,
     match_id: &str,
 ) -> Result<ParsedMatch, IngestError> {
-    let obj = find_match_object(store, match_id).await?;
+    let obj = find_match_object(store, archive, match_id).await?;
 
     let data = obj.bytes().await?;
     Ok(decompress_and_parse(data, |m| build_parsed_match(&m)).await??)
@@ -721,17 +726,21 @@ fn build_ch_players(match_info: &MatchInfo) -> Vec<ClickhouseMatchPlayer> {
     rows
 }
 
-/// Try to find a match file in processed/ first, then failed/, across all known extensions.
-async fn find_match_object(
-    store: &impl ObjectStore,
+/// Try to find a match file in processed/ first, then failed/, across all known extensions, in
+/// `store` and then in `archive`.
+async fn find_match_object<S: ObjectStore>(
+    store: &S,
+    archive: Option<&S>,
     match_id: &str,
 ) -> Result<GetResult, IngestError> {
-    for folder in [PROCESSED_PREFIX, FAILED_PREFIX] {
-        for ext in MATCH_EXTENSIONS {
-            let path = Path::from(format!("{folder}/{match_id}{ext}"));
-            if let Ok(result) = store.get(&path).await {
-                debug!("Found match {match_id} at {path}");
-                return Ok(result);
+    for bucket in core::iter::once(store).chain(archive) {
+        for folder in [PROCESSED_PREFIX, FAILED_PREFIX] {
+            for ext in MATCH_EXTENSIONS {
+                let path = Path::from(format!("{folder}/{match_id}{ext}"));
+                if let Ok(result) = bucket.get(&path).await {
+                    debug!("Found match {match_id} at {path}");
+                    return Ok(result);
+                }
             }
         }
     }

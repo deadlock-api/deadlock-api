@@ -45,6 +45,18 @@ pub(super) struct S3Config {
     pub(super) access_key_id: String,
     pub(super) secret_access_key: String,
     pub(super) endpoint: String,
+    /// The previous metadata bucket (`S3_ARCHIVE_BUCKET`), read after `bucket` with the same
+    /// credentials: a Hetzner bucket holds at most 50M objects, so a full one keeps its
+    /// `processed/` files while new ones go to `bucket`. Late uploads of old matches go to
+    /// `bucket` too, so any match can be in either.
+    #[serde(default)]
+    pub(super) archive_bucket: Option<String>,
+    /// Defaults to `endpoint`.
+    #[serde(default)]
+    pub(super) archive_endpoint: Option<String>,
+    /// Defaults to `region`.
+    #[serde(default)]
+    pub(super) archive_region: Option<String>,
 }
 
 fn default_r2_region() -> String {
@@ -311,6 +323,37 @@ mod tests {
     struct Wrapper {
         #[serde(default)]
         live_query: LiveQueryConfig,
+    }
+
+    #[derive(Deserialize)]
+    struct S3Wrapper {
+        s3: S3Config,
+    }
+
+    #[test]
+    fn s3_archive_bucket_is_optional() {
+        let base = [
+            ("S3_BUCKET", "new"),
+            ("S3_ACCESS_KEY_ID", "k"),
+            ("S3_SECRET_ACCESS_KEY", "s"),
+            ("S3_ENDPOINT", "https://new.example"),
+        ];
+        let without: S3Wrapper = serde_env::from_iter(base).unwrap();
+        assert_eq!(without.s3.archive_bucket, None);
+
+        let with: S3Wrapper = serde_env::from_iter(base.into_iter().chain([
+            ("S3_ARCHIVE_BUCKET", "old"),
+            ("S3_ARCHIVE_ENDPOINT", "https://old.example"),
+            ("S3_ARCHIVE_REGION", "eu-old"),
+        ]))
+        .unwrap();
+        assert_eq!(with.s3.bucket, "new");
+        assert_eq!(with.s3.archive_bucket.as_deref(), Some("old"));
+        assert_eq!(
+            with.s3.archive_endpoint.as_deref(),
+            Some("https://old.example")
+        );
+        assert_eq!(with.s3.archive_region.as_deref(), Some("eu-old"));
     }
 
     #[test]
