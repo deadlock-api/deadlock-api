@@ -70,6 +70,8 @@ pub(crate) struct AppStateInner {
     pub(crate) s3_client: AmazonS3,
     /// Read after `s3_client`, see `S3Config::archive_bucket`.
     pub(crate) s3_archive_client: Option<AmazonS3>,
+    /// Match metadata files packed into the archive bucket, read before the loose objects.
+    pub(crate) metadata_packs: Option<metadata_packs::PackReader>,
     pub(crate) file_cache: Option<LocalFileSystem>,
     pub(crate) r2_client: AmazonS3,
     pub(crate) redis_client: redis::aio::ConnectionManager,
@@ -202,6 +204,16 @@ impl AppState {
         debug!("Loading feature flags");
         let feature_flags = FeatureFlags::load(pg_client.clone()).await;
 
+        // The packs live in the archive bucket (ordinal 0 in the index).
+        let metadata_packs = s3_archive_client.as_ref().map(|archive| {
+            let store: Arc<dyn object_store::ObjectStore> = Arc::new(archive.clone());
+            metadata_packs::PackReader::new(
+                metadata_packs::Index::new(pg_client.clone()),
+                vec![store],
+                metadata_packs::DEFAULT_PREFIX,
+            )
+        });
+
         // Create a Steam client
         debug!("Creating Steam client");
         let steam_client = SteamClient::new(
@@ -320,6 +332,7 @@ impl AppState {
             http_client,
             s3_client,
             s3_archive_client,
+            metadata_packs,
             file_cache,
             r2_client,
             redis_client,

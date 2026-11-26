@@ -15,6 +15,7 @@ db-clients = { workspace = true }
 service-utils = { workspace = true }
 telemetry = { workspace = true, features = ["prometheus"] }
 futures = { workspace = true }
+metadata-packs = { workspace = true }
 metrics = { workspace = true }
 mimalloc = { workspace = true }
 object_store = { workspace = true }

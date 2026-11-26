@@ -293,10 +293,19 @@ async fn main() -> Result<(), Error> {
     let cache_store: Arc<dyn ObjectStore> = Arc::new(db_clients::get_cache_store()?);
     let archive_store: Option<Arc<dyn ObjectStore>> =
         db_clients::get_archive_store()?.map(|s| -> Arc<dyn ObjectStore> { Arc::new(s) });
+    // A match in a pack counts as downloaded: its loose copy may be gone.
+    let index = match db_clients::get_pg_client().await {
+        Ok(pg) => Some(metadata_packs::Index::new(pg)),
+        Err(e) => {
+            warn!("No metadata pack index, checking only the buckets: {e}");
+            None
+        }
+    };
     let stores = Stores {
         main: store,
         archive: archive_store,
         cache: cache_store,
+        index,
     };
 
     if let Some(ref file_path) = cli.match_ids_file {
@@ -345,6 +354,8 @@ struct Stores {
     /// counts as downloaded, nothing is written to it.
     archive: Option<Arc<dyn ObjectStore>>,
     cache: Arc<dyn ObjectStore>,
+    /// The metadata pack index: a packed match counts as downloaded.
+    index: Option<metadata_packs::Index>,
 }
 
 impl Stores {
@@ -356,6 +367,7 @@ impl Stores {
             self.main.as_ref(),
             self.archive.as_deref(),
             self.cache.as_ref(),
+            self.index.as_ref(),
             salts,
         )
         .await
@@ -563,6 +575,7 @@ async fn process_batch<B, C>(
     bucket: &B,
     archive: Option<&B>,
     cache_bucket: &C,
+    index: Option<&metadata_packs::Index>,
     salts: &[MatchCandidates],
 ) -> Vec<(u64, Result<Option<MatchSalts>, DownloadError>)>
 where
@@ -575,7 +588,7 @@ where
     futures::stream::iter(salts.iter())
         .take_until(shutdown.cancelled())
         .map(|s| async move {
-            let r = download_match(bucket, archive, cache_bucket, s).await;
+            let r = download_match(bucket, archive, cache_bucket, index, s).await;
             match &r {
                 Ok(_) => gauge!("matchdata_downloader.matches_to_download").decrement(1),
                 Err(e) => error!(
@@ -767,11 +780,12 @@ impl State {
 
 /// Returns the candidate that produced the file, or `None` when the metadata was already in
 /// the bucket and no candidate was exercised.
-#[instrument(skip(bucket, archive, cache_bucket))]
+#[instrument(skip(bucket, archive, cache_bucket, index))]
 async fn download_match<B, C>(
     bucket: &B,
     archive: Option<&B>,
     cache_bucket: &C,
+    index: Option<&metadata_packs::Index>,
     salts: &MatchCandidates,
 ) -> Result<Option<MatchSalts>, DownloadError>
 where
@@ -783,6 +797,17 @@ where
     let processed_key = processed_metadata_key(salts.match_id);
     let outdated_hltv_key = outdated_hltv_metadata_key(salts.match_id);
     let outdated_cache_hltv_key = outdated_cache_hltv_metadata_key(salts.match_id);
+
+    if let Some(index) = index {
+        match index
+            .contains(salts.match_id, &[metadata_packs::Kind::Salt])
+            .await
+        {
+            Ok(true) => return Ok(None),
+            Ok(false) => {}
+            Err(e) => warn!("Pack index lookup failed, checking the buckets: {e}"),
+        }
+    }
 
     // The ingest worker moves the file to `processed/`, so `ingest/` alone misses every match
     // that was ingested before a restart emptied [`State::uploaded`].
@@ -1069,7 +1094,7 @@ mod tests {
             .await
             .unwrap();
 
-        let result = download_match(&bucket, None, &cache_bucket, &salts(1)).await;
+        let result = download_match(&bucket, None, &cache_bucket, None, &salts(1)).await;
 
         assert!(matches!(result, Ok(None)), "{result:?}");
     }
@@ -1085,7 +1110,7 @@ mod tests {
             .await
             .unwrap();
 
-        let result = download_match(&bucket, Some(&archive), &cache_bucket, &salts(1)).await;
+        let result = download_match(&bucket, Some(&archive), &cache_bucket, None, &salts(1)).await;
 
         assert!(matches!(result, Ok(None)), "{result:?}");
     }

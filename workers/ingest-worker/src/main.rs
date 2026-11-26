@@ -307,9 +307,28 @@ async fn main() -> Result<(), Error> {
 
     if let Some(ref file_path) = cli.reingest_file {
         let archive = db_clients::get_archive_store()?;
+        // Packed files live in the archive bucket; their loose copies may be gone.
+        let packs = match (&archive, db_clients::get_pg_client().await) {
+            (Some(archive), Ok(pg)) => {
+                let pack_store: Arc<dyn ObjectStore> = Arc::new(archive.clone());
+                Some(metadata_packs::PackReader::new(
+                    metadata_packs::Index::new(pg),
+                    vec![pack_store],
+                    metadata_packs::DEFAULT_PREFIX,
+                ))
+            }
+            (None, _) => None,
+            (Some(_), Err(e)) => {
+                warn!("No metadata pack index, reading only loose files: {e}");
+                None
+            }
+        };
         reingest_from_file(
-            &*store,
-            archive.as_ref(),
+            ReingestSources {
+                store: &*store,
+                archive: archive.as_ref(),
+                packs: packs.as_ref(),
+            },
             &ch_client,
             file_path,
             cli.reingest_parallelism,
@@ -580,9 +599,23 @@ const FAILED_PREFIX: &str = "failed/metadata";
 const POST_FLUSH_MOVE_CONCURRENCY: usize = 16;
 
 /// `archive` is searched after `store`, see [`db_clients::get_archive_store`].
+/// Where a re-ingest looks for a match's file: the packs, then `store`, then `archive`.
+struct ReingestSources<'a, S> {
+    store: &'a S,
+    archive: Option<&'a S>,
+    packs: Option<&'a metadata_packs::PackReader>,
+}
+
+impl<S> Clone for ReingestSources<'_, S> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<S> Copy for ReingestSources<'_, S> {}
+
 async fn reingest_from_file<S: ObjectStore>(
-    store: &S,
-    archive: Option<&S>,
+    sources: ReingestSources<'_, S>,
     ch_client: &clickhouse::Client,
     file_path: &str,
     parallelism: usize,
@@ -620,7 +653,7 @@ async fn reingest_from_file<S: ObjectStore>(
                 if inserters.has_failed() {
                     return;
                 }
-                match fetch_and_parse_match(store, archive, match_id).await {
+                match fetch_and_parse_match(sources, match_id).await {
                     Ok(parsed) => {
                         if inserters.insert(parsed).await.is_none() {
                             warn!("Batch inserters have shut down — stopping producers");
@@ -666,13 +699,18 @@ async fn reingest_from_file<S: ObjectStore>(
 
 /// Fetch a match from S3, decompress, parse, and convert to ``ClickHouse`` types.
 async fn fetch_and_parse_match<S: ObjectStore>(
-    store: &S,
-    archive: Option<&S>,
+    sources: ReingestSources<'_, S>,
     match_id: &str,
 ) -> Result<ParsedMatch, IngestError> {
-    let obj = find_match_object(store, archive, match_id).await?;
-
-    let data = obj.bytes().await?;
+    let data = match fetch_packed(sources.packs, match_id).await {
+        Some(data) => data,
+        None => {
+            find_match_object(sources.store, sources.archive, match_id)
+                .await?
+                .bytes()
+                .await?
+        }
+    };
     Ok(decompress_and_parse(data, |m| build_parsed_match(&m)).await??)
 }
 
@@ -724,6 +762,23 @@ fn build_ch_players(match_info: &MatchInfo) -> Vec<ClickhouseMatchPlayer> {
         .collect();
     set_enemy_hero_ids(&mut rows);
     rows
+}
+
+/// The packed file of `match_id`, in the order [`find_match_object`] looks for loose ones. A
+/// failed lookup is logged and read as a miss.
+async fn fetch_packed(
+    packs: Option<&metadata_packs::PackReader>,
+    match_id: &str,
+) -> Option<bytes::Bytes> {
+    let packs = packs?;
+    let id = match_id.parse().ok()?;
+    match packs.get(id, metadata_packs::Kind::ALL).await {
+        Ok(found) => found.map(|(data, _)| data),
+        Err(e) => {
+            warn!("[{match_id}] Reading the metadata packs failed: {e}");
+            None
+        }
+    }
 }
 
 /// Try to find a match file in processed/ first, then failed/, across all known extensions, in

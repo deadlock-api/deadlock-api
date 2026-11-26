@@ -79,6 +79,14 @@ flags! {
         "Rebuilds the Steam profile search index from `ClickHouse`.";
     DATA_DUMP: Job "data_dump" = true,
         "Exports the public data dump (needs `DATA_DUMP_ENABLED` as well).";
+    METADATA_PACKS_READ: Feature "metadata_packs_read" = true,
+        "Reads match metadata from the packs before the loose objects. Disabled, the packs are \
+         read after them: packed files whose loose copy was deleted stay readable.";
+    METADATA_PACKER: Job "metadata_packer" = false,
+        "Lets the metadata-packer worker pack loose match metadata files (read by the worker).";
+    METADATA_PACKER_DELETE: Job "metadata_packer_delete" = false,
+        "Lets the metadata-packer worker delete loose files once their pack is published \
+         (read by the worker).";
 }
 
 /// The table's view of a flag.

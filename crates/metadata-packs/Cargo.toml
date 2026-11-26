@@ -1,0 +1,24 @@
+[package]
+name = "metadata-packs"
+version = "0.1.0"
+edition = "2024"
+description = "Match metadata files packed into large immutable objects: the pack format, the Postgres index, the reader and the pack builder"
+
+[dependencies]
+bytes = { workspace = true }
+crc32fast = "1.5"
+futures = { workspace = true }
+md5 = { package = "md-5", version = "0.11" }
+metrics = { workspace = true }
+object_store = { workspace = true }
+sha2 = "0.11"
+sqlx = { workspace = true, features = ["postgres", "runtime-tokio", "time"] }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["time", "sync"] }
+tracing = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+
+[lints]
+workspace = true

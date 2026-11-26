@@ -23,7 +23,7 @@ use prost::Message as _;
 use serde::Deserialize;
 use tokio::io::AsyncReadExt as _;
 use tokio::sync::OnceCell;
-use tracing::{debug, error};
+use tracing::{debug, error, warn};
 use utoipa::IntoParams;
 use valveprotos::deadlock::{
     CMsgMatchMetaData, CMsgMatchMetaDataContents, CMsgMatchMetaDataContentsPatched,
@@ -33,6 +33,7 @@ use crate::context::AppState;
 use crate::error::{APIError, APIResult};
 use crate::routes::v1::matches::salts::{self, fetch_match_salts};
 use crate::services::ch_cost::TrackedQuery as _;
+use crate::services::feature_flags::METADATA_PACKS_READ;
 use crate::services::rate_limiter::extractor::RateLimitKey;
 use crate::services::rate_limiter::{DOCUMENTED_DEFAULT, Quota, RateLimit, Scope, describe};
 use crate::utils::sql::POINT_LOOKUP_MAX_THREADS;
@@ -221,7 +222,11 @@ async fn fetch_match_metadata_raw(
         .check(rate_limit_key, S3_RATE_LIMIT)
         .await?;
 
-    // If not in cache, fetch from S3
+    // If not in cache, fetch from the packs, then the loose objects in S3.
+    let packs_first = state.feature_flags.is_enabled(&METADATA_PACKS_READ);
+    if packs_first && let Some(data) = fetch_from_packs(state, match_id).await {
+        return Ok(data);
+    }
     if let Some(data) = fetch_salt_or_hltv(match_id, "processed/metadata/", "hetzner", |key| {
         fetch_from_s3(s3, key)
     })
@@ -239,6 +244,9 @@ async fn fetch_match_metadata_raw(
     {
         return Ok(data);
     }
+    if !packs_first && let Some(data) = fetch_from_packs(state, match_id).await {
+        return Ok(data);
+    }
 
     // If not in S3, fetch from Steam
     let salts = fetch_match_salts(state, rate_limit_key, match_id, is_custom, disable_steam)
@@ -254,6 +262,26 @@ async fn fetch_match_metadata_raw(
         Err(e) => {
             remember(&METADATA_FETCH_FAILURES, match_id).await;
             Err(e.into())
+        }
+    }
+}
+
+/// The packed salt file of `match_id`, else its hltv file. Errors (index or bucket) are logged and
+/// read as a miss, so the loose objects and Steam still get their turn.
+async fn fetch_from_packs(state: &AppState, match_id: u64) -> Option<Bytes> {
+    let packs = state.metadata_packs.as_ref()?;
+    match packs.get(match_id, metadata_packs::Kind::SERVED).await {
+        Ok(Some((data, kind))) => {
+            counter!("metadata.fetch", "s3" => "packs", "source" => kind.label()).increment(1);
+            Some(data)
+        }
+        Ok(None) => None,
+        Err(e) => {
+            warn!(
+                match_id,
+                "Reading match metadata from the packs failed: {e}"
+            );
+            None
         }
     }
 }
@@ -306,7 +334,8 @@ async fn parse_match_metadata_raw(raw_data: &[u8]) -> APIResult<CMsgMatchMetaDat
         "
 This endpoints returns the raw .meta.bz2 file for the given `match_id`.
 
-You have to decompress it and decode the protobuf message.
+You have to decompress it and decode the protobuf message. Despite the name, newer files are
+zstd-compressed: tell them apart by their magic bytes (`BZh` for bzip2, `28 b5 2f fd` for zstd).
 
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
 

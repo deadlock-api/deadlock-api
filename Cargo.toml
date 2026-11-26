@@ -14,6 +14,7 @@ members = [
     "workers/hltv-scraper",
     "workers/ingest-worker",
     "workers/matchdata-downloader",
+    "workers/metadata-packer",
     "workers/player-match-history",
     "workers/salt-scraper",
     "workers/steam-profile-fetcher",
@@ -30,6 +31,7 @@ assets-client = { path = "crates/assets-client" }
 clickhouse-utils = { path = "crates/clickhouse-utils" }
 crosshair = { path = "crates/crosshair" }
 db-clients = { path = "crates/db-clients" }
+metadata-packs = { path = "crates/metadata-packs" }
 demofusion = { path = "crates/demofusion" }
 game-assets = { path = "crates/game-assets" }
 keyvalues = { path = "crates/keyvalues" }

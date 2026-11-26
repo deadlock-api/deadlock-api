@@ -1,0 +1,25 @@
+[package]
+name = "metadata-packer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bytes = { workspace = true }
+clap = { workspace = true }
+db-clients = { workspace = true }
+futures = { workspace = true }
+md5 = { package = "md-5", version = "0.11" }
+metadata-packs = { workspace = true }
+metrics = { workspace = true }
+mimalloc = { workspace = true }
+object_store = { workspace = true }
+service-utils = { workspace = true }
+sqlx = { workspace = true, features = ["postgres", "runtime-tokio"] }
+telemetry = { workspace = true, features = ["prometheus"] }
+thiserror = { workspace = true }
+tokio = { workspace = true, features = ["time", "sync"] }
+tokio-util = { workspace = true }
+tracing = { workspace = true }
+
+[lints]
+workspace = true

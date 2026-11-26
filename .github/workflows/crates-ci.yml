@@ -40,7 +40,7 @@ jobs:
     uses: ./.github/workflows/rust-checks.yml
     with:
       packages: >-
-        assets-client clickhouse clickhouse-macros clickhouse-types clickhouse-utils crosshair db-clients demofusion game-assets keyvalues rate-limit
+        assets-client clickhouse clickhouse-macros clickhouse-types clickhouse-utils crosshair db-clients demofusion game-assets keyvalues metadata-packs rate-limit
         service-utils steam-id steam-proxy telemetry valveprotos
         haste haste_core haste_broadcast haste_vartype
         dungers dungers_bitbuf dungers_charsor dungers_varint

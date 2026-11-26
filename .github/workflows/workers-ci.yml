@@ -45,7 +45,7 @@ jobs:
     with:
       packages: >-
         active-matches-scraper builds-fetcher demo-analyzer
-        history-fetcher hltv-scraper ingest-worker matchdata-downloader player-match-history salt-scraper
+        history-fetcher hltv-scraper ingest-worker matchdata-downloader metadata-packer player-match-history salt-scraper
         steam-profile-fetcher update-assets-tables
       paths: workers
       typos-paths: workers
@@ -84,7 +84,8 @@ jobs:
       # Deployed components: each one pulls the base image under its own name.
       COMPONENTS: >-
         active-matches-scraper builds-fetcher demo-analyzer history-fetcher hltv-scraper
-        ingest-worker matchdata-downloader salt-scraper steam-profile-fetcher update-assets-tables
+        ingest-worker matchdata-downloader metadata-packer salt-scraper steam-profile-fetcher
+        update-assets-tables
       # Everything every worker builds on.
       SHARED_PATHS: >-
         crates/** .sqlx/** workers/player-match-history/**
