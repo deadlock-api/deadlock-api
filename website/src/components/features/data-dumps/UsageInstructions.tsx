@@ -25,7 +25,14 @@ WHERE match_id BETWEEN 105000000 AND 105100000
 GROUP BY ALL ORDER BY games DESC;
 
 -- A row can appear twice (base + newer delta). match_player_latest keeps the newest per (match_id, account_id).
-SELECT * FROM lake.match_player_latest WHERE match_id = 105000042;`;
+SELECT * FROM lake.match_player_latest WHERE match_id = 105000042;
+
+-- lake.assets.* are views over the live asset API (heroes, items, ranks, ranked_seasons, accolades, ...),
+-- read on every query, so ids resolve to names without a download step.
+SELECT h.name AS hero, count(*) AS games
+FROM lake.match_player AS p JOIN lake.assets.heroes AS h ON h.id = p.hero_id
+WHERE p.match_id BETWEEN 105000000 AND 105100000
+GROUP BY ALL ORDER BY games DESC;`;
 
 const MANIFEST_EXAMPLE = `# ${MANIFEST_URL}
 # Every table lists the parquet files readers should union (all URLs are plain HTTPS).

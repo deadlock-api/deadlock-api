@@ -16,8 +16,8 @@ use std::path::{Path, PathBuf};
 use duckdb::{Config, Connection, params};
 use tracing::warn;
 
-use super::DumpError;
 use super::manifest::{FileKind, Manifest, PolicyKind, TableState, TableStatus};
+use super::{DumpError, asset_views};
 
 fn sql_str(s: &str) -> String {
     format!("'{}'", s.replace('\'', "''"))
@@ -113,6 +113,7 @@ pub(crate) fn build(
     for (name, table) in ready {
         register_table(&conn, name, table, source)?;
     }
+    asset_views::register(&conn)?;
     conn.execute_batch("DETACH lake;")?;
     conn.close().map_err(|(_, e)| e)?;
 

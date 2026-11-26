@@ -33,6 +33,7 @@ use crate::context::DataDumpConfig;
 use crate::services::feature_flags::{DATA_DUMP, FeatureFlags};
 use crate::services::protected_accounts::update_row_policy;
 
+mod asset_views;
 pub(crate) mod catalog;
 mod checkpoint;
 mod compaction;
