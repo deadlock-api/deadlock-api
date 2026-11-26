@@ -11,11 +11,13 @@ use utoipa::ToSchema;
 #[serde(rename_all = "snake_case")]
 #[graphql(complex, rename_fields = "snake_case")]
 pub(crate) struct BuildHeroDetailsCategoryAbility {
+    #[graphql(skip)]
     pub(crate) ability_id: u32,
     annotation: Option<String>,
     required_flex_slots: Option<u32>,
     sell_priority: Option<u32>,
-    imbue_target_ability_id: Option<u32>,
+    #[graphql(skip)]
+    pub(crate) imbue_target_ability_id: Option<u32>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, ToSchema, SimpleObject)]
@@ -34,6 +36,7 @@ struct BuildHeroDetailsCategory {
 #[serde(rename_all = "snake_case")]
 #[graphql(complex, rename_fields = "snake_case")]
 pub(crate) struct BuildHeroDetailsAbilityOrderCurrencyChange {
+    #[graphql(skip)]
     pub(crate) ability_id: u32,
     currency_type: i32,
     delta: i32,

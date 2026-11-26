@@ -33,6 +33,8 @@
 )]
 
 pub mod client;
+#[cfg(feature = "graphql")]
+pub mod graphql;
 pub mod index;
 pub mod types;
 pub mod versions;

@@ -457,4 +457,45 @@ mod tests {
         assert!(sdl.contains("match_salts("));
         assert!(sdl.contains("salts:")); // Match / MatchPlayer.salts enrichment
     }
+
+    /// Item and ability ids reach `u32::MAX`, past GraphQL's signed 32-bit `Int` (#732).
+    #[test]
+    fn item_and_ability_ids_are_uint32() {
+        let sdl = build_schema().sdl();
+        let field_type = |ty: &str, field: &str| {
+            let body = sdl
+                .split_once(&format!("type {ty} {{"))
+                .and_then(|(_, rest)| rest.split_once('}'))
+                .unwrap_or_else(|| panic!("no type {ty}"))
+                .0;
+            body.lines()
+                .find_map(|l| l.trim().strip_prefix(&format!("{field}: ")))
+                .unwrap_or_else(|| panic!("no field {ty}.{field}"))
+                .to_owned()
+        };
+        for (ty, field, expected) in [
+            ("MatchPlayer", "abilities", "[UInt32!]"),
+            ("Item", "item_id", "UInt32"),
+            ("Item", "upgrade_id", "UInt32"),
+            ("Item", "imbued_ability_id", "UInt32"),
+            ("UpgradePurchase", "item_id", "UInt32"),
+            ("HeroPopularItem", "item_id", "UInt32!"),
+            ("Ability", "id", "UInt32!"),
+            ("Weapon", "id", "UInt32!"),
+            ("Upgrade", "id", "UInt32!"),
+            ("BuildHeroDetailsCategoryAbility", "ability_id", "UInt32!"),
+            (
+                "BuildHeroDetailsCategoryAbility",
+                "imbue_target_ability_id",
+                "UInt32",
+            ),
+            (
+                "BuildHeroDetailsAbilityOrderCurrencyChange",
+                "ability_id",
+                "UInt32!",
+            ),
+        ] {
+            assert_eq!(field_type(ty, field), expected, "{ty}.{field}");
+        }
+    }
 }

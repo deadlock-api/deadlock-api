@@ -28,6 +28,8 @@ pub enum StartupError {
     IO(#[from] std::io::Error),
     #[error("Load app state error: {0}")]
     AppState(#[from] AppStateError),
+    #[error("OpenAPI spec serialization error: {0}")]
+    OpenApi(#[from] serde_json::Error),
 }
 
 #[derive(Debug, Error)]

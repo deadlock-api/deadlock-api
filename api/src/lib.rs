@@ -240,9 +240,11 @@ pub async fn router(port: u16) -> Result<NormalizePath<Router>, StartupError> {
     api_doc::fill_missing_response_descriptions(&mut api);
     state.feature_flags.register_routes(&api).await;
 
+    let mut spec = serde_json::to_value(&api)?;
+    api_doc::normalize_integer_formats(&mut spec);
     let docs = Router::new()
-        .merge(Scalar::with_url("/docs", api.clone()).custom_html(api_doc::SCALAR_HTML))
-        .route("/openapi.json", get(|| async { Json(api) }))
+        .merge(Scalar::with_url("/docs", spec.clone()).custom_html(api_doc::SCALAR_HTML))
+        .route("/openapi.json", get(|| async { Json(spec) }))
         .layer(cors::public());
     let router = router.with_state(state).merge(docs).fallback(unknown_route);
     Ok(NormalizePathLayer::trim_trailing_slash().layer(router))

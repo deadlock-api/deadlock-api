@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 use async_graphql::dataloader::{DataLoader, Loader};
 use async_graphql::{ComplexObject, Context, InputObject, Result as GqlResult};
+use game_assets::graphql::UInt32;
 use game_assets::versions::heroes::Hero;
 use game_assets::versions::items::Item as AssetItem;
 use sqlx::{Pool, Postgres, QueryBuilder};
@@ -171,6 +172,14 @@ impl BuildHero {
 
 #[ComplexObject(rename_fields = "snake_case")]
 impl BuildHeroDetailsCategoryAbility {
+    async fn ability_id(&self) -> UInt32 {
+        UInt32(self.ability_id)
+    }
+
+    async fn imbue_target_ability_id(&self) -> Option<UInt32> {
+        self.imbue_target_ability_id.map(UInt32)
+    }
+
     /// Catalog asset for this build slot's `ability_id`.
     async fn asset(&self, ctx: &Context<'_>) -> GqlResult<Option<AssetItem>> {
         find_item(ctx, self.ability_id).await
@@ -179,6 +188,10 @@ impl BuildHeroDetailsCategoryAbility {
 
 #[ComplexObject(rename_fields = "snake_case")]
 impl BuildHeroDetailsAbilityOrderCurrencyChange {
+    async fn ability_id(&self) -> UInt32 {
+        UInt32(self.ability_id)
+    }
+
     /// Catalog asset for this currency change's `ability_id`.
     async fn asset(&self, ctx: &Context<'_>) -> GqlResult<Option<AssetItem>> {
         find_item(ctx, self.ability_id).await

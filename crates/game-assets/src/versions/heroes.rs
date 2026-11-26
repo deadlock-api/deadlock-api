@@ -606,15 +606,25 @@ pub struct HeroPopularItems {
 #[derive(Debug, Serialize, Clone)]
 #[cfg_attr(feature = "utoipa", derive(utoipa::ToSchema))]
 #[cfg_attr(feature = "graphql", derive(async_graphql::SimpleObject))]
-#[cfg_attr(feature = "graphql", graphql(rename_fields = "snake_case"))]
+#[cfg_attr(feature = "graphql", graphql(complex, rename_fields = "snake_case"))]
 pub struct HeroPopularItem {
     /// Item id, derived from `class_name` like `/v2/items` ids.
+    #[cfg_attr(feature = "graphql", graphql(skip))]
     pub item_id: u32,
     pub class_name: String,
     /// Pick rate in percent (0-100).
     pub pick_pct: f64,
     /// Win rate in percent (0-100).
     pub winrate_pct: f64,
+}
+
+#[cfg(feature = "graphql")]
+#[async_graphql::ComplexObject(rename_fields = "snake_case")]
+impl HeroPopularItem {
+    /// Item id, derived from `class_name` like `/v2/items` ids.
+    async fn item_id(&self) -> crate::graphql::UInt32 {
+        crate::graphql::UInt32(self.item_id)
+    }
 }
 
 #[derive(Debug, Serialize, Clone)]

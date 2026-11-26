@@ -159,6 +159,50 @@ impl Modify for TagGroupsAddon {
     }
 }
 
+/// utoipa's `non_strict_integers` writes the Rust type as the `format` (`u-int32`, `int8`, ...),
+/// which isn't in the `OpenAPI` format registry, so client generators fall back to their default
+/// integer. Sets the type's range as `minimum`/`maximum` (bounds set on the field are kept) and
+/// the registry format that holds it: `int32` when it fits, else `int64`. An unbounded `u32`
+/// needs `int64`: item and ability ids are `murmurhash2` values over the whole range, and as
+/// `int32` the Go, C# and Kotlin clients failed to decode ids above 2^31 (#732).
+pub(super) fn normalize_integer_formats(value: &mut serde_json::Value) {
+    use serde_json::Value;
+
+    match value {
+        Value::Object(map) => {
+            let range: Option<(i64, Option<i64>)> = match map.get("format").and_then(Value::as_str)
+            {
+                Some("int8") => Some((i8::MIN.into(), Some(i8::MAX.into()))),
+                Some("int16") => Some((i16::MIN.into(), Some(i16::MAX.into()))),
+                Some("u-int8") => Some((0, Some(u8::MAX.into()))),
+                Some("u-int16") => Some((0, Some(u16::MAX.into()))),
+                Some("u-int32") => Some((0, Some(u32::MAX.into()))),
+                Some("u-int64") => Some((0, None)),
+                _ => None,
+            };
+            if let Some((minimum, maximum)) = range {
+                map.entry("minimum").or_insert_with(|| minimum.into());
+                if let Some(maximum) = maximum {
+                    map.entry("maximum").or_insert_with(|| maximum.into());
+                }
+                let fits_int32 = map
+                    .get("minimum")
+                    .and_then(Value::as_f64)
+                    .is_some_and(|min| min >= f64::from(i32::MIN))
+                    && map
+                        .get("maximum")
+                        .and_then(Value::as_f64)
+                        .is_some_and(|max| max <= f64::from(i32::MAX));
+                let format = if fits_int32 { "int32" } else { "int64" };
+                map.insert("format".to_owned(), format.into());
+            }
+            map.values_mut().for_each(normalize_integer_formats);
+        }
+        Value::Array(items) => items.iter_mut().for_each(normalize_integer_formats),
+        _ => {}
+    }
+}
+
 /// `OpenAPI` 3.1 requires a `description` on every response, but utoipa (since 6.0) omits it
 /// when a `responses(...)` entry has none. Falls back to the status code's reason phrase.
 pub(super) fn fill_missing_response_descriptions(openapi: &mut utoipa::openapi::OpenApi) {
@@ -250,6 +294,72 @@ mod tests {
             "Tags used in #[utoipa::path] are not present in TAG_GROUPS (Scalar x-tagGroups). \
              Add them to src/api_doc.rs::TAG_GROUPS:\n  {missing:?}",
         );
+    }
+
+    #[test]
+    fn integer_formats_follow_the_registry() {
+        let mut spec = serde_json::json!({
+            "u32": {"type": "integer", "format": "u-int32", "minimum": 0},
+            "opt_u32": {"type": ["integer", "null"], "format": "u-int32", "minimum": 0},
+            "bounded_u8": {"type": "integer", "format": "u-int8", "minimum": 1, "maximum": 116},
+            "bounded_u32": {"type": "integer", "format": "u-int32", "minimum": 0, "maximum": 116},
+            "i16": {"type": "integer", "format": "int16"},
+            "u64": {"type": "integer", "format": "u-int64", "minimum": 0},
+            "i32": {"type": "integer", "format": "int32"},
+            "nested": [{"items": {"type": "integer", "format": "u-int16", "minimum": 0}}],
+            "properties": {"format": {"type": "string"}},
+        });
+        super::normalize_integer_formats(&mut spec);
+        assert_eq!(
+            spec,
+            serde_json::json!({
+                "u32": {"type": "integer", "format": "int64", "minimum": 0, "maximum": 4_294_967_295_u32},
+                "opt_u32": {"type": ["integer", "null"], "format": "int64", "minimum": 0, "maximum": 4_294_967_295_u32},
+                "bounded_u8": {"type": "integer", "format": "int32", "minimum": 1, "maximum": 116},
+                "bounded_u32": {"type": "integer", "format": "int32", "minimum": 0, "maximum": 116},
+                "i16": {"type": "integer", "format": "int32", "minimum": -32768, "maximum": 32767},
+                "u64": {"type": "integer", "format": "int64", "minimum": 0},
+                "i32": {"type": "integer", "format": "int32"},
+                "nested": [{"items": {"type": "integer", "format": "int32", "minimum": 0, "maximum": 65535}}],
+                "properties": {"format": {"type": "string"}},
+            })
+        );
+    }
+
+    /// Item and ability ids reach `u32::MAX`; the served spec must not call them `int32` (#732).
+    #[test]
+    fn u32_ids_are_int64_in_the_spec() {
+        use utoipa::OpenApi;
+
+        use crate::routes::v1::analytics::ability_order_stats::{
+            AnalyticsAbilityMaxFirstStats, AnalyticsAbilityOrderStats,
+        };
+        use crate::routes::v1::analytics::build_item_stats::BuildItemStats;
+
+        #[derive(OpenApi)]
+        #[openapi(components(schemas(
+            AnalyticsAbilityOrderStats,
+            AnalyticsAbilityMaxFirstStats,
+            BuildItemStats
+        )))]
+        struct Doc;
+
+        let mut spec = serde_json::to_value(Doc::openapi()).unwrap();
+        super::normalize_integer_formats(&mut spec);
+        let schemas = &spec["components"]["schemas"];
+        let u32_id = serde_json::json!({"format": "int64", "minimum": 0, "maximum": u32::MAX});
+        for (schema, field, pointer) in [
+            ("AnalyticsAbilityOrderStats", "abilities", "/items"),
+            ("AnalyticsAbilityMaxFirstStats", "ability_id", ""),
+            ("BuildItemStats", "item_id", ""),
+        ] {
+            let prop = schemas[schema]["properties"][field]
+                .pointer(pointer)
+                .unwrap();
+            for key in ["format", "minimum", "maximum"] {
+                assert_eq!(prop[key], u32_id[key], "{schema}.{field}: {prop}");
+            }
+        }
     }
 
     #[test]

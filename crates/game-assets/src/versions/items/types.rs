@@ -18,6 +18,8 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 use strum::{Display, EnumString};
 
+#[cfg(feature = "graphql")]
+use crate::graphql::UInt32;
 #[cfg(feature = "utoipa")]
 use crate::versions::items::raw::BonusValue;
 use crate::versions::items::raw::{
@@ -494,6 +496,7 @@ pub(crate) struct WeaponInfo {
 #[cfg_attr(feature = "graphql", derive(async_graphql::SimpleObject))]
 #[cfg_attr(feature = "graphql", graphql(complex, rename_fields = "snake_case"))]
 pub struct Ability {
+    #[cfg_attr(feature = "graphql", graphql(skip))]
     pub(crate) id: u32,
     pub(crate) class_name: String,
     pub name: String,
@@ -545,6 +548,9 @@ pub struct Ability {
 #[cfg(feature = "graphql")]
 #[async_graphql::ComplexObject(rename_fields = "snake_case")]
 impl Ability {
+    async fn id(&self) -> UInt32 {
+        UInt32(self.id)
+    }
     #[graphql(name = "type")]
     async fn item_type(&self) -> ItemType {
         ItemType::Ability
@@ -573,6 +579,7 @@ impl Ability {
 #[cfg_attr(feature = "graphql", derive(async_graphql::SimpleObject))]
 #[cfg_attr(feature = "graphql", graphql(complex, rename_fields = "snake_case"))]
 pub struct Weapon {
+    #[cfg_attr(feature = "graphql", graphql(skip))]
     pub(crate) id: u32,
     pub(crate) class_name: String,
     pub name: String,
@@ -607,6 +614,9 @@ pub struct Weapon {
 #[cfg(feature = "graphql")]
 #[async_graphql::ComplexObject(rename_fields = "snake_case")]
 impl Weapon {
+    async fn id(&self) -> UInt32 {
+        UInt32(self.id)
+    }
     #[graphql(name = "type")]
     async fn item_type(&self) -> ItemType {
         ItemType::Weapon
@@ -629,6 +639,7 @@ impl Weapon {
 #[cfg_attr(feature = "graphql", derive(async_graphql::SimpleObject))]
 #[cfg_attr(feature = "graphql", graphql(complex, rename_fields = "snake_case"))]
 pub struct Upgrade {
+    #[cfg_attr(feature = "graphql", graphql(skip))]
     pub(crate) id: u32,
     pub(crate) class_name: String,
     pub name: String,
@@ -701,6 +712,9 @@ pub struct Upgrade {
 #[cfg(feature = "graphql")]
 #[async_graphql::ComplexObject(rename_fields = "snake_case")]
 impl Upgrade {
+    async fn id(&self) -> UInt32 {
+        UInt32(self.id)
+    }
     #[graphql(name = "type")]
     async fn item_type(&self) -> ItemType {
         ItemType::Upgrade

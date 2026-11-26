@@ -339,7 +339,7 @@ impl utoipa::PartialSchema for PlayerStatsMetricsBucket {
     fn schema() -> RefOr<Schema> {
         let bucket = ObjectBuilder::new()
             .schema_type(Type::Integer)
-            .format(Some(SchemaFormat::KnownFormat(KnownFormat::Int32)))
+            .format(Some(SchemaFormat::KnownFormat(KnownFormat::UInt32)))
             .minimum(Some(0))
             .description(Some("The bucket's value: the hero id for `bucket=hero`."));
         ObjectBuilder::new()

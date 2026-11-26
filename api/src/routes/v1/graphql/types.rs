@@ -129,7 +129,7 @@ pub(super) struct MatchPlayer {
     pub(super) hero_xp: Option<u32>,
     pub(super) hero_equips: Option<Vec<u64>>,
     /// The `items.item_id` entries that are abilities.
-    #[graphql(complexity = 15)]
+    #[graphql(skip)]
     pub(super) abilities: Option<Vec<u32>>,
     /// When the row was ingested, as a unix timestamp.
     pub(super) created_at: Option<i64>,
@@ -314,10 +314,13 @@ impl From<SteamProfileRow> for SteamProfile {
 #[graphql(complex, rename_fields = "snake_case")]
 pub(super) struct Item {
     pub(super) game_time_s: Option<u32>,
+    #[graphql(skip)]
     pub(super) item_id: Option<u32>,
+    #[graphql(skip)]
     pub(super) upgrade_id: Option<u32>,
     pub(super) sold_time_s: Option<u32>,
     pub(super) flags: Option<u32>,
+    #[graphql(skip)]
     pub(super) imbued_ability_id: Option<u32>,
     pub(super) upgrade_info: Option<u32>,
     /// The player's net worth in the last `stats` snapshot before the purchase.
@@ -325,8 +328,9 @@ pub(super) struct Item {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, SimpleObject)]
-#[graphql(rename_fields = "snake_case")]
+#[graphql(complex, rename_fields = "snake_case")]
 pub(super) struct UpgradePurchase {
+    #[graphql(skip)]
     pub(super) item_id: Option<u32>,
     pub(super) game_time_s: Option<u32>,
     pub(super) sold_time_s: Option<u32>,

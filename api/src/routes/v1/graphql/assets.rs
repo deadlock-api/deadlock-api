@@ -6,6 +6,7 @@ use std::sync::Arc;
 
 use async_graphql::{ComplexObject, Context, Result as GqlResult};
 use clickhouse_utils::BatchError;
+use game_assets::graphql::UInt32;
 use game_assets::versions::error::AssetsError;
 use game_assets::versions::heroes::{Hero, fetch_heroes};
 use game_assets::versions::items::{Item as AssetItem, fetch_items};
@@ -20,7 +21,7 @@ use crate::routes::v1::graphql::cost;
 use crate::routes::v1::graphql::salts::{MatchSalts, load_match_salts};
 use crate::routes::v1::graphql::schema::app_state;
 use crate::routes::v1::graphql::types::{
-    Item as GameplayItem, Match, MatchHistoryEntry, MatchPlayer, SteamProfile,
+    Item as GameplayItem, Match, MatchHistoryEntry, MatchPlayer, SteamProfile, UpgradePurchase,
 };
 use crate::services::protected_accounts::is_protected;
 
@@ -104,6 +105,14 @@ impl Match {
 
 #[ComplexObject(rename_fields = "snake_case")]
 impl MatchPlayer {
+    /// The `items.item_id` entries that are abilities.
+    #[graphql(complexity = 15)]
+    async fn abilities(&self) -> Option<Vec<UInt32>> {
+        self.abilities
+            .as_ref()
+            .map(|ids| ids.iter().copied().map(UInt32).collect())
+    }
+
     /// Hero asset metadata for this player's `hero_id` (latest version, English).
     async fn hero(&self, ctx: &Context<'_>) -> GqlResult<Option<Hero>> {
         let Some(id) = self.hero_id else {
@@ -173,11 +182,30 @@ impl MatchHistoryEntry {
 
 #[ComplexObject(rename_fields = "snake_case")]
 impl GameplayItem {
+    async fn item_id(&self) -> Option<UInt32> {
+        self.item_id.map(UInt32)
+    }
+
+    async fn upgrade_id(&self) -> Option<UInt32> {
+        self.upgrade_id.map(UInt32)
+    }
+
+    async fn imbued_ability_id(&self) -> Option<UInt32> {
+        self.imbued_ability_id.map(UInt32)
+    }
+
     /// Catalog asset for this purchased item, matched by `item_id` then `upgrade_id`.
     async fn asset(&self, ctx: &Context<'_>) -> GqlResult<Option<AssetItem>> {
         let Some(id) = self.item_id.or(self.upgrade_id) else {
             return Ok(None);
         };
         find_item(ctx, id).await
+    }
+}
+
+#[ComplexObject(rename_fields = "snake_case")]
+impl UpgradePurchase {
+    async fn item_id(&self) -> Option<UInt32> {
+        self.item_id.map(UInt32)
     }
 }
