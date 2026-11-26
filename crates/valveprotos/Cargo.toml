@@ -40,6 +40,10 @@ path = "scripts/fetch-protos.rs"
 required-features = ["requests"]
 
 [[bin]]
+name = "extract-protos"
+path = "scripts/extract-protos.rs"
+
+[[bin]]
 name = "graph-imports"
 path = "scripts/graph-imports.rs"
 
