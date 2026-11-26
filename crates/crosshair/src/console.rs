@@ -29,6 +29,7 @@ pub(super) fn parse(commands: &str) -> Result<Settings, CrosshairError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::assert_matches;
 
     #[test]
     fn parses_shared_console_commands() {
@@ -74,13 +75,7 @@ mod tests {
 
     #[test]
     fn rejects_text_without_crosshair_commands() {
-        assert!(matches!(
-            parse("hello world"),
-            Err(CrosshairError::NotACode)
-        ));
-        assert!(matches!(
-            parse("sv_cheats 1"),
-            Err(CrosshairError::NotACode)
-        ));
+        assert_matches!(parse("hello world"), Err(CrosshairError::NotACode));
+        assert_matches!(parse("sv_cheats 1"), Err(CrosshairError::NotACode));
     }
 }

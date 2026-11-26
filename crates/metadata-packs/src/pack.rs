@@ -263,6 +263,7 @@ async fn verify(
 
 #[cfg(test)]
 mod tests {
+    use core::assert_matches;
     use object_store::memory::InMemory;
 
     use super::*;
@@ -300,15 +301,15 @@ mod tests {
 
     #[test]
     fn rejects_duplicates_and_empty() {
-        assert!(matches!(build_pack(1, vec![], 0), Err(PackError::Empty)));
-        assert!(matches!(
+        assert_matches!(build_pack(1, vec![], 0), Err(PackError::Empty));
+        assert_matches!(
             build_pack(
                 1,
                 vec![file(1, Kind::Salt, b"a"), file(1, Kind::Salt, b"b")],
                 0
             ),
             Err(PackError::Duplicate(1, Kind::Salt))
-        ));
+        );
     }
 
     #[tokio::test]

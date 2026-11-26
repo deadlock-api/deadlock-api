@@ -59,6 +59,7 @@ pub(crate) fn validate_session_token(token: &str, secret: &str) -> JwtResult<Pat
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::assert_matches;
 
     #[test]
     fn test_session_token_roundtrip() {
@@ -66,9 +67,9 @@ mod tests {
         let token = create_session_token(patron_id, "secret").unwrap();
         let claims = validate_session_token(&token, "secret").unwrap();
         assert_eq!(claims.patron_id, patron_id);
-        assert!(matches!(
+        assert_matches!(
             validate_session_token(&token, "other"),
             Err(JwtError::InvalidToken)
-        ));
+        );
     }
 }

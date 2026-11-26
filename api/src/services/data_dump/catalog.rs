@@ -267,6 +267,7 @@ fn publish_paths(meta: &Connection, s3_prefix: &str, public_prefix: &str) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::assert_matches;
 
     fn source(endpoint: &str) -> FooterSource {
         FooterSource {
@@ -331,6 +332,6 @@ mod tests {
     fn publish_paths_fails_on_a_foreign_path() {
         let conn = data_files(&["s3://lake/v1/a.parquet", "s3://other/v1/b.parquet"]);
         let err = publish_paths(&conn, "s3://lake/", "https://data.example.com/").unwrap_err();
-        assert!(matches!(err, DumpError::CatalogPaths(1)), "{err}");
+        assert_matches!(err, DumpError::CatalogPaths(1));
     }
 }

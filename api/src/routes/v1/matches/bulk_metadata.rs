@@ -1052,6 +1052,7 @@ async fn fetch_metadata(
 
 #[cfg(test)]
 mod proptests {
+    use core::assert_matches;
     use proptest::prelude::*;
 
     use super::*;
@@ -1076,7 +1077,7 @@ mod proptests {
             "Code: 159. Timeout exceeded (TIMEOUT_EXCEEDED)".to_owned(),
         ));
         let error = cool_down_timeout(query_key("SELECT 'timeout'"), timeout).await;
-        assert!(matches!(error, APIError::ClickhouseTimedOut { .. }));
+        assert_matches!(error, APIError::ClickhouseTimedOut { .. });
         let cooling = TIMEOUT_COOLDOWN.check(query_key("SELECT 'timeout'")).await;
         assert!(cooling.is_some_and(|(error, _)| is_query_timeout(&error)));
 
@@ -1084,7 +1085,7 @@ mod proptests {
             "Code: 60. UNKNOWN_TABLE".to_owned(),
         ));
         let error = cool_down_timeout(query_key("SELECT 'other'"), other).await;
-        assert!(matches!(error, APIError::Io(_)));
+        assert_matches!(error, APIError::Io(_));
         assert!(
             TIMEOUT_COOLDOWN
                 .check(query_key("SELECT 'other'"))

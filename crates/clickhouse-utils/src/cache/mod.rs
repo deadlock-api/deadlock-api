@@ -238,6 +238,7 @@ where
 
 #[cfg(test)]
 mod tests {
+    use core::assert_matches;
     use core::sync::atomic::{AtomicUsize, Ordering};
 
     use super::*;
@@ -312,7 +313,7 @@ mod tests {
             cache.get_or_fetch("SELECT 2", async { Err(Busy::Timeout.into()) }),
         )
         .await;
-        assert!(matches!(busy, Err(QueryError::Busy(Busy::Timeout))));
+        assert_matches!(busy, Err(QueryError::Busy(Busy::Timeout)));
         assert_eq!(busy_until, None);
     }
 
@@ -322,7 +323,7 @@ mod tests {
         let busy = cache
             .get_or_fetch("SELECT 1", async { Err(Busy::Timeout.into()) })
             .await;
-        assert!(matches!(busy, Err(QueryError::Busy(Busy::Timeout))));
+        assert_matches!(busy, Err(QueryError::Busy(Busy::Timeout)));
         let ok = cache
             .get_or_fetch("SELECT 1", async { Ok(vec![7]) })
             .await
@@ -338,21 +339,21 @@ mod tests {
         let first = cache
             .get_or_fetch("SELECT 1", async { Err(timeout()) })
             .await;
-        assert!(matches!(
+        assert_matches!(
             first,
             Err(QueryError::TimedOut { ref error, retry_after })
                 if is_query_timeout(error) && retry_after == Duration::from_millis(100)
-        ));
+        );
 
         // The same query fails with the same error without running; other queries still run.
         let again = cache
             .get_or_fetch("SELECT 1", fetch_counted(&calls, vec![1]))
             .await;
-        assert!(matches!(
+        assert_matches!(
             again,
             Err(QueryError::TimedOut { ref error, retry_after })
                 if is_query_timeout(error) && retry_after <= Duration::from_millis(100)
-        ));
+        );
         assert_eq!(calls.load(Ordering::Relaxed), 0);
         let other = cache
             .get_or_fetch("SELECT 2", fetch_counted(&calls, vec![2]))

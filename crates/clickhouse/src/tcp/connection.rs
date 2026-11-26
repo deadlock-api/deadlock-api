@@ -117,6 +117,7 @@ pub(crate) struct QueryPacket<'a> {
 }
 
 /// A packet that the server sent during a query.
+#[cfg_attr(test, derive(Debug))]
 pub(crate) enum ServerPacket {
     Data(Block),
     Progress(Progress),

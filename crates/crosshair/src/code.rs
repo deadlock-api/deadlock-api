@@ -207,6 +207,7 @@ impl<'a> Iterator for Records<'a> {
 mod tests {
     use super::*;
     use crate::fixtures::{RED_PIPS, TEAL_DOT};
+    use core::assert_matches;
 
     #[test]
     fn decodes_a_compressed_code() {
@@ -258,27 +259,27 @@ mod tests {
 
     #[test]
     fn rejects_bad_codes() {
-        assert!(matches!(decode("AQDehwon"), Err(CrosshairError::NotACode)));
-        assert!(matches!(decode("DL.!!!"), Err(CrosshairError::Base64(_))));
-        assert!(matches!(decode("DL.AQDe"), Err(CrosshairError::Malformed)));
-        assert!(matches!(
+        assert_matches!(decode("AQDehwon"), Err(CrosshairError::NotACode));
+        assert_matches!(decode("DL.!!!"), Err(CrosshairError::Base64(_)));
+        assert_matches!(decode("DL.AQDe"), Err(CrosshairError::Malformed));
+        assert_matches!(
             decode(&format!("{PREFIX}{}", BASE64.encode([2, 0, 0, 0, 0, 0]))),
             Err(CrosshairError::UnsupportedVersion(2))
-        ));
+        );
         let mut tampered = RED_PIPS.trim().to_owned();
         tampered.replace_range(20..21, "B");
-        assert!(matches!(decode(&tampered), Err(CrosshairError::Checksum)));
+        assert_matches!(decode(&tampered), Err(CrosshairError::Checksum));
     }
 
     #[test]
     fn rejects_truncated_records() {
-        assert!(matches!(
+        assert_matches!(
             Records::new(&[2, 5, 1]).next(),
             Some(Err(CrosshairError::Malformed))
-        ));
-        assert!(matches!(
+        );
+        assert_matches!(
             Records::new(&[0xff, 0xff, 0xff, 0xff, 0xff, 0x01]).next(),
             Some(Err(CrosshairError::Malformed))
-        ));
+        );
     }
 }

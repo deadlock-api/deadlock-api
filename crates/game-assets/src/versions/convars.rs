@@ -71,6 +71,7 @@ pub async fn fetch_convars(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::assert_matches;
 
     #[test]
     fn parses_extractor_output() {
@@ -87,7 +88,7 @@ mod tests {
         .expect("parses");
         assert_eq!(convars.len(), 3);
         let restock = &convars["citadel_corrupted_item_shop_restock_interval"];
-        assert!(matches!(restock.value_type, ConvarType::Int32));
+        assert_matches!(restock.value_type, ConvarType::Int32);
         assert_eq!(restock.default, 900);
         assert!(convars["sv_skyname"].description.is_none());
     }

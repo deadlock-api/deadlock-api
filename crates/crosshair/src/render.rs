@@ -366,6 +366,7 @@ fn to_image(canvas: &[[f32; 4]], size: usize) -> RgbaImage {
 
 #[cfg(test)]
 mod tests {
+    use core::assert_matches;
     use rstest::rstest;
 
     use super::*;
@@ -414,10 +415,7 @@ mod tests {
             dot_size: 100_000,
             ..Settings::default()
         };
-        assert!(matches!(
-            render(&settings, 1080.0),
-            Err(CrosshairError::TooLarge)
-        ));
+        assert_matches!(render(&settings, 1080.0), Err(CrosshairError::TooLarge));
     }
 
     #[test]

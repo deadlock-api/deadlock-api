@@ -192,6 +192,7 @@ fn reason(status: StatusCode, exception_code: Option<String>) -> String {
 
 // === Chunks ===
 
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct Chunk {
     pub(crate) data: Bytes,
     pub(crate) net_size: usize,

@@ -970,6 +970,7 @@ async fn key_exists<S: ObjectStore + ?Sized>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::assert_matches;
 
     fn candidate(match_id: u64, cluster_id: u32) -> MatchSalts {
         MatchSalts {
@@ -1096,7 +1097,7 @@ mod tests {
 
         let result = download_match(&bucket, None, &cache_bucket, None, &salts(1)).await;
 
-        assert!(matches!(result, Ok(None)), "{result:?}");
+        assert_matches!(result, Ok(None));
     }
 
     /// Matches ingested before the bucket switch are only in the archive's `processed/`.
@@ -1112,7 +1113,7 @@ mod tests {
 
         let result = download_match(&bucket, Some(&archive), &cache_bucket, None, &salts(1)).await;
 
-        assert!(matches!(result, Ok(None)), "{result:?}");
+        assert_matches!(result, Ok(None));
     }
 
     #[test]

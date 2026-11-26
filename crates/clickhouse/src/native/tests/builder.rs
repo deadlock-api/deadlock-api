@@ -1,5 +1,6 @@
 use crate::native::builder::{BlockBuilder, BlockBuilderError, UpsertColumnError};
 use clickhouse_types::DataTypeNode;
+use core::assert_matches;
 use std::collections::BTreeMap;
 
 #[test]
@@ -179,24 +180,10 @@ fn errors_on_forbidden_types() {
 fn errors_on_empty_block() {
     let mut builder = BlockBuilder::new();
 
-    let Err(e) = builder.build() else {
-        panic!("expected error");
-    };
-
-    assert!(
-        matches!(e, BlockBuilderError::BlockEmpty),
-        "unexpected error kind: {e:?}"
-    );
+    assert_matches!(builder.build(), Err(BlockBuilderError::BlockEmpty));
 
     builder.upsert_column::<i32>("foo").unwrap();
     builder.upsert_column::<String>("bar").unwrap();
 
-    let Err(e) = builder.build() else {
-        panic!("expected error");
-    };
-
-    assert!(
-        matches!(e, BlockBuilderError::BlockEmpty),
-        "unexpected error kind: {e:?}"
-    );
+    assert_matches!(builder.build(), Err(BlockBuilderError::BlockEmpty));
 }

@@ -1027,6 +1027,7 @@ async fn cancel(pooled: &mut PooledConnection, compression: Compression) -> bool
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::assert_matches;
 
     #[test]
     fn text_formats() {
@@ -1041,11 +1042,9 @@ mod tests {
         );
 
         for format in ["CSVWithNames", "JSON", "Parquet", "Arrow", "jsoneachrow"] {
-            assert!(
-                matches!(
-                    Output::new(Some(format), "SELECT 1"),
-                    Err(Error::Unsupported(_))
-                ),
+            assert_matches!(
+                Output::new(Some(format), "SELECT 1"),
+                Err(Error::Unsupported(_)),
                 "{format}"
             );
         }

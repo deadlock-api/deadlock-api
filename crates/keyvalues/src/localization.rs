@@ -309,6 +309,7 @@ impl<'a> Parser<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::assert_matches;
 
     fn snap(name: &str, file: &str) {
         let path = format!(
@@ -333,9 +334,9 @@ mod tests {
         assert_eq!(p.tokens[0], (Cow::Borrowed("K1"), Cow::Borrowed("V1")));
         assert_eq!(p.tokens[1].1, "V2\nwith newline");
         // Borrowed for the no-escape value.
-        assert!(matches!(p.tokens[0].1, Cow::Borrowed(_)));
+        assert_matches!(p.tokens[0].1, Cow::Borrowed(_));
         // Owned because of the escape.
-        assert!(matches!(p.tokens[1].1, Cow::Owned(_)));
+        assert_matches!(p.tokens[1].1, Cow::Owned(_));
     }
 
     #[test]

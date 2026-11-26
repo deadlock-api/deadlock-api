@@ -142,6 +142,7 @@ pub fn render_png(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::assert_matches;
 
     #[test]
     fn decodes_codes_and_console_commands() {
@@ -152,11 +153,11 @@ mod tests {
                 .pip_width,
             5
         );
-        assert!(matches!(
+        assert_matches!(
             decode(&"A".repeat(MAX_CODE_LEN + 1)),
             Err(CrosshairError::CodeTooLong)
-        ));
-        assert!(matches!(decode("AQDehwon"), Err(CrosshairError::NotACode)));
+        );
+        assert_matches!(decode("AQDehwon"), Err(CrosshairError::NotACode));
     }
 
     #[test]
@@ -169,10 +170,7 @@ mod tests {
         for (x, y, pixel) in plain.enumerate_pixels() {
             assert_eq!(scaled.get_pixel(x * 4 + 3, y * 4 + 3), pixel);
         }
-        assert!(matches!(
-            render_png(&settings, 1080, 0),
-            Err(CrosshairError::Scale)
-        ));
+        assert_matches!(render_png(&settings, 1080, 0), Err(CrosshairError::Scale));
         // A large crosshair is only enlarged as far as the size limit allows.
         let large = Settings {
             pip_gap: 200,

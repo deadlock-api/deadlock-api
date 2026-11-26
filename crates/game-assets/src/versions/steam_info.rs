@@ -115,6 +115,7 @@ pub async fn fetch_all_steam_info(r2: &AmazonS3) -> Result<Bytes, AssetsError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::assert_matches;
 
     fn fixture() -> String {
         let manifest = env!("CARGO_MANIFEST_DIR");
@@ -142,6 +143,6 @@ mod tests {
     #[test]
     fn rejects_missing_key() {
         let err = build_steam_info("ClientVersion=1\n").expect_err("missing fields");
-        assert!(matches!(err, AssetsError::SteamInfo(_)));
+        assert_matches!(err, AssetsError::SteamInfo(_));
     }
 }
