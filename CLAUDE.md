@@ -11,7 +11,7 @@ crates/ # libraries shared by the services:
   telemetry/ # console logs + otlp export (all services); feature `prometheus` for the workers' scrape endpoint, `process-memory` for memory-by-owner gauges from /proc/self
   service-utils/ # env config, graceful shutdown, retries with backoff, shared http clients
   steam-id/ # SteamId: a player's account id <-> SteamID64/Steam3/Steam2; feature `serde` has the deserializers for account id query params
-  steam-proxy/ # sv-proxy request/response types and client
+  steam-proxy/ # sv-proxy request/response types and client; the client version the Game Coordinator accepts (shared by the api and hltv-scraper)
   crosshair/ # crosshair share codes (DL.…) to settings and back, and settings to png; used by the api's /crosshair routes and, as wasm (website/wasm/crosshair), the website's crosshair editor
   clickhouse/ # ClickHouse client over HTTP and the native TCP protocol (formerly raimannma/clickhouse-rs, a fork of the official crate); macros/ + types/ are its Row derive and type parser. TCP text formats (JSONEachRow, CSV, …) run through server-side formatRow()
   db-clients/ # clickhouse/postgres/redis/s3/file-cache connections from env, shared postgres queries, redis single-replica lease

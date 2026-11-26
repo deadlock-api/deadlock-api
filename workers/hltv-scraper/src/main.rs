@@ -24,7 +24,6 @@ use crate::cli::run_cli;
 mod active_matches;
 mod cli;
 mod cmd;
-mod easy_poll;
 mod hltv;
 
 #[derive(Debug, thiserror::Error)]
