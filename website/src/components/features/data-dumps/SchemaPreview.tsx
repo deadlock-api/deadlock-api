@@ -3,8 +3,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~
 
 import type { ColumnInfo } from "./types";
 
-/** `name` is the table's, so the columns table is named after it. */
-export function SchemaPreview({ name, columns }: { name: string; columns: ColumnInfo[] }) {
+/** `name` is the table's, so the columns table is named after it; `typeLabel` heads the type column. */
+export function SchemaPreview({
+  name,
+  columns,
+  typeLabel = "ClickHouse type",
+}: {
+  name: string;
+  columns: ColumnInfo[];
+  typeLabel?: string;
+}) {
   const hasComments = columns.some((c) => c.comment);
   return (
     // The height limit sits on Table's own scroll container: the header sticks to its nearest scrolling ancestor.
@@ -13,7 +21,7 @@ export function SchemaPreview({ name, columns }: { name: string; columns: Column
         <TableHeader position="sticky">
           <TableRow>
             <TableHead className="text-muted-foreground">Column</TableHead>
-            <TableHead className="text-muted-foreground">ClickHouse type</TableHead>
+            <TableHead className="text-muted-foreground">{typeLabel}</TableHead>
             {hasComments && <TableHead className="text-muted-foreground">Comment</TableHead>}
           </TableRow>
         </TableHeader>

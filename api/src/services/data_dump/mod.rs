@@ -100,6 +100,13 @@ fn ts(unix: i64) -> String {
     )
 }
 
+/// An uploaded catalog: its versioned key, the `DuckDB` version it was written with and its views.
+struct PublishedCatalog {
+    key: String,
+    duckdb_version: String,
+    views: BTreeMap<String, manifest::ViewState>,
+}
+
 /// One partition rebuild: what [`DataDump::export_base`] writes.
 #[derive(Clone, Copy)]
 struct BaseExport<'a> {
@@ -317,9 +324,10 @@ impl DataDump {
             .any(|t| t.status == TableStatus::Ready)
         {
             match self.build_catalog(&manifest, next_version, run_id).await {
-                Ok((key, duckdb_version)) => {
-                    manifest.catalog = Some(key);
-                    manifest.duckdb_version = Some(duckdb_version);
+                Ok(published) => {
+                    manifest.catalog = Some(published.key);
+                    manifest.duckdb_version = Some(published.duckdb_version);
+                    manifest.views = published.views;
                 }
                 Err(e) => {
                     error!("data dump: catalog build failed, keeping the previous catalog: {e}");
@@ -1094,7 +1102,7 @@ impl DataDump {
         manifest: &Manifest,
         version: u64,
         run_id: &str,
-    ) -> Result<(String, String), DumpError> {
+    ) -> Result<PublishedCatalog, DumpError> {
         let dir = self.work_dir.join(run_id);
         let built = tokio::task::spawn_blocking({
             let dir = dir.clone();
@@ -1127,7 +1135,11 @@ impl DataDump {
                     )
                     .await?;
             }
-            Ok((versioned, built.duckdb_version))
+            Ok(PublishedCatalog {
+                key: versioned,
+                duckdb_version: built.duckdb_version,
+                views: built.views,
+            })
         }
         .await;
         if let Err(e) = tokio::fs::remove_dir_all(&dir).await {

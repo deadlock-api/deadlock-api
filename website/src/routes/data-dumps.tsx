@@ -8,13 +8,17 @@ import { LakeTableRow } from "~/components/features/data-dumps/TableRow";
 import {
   type ColumnInfo,
   type LakeTable,
+  type LakeView,
   type Manifest,
   type PlaygroundTable,
+  type PlaygroundView,
   SQL_PLAYGROUND_DEFAULT_QUERY,
   lakeTables,
+  lakeViews,
 } from "~/components/features/data-dumps/types";
 import { UsageInstructions } from "~/components/features/data-dumps/UsageInstructions";
 import { CATALOG_URL, MANIFEST_URL, formatBytes, formatTimestamp } from "~/components/features/data-dumps/utils";
+import { LakeViewRow } from "~/components/features/data-dumps/ViewRow";
 import { CopyableUrl } from "~/components/patterns/code/CopyableCode";
 import { TableEmptyRow } from "~/components/patterns/data-table/TableEmptyRow";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
@@ -97,12 +101,13 @@ function DataDumps() {
   });
 
   const tables: LakeTable[] = useMemo(() => (manifest.data ? lakeTables(manifest.data) : []), [manifest.data]);
+  const views: LakeView[] = useMemo(() => (manifest.data ? lakeViews(manifest.data) : []), [manifest.data]);
 
   const schemaByTable = useMemo(() => {
     const map = new Map<string, { columns: ColumnInfo[] }>();
-    for (const t of tables) map.set(t.name, { columns: t.columns });
+    for (const t of [...tables, ...views]) map.set(t.name, { columns: t.columns });
     return map;
-  }, [tables]);
+  }, [tables, views]);
 
   const playgroundTables: PlaygroundTable[] = useMemo(
     () =>
@@ -111,10 +116,11 @@ function DataDumps() {
         .map((t) => ({ name: t.name, urls: t.files.map((f) => f.url) })),
     [tables],
   );
+  const playgroundViews: PlaygroundView[] = useMemo(() => views.map((v) => ({ name: v.name, sql: v.sql })), [views]);
 
   const lowerSearch = search.toLowerCase();
   const matchedColumns = useCallback(
-    (table: LakeTable): string[] =>
+    (table: { columns: ColumnInfo[] }): string[] =>
       lowerSearch ? table.columns.filter((c) => c.name.toLowerCase().includes(lowerSearch)).map((c) => c.name) : [],
     [lowerSearch],
   );
@@ -122,6 +128,11 @@ function DataDumps() {
     () =>
       tables.filter((t) => !lowerSearch || t.name.toLowerCase().includes(lowerSearch) || matchedColumns(t).length > 0),
     [tables, lowerSearch, matchedColumns],
+  );
+  const visibleViews = useMemo(
+    () =>
+      views.filter((v) => !lowerSearch || v.name.toLowerCase().includes(lowerSearch) || matchedColumns(v).length > 0),
+    [views, lowerSearch, matchedColumns],
   );
   const totalBytes = useMemo(() => visibleTables.reduce((sum, t) => sum + t.totalBytes, 0), [visibleTables]);
   const totalFiles = useMemo(() => visibleTables.reduce((sum, t) => sum + t.files.length, 0), [visibleTables]);
@@ -143,6 +154,7 @@ function DataDumps() {
               open={playgroundOpen}
               onOpenChange={setPlaygroundOpen}
               tables={playgroundTables}
+              views={playgroundViews}
               schemaByTable={schemaByTable}
               query={sqlQuery}
               onQueryChange={onSqlQueryChange}
@@ -213,9 +225,29 @@ function DataDumps() {
           </Card>
         )}
 
-        {manifest.data && visibleTables.length > 0 && (
+        {manifest.data && visibleViews.length > 0 && (
+          <Card size="flush" className="@container">
+            <Table aria-label="Data lake views" className="table-fixed">
+              <TableHeader>
+                <TableRow>
+                  <TableHead>View</TableHead>
+                  <TableHead className="hidden w-20 text-end @xl:table-cell">Columns</TableHead>
+                  <TableHead className="w-20 text-end">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {visibleViews.map((v) => (
+                  <LakeViewRow key={v.name} view={v} matchedColumns={matchedColumns(v)} />
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        )}
+
+        {manifest.data && visibleTables.length + visibleViews.length > 0 && (
           <Text as="div" variant="caption" tone="muted" align="end" numeric="tabular" className="px-1">
             {visibleTables.length} tables · {totalFiles} files · {formatBytes(totalBytes)} total
+            {visibleViews.length > 0 && ` · ${visibleViews.length} views`}
           </Text>
         )}
       </Stack>

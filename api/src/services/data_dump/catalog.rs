@@ -11,12 +11,13 @@
 //! from R2's S3 API instead, all at once up front, into a staging catalog whose `s3://` paths
 //! are then rewritten to the public URLs and copied into the published file.
 
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 
 use duckdb::{Config, Connection, params};
 use tracing::warn;
 
-use super::manifest::{FileKind, Manifest, PolicyKind, TableState, TableStatus};
+use super::manifest::{Column, FileKind, Manifest, PolicyKind, TableState, TableStatus, ViewState};
 use super::{DumpError, asset_views};
 
 fn sql_str(s: &str) -> String {
@@ -70,6 +71,8 @@ impl FooterSource {
 pub(crate) struct BuiltCatalog {
     pub(crate) path: PathBuf,
     pub(crate) duckdb_version: String,
+    /// What the manifest lists as `views`.
+    pub(crate) views: BTreeMap<String, ViewState>,
 }
 
 /// Writes the catalog for every ready table into `dir` and returns its path. Blocking.
@@ -114,6 +117,7 @@ pub(crate) fn build(
         register_table(&conn, name, table, source)?;
     }
     asset_views::register(&conn)?;
+    let views = catalog_views(&conn)?;
     conn.execute_batch("DETACH lake;")?;
     conn.close().map_err(|(_, e)| e)?;
 
@@ -126,7 +130,68 @@ pub(crate) fn build(
     Ok(BuiltCatalog {
         path: catalog_path,
         duckdb_version,
+        views,
     })
+}
+
+/// The views of the attached `lake` by `<schema>.<name>` (`<name>` in `main`), each with the
+/// `SELECT` the catalog stores (`DuckLake` drops the catalog name from its references) and the
+/// columns it was bound with.
+fn catalog_views(conn: &Connection) -> Result<BTreeMap<String, ViewState>, DumpError> {
+    let mut views = BTreeMap::new();
+    let mut stmt = conn.prepare(
+        "SELECT schema_name, view_name, sql, comment FROM duckdb_views() \
+         WHERE database_name = 'lake' AND NOT internal ORDER BY schema_name, view_name",
+    )?;
+    let rows = stmt
+        .query_map([], |row| {
+            Ok((
+                row.get::<_, String>(0)?,
+                row.get::<_, String>(1)?,
+                row.get::<_, String>(2)?,
+                row.get::<_, Option<String>>(3)?,
+            ))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+    let mut columns = conn.prepare(
+        "SELECT column_name, data_type, comment FROM duckdb_columns() \
+         WHERE database_name = 'lake' AND schema_name = ? AND table_name = ? ORDER BY column_index",
+    )?;
+    for (schema, name, create, comment) in rows {
+        let Some(sql) = view_select(&create) else {
+            warn!("data dump: cannot read the SELECT of catalog view {schema}.{name}: {create}");
+            continue;
+        };
+        let columns = columns
+            .query_map([&schema, &name], |row| {
+                Ok(Column {
+                    name: row.get(0)?,
+                    ch_type: row.get(1)?,
+                    comment: row.get(2)?,
+                })
+            })?
+            .collect::<Result<Vec<_>, _>>()?;
+        let key = if schema == "main" {
+            name
+        } else {
+            format!("{schema}.{name}")
+        };
+        views.insert(
+            key,
+            ViewState {
+                sql: sql.to_owned(),
+                comment,
+                columns,
+            },
+        );
+    }
+    Ok(views)
+}
+
+/// The `SELECT` of a `CREATE VIEW <name> AS <select>;` statement as `duckdb_views()` prints it.
+fn view_select(create: &str) -> Option<&str> {
+    let (_, select) = create.strip_prefix("CREATE VIEW ")?.split_once(" AS ")?;
+    Some(select.trim_end().trim_end_matches(';').trim_end())
 }
 
 /// One multi-threaded read of every footer (~25 s for ~900 files) instead of one round trip
@@ -207,6 +272,15 @@ fn register_table(
         );
         if let Err(e) = conn.execute_batch(&view) {
             warn!("data dump: could not create {name}_latest view in the catalog: {e}");
+        } else if let Err(e) = conn.execute_batch(&format!(
+            "COMMENT ON VIEW lake.{} IS {};",
+            sql_ident(&format!("{name}_latest")),
+            sql_str(&format!(
+                "{name} with duplicates resolved: only the newest {watermark} row per (match_id, account_id) \
+                 is kept. Slower than {name}; use it when exact counts matter."
+            ))
+        )) {
+            warn!("data dump: could not comment the {name}_latest view: {e}");
         }
     }
     Ok(())
@@ -277,6 +351,64 @@ mod tests {
             access_key_id: "id".to_owned(),
             secret_access_key: "se'cret".to_owned(),
         }
+    }
+
+    #[test]
+    fn view_select_strips_the_create_statement() {
+        assert_eq!(
+            view_select("CREATE VIEW assets.heroes AS SELECT * FROM read_json('x');"),
+            Some("SELECT * FROM read_json('x')")
+        );
+        assert_eq!(
+            view_select("CREATE VIEW t_latest AS SELECT * FROM t QUALIFY (a AS b) = 1;"),
+            Some("SELECT * FROM t QUALIFY (a AS b) = 1")
+        );
+        assert_eq!(view_select("SELECT 1"), None);
+    }
+
+    /// Installs the ducklake extension: `cargo test -p deadlock-api catalog_views -- --ignored`.
+    #[test]
+    #[ignore = "downloads the ducklake extension"]
+    fn catalog_views_reference_tables_unqualified() {
+        let dir = std::env::temp_dir().join(format!("catalog-views-{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let conn = Connection::open_in_memory().unwrap();
+        conn.execute_batch(&format!(
+            "INSTALL ducklake; LOAD ducklake;
+             ATTACH 'ducklake:{}/c.ducklake' AS lake (DATA_PATH '{}/data/');
+             CREATE TABLE lake.t AS SELECT 1::INTEGER AS a, 'x' AS b;
+             CREATE VIEW lake.t_latest AS SELECT * FROM lake.t QUALIFY row_number() OVER (PARTITION BY a ORDER BY b DESC) = 1;
+             CREATE SCHEMA lake.assets;
+             CREATE VIEW lake.assets.v AS SELECT 2::UTINYINT AS c;
+             COMMENT ON VIEW lake.assets.v IS 'a view';",
+            dir.display(),
+            dir.display()
+        ))
+        .unwrap();
+        let views = catalog_views(&conn).unwrap();
+        drop(conn);
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(views.keys().collect::<Vec<_>>(), ["assets.v", "t_latest"]);
+        let latest = &views["t_latest"];
+        assert!(
+            latest.sql.starts_with("SELECT * FROM t QUALIFY"),
+            "{}",
+            latest.sql
+        );
+        assert_eq!(
+            latest
+                .columns
+                .iter()
+                .map(|c| (c.name.as_str(), c.ch_type.as_str()))
+                .collect::<Vec<_>>(),
+            [("a", "INTEGER"), ("b", "VARCHAR")]
+        );
+        let v = &views["assets.v"];
+        assert_eq!(v.comment.as_deref(), Some("a view"));
+        assert_eq!(
+            v.columns.first().map(|c| c.ch_type.as_str()),
+            Some("UTINYINT")
+        );
     }
 
     #[test]

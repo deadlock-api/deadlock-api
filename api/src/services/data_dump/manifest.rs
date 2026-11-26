@@ -33,6 +33,10 @@ pub(crate) struct Manifest {
     pub(crate) duckdb_version: Option<String>,
     pub(crate) last_fold_at: Option<DateTime<Utc>>,
     pub(crate) tables: BTreeMap<String, TableState>,
+    /// Views of the current catalog by `<schema>.<name>` (`<name>` in the default schema), so
+    /// readers that query the files directly can create them too.
+    #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
+    pub(crate) views: BTreeMap<String, ViewState>,
 }
 
 impl Manifest {
@@ -46,6 +50,7 @@ impl Manifest {
             duckdb_version: None,
             last_fold_at: None,
             tables: BTreeMap::new(),
+            views: BTreeMap::new(),
         }
     }
 
@@ -91,6 +96,18 @@ impl Column {
     pub(crate) fn shape(&self) -> (&str, &str) {
         (&self.name, &self.ch_type)
     }
+}
+
+/// A view of the catalog, as readers create it over their own copies of the tables.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct ViewState {
+    /// Its `SELECT` as the catalog stores it: tables and views of the catalog by their
+    /// unqualified names, other views by their key.
+    pub(crate) sql: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) comment: Option<String>,
+    /// Columns with their `DuckDB` types.
+    pub(crate) columns: Vec<Column>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

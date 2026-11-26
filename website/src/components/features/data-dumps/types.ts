@@ -11,6 +11,12 @@ export interface PlaygroundTable {
   urls: string[];
 }
 
+/** A view the playground creates on demand: `name` may carry a schema (`assets.heroes`). */
+export interface PlaygroundView {
+  name: string;
+  sql: string;
+}
+
 // Shape of https://data.deadlock-api.com/v1/manifest.json (written by the API's data_dump service).
 export type FileKind = "base" | "delta" | "residual" | "snapshot";
 
@@ -43,6 +49,14 @@ export interface ManifestTable {
   files: ManifestFile[];
 }
 
+/** A view of the catalog: its SELECT reads the tables and views by their unqualified names. */
+export interface ManifestView {
+  sql: string;
+  comment?: string;
+  /** Columns with their DuckDB types. */
+  columns: ColumnInfo[];
+}
+
 export interface Manifest {
   format_version: number;
   version: number;
@@ -51,6 +65,23 @@ export interface Manifest {
   catalog: string | null;
   duckdb_version: string | null;
   tables: Record<string, ManifestTable>;
+  /** Keyed by `<schema>.<name>`, or `<name>` in the default schema. */
+  views?: Record<string, ManifestView>;
+}
+
+/** A view as shown on the page. `api` views read the live asset API, `lake` views the lake's own tables. */
+export interface LakeView extends ManifestView {
+  name: string;
+  source: "api" | "lake";
+}
+
+export function lakeViews(manifest: Manifest): LakeView[] {
+  return Object.entries(manifest.views ?? {})
+    .map(([name, v]): LakeView => {
+      const source: LakeView["source"] = /\bread_json\s*\(/i.test(v.sql) ? "api" : "lake";
+      return Object.assign({}, v, { name, source });
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** A table as shown on the page: the manifest entry plus the files readers should union. */

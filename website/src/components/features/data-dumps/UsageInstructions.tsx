@@ -8,7 +8,7 @@ import { Tabs, TabsContent } from "~/components/ui/tabs";
 import { McpInstructions } from "./McpSection";
 import { CATALOG_URL, LAKE_URL, MANIFEST_URL } from "./utils";
 
-const DUCKLAKE_EXAMPLE = `-- DuckDB 1.4+ (CLI or any client). Attach the catalog over plain HTTPS; no secrets, no S3 setup.
+const DUCKLAKE_EXAMPLE = `-- DuckDB 2.0+ (CLI or any client). Attach the catalog over plain HTTPS; no secrets, no S3 setup.
 INSTALL ducklake; LOAD ducklake;
 INSTALL httpfs;   LOAD httpfs;
 ATTACH 'ducklake:${CATALOG_URL}' AS lake (READ_ONLY);
@@ -41,6 +41,10 @@ const MANIFEST_EXAMPLE = `# ${MANIFEST_URL}
   "generated_at": "2026-09-17T14:03:00Z",
   "public_url": "${LAKE_URL}",
   "catalog": "v1/catalog/123.ducklake",
+  "views": {
+    "match_player_latest": { "sql": "SELECT * FROM match_player QUALIFY ...", "columns": [...] },
+    "assets.heroes": { "sql": "SELECT * FROM read_json('https://api.deadlock-api.com/v1/assets/heroes', ...)", "columns": [...] }
+  },
   "tables": {
     "leaderboard": {
       "policy": "snapshot", "status": "ready",
@@ -63,7 +67,8 @@ const MANIFEST_EXAMPLE = `# ${MANIFEST_URL}
 # Files of the current generation only:  generation == table.generation  (snapshots: all files)
 # Base files hold rows with watermark <= hi; deltas/residuals hold rows with watermark in (lo, hi].
 # Base files carry min/max_match_id and min/max_start_time (unix seconds): pick files by range without opening them.
-# Files are immutable and uniquely named; the manifest is the only object that changes.`;
+# Files are immutable and uniquely named; the manifest is the only object that changes.
+# Views: create the tables first, then each view as CREATE VIEW <name> AS <sql> (assets.* read the asset API live).`;
 
 const PYTHON_EXAMPLE = `# pip install duckdb requests
 import duckdb, requests
@@ -81,8 +86,14 @@ con = duckdb.connect()
 con.execute("INSTALL httpfs; LOAD httpfs;")
 for name in manifest["tables"]:
     con.execute(f"CREATE VIEW {name} AS SELECT * FROM read_parquet({urls(name)!r}, union_by_name = true)")
+# match_player_latest, and assets.heroes, assets.items, ... over the live asset API
+for name, view in manifest.get("views", {}).items():
+    if "." in name:
+        con.execute(f"CREATE SCHEMA IF NOT EXISTS {name.split('.')[0]}")
+    con.execute(f"CREATE VIEW {name} AS {view['sql']}")
 
 print(con.sql("SELECT count(*) FROM leaderboard"))
+print(con.sql("SELECT name, hero_type FROM assets.heroes WHERE player_selectable"))
 
 # pandas works on single files directly:
 #   pd.read_parquet(urls("leaderboard")[0])`;

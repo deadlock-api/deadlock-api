@@ -22,8 +22,9 @@ import {
   initDuckDb,
   runDuckDbQuery,
 } from "~/lib/duckdb-client";
+import { formatCountNoun } from "~/lib/format";
 
-import type { ColumnInfo, PlaygroundTable } from "./types";
+import type { ColumnInfo, PlaygroundTable, PlaygroundView } from "./types";
 import { downloadCsv, formatCell, toCsv } from "./utils";
 
 const RESULT_ROW_LIMIT = 1000;
@@ -43,7 +44,7 @@ const RESULT_PLACEHOLDER: Record<InitState, string> = {
   error: "DuckDB failed to load.",
 };
 
-function getInitMessage(state: InitState, error: string | null, tableCount: number): ReactNode {
+function getInitMessage(state: InitState, error: string | null, tableCount: number, viewCount: number): ReactNode {
   if (state === "loading") {
     return (
       <span className="inline-flex items-center gap-1.5">
@@ -56,7 +57,8 @@ function getInitMessage(state: InitState, error: string | null, tableCount: numb
   if (state === "ready") {
     return (
       <span className="text-positive">
-        Ready · {tableCount} table{tableCount === 1 ? "" : "s"} available
+        Ready · {formatCountNoun(tableCount, "table")}
+        {viewCount > 0 && ` · ${formatCountNoun(viewCount, "view")}`} available
       </span>
     );
   }
@@ -68,12 +70,25 @@ interface SqlPlaygroundProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tables: PlaygroundTable[];
+  /** The manifest's views (`match_player_latest`, `assets.heroes`, …), created when a query names them. */
+  views?: PlaygroundView[];
+  /** Columns of the tables and views, for autocompletion. */
   schemaByTable: Map<string, { columns: ColumnInfo[] }>;
   query: string;
   onQueryChange: (q: string) => void;
 }
 
-export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query, onQueryChange }: SqlPlaygroundProps) {
+const NO_VIEWS: PlaygroundView[] = [];
+
+export function SqlPlayground({
+  open,
+  onOpenChange,
+  tables,
+  views = NO_VIEWS,
+  schemaByTable,
+  query,
+  onQueryChange,
+}: SqlPlaygroundProps) {
   const [initState, setInitState] = useState<InitState>("idle");
   const [initError, setInitError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -93,15 +108,16 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
   useEffect(() => () => abortRef.current?.abort(), []);
 
   const tableMap = useMemo(() => new Map(tables.map((t) => [t.name, t.urls])), [tables]);
+  const viewMap = useMemo(() => new Map(views.map((v) => [v.name, v.sql])), [views]);
 
   const cmSchema = useMemo(() => {
     const out: Record<string, string[]> = {};
-    for (const t of tables) {
-      const info = schemaByTable.get(t.name);
-      out[t.name] = info ? info.columns.map((c) => c.name) : [];
+    for (const { name } of [...tables, ...views]) {
+      const info = schemaByTable.get(name);
+      out[name] = info ? info.columns.map((c) => c.name) : [];
     }
     return out;
-  }, [tables, schemaByTable]);
+  }, [tables, views, schemaByTable]);
 
   const initStartedRef = useRef(false);
 
@@ -139,7 +155,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
     const start = performance.now();
     try {
       setStatus("Running query…");
-      await ensureViews(handle, tableMap, findTableNames(query, tableMap.keys()));
+      await ensureViews(handle, tableMap, findTableNames(query, [...tableMap.keys(), ...viewMap.keys()]), viewMap);
       const { columns, rows, truncated } = await runDuckDbQuery(handle, query, {
         maxRows: RESULT_ROW_LIMIT,
         signal: controller.signal,
@@ -156,7 +172,7 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
     }
     abortRef.current = null;
     setRunning(false);
-  }, [handle, query, tableMap]);
+  }, [handle, query, tableMap, viewMap]);
 
   const cancelQuery = () => {
     abortRef.current?.abort();
@@ -213,32 +229,28 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
         <DialogHeader className="gap-1">
           <Inline gap={3} align="baseline">
             <DialogTitle>SQL Playground</DialogTitle>
-            <DialogStatus>{getInitMessage(initState, initError, tables.length)}</DialogStatus>
+            <DialogStatus>{getInitMessage(initState, initError, tables.length, views.length)}</DialogStatus>
           </Inline>
         </DialogHeader>
 
         <div className="grid min-h-0 gap-3 lg:grid-cols-2">
           <Stack gap={2} className="min-h-0">
             {tables.length > 0 && (
-              <Stack gap={1}>
-                <Heading as="h3" size="sm">
-                  Tables ({tables.length})
-                </Heading>
-                <Inline gap={1} className="max-h-24 overflow-y-auto">
-                  {tables.map((t) => (
-                    <Button
-                      key={t.name}
-                      variant="subtle"
-                      size="xs"
-                      onClick={() => insertAtCursor(t.name)}
-                      className="font-mono"
-                      title={`${t.urls.length} parquet file${t.urls.length === 1 ? "" : "s"}`}
-                    >
-                      {t.name}
-                    </Button>
-                  ))}
-                </Inline>
-              </Stack>
+              <NameList
+                heading={`Tables (${tables.length})`}
+                items={tables.map((t) => ({ name: t.name, title: formatCountNoun(t.urls.length, "parquet file") }))}
+                onInsert={insertAtCursor}
+              />
+            )}
+            {views.length > 0 && (
+              <NameList
+                heading={`Views (${views.length})`}
+                items={views.map((v) => ({
+                  name: v.name,
+                  title: /\bread_json\s*\(/i.test(v.sql) ? "Reads the asset API live" : "View over the lake's tables",
+                }))}
+                onInsert={insertAtCursor}
+              />
             )}
 
             <CodeEditor
@@ -349,6 +361,39 @@ export function SqlPlayground({ open, onOpenChange, tables, schemaByTable, query
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** Table or view names that insert themselves into the editor when pressed. */
+function NameList({
+  heading,
+  items,
+  onInsert,
+}: {
+  heading: string;
+  items: { name: string; title: string }[];
+  onInsert: (name: string) => void;
+}) {
+  return (
+    <Stack gap={1}>
+      <Heading as="h3" size="sm">
+        {heading}
+      </Heading>
+      <Inline gap={1} className="max-h-24 overflow-y-auto">
+        {items.map((item) => (
+          <Button
+            key={item.name}
+            variant="subtle"
+            size="xs"
+            onClick={() => onInsert(item.name)}
+            className="font-mono"
+            title={item.title}
+          >
+            {item.name}
+          </Button>
+        ))}
+      </Inline>
+    </Stack>
   );
 }
 

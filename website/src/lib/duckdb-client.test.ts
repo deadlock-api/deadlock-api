@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { findTableNames, sharedUntilRejected } from "./duckdb-client";
+import { findTableNames, sharedUntilRejected, viewCreationOrder } from "./duckdb-client";
 
 const KNOWN = ["leaderboard", "hero_leaderboard", "match_player"];
 
@@ -19,6 +19,29 @@ test("findTableNames finds tables in subqueries and CTEs, in any case and quoted
 
 test("findTableNames ignores names that are only part of a word", () => {
   assert.deepEqual(findTableNames("SELECT leaderboard_position FROM my_leaderboard_copy", KNOWN), []);
+});
+
+test("findTableNames finds names with a schema and tables before a column", () => {
+  const known = [...KNOWN, "assets.heroes", "assets.items"];
+  const sql = "SELECT h.name, match_player.account_id FROM match_player JOIN assets.heroes h ON h.id = hero_id";
+  assert.deepEqual(findTableNames(sql, known), ["match_player", "assets.heroes"]);
+  assert.deepEqual(findTableNames("SELECT heroes, items FROM t", known), []);
+});
+
+test("viewCreationOrder puts what a view reads before it and drops unknown names", () => {
+  const tables = new Map([
+    ["match_player", ["a.parquet"]],
+    ["leaderboard", ["b.parquet"]],
+  ]);
+  const views = new Map([
+    ["match_player_latest", "SELECT * FROM match_player QUALIFY row_number() OVER () = 1"],
+    ["assets.heroes", "SELECT * FROM read_json('https://example.com/heroes')"],
+  ]);
+  assert.deepEqual(viewCreationOrder(["match_player_latest", "assets.heroes", "nope"], tables, views), [
+    "match_player",
+    "match_player_latest",
+    "assets.heroes",
+  ]);
 });
 
 test("sharedUntilRejected shares one pending attempt between concurrent callers", async () => {

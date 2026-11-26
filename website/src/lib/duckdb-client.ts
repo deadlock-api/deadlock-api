@@ -72,17 +72,54 @@ const loadDuckDb = sharedUntilRejected(async (): Promise<DuckDbHandle> => {
 /**
  * The known tables a query mentions anywhere, not only right after FROM or JOIN: `FROM a, b`, subqueries and CTEs
  * all count. Identifiers are case-insensitive as in DuckDB. A table named in a string or a comment is registered
- * too, which costs one view and does no harm.
+ * too, which costs one view and does no harm. A known name with a schema (`assets.heroes`) is found written out
+ * with it; a dotted word also counts with each of its parts (`match_player.account_id`).
  */
 export function findTableNames(query: string, known: Iterable<string>): string[] {
   const byLowerName = new Map<string, string>();
   for (const name of known) byLowerName.set(name.toLowerCase(), name);
   const found = new Set<string>();
-  for (const [token] of query.matchAll(/\w+/g)) {
-    const name = byLowerName.get(token.toLowerCase());
-    if (name) found.add(name);
+  for (const [token] of query.matchAll(/\w+(?:\.\w+)*/g)) {
+    const parts = token.toLowerCase().split(".");
+    const candidates = [...parts, ...parts.map((_, i) => parts.slice(0, i + 1).join("."))];
+    for (const candidate of candidates) {
+      const name = byLowerName.get(candidate);
+      if (name) found.add(name);
+    }
   }
   return [...found];
+}
+
+/**
+ * `names` with everything their views read, each after what it reads: a view is created over existing tables and
+ * views. Names that are neither a table nor a view are dropped.
+ */
+export function viewCreationOrder(
+  names: string[],
+  tableMap: Map<string, string[]>,
+  viewMap: Map<string, string>,
+): string[] {
+  const known = [...tableMap.keys(), ...viewMap.keys()];
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+  const visit = (name: string) => {
+    if (seen.has(name)) return;
+    seen.add(name);
+    const sql = viewMap.get(name);
+    if (sql === undefined && !tableMap.has(name)) return;
+    if (sql !== undefined) for (const dep of findTableNames(sql, known)) visit(dep);
+    ordered.push(name);
+  };
+  for (const name of names) visit(name);
+  return ordered;
+}
+
+/** `assets.heroes` as `"assets"."heroes"`. */
+function quoteQualifiedName(name: string): string {
+  return name
+    .split(".")
+    .map((part) => `"${part.replace(/"/g, '""')}"`)
+    .join(".");
 }
 
 export interface QueryColumn {
@@ -297,29 +334,45 @@ export async function runDuckDbQuery(
   }
 }
 
+/**
+ * Creates the views `names` need: one over the files of each table, and the manifest's own views (`viewMap`, name to
+ * SELECT) after the tables and views they read. Returns the names it created.
+ */
 export async function ensureViews(
   handle: DuckDbHandle,
   tableMap: Map<string, string[]>,
   names: string[],
+  viewMap: Map<string, string> = new Map(),
 ): Promise<string[]> {
   const registered = registeredViews.get(handle) ?? new Map<string, string>();
   // The lake is re-exported hourly and the manifest refetched; a view over last hour's files would miss new rows or
-  // point at removed ones, so it is recreated whenever its file list changes.
-  const toCreate = names.filter((n) => {
+  // point at removed ones, so it is recreated whenever its file list (or a manifest view's SQL) changes.
+  const definition = (n: string) => {
     const urls = tableMap.get(n);
-    return urls && urls.length > 0 && registered.get(n) !== urls.join("\n");
+    if (urls) return urls.length > 0 ? `SELECT * FROM ${readParquetExpr(urls)}` : undefined;
+    return viewMap.get(n);
+  };
+  const toCreate = viewCreationOrder(names, tableMap, viewMap).filter((n) => {
+    const sql = definition(n);
+    return sql !== undefined && registered.get(n) !== sql;
   });
   if (toCreate.length === 0) return [];
   const conn = await handle.db.connect();
   try {
-    await Promise.all(
-      toCreate.map(async (n) => {
-        const urls = tableMap.get(n);
-        if (!urls || urls.length === 0) return;
-        await conn.query(`CREATE OR REPLACE VIEW "${n}" AS SELECT * FROM ${readParquetExpr(urls)}`);
-        registered.set(n, urls.join("\n"));
-      }),
-    );
+    const create = async (n: string) => {
+      const sql = definition(n);
+      if (sql === undefined) return;
+      const schema = n.includes(".") ? n.slice(0, n.lastIndexOf(".")) : null;
+      if (schema) await conn.query(`CREATE SCHEMA IF NOT EXISTS ${quoteQualifiedName(schema)}`);
+      await conn.query(`CREATE OR REPLACE VIEW ${quoteQualifiedName(n)} AS ${sql}`);
+      registered.set(n, sql);
+    };
+    // Tables read only files, so they go in parallel; manifest views in order, each after what it reads.
+    await Promise.all(toCreate.filter((n) => tableMap.has(n)).map(create));
+    for (const n of toCreate.filter((name) => !tableMap.has(name))) {
+      // oxlint-disable-next-line no-await-in-loop -- a view is created after the views it reads
+      await create(n);
+    }
   } finally {
     await conn.close();
   }
