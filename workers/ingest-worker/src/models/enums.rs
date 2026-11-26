@@ -6,6 +6,21 @@ use valveprotos::deadlock::{
     ECitadelRankedType, ECitadelTeamObjective, EHeroXpGrantReason, EPlayerMatchOutcome,
 };
 
+/// The stat types of `match_player.damage_matrix` entries, numbered as Valve's
+/// `CMsgMatchPlayerDamageMatrix.EStatType`. Its `mitigated` (3) and `lethal_damage` (4) are not
+/// entry types here: they are the `mitigated` and `lethal` columns of the `Damage` entry of the
+/// same hit.
+#[derive(Serialize_repr, Deserialize_repr, PartialEq, Eq, PartialOrd, Ord, Debug, Clone, Copy)]
+#[repr(i8)]
+pub(crate) enum DamageMatrixStat {
+    Damage = 0,
+    Healing = 1,
+    HealPrevented = 2,
+    Regen = 5,
+    CrowdControl = 6,
+    MitigatedBySource = 7,
+}
+
 #[derive(Serialize_repr, Deserialize_repr, PartialEq, Debug, Clone)]
 #[repr(i8)]
 pub(crate) enum GameMode {

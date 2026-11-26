@@ -1,5 +1,6 @@
 use clickhouse::Row;
 use serde::Serialize;
+use std::collections::BTreeMap;
 use std::io::Read as _;
 
 use prost::Message as _;
@@ -15,8 +16,8 @@ use valveprotos::deadlock::{
 };
 
 use crate::models::enums::{
-    BotDifficulty, GameMode, HeroReleaseVoteCategory, HeroXpGrantReason, MatchMode, MatchOutcome,
-    Objective, PlayerMatchOutcome, RankedType, Team,
+    BotDifficulty, DamageMatrixStat, GameMode, HeroReleaseVoteCategory, HeroXpGrantReason,
+    MatchMode, MatchOutcome, Objective, PlayerMatchOutcome, RankedType, Team,
 };
 
 #[derive(Row, Debug, Clone, Serialize)]
@@ -368,6 +369,25 @@ pub(crate) struct ClickhouseMatchPlayer {
     /// Sorted, distinct heroes of the opposing team's rows written for this match (empty for
     /// spectators). Filled by [`set_enemy_hero_ids`] once every row of the match is built.
     pub enemy_hero_ids: Vec<u8>,
+    /// End-of-match totals of the match's damage matrix that belong to this row, see
+    /// [`damage_matrix_entries`]: what the player did, then what non-heroes did to them.
+    #[serde(rename = "damage_matrix.stat_type")]
+    pub damage_matrix_stat_type: Vec<DamageMatrixStat>,
+    #[serde(rename = "damage_matrix.source")]
+    pub damage_matrix_source: Vec<String>,
+    #[serde(rename = "damage_matrix.dealer_slot")]
+    pub damage_matrix_dealer_slot: Vec<u8>,
+    #[serde(rename = "damage_matrix.target_slot")]
+    pub damage_matrix_target_slot: Vec<u8>,
+    #[serde(rename = "damage_matrix.value")]
+    pub damage_matrix_value: Vec<u32>,
+    #[serde(rename = "damage_matrix.mitigated")]
+    pub damage_matrix_mitigated: Vec<u32>,
+    #[serde(rename = "damage_matrix.lethal")]
+    pub damage_matrix_lethal: Vec<u32>,
+    /// Hero of every player slot of the match (index = slot, 0 where no player has the slot), so
+    /// queries can name the heroes behind `damage_matrix` slots without a self-join.
+    pub slot_hero_ids: Vec<u8>,
 }
 
 /// Match-level average badge, in the `tier * 10 + subrank` encoding.
@@ -490,6 +510,8 @@ pub(crate) struct MatchShared<'a> {
     match_tracked_stats: Vec<(u32, i32)>,
     team0_tracked_stats: Vec<(u32, i32)>,
     team1_tracked_stats: Vec<(u32, i32)>,
+    damage_matrix: Vec<DamageMatrixEntry>,
+    slot_hero_ids: Vec<u8>,
 }
 
 impl<'a> MatchShared<'a> {
@@ -600,6 +622,8 @@ impl<'a> MatchShared<'a> {
                     .map(|x| (x.tracked_stat_id(), x.tracked_stat_value()))
                     .collect()
             }),
+            damage_matrix: damage_matrix_entries(match_info),
+            slot_hero_ids: slot_hero_ids(match_info),
         }
     }
 }
@@ -630,6 +654,8 @@ impl From<(&MatchShared<'_>, bool, &Players)> for ClickhouseMatchPlayer {
             custom_user_stats_deltas(match_info, &value.stats)
                 .into_iter()
                 .unzip();
+        let damage_matrix =
+            DamageMatrixColumns::for_slot(&shared.damage_matrix, value.player_slot());
         Self {
             match_id: match_info.match_id(),
             start_time: match_info.start_time(),
@@ -1024,6 +1050,14 @@ impl From<(&MatchShared<'_>, bool, &Players)> for ClickhouseMatchPlayer {
                 .player_rank_data
                 .and_then(|r| r.initial_win_streak),
             enemy_hero_ids: Vec::new(),
+            damage_matrix_stat_type: damage_matrix.stat_type,
+            damage_matrix_source: damage_matrix.source,
+            damage_matrix_dealer_slot: damage_matrix.dealer_slot,
+            damage_matrix_target_slot: damage_matrix.target_slot,
+            damage_matrix_value: damage_matrix.value,
+            damage_matrix_mitigated: damage_matrix.mitigated,
+            damage_matrix_lethal: damage_matrix.lethal,
+            slot_hero_ids: shared.slot_hero_ids.clone(),
         }
     }
 }
@@ -1051,6 +1085,188 @@ pub(crate) fn set_enemy_hero_ids(rows: &mut [ClickhouseMatchPlayer]) {
             Team::Spectator => Vec::new(),
         };
     }
+}
+
+/// One end-of-match total of the damage matrix, written to the row of the player in `owner`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct DamageMatrixEntry {
+    owner: u8,
+    stat: DamageMatrixStat,
+    source: String,
+    dealer: u8,
+    target: u8,
+    value: u32,
+    mitigated: u32,
+    lethal: u32,
+}
+
+/// Where a raw matrix value goes: the value of an entry of its own type, or the `mitigated` /
+/// `lethal` total of the `Damage` entry of the same hit.
+#[derive(Debug, Clone, Copy)]
+enum MatrixFold {
+    Value(DamageMatrixStat),
+    Mitigated,
+    Lethal,
+}
+
+const fn matrix_fold(stat_type: i32) -> Option<MatrixFold> {
+    Some(match stat_type {
+        0 => MatrixFold::Value(DamageMatrixStat::Damage),
+        1 => MatrixFold::Value(DamageMatrixStat::Healing),
+        2 => MatrixFold::Value(DamageMatrixStat::HealPrevented),
+        3 => MatrixFold::Mitigated,
+        4 => MatrixFold::Lethal,
+        5 => MatrixFold::Value(DamageMatrixStat::Regen),
+        6 => MatrixFold::Value(DamageMatrixStat::CrowdControl),
+        7 => MatrixFold::Value(DamageMatrixStat::MitigatedBySource),
+        _ => return None,
+    })
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct MatrixTotals {
+    value: u32,
+    mitigated: u32,
+    lethal: u32,
+}
+
+/// The damage matrix as end-of-match totals, one entry per (stat, source, dealer, target).
+///
+/// Each `damage` array is cumulative and end-aligned with `sample_time_s` (leading zeros are
+/// left out), so its last element is the match total; the per-sample series stay in the raw
+/// metadata. A `mitigated` value (dealer = the defender, target = the attacker) and a
+/// `lethal_damage` value mirror the `damage` value of the same hit, so they become its
+/// `mitigated` and `lethal` totals, which halves the entries. Slot 0 is a non-hero (troopers,
+/// bosses, objectives) and has no row, so its entries go to the row of the player it hit. Entries
+/// are in (stat, source, dealer, target) order; values that are not there or 0 are left out.
+fn damage_matrix_entries(match_info: &MatchInfo) -> Vec<DamageMatrixEntry> {
+    let Some(matrix) = &match_info.damage_matrix else {
+        return Vec::new();
+    };
+    let Some(details) = &matrix.source_details else {
+        return Vec::new();
+    };
+    let mut totals: BTreeMap<(DamageMatrixStat, &str, u8, u8), MatrixTotals> = BTreeMap::new();
+    let mut unknown = 0_usize;
+    for dealer in &matrix.damage_dealers {
+        let Ok(dealer_slot) = u8::try_from(dealer.dealer_player_slot()) else {
+            continue;
+        };
+        for source in &dealer.damage_sources {
+            let index = usize::try_from(source.source_details_index()).unwrap_or(usize::MAX);
+            let fold = details.stat_type.get(index).copied().and_then(matrix_fold);
+            let (Some(fold), Some(name)) = (fold, details.source_name.get(index)) else {
+                unknown = unknown.saturating_add(1);
+                continue;
+            };
+            for to in &source.damage_to_players {
+                let Ok(target_slot) = u8::try_from(to.target_player_slot()) else {
+                    continue;
+                };
+                let Some(&total) = to.damage.last().filter(|&&total| total > 0) else {
+                    continue;
+                };
+                let (stat, dealer, target) = match fold {
+                    MatrixFold::Value(stat) => (stat, dealer_slot, target_slot),
+                    MatrixFold::Mitigated => (DamageMatrixStat::Damage, target_slot, dealer_slot),
+                    MatrixFold::Lethal => (DamageMatrixStat::Damage, dealer_slot, target_slot),
+                };
+                let entry = totals
+                    .entry((stat, name.as_str(), dealer, target))
+                    .or_default();
+                let field = match fold {
+                    MatrixFold::Value(_) => &mut entry.value,
+                    MatrixFold::Mitigated => &mut entry.mitigated,
+                    MatrixFold::Lethal => &mut entry.lethal,
+                };
+                *field = field.saturating_add(total);
+            }
+        }
+    }
+    if unknown > 0 {
+        warn!(
+            match_id = match_info.match_id(),
+            unknown, "Skipped damage matrix sources with an unknown stat type"
+        );
+    }
+    totals
+        .into_iter()
+        .filter_map(|((stat, source, dealer, target), totals)| {
+            let owner = if dealer == 0 { target } else { dealer };
+            (owner != 0).then(|| DamageMatrixEntry {
+                owner,
+                stat,
+                source: source.to_owned(),
+                dealer,
+                target,
+                value: totals.value,
+                mitigated: totals.mitigated,
+                lethal: totals.lethal,
+            })
+        })
+        .collect()
+}
+
+/// The `damage_matrix.*` columns of one row.
+#[derive(Debug, Default)]
+struct DamageMatrixColumns {
+    stat_type: Vec<DamageMatrixStat>,
+    source: Vec<String>,
+    dealer_slot: Vec<u8>,
+    target_slot: Vec<u8>,
+    value: Vec<u32>,
+    mitigated: Vec<u32>,
+    lethal: Vec<u32>,
+}
+
+impl DamageMatrixColumns {
+    /// The entries of the player in `slot`: their own first, then the ones non-heroes dealt to
+    /// them, each in (stat, source, target) order. Rows then repeat the same key sequence, which
+    /// compresses well.
+    fn for_slot(entries: &[DamageMatrixEntry], slot: u32) -> Self {
+        let mut own: Vec<&DamageMatrixEntry> = entries
+            .iter()
+            .filter(|e| u32::from(e.owner) == slot)
+            .collect();
+        // stable, so the (stat, source, dealer, target) order holds within each group
+        own.sort_by_key(|e| e.dealer != e.owner);
+        let mut columns = Self::default();
+        for entry in own {
+            columns.stat_type.push(entry.stat);
+            columns.source.push(entry.source.clone());
+            columns.dealer_slot.push(entry.dealer);
+            columns.target_slot.push(entry.target);
+            columns.value.push(entry.value);
+            columns.mitigated.push(entry.mitigated);
+            columns.lethal.push(entry.lethal);
+        }
+        columns
+    }
+}
+
+/// Hero of every player slot (index = slot), 0 for slots without a player. Covers all players,
+/// also those whose rows are not written, so every slot in `damage_matrix` resolves.
+fn slot_hero_ids(match_info: &MatchInfo) -> Vec<u8> {
+    let slots: Vec<(usize, u8)> = match_info
+        .players
+        .iter()
+        .filter_map(|p| {
+            let slot = u8::try_from(p.player_slot()).ok()?;
+            Some((usize::from(slot), u8::try_from(p.hero_id()).ok()?))
+        })
+        .collect();
+    let len = slots
+        .iter()
+        .map(|&(slot, _)| slot)
+        .max()
+        .map_or(0, |max| max.saturating_add(1));
+    let mut heroes = vec![0; len];
+    for (slot, hero) in slots {
+        if let Some(entry) = heroes.get_mut(slot) {
+            *entry = hero;
+        }
+    }
+    heroes
 }
 
 /// Custom stats keyed by name (the id when the match has no name for it), sorted by name, each
@@ -1139,6 +1355,113 @@ mod tests {
                 .collect(),
             ..Default::default()
         }
+    }
+
+    fn damage_matrix_match() -> MatchInfo {
+        use valveprotos::deadlock::CMsgMatchPlayerDamageMatrix;
+        use valveprotos::deadlock::c_msg_match_player_damage_matrix::{
+            DamageDealer, DamageSource, DamageToPlayer, SourceDetails,
+        };
+
+        let to = |target: u32, damage: &[u32]| DamageToPlayer {
+            target_player_slot: Some(target),
+            damage: damage.to_vec(),
+        };
+        let source = |index: u32, targets: Vec<DamageToPlayer>| DamageSource {
+            damage_to_players: targets,
+            source_details_index: Some(index),
+        };
+        let dealer = |slot: u32, sources: Vec<DamageSource>| DamageDealer {
+            dealer_player_slot: Some(slot),
+            damage_sources: sources,
+        };
+        MatchInfo {
+            players: [(1, 7), (2, 15), (7, 2)]
+                .into_iter()
+                .map(|(slot, hero)| Players {
+                    player_slot: Some(slot),
+                    hero_id: Some(hero),
+                    ..Default::default()
+                })
+                .collect(),
+            damage_matrix: Some(CMsgMatchPlayerDamageMatrix {
+                sample_time_s: vec![180, 360, 400],
+                source_details: Some(SourceDetails {
+                    // 0 damage, 3 mitigated, 4 lethal, 6 crowd control, 9 unknown
+                    stat_type: vec![0, 3, 4, 6, 9, 0],
+                    source_name: ["Bullet", "Bullet", "Bullet", "Stun", "New", "Ability"]
+                        .map(str::to_owned)
+                        .to_vec(),
+                }),
+                damage_dealers: vec![
+                    dealer(
+                        1,
+                        vec![
+                            // cumulative and end-aligned: the last value is the total
+                            source(0, vec![to(7, &[10, 30, 50]), to(0, &[5])]),
+                            source(2, vec![to(7, &[20])]),
+                            source(3, vec![to(7, &[1500])]),
+                            source(4, vec![to(7, &[99])]),
+                            source(5, vec![to(7, &[])]),
+                        ],
+                    ),
+                    // the defender (7) mitigated part of 1's bullets
+                    dealer(7, vec![source(1, vec![to(1, &[4, 12])])]),
+                    // a trooper (slot 0) hit player 1
+                    dealer(0, vec![source(0, vec![to(1, &[8])])]),
+                ],
+            }),
+            ..Default::default()
+        }
+    }
+
+    #[test]
+    fn damage_matrix_folds_mitigated_and_lethal_into_the_damage_entry() {
+        let entries = damage_matrix_entries(&damage_matrix_match());
+        let row = DamageMatrixColumns::for_slot(&entries, 1);
+
+        // own entries in (stat, source, target) order, then what the trooper dealt to slot 1;
+        // the empty "Ability" series and the unknown stat type are left out
+        assert_eq!(
+            row.stat_type,
+            [
+                DamageMatrixStat::Damage,
+                DamageMatrixStat::Damage,
+                DamageMatrixStat::CrowdControl,
+                DamageMatrixStat::Damage
+            ]
+        );
+        assert_eq!(row.source, ["Bullet", "Bullet", "Stun", "Bullet"]);
+        assert_eq!(row.dealer_slot, [1, 1, 1, 0]);
+        assert_eq!(row.target_slot, [0, 7, 7, 1]);
+        assert_eq!(row.value, [5, 50, 1500, 8]);
+        assert_eq!(row.mitigated, [0, 12, 0, 0]);
+        assert_eq!(row.lethal, [0, 20, 0, 0]);
+
+        // the defender's mitigation lives on the attacker's entry, not in the defender's row
+        let defender = DamageMatrixColumns::for_slot(&entries, 7);
+        assert_eq!(defender.stat_type, []);
+    }
+
+    #[test]
+    fn damage_matrix_keeps_every_value() {
+        let entries = damage_matrix_entries(&damage_matrix_match());
+        let kept: u32 = entries
+            .iter()
+            .map(|e| e.value + e.mitigated + e.lethal)
+            .sum();
+        // 50 + 5 + 20 + 1500 + 12 + 8; the unknown type (99) is skipped
+        assert_eq!(kept, 1595);
+        assert!(entries.iter().all(|e| e.owner != 0));
+    }
+
+    #[test]
+    fn slot_hero_ids_index_by_slot() {
+        assert_eq!(
+            slot_hero_ids(&damage_matrix_match()),
+            [0, 7, 15, 0, 0, 0, 0, 2]
+        );
+        assert_eq!(slot_hero_ids(&MatchInfo::default()), Vec::<u8>::new());
     }
 
     #[test]
