@@ -1,6 +1,6 @@
 use core::num::NonZeroUsize;
 use core::time::Duration;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::sync::{Arc, LazyLock, Mutex};
 use std::time::Instant;
@@ -159,6 +159,13 @@ impl SpectatorBot {
         let exists: Option<String> = self.redis.clone().hget(key, match_id).await?;
         Ok(exists.is_some())
     }
+
+    /// [`spectated_ids_and_own`] of `key`, read with one `HGETALL`.
+    async fn spectated_match_ids(&self, key: &str) -> Result<(HashSet<u64>, usize)> {
+        let records: HashMap<String, String> = self.redis.clone().hgetall(key).await?;
+        Ok(spectated_ids_and_own(&records))
+    }
+
     async fn update_spectated(&self, key: &str, match_id: u64, expiry_seconds: i64) -> Result<()> {
         let _: () = self
             .redis
@@ -216,14 +223,14 @@ impl SpectatorBot {
         let members: Vec<String> = self.redis.clone().hvals(key).await?;
         Ok(members
             .into_iter()
-            .filter_map(|s| serde_json::from_str::<SpectatedMatchInfo>(&s).ok())
+            .filter_map(|s| parse_record(&s))
             .map(|x| (x.match_id, x))
             .collect())
     }
 
     fn find_gaps(
         active_match_ids: &[u64],
-        recently_spectated: &HashMap<u64, SpectatedMatchInfo>,
+        spectated: &HashSet<u64>,
         failed_spectating: &HashMap<u64, SpectatedMatchInfo>,
     ) -> Vec<u64> {
         let Some((&min_id, &max_id)) = active_match_ids
@@ -244,13 +251,13 @@ impl SpectatorBot {
         let offset = (span as f64 * *GAP_PERCENTILE) as u64;
         let start = min_id.saturating_add(offset).min(max_id);
 
-        let active_set: std::collections::HashSet<u64> = active_match_ids.iter().copied().collect();
+        let active_set: HashSet<u64> = active_match_ids.iter().copied().collect();
 
         // we prioritise from start to max first, then start to min
         // cause the very old matches might be already over and result in KENotInGame Errors
         (start..max_id)
             .chain(min_id..start)
-            .filter(|x| !recently_spectated.contains_key(x))
+            .filter(|x| !spectated.contains(x))
             .filter(|x| !failed_spectating.contains_key(x))
             .filter(|x| !active_set.contains(x))
             .take(MAX_GAP_SIZE)
@@ -422,8 +429,7 @@ impl SpectatorBot {
         while start_time.elapsed() < Duration::from_secs(BOT_RUNTIME_HOURS * 3600) {
             self.update_patch_version(&steam_inf.read().await)?;
 
-            let recently_spectated = self.get_all_recently_spectated(REDIS_SPEC_KEY).await?;
-            let n_spectated = recently_spectated.len();
+            let (spectated_ids, n_spectated) = self.spectated_match_ids(REDIS_SPEC_KEY).await?;
 
             if let Some(max_spectating_matches) = max_spectating_matches
                 && n_spectated > max_spectating_matches
@@ -434,7 +440,7 @@ impl SpectatorBot {
             }
 
             let redis_failed_spectates = self.get_all_recently_spectated(REDIS_FAILED_KEY).await?;
-            let local_failed_spectates: std::collections::HashSet<u64> = self
+            let local_failed_spectates: HashSet<u64> = self
                 .failed_spectates
                 .lock()
                 .map_or_default(|guard| guard.iter().map(|(k, _)| *k).collect());
@@ -444,7 +450,7 @@ impl SpectatorBot {
                 .iter()
                 .filter(|x| {
                     x.spectators.unwrap_or_default() == 0
-                        && !recently_spectated.contains_key(&x.match_id)
+                        && !spectated_ids.contains(&x.match_id)
                         && !redis_failed_spectates.contains_key(&x.match_id)
                         && !local_failed_spectates.contains(&x.match_id)
                 })
@@ -498,11 +504,10 @@ impl SpectatorBot {
                     .sorted()
                     .collect();
 
-                let gaps =
-                    Self::find_gaps(&match_ids, &recently_spectated, &redis_failed_spectates)
-                        .into_iter()
-                        .filter(|x| !local_failed_spectates.contains(x))
-                        .collect::<Vec<_>>();
+                let gaps = Self::find_gaps(&match_ids, &spectated_ids, &redis_failed_spectates)
+                    .into_iter()
+                    .filter(|x| !local_failed_spectates.contains(x))
+                    .collect::<Vec<_>>();
 
                 if gaps.is_empty() {
                     info!("No eligible matches or gaps found (spectated: {n_spectated})");
@@ -626,5 +631,55 @@ pub(crate) async fn run_bot(
             server.abort();
             Ok(())
         }
+    }
+}
+
+/// A record of this bot's own, the only kind `/matches` serves to the scrapers.
+fn parse_record(record: &str) -> Option<SpectatedMatchInfo> {
+    serde_json::from_str(record).ok()
+}
+
+/// The match ids in a spectated hash and the number of this bot's own records. The API and
+/// `POST /live/urls` also write to the hash, in records the bot cannot parse. Matches are picked by
+/// id, so one that `spectate_match` skips as recently spectated is not picked again every round.
+fn spectated_ids_and_own(records: &HashMap<String, String>) -> (HashSet<u64>, usize) {
+    let ids = records.keys().filter_map(|id| id.parse().ok()).collect();
+    let own = records.values().filter_map(|r| parse_record(r)).count();
+    (ids, own)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_record_is_spectated_but_only_own_ones_count() {
+        let records = HashMap::from([
+            // Written by the API when it spectates a match for /live/url: no started_at.
+            (
+                "1".to_owned(),
+                r#"{"match_type":"GapMatch","match_id":1,"broadcast_url":"http://a.steamcontent.com/tv/1","lobby_id":11,"updated_at":1764200000}"#.to_owned(),
+            ),
+            // Written by POST /live/urls.
+            (
+                "2".to_owned(),
+                r#"{"match_type":"IngestedMatch","match_id":2,"broadcast_url":"http://a.steamcontent.com/tv/2","lobby_id":null,"updated_at":1764200000,"started_at":null}"#.to_owned(),
+            ),
+            // Written by this bot.
+            (
+                "3".to_owned(),
+                r#"{"match_type":"ActiveMatch","match_id":3,"broadcast_url":"http://a.steamcontent.com/tv/3","updated_at":1764200000,"started_at":1764199000}"#.to_owned(),
+            ),
+        ]);
+        let (ids, own) = spectated_ids_and_own(&records);
+        assert_eq!(ids, HashSet::from([1, 2, 3]));
+        assert_eq!(own, 1);
+    }
+
+    #[test]
+    fn gaps_skip_every_spectated_id() {
+        let gaps = SpectatorBot::find_gaps(&[10, 15], &HashSet::from([12]), &HashMap::new());
+        // The order depends on GAP_PERCENTILE; the set does not.
+        assert_eq!(gaps.into_iter().sorted().collect_vec(), [11, 13, 14]);
     }
 }
