@@ -45,7 +45,8 @@ const MANIFEST_EXAMPLE = `# ${MANIFEST_URL}
       "policy": "incremental", "status": "ready", "watermark": "created_at",
       "partition_expr": "intDiv(match_id, 1000000)", "generation": 1, "watermark_hi": 1789648080,
       "files": [
-        { "key": "v1/tables/match_player/g1/base/part-105/....parquet", "kind": "base", "partition": 105, "hi": 1789640000, ... },
+        { "key": "v1/tables/match_player/g1/base/part-105/....parquet", "kind": "base", "partition": 105, "hi": 1789640000,
+          "min_match_id": 105000000, "max_match_id": 105041312, "min_start_time": 1786111200, "max_start_time": 1786190400, ... },
         { "key": "v1/tables/match_player/g1/delta/....parquet", "kind": "delta", "lo": 1789644480, "hi": 1789648080, ... }
       ]
     }
@@ -54,6 +55,7 @@ const MANIFEST_EXAMPLE = `# ${MANIFEST_URL}
 
 # Files of the current generation only:  generation == table.generation  (snapshots: all files)
 # Base files hold rows with watermark <= hi; deltas/residuals hold rows with watermark in (lo, hi].
+# Base files carry min/max_match_id and min/max_start_time (unix seconds): pick files by range without opening them.
 # Files are immutable and uniquely named; the manifest is the only object that changes.`;
 
 const PYTHON_EXAMPLE = `# pip install duckdb requests

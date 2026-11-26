@@ -276,6 +276,17 @@ pub(crate) fn file_rows(named_collection: &str, key: &str) -> String {
     )
 }
 
+/// `match_id` / `start_time` (unix seconds) bounds of an uploaded file; reads only those
+/// two columns.
+pub(crate) fn file_bounds(named_collection: &str, key: &str) -> String {
+    format!(
+        "SELECT toUInt64(min(match_id)) AS min_match_id, toUInt64(max(match_id)) AS max_match_id, \
+         toInt64(toUnixTimestamp(min(start_time))) AS min_start_time, \
+         toInt64(toUnixTimestamp(max(start_time))) AS max_start_time FROM {}",
+        target(named_collection, key)
+    )
+}
+
 /// Rows per partition inside an uploaded file (only the partition column is read).
 pub(crate) fn file_partition_counts(
     named_collection: &str,

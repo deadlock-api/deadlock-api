@@ -11,7 +11,7 @@ use serde::Deserialize;
 use tracing::info;
 
 use super::DumpError;
-use super::manifest::{FileEntry, FileKind};
+use super::manifest::{FileBounds, FileEntry, FileKind};
 use super::sql::{self, LOG_COMMENT};
 
 pub(crate) struct Exporter {
@@ -59,6 +59,14 @@ impl Exporter {
 
     pub(crate) async fn fetch_u64s(&self, sql: &str, step: &str) -> Result<Vec<u64>, DumpError> {
         Ok(self.query(sql, step).fetch_one::<Vec<u64>>().await?)
+    }
+
+    /// `match_id` / `start_time` bounds of an uploaded file.
+    pub(crate) async fn file_bounds(&self, key: &str, step: &str) -> Result<FileBounds, DumpError> {
+        Ok(self
+            .query(&sql::file_bounds(&self.named_collection, key), step)
+            .fetch_one::<FileBounds>()
+            .await?)
     }
 
     pub(crate) async fn delete(&self, key: &str) -> Result<(), DumpError> {
@@ -161,6 +169,10 @@ impl Exporter {
             bytes: written.bytes,
             rows_by_partition,
             built_at: Utc::now(),
+            min_match_id: None,
+            max_match_id: None,
+            min_start_time: None,
+            max_start_time: None,
         })
     }
 }

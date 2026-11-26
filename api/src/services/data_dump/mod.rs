@@ -46,6 +46,8 @@ const TICK: Duration = Duration::from_secs(3600);
 const HOUR: i64 = 3600;
 const FOLD_EVERY: chrono::Duration = chrono::Duration::hours(20);
 const LEASE_KEY: &str = "data_dump:leader";
+/// Base files per tick whose missing `match_id` / `start_time` bounds are read.
+const BOUNDS_BACKFILL_PER_TICK: usize = 500;
 
 #[derive(Debug, thiserror::Error)]
 pub(crate) enum DumpError {
@@ -105,6 +107,8 @@ struct BaseExport<'a> {
     range: sql::BaseRange<'a>,
     watermark: &'a str,
     watermark_hi: i64,
+    /// Read the written files' `match_id` / `start_time` bounds into their entries.
+    bounds: bool,
 }
 
 /// One residual window over every partition: what [`DataDump::export_residual`] writes.
@@ -511,6 +515,10 @@ impl DataDump {
                 bytes: written.bytes,
                 rows_by_partition: BTreeMap::new(),
                 built_at: Utc::now(),
+                min_match_id: None,
+                max_match_id: None,
+                min_start_time: None,
+                max_start_time: None,
             });
         }
         Ok(files)
@@ -692,6 +700,7 @@ impl DataDump {
             max_base_age_secs: self.config.max_base_age_secs,
         };
         let plan = compaction::plan_rebuilds(state, target_gen, &actual, watermark_hi, &params);
+        let bounds = manifest::has_bounds_columns(&state.columns);
         for rebuild in plan {
             shutdown_check()?;
             let p = rebuild.partition;
@@ -706,6 +715,7 @@ impl DataDump {
                 },
                 watermark,
                 watermark_hi,
+                bounds,
             };
             let estimate = compaction::estimate_base_bytes(
                 state,
@@ -787,6 +797,52 @@ impl DataDump {
             state.files.extend(files);
             self.checkpoint(manifest, name, state).await;
         }
+
+        if bounds && let Err(e) = self.backfill_bounds(exporter, manifest, name, state).await {
+            if matches!(e, DumpError::Shutdown) {
+                return Err(e);
+            }
+            warn!("data dump: {name} bounds backfill failed: {e}");
+        }
+        Ok(())
+    }
+
+    /// Reads the `match_id` / `start_time` bounds of base files written before bases carried
+    /// them, at most `BOUNDS_BACKFILL_PER_TICK` per tick. Each reads two column chunks of the
+    /// file (~150 KB for a 400 MB `match_player` base).
+    async fn backfill_bounds(
+        &self,
+        exporter: &Exporter,
+        manifest: &Manifest,
+        name: &str,
+        state: &mut TableState,
+    ) -> Result<(), DumpError> {
+        let keys: Vec<String> = state
+            .files
+            .iter()
+            .filter(|f| f.kind == FileKind::Base && !f.has_bounds())
+            .take(BOUNDS_BACKFILL_PER_TICK)
+            .map(|f| f.key.clone())
+            .collect();
+        if keys.is_empty() {
+            return Ok(());
+        }
+        let mut done = 0usize;
+        for key in &keys {
+            shutdown_check()?;
+            let bounds = exporter
+                .file_bounds(key, &format!("{name}-bounds-{done}"))
+                .await?;
+            if let Some(f) = state.files.iter_mut().find(|f| f.key == *key) {
+                f.set_bounds(bounds);
+            }
+            done = done.saturating_add(1);
+            if done.is_multiple_of(100) {
+                self.checkpoint(manifest, name, state).await;
+            }
+        }
+        info!("data dump: {name} backfilled the bounds of {done} base files");
+        self.checkpoint(manifest, name, state).await;
         Ok(())
     }
 
@@ -922,6 +978,7 @@ impl DataDump {
             range,
             watermark,
             watermark_hi,
+            bounds,
         } = *base;
         let p = range.partition;
         let step = format!("{name}-g{generation}-base-{p}");
@@ -981,7 +1038,7 @@ impl DataDump {
                     "data dump: base file over the size limit cannot be split further"
                 );
             }
-            files.push(FileEntry {
+            let mut entry = FileEntry {
                 key,
                 kind: FileKind::Base,
                 generation,
@@ -992,7 +1049,19 @@ impl DataDump {
                 bytes: written.bytes,
                 rows_by_partition: BTreeMap::new(),
                 built_at: Utc::now(),
-            });
+                min_match_id: None,
+                max_match_id: None,
+                min_start_time: None,
+                max_start_time: None,
+            };
+            if bounds {
+                entry.set_bounds(
+                    exporter
+                        .file_bounds(&entry.key, &format!("{chunk_step}-bounds"))
+                        .await?,
+                );
+            }
+            files.push(entry);
         }
         Ok(files)
     }

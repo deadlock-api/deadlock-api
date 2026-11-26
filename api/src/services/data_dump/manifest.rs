@@ -234,6 +234,52 @@ pub(crate) struct FileEntry {
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub(crate) rows_by_partition: BTreeMap<u64, u64>,
     pub(crate) built_at: DateTime<Utc>,
+    /// Smallest and largest `match_id` and `start_time` (unix seconds) in the file, so readers
+    /// can pick the files of a match id or time range without opening them. Set on base files
+    /// of tables that have both columns.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) min_match_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) max_match_id: Option<u64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) min_start_time: Option<i64>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) max_start_time: Option<i64>,
+}
+
+impl FileEntry {
+    pub(crate) const fn set_bounds(&mut self, bounds: FileBounds) {
+        self.min_match_id = Some(bounds.min_match_id);
+        self.max_match_id = Some(bounds.max_match_id);
+        self.min_start_time = Some(bounds.min_start_time);
+        self.max_start_time = Some(bounds.max_start_time);
+    }
+
+    pub(crate) const fn has_bounds(&self) -> bool {
+        self.min_match_id.is_some()
+            && self.max_match_id.is_some()
+            && self.min_start_time.is_some()
+            && self.max_start_time.is_some()
+    }
+}
+
+/// Columns [`FileBounds`] is read from.
+pub(crate) const BOUNDS_COLUMNS: [&str; 2] = ["match_id", "start_time"];
+
+/// Whether a table's files can carry [`FileBounds`].
+pub(crate) fn has_bounds_columns(columns: &[Column]) -> bool {
+    BOUNDS_COLUMNS
+        .iter()
+        .all(|c| columns.iter().any(|col| col.name == *c))
+}
+
+/// `match_id` and `start_time` bounds of one file (see [`FileEntry::min_match_id`]).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, clickhouse::Row, Deserialize)]
+pub(crate) struct FileBounds {
+    pub(crate) min_match_id: u64,
+    pub(crate) max_match_id: u64,
+    pub(crate) min_start_time: i64,
+    pub(crate) max_start_time: i64,
 }
 
 /// The manifest together with the `ETag` it was read with.
@@ -329,7 +375,35 @@ mod tests {
             bytes: 100,
             rows_by_partition: BTreeMap::from([(5, 3)]),
             built_at: Utc::now(),
+            min_match_id: None,
+            max_match_id: None,
+            min_start_time: None,
+            max_start_time: None,
         });
+        table.files.push(FileEntry {
+            key: "v1/tables/match_player/g1/base/part-5/b.parquet".to_owned(),
+            kind: FileKind::Base,
+            generation: 1,
+            partition: Some(5),
+            lo: None,
+            hi: Some(20),
+            rows: 3,
+            bytes: 100,
+            rows_by_partition: BTreeMap::new(),
+            built_at: Utc::now(),
+            min_match_id: None,
+            max_match_id: None,
+            min_start_time: None,
+            max_start_time: None,
+        });
+        if let Some(base) = table.files.get_mut(1) {
+            base.set_bounds(FileBounds {
+                min_match_id: 5_000_001,
+                max_match_id: 5_999_999,
+                min_start_time: 100,
+                max_start_time: 200,
+            });
+        }
         manifest.tables.insert("match_player".to_owned(), table);
 
         let json = serde_json::to_string(&manifest).unwrap();
@@ -339,6 +413,13 @@ mod tests {
             back.tables["match_player"].files[0].rows_by_partition[&5],
             3
         );
+        let delta = &back.tables["match_player"].files[0];
+        assert!(!delta.has_bounds());
+        assert!(!json.contains("\"min_match_id\":null"));
+        let base = &back.tables["match_player"].files[1];
+        assert!(base.has_bounds());
+        assert_eq!(base.min_match_id, Some(5_000_001));
+        assert_eq!(base.max_start_time, Some(200));
         assert_eq!(
             manifest.url("v1/x.parquet"),
             "https://data.example.com/v1/x.parquet"

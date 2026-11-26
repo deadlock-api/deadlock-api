@@ -444,6 +444,10 @@ mod tests {
                 BTreeMap::from([(partition.unwrap_or(0), rows)])
             },
             built_at: Utc::now(),
+            min_match_id: None,
+            max_match_id: None,
+            min_start_time: None,
+            max_start_time: None,
         }
     }
 

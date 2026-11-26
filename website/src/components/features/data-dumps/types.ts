@@ -24,6 +24,11 @@ export interface ManifestFile {
   rows: number;
   bytes: number;
   built_at: string;
+  /** Base files: smallest/largest match_id and start_time (unix seconds) in the file. */
+  min_match_id?: number;
+  max_match_id?: number;
+  min_start_time?: number;
+  max_start_time?: number;
 }
 
 export interface ManifestTable {
