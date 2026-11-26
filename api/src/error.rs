@@ -8,7 +8,7 @@ use clickhouse_utils::{BatchError, is_query_timeout};
 use game_assets::client::AssetsClientError;
 use reqwest::StatusCode;
 use serde_json::json;
-use steam_proxy::SteamProxyError;
+use steam_proxy::{ClientVersionError, SteamProxyError};
 use thiserror::Error;
 use tracing::{debug, error, info, warn};
 
@@ -130,6 +130,15 @@ impl From<BatchError> for APIError {
 impl From<AssetsClientError> for APIError {
     fn from(e: AssetsClientError) -> Self {
         Self::internal(e.to_string())
+    }
+}
+
+impl From<ClientVersionError> for APIError {
+    fn from(e: ClientVersionError) -> Self {
+        match e {
+            ClientVersionError::Request(e) => Self::Request(e),
+            ClientVersionError::Internal(message) => Self::internal(message),
+        }
     }
 }
 

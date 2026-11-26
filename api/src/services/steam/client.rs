@@ -12,7 +12,7 @@ use url::Url;
 use valveprotos::deadlock::{CMsgClientToGcGetMatchMetaDataResponse, EgcCitadelClientMessages};
 
 use crate::context::AppState;
-use crate::error::{APIError, APIResult};
+use crate::error::APIResult;
 use crate::middleware::cors::is_own_origin;
 use crate::services::protected_accounts;
 use crate::services::rate_limiter::extractor::RateLimitKey;
@@ -93,7 +93,7 @@ impl SteamClient {
 
     /// Get the current client version from the Steam Database
     pub(crate) async fn get_current_client_version(&self) -> APIResult<u32> {
-        get_current_client_version(&self.http_client).await
+        Ok(steam_proxy::get_current_client_version(&self.http_client).await?)
     }
 
     pub(crate) const fn http_client(&self) -> &reqwest::Client {
@@ -192,71 +192,6 @@ impl SteamClient {
             .await
             .map(Vec::from)
     }
-}
-
-#[derive(serde::Deserialize)]
-struct SteamClientVersionResponse {
-    result: SteamClientVersionResult,
-}
-
-#[derive(serde::Deserialize)]
-struct SteamClientVersionResult {
-    success: bool,
-    min_allowed_version: Option<u32>,
-}
-
-#[cached(ttl_secs = 300, convert = "{ 0 }", key = "u8", result_fallback = true)]
-async fn get_current_client_version(http_client: &reqwest::Client) -> Result<u32, APIError> {
-    // Try the official Steam API first
-    if let Ok(version) = get_client_version_from_steam_api(http_client).await {
-        return Ok(version);
-    }
-
-    // Fall back to GitHub repo
-    debug!("Steam API failed, falling back to GitHub for client version");
-    get_client_version_from_github(http_client).await
-}
-
-async fn get_client_version_from_steam_api(http_client: &reqwest::Client) -> APIResult<u32> {
-    let response: SteamClientVersionResponse = http_client
-        .get("https://api.steampowered.com/IGCVersion_1422450/GetClientVersion/v1/")
-        .timeout(Duration::from_secs(5))
-        .send()
-        .await
-        .and_then(Response::error_for_status)
-        .map_err(|e| {
-            APIError::internal(format!(
-                "Failed to fetch client version from Steam API: {e}"
-            ))
-        })?
-        .json()
-        .await
-        .map_err(|e| APIError::internal(format!("Failed to parse Steam API response: {e}")))?;
-
-    if !response.result.success {
-        return Err(APIError::internal("Steam API returned success=false"));
-    }
-
-    response
-        .result
-        .min_allowed_version
-        .ok_or_else(|| APIError::internal("Steam API response missing min_allowed_version"))
-}
-
-async fn get_client_version_from_github(http_client: &reqwest::Client) -> APIResult<u32> {
-    let steam_info = http_client
-        .get("https://raw.githubusercontent.com/SteamDatabase/GameTracking-Deadlock/refs/heads/master/game/citadel/steam.inf")
-        .send()
-        .await
-        .and_then(Response::error_for_status)?
-        .text().await?;
-    let version = steam_info
-        .lines()
-        .find_map(|line| line.strip_prefix("ClientVersion="))
-        .ok_or_else(|| APIError::internal("Failed to fetch client version"))?;
-    version
-        .parse()
-        .map_err(|_not_a_number| APIError::internal("Failed to parse client version"))
 }
 
 #[cached(

@@ -2,10 +2,11 @@
 name = "steam-proxy"
 version = "0.1.0"
 edition = "2024"
-description = "Request and response types of sv-proxy, and a client for it"
+description = "Request and response types of sv-proxy, a client for it, and the client version the Game Coordinator accepts"
 
 [dependencies]
 base64 = { workspace = true }
+cached = { workspace = true, features = ["async"] }
 metrics = { workspace = true }
 prost = { workspace = true }
 rand = { workspace = true }
