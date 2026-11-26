@@ -69,6 +69,15 @@ pub struct SteamProxyResponse {
     pub data: String,
     /// The bot that ran the job.
     pub username: String,
+    /// The state of the bot pool after the job.
+    pub pool_limit_info: Option<SteamProxyPoolInfo>,
+}
+
+/// The state of sv-proxy's bot pool, sent with a successful job response.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct SteamProxyPoolInfo {
+    /// How many bots of the job's groups are ready for another job.
+    pub ready_bots: u32,
 }
 
 impl SteamProxyResponse {
@@ -368,10 +377,23 @@ mod tests {
         let response = SteamProxyResponse {
             data: body.data,
             username: "bot".to_owned(),
+            pool_limit_info: None,
         };
         let decoded: CMsgClientToGcGetMatchMetaData =
             response.decode::<_, SteamProxyError>().unwrap();
         assert_eq!(decoded, msg);
+    }
+
+    #[test]
+    fn reads_the_pool_info_when_present() {
+        let with_pool: SteamProxyResponse = serde_json::from_str(
+            r#"{"data": "", "username": "bot", "pool_limit_info": {"ready_bots": 3}}"#,
+        )
+        .unwrap();
+        assert_eq!(with_pool.pool_limit_info.map(|p| p.ready_bots), Some(3));
+        let without: SteamProxyResponse =
+            serde_json::from_str(r#"{"data": "", "username": "bot"}"#).unwrap();
+        assert!(without.pool_limit_info.is_none());
     }
 
     #[test]

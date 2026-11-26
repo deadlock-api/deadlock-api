@@ -3767,7 +3767,6 @@ version = "0.1.0"
 dependencies = [
  "async-compression",
  "axum",
- "base64 0.23.1",
  "bytes",
  "cached",
  "clap",
@@ -3787,6 +3786,7 @@ dependencies = [
  "serde",
  "serde_json",
  "service-utils",
+ "steam-proxy",
  "strum 0.28.0",
  "telemetry",
  "thiserror",
