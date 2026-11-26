@@ -8,8 +8,9 @@ use object_store::{ObjectStore, ObjectStoreExt as _};
 use crate::format::pack_key;
 use crate::{Index, Kind};
 
-/// The longest an index lookup may take before the caller falls back to the loose objects.
-const LOOKUP_TIMEOUT: Duration = Duration::from_millis(500);
+/// The longest an index lookup may take before the caller falls back to the loose objects (which
+/// are gone for packed files, so this errs long).
+const LOOKUP_TIMEOUT: Duration = Duration::from_secs(2);
 
 #[derive(Debug, thiserror::Error)]
 pub enum ReadError {

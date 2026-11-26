@@ -200,17 +200,23 @@ impl AppState {
             .database(&config.postgres.dbname);
         let pg_client = PgPoolOptions::new()
             .max_connections(config.postgres.pool_size)
-            .connect_with(pg_options)
+            .connect_with(pg_options.clone())
             .await?;
 
         debug!("Loading feature flags");
         let feature_flags = FeatureFlags::load(pg_client.clone()).await;
 
-        // The packs live in the archive bucket (ordinal 0 in the index).
+        // The packs live in the archive bucket (ordinal 0 in the index). Their index lookups get a
+        // pool of their own: a metadata read whose loose copy is gone depends on its lookup, which
+        // must not queue behind slow queries on the shared pool.
+        let packs_pool = PgPoolOptions::new()
+            .max_connections(8)
+            .acquire_timeout(Duration::from_secs(2))
+            .connect_lazy_with(pg_options);
         let metadata_packs = s3_archive_client.as_ref().map(|archive| {
             let store: Arc<dyn object_store::ObjectStore> = Arc::new(archive.clone());
             metadata_packs::PackReader::new(
-                metadata_packs::Index::new(pg_client.clone()),
+                metadata_packs::Index::new(packs_pool.clone()),
                 vec![store],
                 metadata_packs::DEFAULT_PREFIX,
             )
