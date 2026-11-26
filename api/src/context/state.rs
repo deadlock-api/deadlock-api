@@ -26,6 +26,7 @@ use crate::services::request_logger::RequestLogger;
 use crate::services::retry_after_blocks::RetryAfterBlocks;
 use crate::services::steam::client::SteamClient;
 use crate::services::steam_search_index::SteamSearchIndex;
+use crate::services::tracker_access::TrackerAccess;
 
 #[derive(Debug, Error)]
 pub enum AppStateError {
@@ -91,6 +92,7 @@ pub(crate) struct AppStateInner {
     pub(crate) version_store: VersionStore,
     pub(crate) demo_query_queue: crate::routes::v1::matches::demo::DemoQueryQueue,
     pub(crate) data_lake: Arc<SnapshotCatalog>,
+    pub(crate) tracker_access: Arc<TrackerAccess>,
 }
 
 impl AppState {
@@ -316,6 +318,9 @@ impl AppState {
         let data_lake = Arc::new(SnapshotCatalog::try_new(&config.mcp_snapshot)?);
         Arc::clone(&data_lake).spawn_refresh_loop();
 
+        let tracker_access = Arc::new(TrackerAccess::default());
+        Arc::clone(&tracker_access).spawn_refresh_loop(ch_client_ro.clone());
+
         if config.data_dump.enabled {
             debug!("Starting data dump");
             spawn_data_dump(
@@ -351,6 +356,7 @@ impl AppState {
             version_store,
             demo_query_queue,
             data_lake,
+            tracker_access,
         })))
     }
 }

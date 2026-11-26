@@ -61,7 +61,8 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
     enabled: !IS_DEV && isAuthenticated && hasSlots,
   });
 
-  // Running the ingest tool opens the account's tracker for anyone, signed in or not.
+  // An ingest client run by the account or one of its Steam friends, or any patron prioritizing it, opens the account's
+  // tracker for anyone, signed in or not.
   const ingestQuery = useQuery({ ...trackerIngestStatusQueryOptions(accountId), enabled: !IS_DEV });
 
   // Patreon OAuth is unavailable against localhost, so the gate would make the page untestable in dev.
@@ -99,9 +100,10 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
     return (
       <GateCard icon={<Lock />} title="Unlock the player tracker">
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Full match history, rank progression, hero breakdowns, and mate &amp; opponent analytics. Free for every
-          account that sent its matches with the ingest tool in the last {INGEST_TRACKER_WINDOW_DAYS} days (once we have
-          checked one of them), and for the prioritized Steam accounts linked to your Patreon subscription.
+          Full match history, rank progression, hero breakdowns, and mate &amp; opponent analytics. Open to everyone for
+          every account that, or whose Steam friend, sent matches with the ingest tool in the last{" "}
+          {INGEST_TRACKER_WINDOW_DAYS} days (once we have checked one of them), and for every Steam account a patron
+          prioritizes.
         </p>
         {isAuthenticated && (
           <p className="text-sm text-muted-foreground">
@@ -151,9 +153,9 @@ export function TrackerGate({ accountId, children }: { accountId: number; childr
     return (
       <GateCard icon={<ShieldX />} title="Not one of your prioritized accounts">
         <p className="text-sm leading-relaxed text-muted-foreground">
-          The tracker opens for Steam accounts linked to your Patreon subscription, and for every account that sent its
-          matches with the ingest tool in the last {INGEST_TRACKER_WINDOW_DAYS} days, once we have checked one of them.
-          Add this account on the Prioritized Fetching page, or run the tool on it.
+          The tracker opens for every Steam account a patron prioritizes, and for every account that, or whose Steam
+          friend, sent matches with the ingest tool in the last {INGEST_TRACKER_WINDOW_DAYS} days, once we have checked
+          one of them. Add this account on the Prioritized Fetching page, or run the tool on it.
         </p>
         <div className="flex flex-col gap-2 pt-2 sm:flex-row">
           <Button asChild>

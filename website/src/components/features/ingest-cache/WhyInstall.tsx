@@ -52,7 +52,7 @@ export function WhyInstall() {
               <TextLink asChild underline="always">
                 <SmartLink href="/tracker/demo">player tracker</SmartLink>
               </TextLink>{" "}
-              for free once we have checked one of those matches, no sign-in needed.
+              for free once we have checked one of those matches, no sign-in needed, and so do its Steam friends.
             </Reason>
             <Reason icon={<Power />} title="Set up once">
               It starts with your computer and stays out of the way. Nothing to click after the install.

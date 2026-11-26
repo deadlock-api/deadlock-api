@@ -41,7 +41,8 @@ export const Route = createFileRoute("/tracker_/players/$accountId")({
         : "Full Deadlock match history, rank progression, hero breakdowns, and mate & opponent analytics for prioritized players.",
       path: loaderData ? `/tracker/players/${loaderData.accountId}` : "/tracker/demo",
     });
-    // A profile opens only for the patron who owns the account; a crawler would index a sign-in gate under the name.
+    // Most profiles show a gate (only ingest users, their friends and prioritized accounts open); a crawler would index
+    // that gate under the name.
     return { ...base, meta: [...base.meta, { name: "robots", content: "noindex, follow" }] };
   },
 });
