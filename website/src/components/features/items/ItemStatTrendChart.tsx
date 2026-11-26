@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiItemStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import { PATCH_MARKERS_SHORT } from "~/components/domain/charts/PatchMarkers";
+import { usePatchMarkers } from "~/components/domain/charts/PatchMarkers";
 import StatTrendChart, { type StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import { MIN_MATCHES_PER_BUCKET } from "~/lib/constants";
 import {
@@ -85,10 +85,11 @@ export default function ItemStatTrendChart({ params, itemId, stat }: ItemStatTre
 
   const pending = itemQuery.isPending || (byTier && !assetsItems);
   const failed = itemQuery.isError;
+  const patchMarkers = usePatchMarkers("sm");
   return (
     <StatTrendChart
       data={chartData}
-      markers={PATCH_MARKERS_SHORT}
+      markers={patchMarkers}
       state={pending ? "loading" : failed ? "error" : "ready"}
       stat={ITEM_TABLE_TRENDS[stat]}
       value={BUCKET}

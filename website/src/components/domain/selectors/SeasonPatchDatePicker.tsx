@@ -7,31 +7,20 @@ import { useControllableState } from "~/components/ui/hooks/use-controllable-sta
 import { OptionRow } from "~/components/ui/option-row";
 import { Skeleton } from "~/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "~/components/ui/tabs";
-import type { Dayjs } from "~/dayjs";
-import { useSeasons } from "~/hooks/useSeasons";
-import { PATCHES, type PatchInfo } from "~/lib/constants";
+import { day } from "~/dayjs";
+import { usePeriodLists } from "~/hooks/usePeriodLists";
 import { DEFAULT_DATE_FILTER, type DateFilterAction } from "~/lib/date-filter-preference";
+import type { PatchEntry } from "~/lib/patches";
 import {
-  type SeasonInfo,
-  computePreviousPeriod,
-  dateRangeLabel,
-  defaultDateRange,
-  patchMatches,
-  seasonContaining,
-  seasonMatches,
-} from "~/lib/seasons";
-
-interface SeasonPatchDatePickerValue {
-  action: DateFilterAction;
-  startDate?: Dayjs;
-  endDate?: Dayjs;
-  prevStartDate?: Dayjs;
-  prevEndDate?: Dayjs;
-}
-
-type DateValue = Pick<SeasonPatchDatePickerValue, "startDate" | "endDate">;
-
-const ALL_TIME: DateValue = {};
+  ALL_TIME,
+  customPeriod,
+  defaultPeriod,
+  type Period,
+  periodLabel,
+  periodRange,
+  periodsEqual,
+} from "~/lib/period";
+import { type SeasonInfo, seasonContaining } from "~/lib/seasons";
 
 const TABS = ["patch", "season", "custom"] as const;
 type PickerTab = (typeof TABS)[number];
@@ -40,53 +29,40 @@ interface SeasonPatchDatePickerProps extends Omit<
   React.ComponentProps<typeof FilterCell>,
   "label" | "value" | "defaultValue" | "active" | "onReset" | "icon" | "children"
 > {
-  value?: DateValue;
+  value?: Period;
   /**
-   * The range it starts at, and the one the reset returns to. Without it the picker starts at all time and resets to
+   * The period it starts at, and the one the reset returns to. Without it the picker starts at all time and resets to
    * the site's default period (`DEFAULT_DATE_FILTER`).
    */
-  defaultValue?: DateValue;
-  onValueChange?: (value: SeasonPatchDatePickerValue) => void;
+  defaultValue?: Period;
+  /** The picked period, and how: a season, a patch, custom dates, or the reset. */
+  onValueChange?: (value: Period, action: DateFilterAction) => void;
   defaultTab?: PickerTab;
-}
-
-function inferTabFromValue({
-  matchingSeason,
-  matchingPatch,
-  startDate,
-  endDate,
-  defaultTab,
-}: {
-  matchingSeason?: SeasonInfo;
-  matchingPatch?: PatchInfo;
-  startDate?: Dayjs;
-  endDate?: Dayjs;
-  defaultTab: PickerTab;
-}): PickerTab {
-  if (matchingSeason) return "season";
-  if (matchingPatch) return "patch";
-  if (startDate || endDate) return "custom";
-  return defaultTab;
 }
 
 interface PatchGroup {
   label?: string;
-  patches: PatchInfo[];
+  patches: PatchEntry[];
 }
 
 // Labelling each patch with the season it falls in is what keeps the two tabs
 // from reading as competing, unrelated ways to slice time.
-function groupPatchesBySeason(patches: readonly PatchInfo[], seasons: readonly SeasonInfo[]): PatchGroup[] {
+function groupPatchesBySeason(patches: readonly PatchEntry[], seasons: readonly SeasonInfo[]): PatchGroup[] {
   if (seasons.length === 0) return [{ patches: [...patches] }];
   const oldestSeason = seasons[seasons.length - 1];
   const groups: PatchGroup[] = [];
   for (const patch of patches) {
-    const label = seasonContaining(seasons, patch.startDate)?.name ?? `Before ${oldestSeason.name}`;
+    const label = seasonContaining(seasons, day.unix(patch.startUnix))?.name ?? `Before ${oldestSeason.name}`;
     const lastGroup = groups.at(-1);
     if (lastGroup?.label === label) lastGroup.patches.push(patch);
     else groups.push({ label, patches: [patch] });
   }
   return groups;
+}
+
+function patchHint(patch: PatchEntry): string | undefined {
+  if (patch.endUnix === undefined) return "current";
+  return patch.kind === "hero" ? "hero" : undefined;
 }
 
 export function SeasonPatchDatePicker({
@@ -97,68 +73,39 @@ export function SeasonPatchDatePicker({
   className,
   ...props
 }: SeasonPatchDatePickerProps) {
-  const [value, setValue] = useControllableState<DateValue>({
+  const [value, setValue] = useControllableState<Period>({
     value: valueProp,
     defaultValue: defaultValue ?? ALL_TIME,
-    // `emit` below is the only writer and always sends the full SeasonPatchDatePickerValue.
-    onValueChange: onValueChange as ((value: DateValue) => void) | undefined,
   });
-  const { seasons, isPending: seasonsPending } = useSeasons();
-
-  const { startDate: valueStart, endDate: valueEnd } = value;
-  const matchingSeason = valueStart ? seasons.find((season) => seasonMatches(season, valueStart, valueEnd)) : undefined;
-  const matchingPatch =
-    !matchingSeason && valueStart ? PATCHES.find((patch) => patchMatches(patch, valueStart, valueEnd)) : undefined;
+  const lists = usePeriodLists();
+  const { seasons, patches, isPending: seasonsPending } = lists;
 
   const [queryTab, setQueryTab] = useQueryState(
     "pd-picker-tab",
     // Browsing the tabs is not a navigation: Back should not step through them.
     parseAsStringLiteral(TABS).withOptions({ history: "replace" }),
   );
-  const tab =
-    queryTab ??
-    inferTabFromValue({
-      matchingSeason,
-      matchingPatch,
-      startDate: value.startDate,
-      endDate: value.endDate,
-      defaultTab,
-    });
+  const valueTab: PickerTab | undefined =
+    value.kind !== "custom" ? value.kind : value.start || value.end ? "custom" : undefined;
+  const tab = queryTab ?? valueTab ?? defaultTab;
 
-  const emit = (startDate: Dayjs | undefined, endDate: Dayjs | undefined, action: DateFilterAction) => {
-    const prev = computePreviousPeriod(startDate, endDate, { seasons, patches: PATCHES });
-    const next: SeasonPatchDatePickerValue = { startDate, endDate, ...prev, action };
+  const emit = (next: Period, action: DateFilterAction) => {
     setValue(next);
+    onValueChange?.(next, action);
   };
 
-  const handleSeasonSelect = (seasonId: string) => {
-    const season = seasons.find((s) => s.id === seasonId);
-    emit(season?.startDate, season?.endDate, "season");
-  };
-
-  const handlePatchSelect = (patchId: string) => {
-    const patch = PATCHES.find((p) => p.id === patchId);
-    emit(patch?.startDate, patch?.endDate, "patch");
-  };
-
-  // The picker hands over whole days from the calendar and the day presets, and an hour-aligned start from "Last 24h".
-  const handleDateRangePickerChange = (range: { startDate?: Dayjs; endDate?: Dayjs }) => {
-    emit(range.startDate, range.endDate, "custom");
-  };
-
-  const [defaultStart, defaultEnd] = defaultValue
-    ? [defaultValue.startDate, defaultValue.endDate]
-    : defaultDateRange(seasons);
-  const isActive =
-    value.startDate?.valueOf() !== defaultStart?.valueOf() || value.endDate?.valueOf() !== defaultEnd?.valueOf();
+  const resetTarget = defaultValue ?? defaultPeriod(lists);
+  const isActive = !periodsEqual(value, resetTarget);
+  // The custom tab opens on the dates of the patch or season picked, so a tweak starts from them.
+  const [rangeStart, rangeEnd] = periodRange(value, lists) ?? [];
 
   return (
     <FilterCell
       label="Date"
-      value={dateRangeLabel(value, { seasons, patches: PATCHES })}
+      value={periodLabel(value, lists)}
       active={isActive}
       onReset={() => {
-        emit(defaultStart, defaultEnd, "reset");
+        emit(resetTarget, "reset");
         void setQueryTab(null);
       }}
       icon={<CalendarIcon className="size-3.5 shrink-0" />}
@@ -197,8 +144,8 @@ export function SeasonPatchDatePicker({
                 {seasons.map((season) => (
                   <OptionRow
                     key={season.id}
-                    selected={matchingSeason?.id === season.id}
-                    onClick={() => handleSeasonSelect(season.id)}
+                    selected={value.kind === "season" && value.id === season.id}
+                    onClick={() => emit({ kind: "season", id: season.id }, "season")}
                     hint={season.endDate ? undefined : "current"}
                   >
                     {season.name}
@@ -212,15 +159,15 @@ export function SeasonPatchDatePicker({
         {tab === "patch" && (
           <div className="flex flex-col gap-1.5">
             <div className="flex max-h-64 flex-col overflow-y-auto">
-              {groupPatchesBySeason(PATCHES, seasons).map((group) => (
+              {groupPatchesBySeason(patches, seasons).map((group) => (
                 <div key={group.label ?? "patches"}>
                   {group.label && <div className="px-2 pt-2 pb-1 eyebrow first:pt-0">{group.label}</div>}
                   {group.patches.map((patch) => (
                     <OptionRow
                       key={patch.id}
-                      selected={matchingPatch?.id === patch.id}
-                      onClick={() => handlePatchSelect(patch.id)}
-                      hint={patch.endDate ? undefined : "current"}
+                      selected={value.kind === "patch" && value.id === patch.id}
+                      onClick={() => emit({ kind: "patch", id: patch.id }, "patch")}
+                      hint={patchHint(patch)}
                     >
                       {patch.name}
                     </OptionRow>
@@ -231,7 +178,13 @@ export function SeasonPatchDatePicker({
           </div>
         )}
 
-        {tab === "custom" && <DateRangePicker value={value} onValueChange={handleDateRangePickerChange} />}
+        {/* The calendar and the day presets hand over whole days, "Last 24h" an hour-aligned start. */}
+        {tab === "custom" && (
+          <DateRangePicker
+            value={{ startDate: rangeStart, endDate: rangeEnd }}
+            onValueChange={(range) => emit(customPeriod(range.startDate, range.endDate), "custom")}
+          />
+        )}
       </div>
     </FilterCell>
   );

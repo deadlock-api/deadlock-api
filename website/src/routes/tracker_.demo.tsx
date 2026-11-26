@@ -4,7 +4,7 @@ import { DemoNotice } from "~/components/features/tracker/shared/DemoNotice";
 import { TrackerContent } from "~/components/features/tracker/TrackerContent";
 import { PageHeader } from "~/components/patterns/page/PageHeader";
 import { PatronAuthProvider } from "~/contexts/PatronAuthContext";
-import type { DateRange } from "~/lib/date-filter-preference";
+import { ALL_TIME } from "~/lib/period";
 import { prefetchCached } from "~/lib/prefetch-safe";
 import { pageTitle, seo } from "~/lib/seo";
 import { DEMO_ACCOUNT_ID } from "~/lib/tracker/demo";
@@ -36,7 +36,6 @@ export const Route = createFileRoute("/tracker_/demo")({
 });
 
 // The generated season is the whole point of the page, so a first visit shows all of it, not just the current patch.
-const ALL_TIME: DateRange = [undefined, undefined];
 
 function TrackerDemoRoute() {
   return (
@@ -51,7 +50,7 @@ function TrackerDemoRoute() {
           </>
         }
         playerHeading="h2"
-        defaultDateRange={ALL_TIME}
+        defaultPeriod={ALL_TIME}
       />
     </PatronAuthProvider>
   );

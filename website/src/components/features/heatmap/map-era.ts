@@ -8,12 +8,12 @@ import type { DateRange } from "~/lib/date-filter-preference";
 export type MapEra = "legacy" | "city-never-sleeps";
 
 /**
- * When the rebuilt map went live; matches that started from then on were played on it. A page filtering by it
- * registers it with `registerExactBoundaries`, so a range starting here is not floored to midnight, which would pull
- * the last old-layout matches of the day back in.
+ * When the rebuilt map went live; matches that started from then on were played on it. A page filtering by it keeps
+ * a range starting here exact instead of flooring it to midnight, which would pull the last old-layout matches of the
+ * day back in.
  */
 export const MAP_REWORK_START: Dayjs = day.utc("2026-09-29T20:50:00Z").local();
-const MAP_REWORK_UNIX = MAP_REWORK_START.unix();
+export const MAP_REWORK_UNIX = MAP_REWORK_START.unix();
 
 /**
  * The `client_version` to ask `/v1/assets/map` for, so the images match the positions. `undefined` is the latest build.

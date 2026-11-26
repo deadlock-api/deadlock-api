@@ -1,6 +1,5 @@
 import { day } from "~/dayjs";
 import type { PatchInfo } from "~/lib/constants";
-import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 
 // Everything here takes the patch list as an argument: the list comes from the API at runtime, and constants.ts reads
 // `import.meta.env`, which plain Node tests can't load.
@@ -27,6 +26,8 @@ export interface PatchEntry {
   startUnix: number;
   /** Undefined for the patch still running. */
   endUnix?: number;
+  /** A game update, or a hero's release post (a hero joining the game is an update of its own). */
+  kind: "update" | "hero";
 }
 
 /** One post of the `/v2/patches` feed: the official forum changelog and the Steam news, mixed. */
@@ -57,7 +58,7 @@ export function toPatchEntry(patch: PatchInfo): PatchEntry {
     name: patch.name,
     shortName: patch.shortName,
     startUnix: patch.startDate.unix(),
-    endUnix: patch.endDate?.unix(),
+    kind: patch.kind ?? "update",
   };
 }
 
@@ -142,11 +143,14 @@ export function mergePatchFeed(feed: readonly PatchFeedItem[], curated: readonly
     const timed = group.find((post) => post.source === "steam" && onTime(post)) ?? group.find(onTime);
     const named = group.find((post) => post.source === "steam" && !post.day);
     const startUnix = timed ? timed.published.unix() : releaseDay.hour(USUAL_RELEASE_HOUR_UTC).unix();
+    // A day of a hero's post and nothing that calls itself an update is the hero's release.
+    const isUpdate = group.some((post) => post.day !== undefined || /update/i.test(post.title));
     entries.set(id, {
       id,
       name: named ? `${named.title} (${id})` : `Update (${id})`,
       shortName: named ? named.title : "Patch",
       startUnix,
+      kind: !isUpdate && group.some((post) => post.hero) ? "hero" : "update",
     });
   }
 
@@ -208,13 +212,7 @@ export function patchLabel(patch: PatchEntry): string {
   return `${patch.shortName === "Patch" ? patchDate(patch) : patch.shortName} Patch`;
 }
 
-/**
- * The patch as the analytics pages' `date_range`: its exact start and end, the range their patch picker selects for
- * a curated patch, so they compare it with the patch before.
- */
+/** The patch as the analytics pages' `date_range`: `patch:<id>`, which they resolve to its exact start and end. */
 export function patchDateRange(patch: PatchEntry): string {
-  return parseAsDayjsRange.serialize([
-    day.unix(patch.startUnix),
-    patch.endUnix === undefined ? undefined : day.unix(patch.endUnix),
-  ]);
+  return `patch:${patch.id}`;
 }

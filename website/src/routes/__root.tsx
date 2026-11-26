@@ -79,6 +79,18 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         ),
       );
     }
+    // The patches and seasons every date filter resolves its period against (`usePeriodLists`), so the server and the
+    // browser resolve the same bounds. The page's own loader often needs them too; the two share one request.
+    if (
+      pathname === "/" ||
+      isAnalytics ||
+      isPlayerTracker ||
+      pathname === "/tracker/demo" ||
+      pathname === "/community/heatmap" ||
+      pathname === "/community/badge-distribution"
+    ) {
+      preloads.push(import("~/queries/asset-queries").then(({ loadPeriodLists }) => loadPeriodLists(queryClient)));
+    }
     // Not the hero stat views: they show no items, and the list embedded 200 KB into each of their pages. A hero's
     // own page (its best items) and the item and ability pages still get it.
     const heroSegment = /^\/analytics\/heroes(?:\/([^/]+))?\/?$/.exec(pathname)?.[1] ?? null;

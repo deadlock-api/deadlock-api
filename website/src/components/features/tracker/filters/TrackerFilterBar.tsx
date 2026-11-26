@@ -7,13 +7,11 @@ import { FilterToggleCell } from "~/components/patterns/filter-bar/FilterCell";
 import { Button } from "~/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "~/components/ui/collapsible";
 import { SegmentedItem } from "~/components/ui/segmented";
-import type { Dayjs } from "~/dayjs";
 import { useHeroById } from "~/hooks/useAssetById";
-import { useSeasons } from "~/hooks/useSeasons";
-import { PATCHES } from "~/lib/constants";
-import type { DateFilterAction, DateRange } from "~/lib/date-filter-preference";
+import { usePeriodLists } from "~/hooks/usePeriodLists";
+import type { DateFilterAction } from "~/lib/date-filter-preference";
 import { type Mode, MODE_CONFIG, TRACKER_DEFAULT_MODE } from "~/lib/game-mode";
-import { dateRangeLabel } from "~/lib/seasons";
+import { type Period, periodLabel } from "~/lib/period";
 import type { ResultFilter } from "~/lib/tracker/compute";
 
 export function TrackerFilterBar({
@@ -24,10 +22,9 @@ export function TrackerFilterBar({
   heroOrder,
   result,
   onResultChange,
-  startDate,
-  endDate,
-  onDateChange,
-  resetRange,
+  period,
+  onPeriodChange,
+  defaultPeriod,
 }: {
   mode: Mode;
   onModeChange: (mode: Mode) => void;
@@ -37,15 +34,15 @@ export function TrackerFilterBar({
   heroOrder?: readonly number[];
   result: ResultFilter;
   onResultChange: (result: ResultFilter) => void;
-  startDate?: Dayjs;
-  endDate?: Dayjs;
-  resetRange: DateRange;
-  onDateChange: (startDate?: Dayjs, endDate?: Dayjs, action?: DateFilterAction) => void;
+  period: Period;
+  /** The period the date filter resets to. */
+  defaultPeriod: Period;
+  onPeriodChange: (period: Period, action: DateFilterAction) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const { hero } = useHeroById(heroId ?? 0);
-  const { seasons } = useSeasons();
-  const dateLabel = dateRangeLabel({ startDate, endDate }, { seasons, patches: PATCHES });
+  const lists = usePeriodLists();
+  const dateLabel = periodLabel(period, lists);
   const heroLabel = heroId == null ? "Any hero" : (hero?.name ?? `Hero ${heroId}`);
   const modeLabel = mode === "normal_all" ? "All normal" : MODE_CONFIG[mode].label;
   const resultLabel = result === "all" ? "All results" : result === "win" ? "Wins" : "Losses";
@@ -84,11 +81,7 @@ export function TrackerFilterBar({
         <div className="flex flex-col gap-1">
           <Filter.Root>
             {/* The two popover cells sit together so a phone pairs them on one row, ahead of the full-width toggles. */}
-            <Filter.SeasonPatchDate
-              value={{ startDate, endDate }}
-              onValueChange={(next) => onDateChange(next.startDate, next.endDate, next.action)}
-              defaultValue={{ startDate: resetRange[0], endDate: resetRange[1] }}
-            />
+            <Filter.SeasonPatchDate value={period} onValueChange={onPeriodChange} defaultValue={defaultPeriod} />
             <Filter.Hero value={heroId} onValueChange={onHeroChange} heroOrder={heroOrder} allowNull />
             <ModeSelector value={mode} onValueChange={onModeChange} defaultValue={TRACKER_DEFAULT_MODE} />
             <FilterToggleCell label="Result" value={result} defaultValue="all" onValueChange={onResultChange}>

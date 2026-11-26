@@ -13,6 +13,7 @@ import {
   MAP_ART,
   MAP_CLIENT_VERSION,
   MAP_REWORK_START,
+  MAP_REWORK_UNIX,
   mapEraOf,
   trimToCurrentLayout,
 } from "~/components/features/heatmap/map-era";
@@ -34,18 +35,14 @@ import { useDateFilterPreference } from "~/hooks/useDateFilterPreference";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
-import { useSeasons } from "~/hooks/useSeasons";
+import { usePeriodLists } from "~/hooks/usePeriodLists";
 import { getEffectiveRankRange } from "~/lib/game-mode";
+import { customPeriod, defaultPeriod as defaultPeriodOf, periodRange } from "~/lib/period";
 import { prefetchCached } from "~/lib/prefetch-safe";
 import { MAX_BADGE } from "~/lib/rank-utils";
-import { defaultDateRange } from "~/lib/seasons";
 import { pageTitle, seo } from "~/lib/seo";
-import { registerExactBoundaries } from "~/lib/time-normalize";
-import { loadSeasons } from "~/queries/asset-queries";
+import { loadPeriodLists } from "~/queries/asset-queries";
 import { killDeathStatsQueryOptions, mapQueryOptions } from "~/queries/heatmap-queries";
-
-// A range starting at the map rework keeps its exact second, instead of midnight with the day's old-layout matches.
-registerExactBoundaries([MAP_REWORK_START.unix()]);
 
 const Heatmap3D = lazy(() => import("~/components/features/heatmap/Heatmap3D"));
 
@@ -69,7 +66,7 @@ export const Route = createFileRoute("/community/heatmap")({
     await Promise.all([
       // The default range is on the current layout, whose map is the latest build's.
       prefetchCached(queryClient, mapQueryOptions()),
-      loadSeasons(queryClient),
+      loadPeriodLists(queryClient),
     ]);
   },
   head: () =>
@@ -99,16 +96,22 @@ function HeatmapPage() {
   // The slider's range (80-100%): an edited `?outlier=5000` saturated half the map with the thumb stuck at its minimum.
   const sensitivity = Math.min(10000, Math.max(8000, outlier));
   // Positions from two map layouts do not add up, so the default season or patch starts no earlier than the current one.
-  const { seasons } = useSeasons();
+  const lists = usePeriodLists();
   const { preference } = useDateFilterPreference();
-  const layoutDefaultRange = useMemo(
-    () => trimToCurrentLayout(defaultDateRange(seasons, preference)),
-    [seasons, preference],
-  );
-  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState(layoutDefaultRange);
+  const layoutDefaultPeriod = useMemo(() => {
+    const period = defaultPeriodOf(lists, preference);
+    const range = periodRange(period, lists) ?? [undefined, undefined];
+    const trimmed = trimToCurrentLayout(range);
+    return trimmed === range ? period : customPeriod(trimmed[0], trimmed[1]);
+  }, [lists, preference]);
+  const { period, range, startDate, endDate, handlePeriodChange, defaultPeriod } =
+    useDateRangeState(layoutDefaultPeriod);
 
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
-  const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
+  const bounds = useNormalizedTimeRange(startDate, endDate);
+  // A range starting at the map rework keeps its exact second, instead of midnight with the day's old-layout matches.
+  const minUnixTimestamp = range[0]?.unix() === MAP_REWORK_UNIX ? MAP_REWORK_UNIX : bounds.minUnixTimestamp;
+  const { maxUnixTimestamp } = bounds;
   // The map images have to be the layout the positions were recorded on.
   const { era, spansRework } = mapEraOf(minUnixTimestamp, maxUnixTimestamp);
 
@@ -220,11 +223,7 @@ function HeatmapPage() {
           step={5}
           defaultValue={0}
         />
-        <Filter.SeasonPatchDate
-          value={{ startDate, endDate }}
-          onValueChange={({ startDate: start, endDate: end, action }) => handleDateChange(start, end, action)}
-          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-        />
+        <Filter.SeasonPatchDate value={period} onValueChange={handlePeriodChange} defaultValue={defaultPeriod} />
       </Filter.Root>
 
       {spansRework && (
@@ -237,7 +236,11 @@ function HeatmapPage() {
               The City Never Sleeps update rebuilt the map on September 29, 2026. Kills and deaths from before it were
               on the old streets, so they land in the wrong places on the new map drawn here.
             </p>
-            <Button size="sm" variant="outline" onClick={() => handleDateChange(MAP_REWORK_START, endDate, "custom")}>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handlePeriodChange(customPeriod(MAP_REWORK_START, range[1]), "custom")}
+            >
               Only show matches since the update
             </Button>
           </AlertDescription>

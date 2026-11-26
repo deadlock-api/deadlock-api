@@ -79,7 +79,7 @@ export function DomainData() {
       <Specimen
         name="PatchMarkers"
         source="domain/charts/PatchMarkers"
-        note="Every patch on a time axis in ms, as ChartMarkers: labelled with the name the date picker lists. Render it inside the chart with CHART_MARGIN_MARKED; size=sm (PATCH_MARKERS_SHORT) uses each patch's shortName, Patch for minor updates. StatTrendChart and WeeklyTrendChart take the markers through markers."
+        note="Every patch of the /v2/patches list on a time axis in ms, hero releases too, as ChartMarkers: labelled with the name the date picker lists. Render it inside the chart with CHART_MARGIN_MARKED; size=sm (usePatchMarkers('sm')) uses each patch's shortName, Patch for minor updates. StatTrendChart and WeeklyTrendChart take usePatchMarkers() through markers."
       >
         <ChartSurface label="Example trend across the recent patches" size="md">
           <LineChart data={PATCH_TREND} margin={CHART_MARGIN_MARKED}>

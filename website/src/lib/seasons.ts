@@ -1,9 +1,6 @@
 import type { RankedSeason } from "deadlock_api_client";
 
 import { type Dayjs, day } from "~/dayjs";
-import { PATCHES, type PatchInfo } from "~/lib/constants";
-import { DEFAULT_DATE_FILTER, type DateFilterPreference, type DateRange } from "~/lib/date-filter-preference";
-import { normalizeUnixRange, registerExactBoundaries } from "~/lib/time-normalize";
 
 export interface SeasonInfo {
   id: string;
@@ -19,7 +16,7 @@ export interface SeasonInfo {
 /**
  * Collapses each season's intervals into a single range and drops seasons that
  * haven't started yet — the client ships their definitions ahead of time.
- * Newest first, matching `PATCHES`.
+ * Newest first, like the patch list.
  */
 export function toSeasons(raw: readonly RankedSeason[]): SeasonInfo[] {
   const now = day();
@@ -42,8 +39,6 @@ export function toSeasons(raw: readonly RankedSeason[]): SeasonInfo[] {
     })
     .filter((season) => !season.startDate.isAfter(now))
     .sort((a, b) => b.startDate.unix() - a.startDate.unix());
-
-  registerExactBoundaries(seasons.flatMap((s) => [s.startDate.unix(), s.scheduledEndDate.unix()]));
   return seasons;
 }
 
@@ -67,145 +62,4 @@ export function previousSeasonRange(seasons: readonly SeasonInfo[], index: numbe
   if (previous) return [previous.startDate, previous.endDate ?? season.startDate];
   const lengthSeconds = season.scheduledEndDate.unix() - season.startDate.unix();
   return [season.startDate.subtract(lengthSeconds, "second"), season.startDate];
-}
-
-/** The selected current period, with a patch fallback when seasons are unavailable. */
-export function defaultDateRange(
-  seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
-): DateRange {
-  const season = preference === "season" ? currentSeason(seasons) : undefined;
-  return season ? [season.startDate, season.endDate] : [PATCHES[0].startDate, PATCHES[0].endDate];
-}
-
-/** `defaultDateRange` as an ISO 8601 interval for Dataset `temporalCoverage`, open-ended ("2026-08-21/..") while it runs. */
-export function defaultTemporalCoverage(
-  seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
-): string | undefined {
-  const [start, end] = defaultDateRange(seasons, preference);
-  if (!start) return undefined;
-  return `${start.utc().format("YYYY-MM-DD")}/${end ? end.utc().format("YYYY-MM-DD") : ".."}`;
-}
-
-/** How copy names `defaultDateRange`: "this season", or "the current patch" (also the fallback without a season). */
-export function defaultPeriodLabel(
-  seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
-): "this season" | "the current patch" {
-  return preference === "season" && currentSeason(seasons) ? "this season" : "the current patch";
-}
-
-/** The patch `defaultDateRange` covers while it is not a season, as titles name it: "Oct 30 Patch" (its release day, UTC). */
-export function currentPatchLabel(): string {
-  return `${day.utc(PATCHES[0].id).format("MMM D")} Patch`;
-}
-
-/**
- * `defaultDateRange` as titles name it: the running season as players search for it ("Season 2", without the API's
- * "Beta" prefix), or the current patch ("Oct 30 Patch") when the period is a patch.
- */
-export function defaultPeriodTitle(
-  seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
-): string {
-  const season = preference === "season" ? currentSeason(seasons) : undefined;
-  return season ? season.name.replace(/^beta\s+/i, "") : currentPatchLabel();
-}
-
-export function defaultPrevDateRange(
-  seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
-): DateRange {
-  return preference === "season" && currentSeason(seasons)
-    ? previousSeasonRange(seasons, 0)
-    : [PATCHES[1].startDate, PATCHES[0].startDate];
-}
-
-/** Exact bounds shared by server prefetching and the hydrated UI. */
-export function defaultUnixRange(
-  seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
-) {
-  return normalizeUnixRange(defaultDateRange(seasons, preference));
-}
-
-export function defaultPrevUnixRange(
-  seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
-) {
-  return normalizeUnixRange(defaultPrevDateRange(seasons, preference));
-}
-
-export function patchMatches(patch: PatchInfo, startDate: Dayjs, endDate?: Dayjs): boolean {
-  if (!patch.startDate.isSame(startDate, "day")) return false;
-  if (patch.endDate === undefined) return endDate === undefined;
-  return endDate !== undefined && patch.endDate.isSame(endDate, "day");
-}
-
-// Seasons match to the second, unlike patches: a season can begin on the same
-// day as the patch that starts it, and day-granularity matching would then
-// report the patch selection as its season.
-export function seasonMatches(season: SeasonInfo, startDate: Dayjs, endDate?: Dayjs): boolean {
-  if (season.startDate.unix() !== startDate.unix()) return false;
-  if (season.endDate === undefined) return endDate === undefined;
-  return endDate !== undefined && season.endDate.unix() === endDate.unix();
-}
-
-/** The same human-readable date label in the picker and compact filter summaries. */
-export function dateRangeLabel(
-  { startDate, endDate }: { startDate?: Dayjs; endDate?: Dayjs },
-  { seasons = [], patches = [] }: { seasons?: readonly SeasonInfo[]; patches?: readonly PatchInfo[] } = {},
-): string {
-  const season = startDate && seasons.find((candidate) => seasonMatches(candidate, startDate, endDate));
-  if (season) return season.name;
-  const patch = startDate && patches.find((candidate) => patchMatches(candidate, startDate, endDate));
-  if (patch) return patch.name;
-  if (!startDate && !endDate) return "All Time";
-  // The "Last 24h" preset: an open range starting on the hour a day back.
-  if (startDate && !endDate && day().diff(startDate, "hour", true) <= 25) return "Last 24h";
-  // The year only when it is not this one: "Jan 1 - Feb 1" for a range in 2030 read as this January.
-  const thisYear = day().year();
-  const withYear = [startDate, endDate].some((date) => date && date.year() !== thisYear);
-  const format = (date: Dayjs) => date.format(withYear ? "MMM D, YYYY" : "MMM D");
-  if (startDate && endDate) return `${format(startDate)} - ${format(endDate)}`;
-  if (startDate) return `since ${format(startDate)}`;
-  return `until ${format(endDate!)}`;
-}
-
-export function computePreviousPeriod(
-  startDate?: Dayjs,
-  endDate?: Dayjs,
-  ranges?: { seasons?: readonly SeasonInfo[]; patches?: readonly PatchInfo[] },
-): { prevStartDate?: Dayjs; prevEndDate?: Dayjs } {
-  if (!startDate) return {};
-
-  const seasons = ranges?.seasons;
-  if (seasons) {
-    const seasonIndex = seasons.findIndex((season) => seasonMatches(season, startDate, endDate));
-    if (seasonIndex >= 0) {
-      const [prevStartDate, prevEndDate] = previousSeasonRange(seasons, seasonIndex);
-      return { prevStartDate, prevEndDate };
-    }
-  }
-
-  const patches = ranges?.patches;
-  if (patches) {
-    const patchIndex = patches.findIndex((patch) => patchMatches(patch, startDate, endDate));
-    if (patchIndex >= 0 && patchIndex + 1 < patches.length) {
-      const prevPatch = patches[patchIndex + 1];
-      return {
-        prevStartDate: prevPatch.startDate,
-        prevEndDate: patches[patchIndex].startDate,
-      };
-    }
-  }
-
-  if (!endDate) return {};
-  // Duration shift fallback for custom ranges.
-  const durationSeconds = endDate.unix() - startDate.unix();
-  return {
-    prevStartDate: startDate.subtract(durationSeconds, "second"),
-    prevEndDate: startDate,
-  };
 }

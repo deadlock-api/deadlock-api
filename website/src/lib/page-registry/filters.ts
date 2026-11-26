@@ -1,7 +1,7 @@
 import { day } from "~/dayjs";
 import { DEFAULT_MODE, MODE_CONFIG, type Mode } from "~/lib/game-mode";
-import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
 import { patchDateRange } from "~/lib/patches";
+import { customPeriod, parseAsPeriod } from "~/lib/period";
 
 import type {
   ResolveContext,
@@ -22,12 +22,12 @@ const MODE_BY_SELECTION: Record<SelectionMode, Mode> = {
   street_brawl: "street_brawl",
 };
 
-function seasonRange({ startUnix, endUnix }: SeasonRef): string {
-  return parseAsDayjsRange.serialize([day.unix(startUnix), endUnix === undefined ? undefined : day.unix(endUnix)]);
+function seasonRange({ id }: SeasonRef): string {
+  return parseAsPeriod.serialize({ kind: "season", id });
 }
 
 function lastDays(now: number, days: number): string {
-  return parseAsDayjsRange.serialize([day.unix(now).utc().startOf("day").subtract(days, "day"), undefined]);
+  return parseAsPeriod.serialize(customPeriod(day.unix(now).utc().startOf("day").subtract(days, "day")));
 }
 
 /** The `date_range` a time window stands for, or `undefined` where the site knows no such window yet. */

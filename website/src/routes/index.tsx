@@ -37,12 +37,12 @@ import { useIsWindows } from "~/hooks/useIsWindows";
 import { formatBlogDate } from "~/lib/blog-date";
 import { fetchBlogPosts } from "~/lib/blog-fns";
 import { API_ORIGIN } from "~/lib/constants";
+import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange } from "~/lib/period";
 import { prefetchCached, prefetchSeed } from "~/lib/prefetch-safe";
-import { defaultPeriodLabel, defaultPrevUnixRange, defaultUnixRange } from "~/lib/seasons";
 import { ORGANIZATION, pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { navGroups } from "~/lib/site-nav";
 import { TRACKER_SITES } from "~/lib/tracker-sites";
-import { heroesQueryOptions, loadSeasons } from "~/queries/asset-queries";
+import { heroesQueryOptions, loadPeriodLists } from "~/queries/asset-queries";
 
 export const Route = createFileRoute("/")({
   head: () =>
@@ -87,9 +87,9 @@ export const Route = createFileRoute("/")({
     }),
   loader: async ({ context: { queryClient, preferences } }) => {
     // The hero win rates in the hero table's default period, current and previous, so the panel renders with the page.
-    const seasons = await loadSeasons(queryClient);
-    const range = defaultUnixRange(seasons, preferences.dateFilter);
-    const prevRange = defaultPrevUnixRange(seasons, preferences.dateFilter);
+    const lists = await loadPeriodLists(queryClient);
+    const range = defaultUnixRange(lists, preferences.dateFilter);
+    const prevRange = defaultPrevUnixRange(lists, preferences.dateFilter);
     const leaders = heroWinRateLeadersQueries(range, prevRange);
     const current = prefetchCached(queryClient, leaders.current);
     const previous = prefetchCached(queryClient, leaders.previous);
@@ -108,7 +108,7 @@ export const Route = createFileRoute("/")({
       posts: posts.slice(0, 4),
       range,
       prevRange,
-      period: defaultPeriodLabel(seasons, preferences.dateFilter),
+      period: defaultPeriodLabel(lists, preferences.dateFilter),
     };
   },
   component: IndexRoute,

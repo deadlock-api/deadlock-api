@@ -4,9 +4,8 @@ import { useMemo } from "react";
 import { day } from "~/dayjs";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
-import type { DateRange } from "~/lib/date-filter-preference";
 import { MODE_CONFIG, parseAsGameMode, parseAsTrackerMatchMode } from "~/lib/game-mode";
-import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
+import { customPeriod, parseAsPeriod, type Period } from "~/lib/period";
 import type { TrackerFilterValues } from "~/lib/tracker/compute";
 
 export const TRACKER_TABS = ["matches", "heroes", "mates"] as const;
@@ -17,20 +16,21 @@ const TRACKER_SELECTION_PARSERS = {
   result: parseAsStringLiteral(RESULT_FILTERS).withDefault("all"),
   game_mode: parseAsGameMode,
   match_mode: parseAsTrackerMatchMode,
-  date_range: parseAsDayjsRange,
+  date_range: parseAsPeriod,
   "pd-picker-tab": parseAsString,
   match: parseAsInteger,
 };
 
-export function useTrackerFilters(defaultDateRange?: DateRange) {
+export function useTrackerFilters(defaultPeriod?: Period) {
   const [tab, setTab] = useQueryState("tab", parseAsStringLiteral(TRACKER_TABS).withDefault("matches"));
   const { mode, setMode, gameMode, matchMode } = useModeState({ scope: "tracker" });
   const [heroId, setHeroId] = useQueryState("hero", parseAsInteger);
   const [result, setResult] = useQueryState("result", parseAsStringLiteral(RESULT_FILTERS).withDefault("all"));
-  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState(defaultDateRange);
+  const dateRange = useDateRangeState(defaultPeriod);
   const [, setFilterQuery] = useQueryStates(TRACKER_SELECTION_PARSERS);
   // The picker already supplies day, season or patch boundaries. Rounding them to UTC days can
   // add matches outside a local calendar-day selection, so every tracker view uses the exact instants.
+  const [startDate, endDate] = dateRange.range;
   const minUnixTimestamp = startDate?.unix();
   const maxUnixTimestamp = endDate?.unix();
 
@@ -46,10 +46,10 @@ export function useTrackerFilters(defaultDateRange?: DateRange) {
         match_mode: MODE_CONFIG[next.mode].matchMode,
         // An open range must be explicit: null would restore the current-season default instead.
         date_range: datesChanged
-          ? [
+          ? customPeriod(
               next.minUnixTimestamp == null ? undefined : day.unix(next.minUnixTimestamp),
               next.maxUnixTimestamp == null ? undefined : day.unix(next.maxUnixTimestamp),
-            ]
+            )
           : undefined,
         "pd-picker-tab": datesChanged ? null : undefined,
         match: clearMatch ? null : undefined,
@@ -80,10 +80,9 @@ export function useTrackerFilters(defaultDateRange?: DateRange) {
     setHeroId,
     result,
     setResult,
-    startDate,
-    endDate,
-    handleDateChange,
-    defaultRange,
+    period: dateRange.period,
+    handlePeriodChange: dateRange.handlePeriodChange,
+    defaultPeriod: dateRange.defaultPeriod,
     minUnixTimestamp,
     maxUnixTimestamp,
     filters,

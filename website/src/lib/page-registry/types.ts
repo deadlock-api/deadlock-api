@@ -94,9 +94,9 @@ export interface Selection {
 /** The parts of a selection a page can use. */
 export type Slot = "hero" | "heroes" | "enemyHeroes" | "item" | "items" | "itemTiers" | "region" | "sort" | "patch";
 
+/** A ranked season, by the id a `season:<id>` date range names it with. */
 export interface SeasonRef {
-  startUnix: number;
-  endUnix?: number;
+  id: string;
 }
 
 /** What the site knows when a selection becomes a URL. Lists are newest first. */

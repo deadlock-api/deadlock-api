@@ -12,8 +12,8 @@ import { LoadingState } from "~/components/patterns/states/LoadingState";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "~/components/ui/dialog";
 import { Inline, Stack } from "~/components/ui/stack";
 import { CACHE_DURATIONS } from "~/constants/cache";
-import { day, type Dayjs } from "~/dayjs";
-import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { day } from "~/dayjs";
+import { usePeriodLists } from "~/hooks/usePeriodLists";
 import { api } from "~/lib/api";
 import { computeAverageBuild } from "~/lib/average-build";
 import {
@@ -23,6 +23,7 @@ import {
   buildUpgradeChainLookup,
   getHeroAbilityMetadata,
 } from "~/lib/build-transform";
+import { canonicalPeriod, customPeriod, type Period, periodBounds } from "~/lib/period";
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "~/queries/asset-queries";
 import { queryKeys } from "~/queries/query-keys";
 
@@ -55,29 +56,32 @@ export function PlayerHeroBuildsDialog({
   // Lets the user pivot the dialog to a different player (same hero) without leaving it,
   // and widen/narrow the time window past the range it inherited from the item-stats page.
   // Reset both back to their originating values whenever the dialog is (re)opened or the source account changes.
-  const inheritedRange = useMemo<{ startDate?: Dayjs; endDate?: Dayjs }>(
-    () => ({
-      startDate: minUnixTimestamp != null ? day.unix(minUnixTimestamp) : undefined,
-      endDate: maxUnixTimestamp != null ? day.unix(maxUnixTimestamp) : undefined,
-    }),
+  // The inherited bounds are the page's request bounds already (a patch's exact instants stay exact); only a period
+  // picked here resolves again.
+  const inheritedPeriod = useMemo(
+    () =>
+      customPeriod(
+        minUnixTimestamp != null ? day.unix(minUnixTimestamp) : undefined,
+        maxUnixTimestamp != null ? day.unix(maxUnixTimestamp) : undefined,
+      ),
     [minUnixTimestamp, maxUnixTimestamp],
   );
+  const lists = usePeriodLists();
   const [overridePlayer, setOverridePlayer] = useState<{ accountId: number; name?: string } | null>(null);
-  const [dateRange, setDateRange] = useState<{ startDate?: Dayjs; endDate?: Dayjs }>(inheritedRange);
+  const [pickedPeriod, setPickedPeriod] = useState<Period | null>(null);
   const [sessionKey, setSessionKey] = useState(`${open}:${accountId}`);
   const currentKey = `${open}:${accountId}`;
   if (currentKey !== sessionKey) {
     setSessionKey(currentKey);
     setOverridePlayer(null);
-    setDateRange(inheritedRange);
+    setPickedPeriod(null);
   }
 
   const effectiveAccountId = overridePlayer?.accountId ?? accountId;
   const effectiveName = overridePlayer?.name ?? playerName;
-  const { minUnixTimestamp: queryMinTimestamp, maxUnixTimestamp: queryMaxTimestamp } = useNormalizedTimeRange(
-    dateRange.startDate,
-    dateRange.endDate,
-  );
+  const pickedBounds = pickedPeriod ? periodBounds(pickedPeriod, lists) : undefined;
+  const queryMinTimestamp = pickedPeriod ? pickedBounds?.minUnixTimestamp : minUnixTimestamp;
+  const queryMaxTimestamp = pickedPeriod ? pickedBounds?.maxUnixTimestamp : maxUnixTimestamp;
 
   const {
     data: matches,
@@ -163,8 +167,8 @@ export function PlayerHeroBuildsDialog({
             onValueChange={(player) => setOverridePlayer({ accountId: player.accountId, name: player.name })}
           />
           <SeasonPatchDatePicker
-            value={dateRange}
-            onValueChange={({ startDate, endDate }) => setDateRange({ startDate, endDate })}
+            value={pickedPeriod ?? canonicalPeriod(inheritedPeriod, lists)}
+            onValueChange={setPickedPeriod}
             defaultTab="custom"
           />
         </Inline>

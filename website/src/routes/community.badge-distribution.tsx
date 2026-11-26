@@ -21,10 +21,10 @@ import { combineQueryStates } from "~/components/patterns/states/QueryRenderer";
 import { SegmentedItem } from "~/components/ui/segmented";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useNormalizedTimeRange } from "~/hooks/useNormalizedTimeRange";
+import { defaultPeriodTitle, defaultTemporalCoverage, defaultUnixRange } from "~/lib/period";
 import { prefetchCached } from "~/lib/prefetch-safe";
-import { currentPatchLabel, defaultPeriodTitle, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { TITLE_MAX_LENGTH, datasetJsonLd, pageTitle, seo } from "~/lib/seo";
-import { loadSeasons } from "~/queries/asset-queries";
+import { loadPeriodLists } from "~/queries/asset-queries";
 import { badgeDistributionQueryOptions } from "~/queries/badge-distribution-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 
@@ -51,20 +51,20 @@ function findMedianRankName(
 export const Route = createFileRoute("/community/badge-distribution")({
   component: BadgeDistributionPage,
   loader: async ({ context: { queryClient, preferences } }) => {
-    const seasons = await loadSeasons(queryClient);
-    const range = defaultUnixRange(seasons, preferences.dateFilter);
+    const lists = await loadPeriodLists(queryClient);
+    const range = defaultUnixRange(lists, preferences.dateFilter);
     const [distribution, ranks] = await Promise.all([
       prefetchCached(queryClient, badgeDistributionQueryOptions(range)),
       prefetchCached(queryClient, ranksQueryOptions),
     ]);
     return {
       medianRank: findMedianRankName(distribution, ranks),
-      period: defaultPeriodTitle(seasons, preferences.dateFilter),
-      coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
+      period: defaultPeriodTitle(lists, preferences.dateFilter),
+      coverage: defaultTemporalCoverage(lists, preferences.dateFilter),
     };
   },
   head: ({ loaderData }) => {
-    const period = loaderData?.period ?? currentPatchLabel();
+    const period = loaderData?.period ?? "Current Patch";
     const name = `Deadlock Rank Distribution (${period})`;
     const title = `${name}: % of Players per Rank`;
     const inPeriod = period.endsWith("Patch") ? `in the ${period}` : `in ${period}`;
@@ -88,7 +88,7 @@ export const Route = createFileRoute("/community/badge-distribution")({
 });
 
 function BadgeDistributionPage() {
-  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
+  const { period, startDate, endDate, handlePeriodChange, defaultPeriod } = useDateRangeState();
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
   const [metric, setMetric] = useQueryState(
@@ -148,11 +148,7 @@ function BadgeDistributionPage() {
           value={[minDurationS ?? undefined, maxDurationS ?? undefined]}
           onValueChange={handleDurationChange}
         />
-        <Filter.SeasonPatchDate
-          value={{ startDate, endDate }}
-          onValueChange={({ startDate: start, endDate: end, action }) => handleDateChange(start, end, action)}
-          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-        />
+        <Filter.SeasonPatchDate value={period} onValueChange={handlePeriodChange} defaultValue={defaultPeriod} />
         <FilterToggleCell label="Metric" value={metric} defaultValue="players" onValueChange={setMetric}>
           {BADGE_DISTRIBUTION_METRICS.map((value) => (
             <SegmentedItem key={value} value={value}>

@@ -8,32 +8,32 @@ import { directIntent, NO_FILTERS } from "~/lib/ai-search/intent";
 import { isNameLike, matchLookupOf, type PlayerLookup, playerLookupOf } from "~/lib/ai-search/lookup";
 import { resolveIntent } from "~/lib/ai-search/resolve";
 import { decideSearch } from "~/lib/ai-search/search-fns";
-import { PATCHES } from "~/lib/constants";
 import { isClientError } from "~/lib/http";
 import type { SeasonRef } from "~/lib/page-registry";
-import { toPatchEntry } from "~/lib/patches";
+import type { PatchEntry } from "~/lib/patches";
 import { ensureCached } from "~/lib/prefetch-safe";
 import { stringifySearch } from "~/lib/search-params";
 import { resolveSteamVanity } from "~/lib/steam-vanity-fns";
-import { heroesQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
+import { heroesQueryOptions, itemUpgradesQueryOptions, loadPeriodLists } from "~/queries/asset-queries";
 import { ranksQueryOptions } from "~/queries/ranks-query";
 import { steamSearchQueryOptions } from "~/queries/steam-queries";
 
 // The search's work, loaded on its first question so the field in every page's sidebar costs no more than a field.
 
-const PATCH_ENTRIES = PATCHES.map(toPatchEntry);
-
 /** The names and time windows a question is read against, from the asset caches every page warms. */
-async function loadSearchCatalog(queryClient: QueryClient): Promise<SearchCatalog & { seasons: SeasonRef[] }> {
-  const [heroes, items, ranks, seasons] = await Promise.all([
+async function loadSearchCatalog(
+  queryClient: QueryClient,
+): Promise<SearchCatalog & { seasons: SeasonRef[]; patches: readonly PatchEntry[] }> {
+  const [heroes, items, ranks, lists] = await Promise.all([
     ensureCached(queryClient, heroesQueryOptions),
     ensureCached(queryClient, itemUpgradesQueryOptions),
     ensureCached(queryClient, ranksQueryOptions),
-    loadSeasons(queryClient),
+    loadPeriodLists(queryClient),
   ]);
   return {
     ...buildSearchCatalog(heroes, items, ranks),
-    seasons: seasons.map((season) => ({ startUnix: season.startDate.unix(), endUnix: season.endDate?.unix() })),
+    seasons: lists.seasons.map((season) => ({ id: season.id })),
+    patches: lists.patches,
   };
 }
 
@@ -93,7 +93,7 @@ export async function routeQuestion(
   question: string,
 ): Promise<Routed & { direct: boolean; durationMs: number }> {
   const startedAt = performance.now();
-  const { vocabulary, catalog, seasons } = await loadSearchCatalog(queryClient);
+  const { vocabulary, catalog, seasons, patches } = await loadSearchCatalog(queryClient);
   let intent = directIntent(question, vocabulary);
   const direct = intent !== undefined;
   const done = (routed: Routed) => ({ ...routed, direct, durationMs: performance.now() - startedAt });
@@ -115,7 +115,7 @@ export async function routeQuestion(
     if (!decided.ok) throw new Error("The search model is unavailable");
     intent = intentFromDecision(decided.answers, question, entities, vocabulary.rankNames);
   }
-  const target = resolveIntent(intent, catalog, { patches: PATCH_ENTRIES, seasons, now: Date.now() / 1000 });
+  const target = resolveIntent(intent, catalog, { patches, seasons, now: Date.now() / 1000 });
   if (!target) {
     // A word or two no page answers is most likely a player's name without a digit ("xaiyadev").
     if (!isNameLike(question)) return done({ kind: "not_understood", players: 0 });
@@ -148,7 +148,7 @@ export interface HeroSuggestion {
  * and, while a name is still being typed, heroes one of its words starts ("ab", "lady g").
  */
 export async function suggestHeroes(queryClient: QueryClient, question: string, limit = 3): Promise<HeroSuggestion[]> {
-  const { vocabulary, catalog, seasons } = await loadSearchCatalog(queryClient);
+  const { vocabulary, catalog, seasons, patches } = await loadSearchCatalog(queryClient);
   const typed = words(question);
   const last = typed.at(-1);
   const named = findMentions(question, vocabulary.heroNames).map((mention) => mention.name);
@@ -156,7 +156,7 @@ export async function suggestHeroes(queryClient: QueryClient, question: string, 
     last && last.length >= 2
       ? vocabulary.heroNames.filter((name) => words(name).some((word) => word.startsWith(last)))
       : [];
-  const context = { patches: PATCH_ENTRIES, seasons, now: Date.now() / 1000 };
+  const context = { patches, seasons, now: Date.now() / 1000 };
   return [...new Set([...named, ...started])].slice(0, limit).flatMap((name) => {
     const hero = catalog.heroes.find((entity) => entity.name === name);
     const target = resolveIntent({ ...NO_FILTERS, page: "hero_page", heroes: [name] }, catalog, context);

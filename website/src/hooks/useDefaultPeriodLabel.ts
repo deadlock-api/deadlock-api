@@ -1,7 +1,7 @@
 import { useRouteContext } from "@tanstack/react-router";
 
-import { useSeasons } from "~/hooks/useSeasons";
-import { defaultPeriodLabel } from "~/lib/seasons";
+import { usePeriodLists } from "~/hooks/usePeriodLists";
+import { defaultPeriodLabel } from "~/lib/period";
 
 /**
  * The period the default date range covers, as copy: "this season" or "the current patch". Follows the visitor's
@@ -10,6 +10,6 @@ import { defaultPeriodLabel } from "~/lib/seasons";
  */
 export function useDefaultPeriodLabel() {
   const { preferences } = useRouteContext({ from: "__root__" });
-  const { seasons } = useSeasons();
-  return defaultPeriodLabel(seasons, preferences.dateFilter);
+  const lists = usePeriodLists();
+  return defaultPeriodLabel(lists, preferences.dateFilter);
 }

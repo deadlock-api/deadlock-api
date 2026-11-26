@@ -13,12 +13,12 @@ import { useKnownHeroId } from "~/hooks/useAssetById";
 import { useDateRangeState } from "~/hooks/useDateRangeState";
 import { useModeState } from "~/hooks/useModeState";
 import { ALL_RANKS_BADGES, DEFAULT_MATCH_MODE, getEffectiveRankRange } from "~/lib/game-mode";
+import { defaultUnixRange } from "~/lib/period";
 import { prefetchCached } from "~/lib/prefetch-safe";
 import { MAX_BADGE } from "~/lib/rank-utils";
-import { defaultUnixRange } from "~/lib/seasons";
 import { pageTitle, seo } from "~/lib/seo";
 import { abilityOrderTreeQueryOptions } from "~/queries/ability-order-query";
-import { loadSeasons } from "~/queries/asset-queries";
+import { loadPeriodLists } from "~/queries/asset-queries";
 
 const DEFAULT_HERO_ID = 2;
 /** Per node of the tree: a branch with fewer matches is noise, and a season's tree for a popular hero stays near 8k nodes. */
@@ -32,7 +32,7 @@ export const Route = createFileRoute("/analytics/abilities")({
     return { heroId: typeof heroId === "number" && Number.isInteger(heroId) ? heroId : DEFAULT_HERO_ID };
   },
   loader: async ({ context: { queryClient, preferences }, deps }) => {
-    const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
+    const range = defaultUnixRange(await loadPeriodLists(queryClient), preferences.dateFilter);
     await prefetchCached(
       queryClient,
       abilityOrderTreeQueryOptions({
@@ -60,7 +60,7 @@ function AbilitiesPage() {
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(MAX_BADGE));
   const { mode, setMode, gameMode, matchMode } = useModeState();
-  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
+  const { period, startDate, endDate, handlePeriodChange, defaultPeriod } = useDateRangeState();
   // An advanced filter; its default is the minimum the loader warms.
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
   // In the URL like every other filter, so a shared or reloaded link and Back keep them. One update sets both lists.
@@ -120,11 +120,7 @@ function AbilitiesPage() {
           }}
         />
         <Filter.Item selection="tri-state" value={itemSelections} onValueChange={setItemSelections} />
-        <Filter.SeasonPatchDate
-          value={{ startDate, endDate }}
-          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-        />
+        <Filter.SeasonPatchDate value={period} onValueChange={handlePeriodChange} defaultValue={defaultPeriod} />
         <>
           <Filter.MinMatches
             value={minMatches}

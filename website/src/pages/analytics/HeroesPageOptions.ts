@@ -9,15 +9,15 @@ import { formatPercent } from "~/lib/format";
 import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { heroSlug } from "~/lib/hero-slug";
 import { rankHeroes, type Tier } from "~/lib/hero-tiers";
-import { prefetchCached } from "~/lib/prefetch-safe";
 import {
   currentPatchLabel,
   defaultPeriodLabel,
   defaultPrevUnixRange,
   defaultTemporalCoverage,
   defaultUnixRange,
-  type SeasonInfo,
-} from "~/lib/seasons";
+  type PeriodLists,
+} from "~/lib/period";
+import { prefetchCached } from "~/lib/prefetch-safe";
 import { datasetJsonLd, pageTitle, seo, SITE_URL } from "~/lib/seo";
 import { redirectLegacyHeroId } from "~/lib/site-route-migration";
 import type { SlimHero } from "~/queries/asset-queries";
@@ -25,11 +25,8 @@ import type { RouterContext } from "~/router";
 
 const DEFAULT_MIN_MATCHES = 10;
 
-function defaultHeroStatsRanges(
-  seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
-) {
-  return { range: defaultUnixRange(seasons, preference), prevRange: defaultPrevUnixRange(seasons, preference) };
+function defaultHeroStatsRanges(lists: PeriodLists, preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
+  return { range: defaultUnixRange(lists, preference), prevRange: defaultPrevUnixRange(lists, preference) };
 }
 
 /** Highest win rate among heroes with enough matches for the number to mean something. */
@@ -238,16 +235,17 @@ export const heroesPageOptions = {
     const tab = analyticsTabFromPath("heroes", location.pathname);
     // Shared route options are not automatically split by the router plugin.
     // Import query code only when this loader runs, rather than on every page.
-    const [{ heroesQueryOptions, loadSeasons }, { heroBanStatsQueryOptions }, { heroStatsQueryOptions }] =
+    const [{ heroesQueryOptions, loadPeriodLists }, { heroBanStatsQueryOptions }, { heroStatsQueryOptions }] =
       await Promise.all([
         import("~/queries/asset-queries"),
         import("~/queries/hero-ban-stats-query"),
         import("~/queries/hero-stats-query"),
       ]);
-    const seasons = await loadSeasons(queryClient);
-    const r = defaultHeroStatsRanges(seasons, preferences.dateFilter);
-    const period = defaultPeriodLabel(seasons, preferences.dateFilter);
-    const coverage = defaultTemporalCoverage(seasons, preferences.dateFilter);
+    const lists = await loadPeriodLists(queryClient);
+    const r = defaultHeroStatsRanges(lists, preferences.dateFilter);
+    const period = defaultPeriodLabel(lists, preferences.dateFilter);
+    const coverage = defaultTemporalCoverage(lists, preferences.dateFilter);
+    const patchLabel = currentPatchLabel(lists);
     const heroes = prefetchCached(queryClient, heroesQueryOptions);
     // The server waits for the view's data, so its HTML carries it. In the browser a tab click does not: the view shows
     // its own loading state, where waiting kept the navigation pending and washed out the whole page (PendingNavigation).
@@ -260,7 +258,7 @@ export const heroesPageOptions = {
       const view = Promise.all([heroes, prefetchHeroView(queryClient, tab, r), viewCode]);
       if (isServer) await view;
       else await viewCode;
-      return { leader: null, tierList: [], period, coverage };
+      return { leader: null, tierList: [], period, patchLabel, coverage };
     }
     const common = {
       minHeroMatches: 0,
@@ -285,12 +283,13 @@ export const heroesPageOptions = {
     const previous = tab === "stats" ? Promise.all([statsFor(r.prevRange), bansFor(r.prevRange)]) : undefined;
     if (!isServer) {
       await viewCode;
-      return { leader: null, tierList: [], period, coverage };
+      return { leader: null, tierList: [], period, patchLabel, coverage };
     }
     const [[stats, heroList, bans]] = await Promise.all([current, previous, viewCode]);
-    if (tab === "tier-list") return { leader: null, tierList: findTierList(stats, bans, heroList), period, coverage };
+    if (tab === "tier-list")
+      return { leader: null, tierList: findTierList(stats, bans, heroList), period, patchLabel, coverage };
     // The leader is measured over the default range, which is this season unless the visitor prefers patches.
-    return { leader: findWinRateLeader(stats, heroList), tierList: [], period, coverage };
+    return { leader: findWinRateLeader(stats, heroList), tierList: [], period, patchLabel, coverage };
   },
   head: ({
     loaderData,
@@ -300,6 +299,7 @@ export const heroesPageOptions = {
       leader: { name: string; winRate: number } | null;
       tierList: TieredHero[];
       period: string;
+      patchLabel: string;
       coverage?: string;
     };
     match: { pathname: string };
@@ -335,7 +335,8 @@ export const heroesPageOptions = {
       temporalCoverage: tab === "stats" || tab === "tier-list" ? loaderData?.coverage : undefined,
     });
     // The data covers the newest patch unless the visitor prefers seasons; the loader names which.
-    const patchTitle = loaderData?.period === "the current patch" ? view.patchTitle?.(currentPatchLabel()) : undefined;
+    const patchTitle =
+      loaderData?.period === "the current patch" ? view.patchTitle?.(loaderData.patchLabel) : undefined;
     return seo({
       title: pageTitle(patchTitle ?? view.title),
       description: view.description + lead,

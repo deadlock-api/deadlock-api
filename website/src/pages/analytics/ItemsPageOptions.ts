@@ -5,8 +5,8 @@ import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/l
 import { enemyHeroFilter, parseEnemyParam } from "~/lib/enemy-heroes";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
+import { defaultPeriodLabel, defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/period";
 import { prefetchCached, prefetchSeed } from "~/lib/prefetch-safe";
-import { defaultPeriodLabel, defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { wilsonScoreInterval } from "~/lib/wilson";
 import type { RouterContext } from "~/router";
@@ -56,15 +56,15 @@ export const itemsPageOptions = {
     location: { pathname: string };
   }) => {
     const tab = analyticsTabFromPath("items", location.pathname);
-    const [{ itemUpgradesQueryOptions, loadSeasons }, { itemStatsQueryOptions }, flow, combos] = await Promise.all([
+    const [{ itemUpgradesQueryOptions, loadPeriodLists }, { itemStatsQueryOptions }, flow, combos] = await Promise.all([
       import("~/queries/asset-queries"),
       import("~/queries/item-stats-query"),
       import("~/queries/item-flow-query"),
       import("~/queries/item-permutation-query"),
     ]);
-    const seasons = await loadSeasons(queryClient);
-    const range = defaultUnixRange(seasons, preferences.dateFilter);
-    const prevRange = defaultPrevUnixRange(seasons, preferences.dateFilter);
+    const lists = await loadPeriodLists(queryClient);
+    const range = defaultUnixRange(lists, preferences.dateFilter);
+    const prevRange = defaultPrevUnixRange(lists, preferences.dateFilter);
     // The page's defaults, as the views put them into their query keys.
     const common = {
       minMatches: 10,
@@ -75,7 +75,7 @@ export const itemsPageOptions = {
     };
     // Every view names items, and the combos trim their answer by the item list.
     const items = prefetchCached(queryClient, itemUpgradesQueryOptions);
-    const coverage = defaultTemporalCoverage(seasons, preferences.dateFilter);
+    const coverage = defaultTemporalCoverage(lists, preferences.dateFilter);
     // The server waits for the view's data, so its HTML carries it. In the browser a tab click or a hero pick does not:
     // the view shows its own loading state instead of the navigation waiting on the API.
     const isServer = typeof window === "undefined";
@@ -183,7 +183,7 @@ export const itemsPageOptions = {
     // The description names the leader of the whole period, which a hero-filtered table would misrepresent.
     return {
       leader: deps.heroId === null && deps.enemyIds.length === 0 ? findWinRateLeader(stats, await items) : null,
-      period: defaultPeriodLabel(seasons, preferences.dateFilter),
+      period: defaultPeriodLabel(lists, preferences.dateFilter),
       coverage,
     };
   },

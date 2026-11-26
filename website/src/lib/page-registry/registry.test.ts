@@ -68,8 +68,21 @@ test("page ids are unique and every page says what it shows", () => {
 
 const context = {
   patches: [
-    { id: "2026-09-29", name: "City Never Sleeps", shortName: "City Never Sleeps", startUnix: 1_790_000_000 },
-    { id: "2026-09-16", name: "Minor Update", shortName: "Patch", startUnix: 1_789_000_000, endUnix: 1_790_000_000 },
+    {
+      id: "2026-09-29",
+      name: "City Never Sleeps",
+      shortName: "City Never Sleeps",
+      startUnix: 1_790_000_000,
+      kind: "update" as const,
+    },
+    {
+      id: "2026-09-16",
+      name: "Minor Update",
+      shortName: "Patch",
+      startUnix: 1_789_000_000,
+      endUnix: 1_790_000_000,
+      kind: "update" as const,
+    },
   ],
   seasons: [],
   now: 1_791_000_000,
@@ -86,7 +99,7 @@ test("a page reads only the filters it lists", () => {
     match_mode: "ranked",
     min_rank: 91,
     max_rank: 116,
-    date_range: "2026-09-21T14:13:20.000Z_",
+    date_range: "patch:2026-09-29",
   });
 });
 

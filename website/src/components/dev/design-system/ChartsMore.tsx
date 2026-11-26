@@ -257,7 +257,7 @@ export function ChartsMore() {
       <Specimen
         name="ChartMarkers"
         source="patterns/charts/ChartMarkers"
-        note="Events on a time axis (patches) as dotted vertical lines, each labelled beside its line in the top margin (CHART_MARGIN_MARKED). Colliding labels stack into further rows over the plot on a halo, up to a third of its height. A label that fits on neither side of its line falls back to shortLabel, else the line stays unlabelled; a label is never drawn away from its line. labels={false} for the lower plots of a stack. Features pass PATCH_MARKERS or render PatchMarkers from domain/charts."
+        note="Events on a time axis (patches) as dotted vertical lines, each labelled beside its line in the top margin (CHART_MARGIN_MARKED). Colliding labels stack into further rows over the plot on a halo, up to a third of its height. A label that fits on neither side of its line falls back to shortLabel, else the line stays unlabelled; a label is never drawn away from its line. labels={false} for the lower plots of a stack. Features pass usePatchMarkers() or render PatchMarkers from domain/charts."
       >
         <Variants className="flex-col items-stretch">
           <ChartSurface label="Win rate by week with patch markers" size="md">

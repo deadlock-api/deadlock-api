@@ -103,7 +103,7 @@ function TeamBuilderPage() {
   };
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(DEFAULT_MIN_RANK));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(DEFAULT_MAX_RANK));
-  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
+  const { period, range, startDate, endDate, handlePeriodChange, defaultPeriod } = useDateRangeState();
   const { minUnixTimestamp, maxUnixTimestamp } = useNormalizedTimeRange(startDate, endDate);
 
   const [pickerTarget, setPickerTarget] = useState<PickerTarget | null>(null);
@@ -231,7 +231,7 @@ function TeamBuilderPage() {
 
   const totalPicked = allyHeroes.length + enemyHeroes.length;
 
-  const dateSummary = formatDateRange(startDate, endDate);
+  const dateSummary = formatDateRange(range[0], range[1]);
   const filterSummary = `${MODE_CONFIG[mode].label}${dateSummary ? ` · ${dateSummary}` : ""}`;
   // Names the filters the curve is read under: the imported match counts only if it passes them, and
   // only games where these duos met in this lane count, so "no souls" alone read as missing data.
@@ -384,11 +384,7 @@ function TeamBuilderPage() {
             }
           }}
         />
-        <Filter.SeasonPatchDate
-          value={{ startDate, endDate }}
-          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-        />
+        <Filter.SeasonPatchDate value={period} onValueChange={handlePeriodChange} defaultValue={defaultPeriod} />
         <MatchImportControl
           matchId={importedMatchId}
           isLoading={importQuery.isFetching || importing}

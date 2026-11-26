@@ -1,42 +1,19 @@
 import type { Dayjs } from "~/dayjs";
-import { PATCHES } from "~/lib/constants";
 
 export type Granularity = "hour" | "day";
 
 export const DEFAULT_GRANULARITY: Granularity = "day";
 
-// Exact unix timestamps of every known patch boundary. Normalization exists to
-// improve cache-key hit rate by collapsing nearby timestamps to a shared
-// day/hour boundary. Patch ranges are already-fixed dates, so hit rate isn't a
-// concern for them — we'd rather preserve the exact boundary for accuracy. A
-// date matching one of these is passed through unnormalized.
-const EXACT_BOUNDARY_UNIX = new Set<number>(
-  PATCHES.flatMap((p) => (p.endDate ? [p.startDate.unix(), p.endDate.unix()] : [p.startDate.unix()])),
-);
-
-// Season boundaries earn the same treatment but only exist once the ranked
-// seasons endpoint has answered, so they're registered instead of static.
-export function registerExactBoundaries(unixTimestamps: readonly number[]) {
-  for (const unix of unixTimestamps) EXACT_BOUNDARY_UNIX.add(unix);
-}
-
-function isExactBoundary(d: Dayjs): boolean {
-  return EXACT_BOUNDARY_UNIX.has(d.unix());
-}
+// A custom date range is widened to whole UTC days (or hours) before it becomes a request, so nearby picks share a
+// cache key and the day rollups answer them. A patch's or a season's bounds are exact instead: `periodBounds` (in
+// period.ts) decides by the period, never by the instant.
 
 export function normalizeUnixFloor(d: Dayjs | undefined, granularity: Granularity = DEFAULT_GRANULARITY) {
   if (!d) return undefined;
-  if (isExactBoundary(d)) return d.unix();
   return d.utc().startOf(granularity).unix();
 }
 
 export function normalizeUnixCeil(d: Dayjs | undefined, granularity: Granularity = DEFAULT_GRANULARITY) {
   if (!d) return undefined;
-  if (isExactBoundary(d)) return d.unix();
   return d.utc().endOf(granularity).unix();
-}
-
-/** A date range as the analytics requests' bounds; an open start reads from 0, an open end stays open. */
-export function normalizeUnixRange([start, end]: readonly [Dayjs | undefined, Dayjs | undefined]) {
-  return { minUnixTimestamp: normalizeUnixFloor(start) ?? 0, maxUnixTimestamp: normalizeUnixCeil(end) };
 }

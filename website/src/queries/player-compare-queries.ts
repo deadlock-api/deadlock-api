@@ -12,6 +12,7 @@ import type { Dayjs } from "~/dayjs";
 import { api } from "~/lib/api";
 import { FAVORITE_MIN_MATCHES } from "~/lib/compare-items";
 import type { CompareFilterSearch } from "~/lib/compare-share";
+import type { DateFilterPreference } from "~/lib/date-filter-preference";
 import {
   DEFAULT_MATCH_MODE,
   type GameMode,
@@ -21,8 +22,7 @@ import {
   parseAsGameMode,
   parseAsMatchMode,
 } from "~/lib/game-mode";
-import { parseAsDayjsRange } from "~/lib/nuqs-parsers";
-import { normalizeUnixRange } from "~/lib/time-normalize";
+import { defaultPeriod, parseAsPeriod, periodBounds, type PeriodLists, periodRange, resolvePeriod } from "~/lib/period";
 
 import { queryKeys } from "./query-keys";
 
@@ -36,29 +36,33 @@ export interface CompareFilters {
 }
 
 /**
- * A comparison's filters from its URL, with the page's defaults: the page, its loader and its share card all read
- * them here, so they ask for the same data. `defaultRange` is only awaited when the URL has no dates.
+ * A comparison's filters from its URL, with the page's defaults: the page's loader and its share card read them here,
+ * the page through `useDateRangeState`, which resolves the period the same way, so they ask for the same data.
+ * `range` is the period's own instants, or null for the default period.
  */
-export async function resolveCompareFilters(
+export function resolveCompareFilters(
   search: CompareFilterSearch,
-  defaultRange: () => Promise<{ minUnixTimestamp: number; maxUnixTimestamp: number | undefined }>,
-): Promise<{ filters: CompareFilters; mode: Mode; range: [Dayjs | undefined, Dayjs | undefined] | null }> {
+  lists: PeriodLists,
+  preference?: DateFilterPreference,
+): { filters: CompareFilters; mode: Mode; range: [Dayjs | undefined, Dayjs | undefined] | null } {
   const mode = modeFromParams(
     parseAsGameMode.parse(search.game_mode ?? "") ?? "normal",
     parseAsMatchMode.parse(search.match_mode ?? "") ?? DEFAULT_MATCH_MODE,
   );
   const hero = Number(search.hero);
-  const range = parseAsDayjsRange.parse(search.date_range ?? "");
-  const time = range ? normalizeUnixRange(range) : await defaultRange();
+  const fallback = defaultPeriod(lists, preference);
+  const period = resolvePeriod(parseAsPeriod.parse(search.date_range ?? ""), lists, fallback);
+  const bounds = periodBounds(period, lists);
   return {
     filters: {
       gameMode: MODE_CONFIG[mode].gameMode,
       matchMode: MODE_CONFIG[mode].matchMode,
       heroId: Number.isInteger(hero) && hero > 0 ? hero : null,
-      ...time,
+      minUnixTimestamp: bounds?.minUnixTimestamp ?? 0,
+      maxUnixTimestamp: bounds?.maxUnixTimestamp,
     },
     mode,
-    range,
+    range: period === fallback ? null : (periodRange(period, lists) ?? null),
   };
 }
 

@@ -15,9 +15,11 @@ import {
 import { buffInfoByType } from "~/lib/buffs";
 import { isPlayableHero } from "~/lib/hero-roster";
 import { isShopableItem } from "~/lib/item-roster";
+import type { PeriodLists } from "~/lib/period";
 import { catchPrefetch, ensureCached } from "~/lib/prefetch-safe";
 import { type SeasonInfo, toSeasons } from "~/lib/seasons";
 
+import { CURATED_PATCH_LIST, patchListQueryOptions } from "./patch-list-query";
 import { queryKeys } from "./query-keys";
 
 export type { SlimAbility, SlimHero, SlimUpgrade };
@@ -157,9 +159,8 @@ export const rankedSeasonsQueryOptions = queryOptions({
     const response = await api.ranked_seasons_api.listRankedSeasons();
     return response.data;
   },
-  // Transform in `select`, not in `queryFn`: on the client the query is served
-  // from the dehydrated cache, so `queryFn` never runs there and the season
-  // boundaries `toSeasons` registers would stay missing.
+  // Transform in `select`, not in `queryFn`: the cache (and the dehydrated HTML) keeps the API's plain numbers, which
+  // `toSeasons` turns into dates on each side.
   select: toSeasons,
   staleTime: CACHE_DURATIONS.FOREVER,
 });
@@ -169,6 +170,18 @@ export async function loadSeasons(queryClient: QueryClient): Promise<SeasonInfo[
   // `query()` applies `select`, so this already is `toSeasons` of the cached response.
   const seasons = await catchPrefetch(ensureCached(queryClient, rankedSeasonsQueryOptions));
   return seasons ?? [];
+}
+
+/**
+ * Loader-side counterpart of `usePeriodLists`: the patches and seasons a date filter's period resolves against, with
+ * the curated patches if the feed is unavailable.
+ */
+export async function loadPeriodLists(queryClient: QueryClient): Promise<PeriodLists> {
+  const [seasons, patches] = await Promise.all([
+    loadSeasons(queryClient),
+    catchPrefetch(ensureCached(queryClient, patchListQueryOptions)),
+  ]);
+  return { seasons, patches: patches ?? CURATED_PATCH_LIST };
 }
 
 /** The heroes anyone can pick in matchmaking: the hero lists also hold pre-release and disabled ones. */

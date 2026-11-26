@@ -23,10 +23,9 @@ type HeroFiltersProps = Pick<
   | "maxRankId"
   | "setMinRankId"
   | "setMaxRankId"
-  | "startDate"
-  | "endDate"
-  | "handleDateChange"
-  | "defaultRange"
+  | "period"
+  | "handlePeriodChange"
+  | "defaultPeriod"
 > & {
   /** View controls that remain visible beside the primary filters. */
   children?: React.ReactNode;
@@ -49,10 +48,9 @@ export function HeroFiltersSection({
   maxRankId,
   setMinRankId,
   setMaxRankId,
-  startDate,
-  endDate,
-  handleDateChange,
-  defaultRange,
+  period,
+  handlePeriodChange,
+  defaultPeriod,
   children,
   advancedControls,
 }: HeroFiltersProps) {
@@ -76,11 +74,7 @@ export function HeroFiltersSection({
         }}
         hideRankRange={tab === "stats-by-rank"}
       />
-      <Filter.SeasonPatchDate
-        value={{ startDate, endDate }}
-        onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-        defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-      />
+      <Filter.SeasonPatchDate value={period} onValueChange={handlePeriodChange} defaultValue={defaultPeriod} />
       {children}
       <Disclosure title="Advanced" variant="inline" className="w-full">
         <Inline>

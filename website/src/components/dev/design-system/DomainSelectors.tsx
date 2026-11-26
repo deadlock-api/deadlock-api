@@ -27,11 +27,13 @@ import { type ItemSelectionProps, useItemPicker, useShopItems } from "~/componen
 import { ExtraArgumentFields } from "~/components/domain/streamkit/ExtraArgumentFields";
 import type { PickerTriState } from "~/components/patterns/picker/picker";
 import { Separator } from "~/components/ui/separator";
-import type { Dayjs } from "~/dayjs";
 import { PATCHES } from "~/lib/constants";
 import { type Mode, TRACKER_DEFAULT_MODE } from "~/lib/game-mode";
 import { isPlayableHero } from "~/lib/hero-roster";
+import type { Period } from "~/lib/period";
 import { heroesQueryOptions, type SlimUpgrade } from "~/queries/asset-queries";
+
+const LATEST_PATCH: Period = { kind: "patch", id: PATCHES[0].id };
 
 type TimeRange = [number | undefined, number | undefined];
 
@@ -148,10 +150,7 @@ export function DomainSelectors() {
   const [highRanks, setHighRanks] = useState<[number, number]>([91, 116]);
   const [matchTime, setMatchTime] = useState<TimeRange>([undefined, undefined]);
   const [buyTime, setBuyTime] = useState<TimeRange>([0, 600]);
-  const [dates, setDates] = useState<{ startDate?: Dayjs; endDate?: Dayjs }>({
-    startDate: PATCHES[0].startDate,
-    endDate: PATCHES[0].endDate,
-  });
+  const [period, setPeriod] = useState<Period>(LATEST_PATCH);
 
   return (
     <>
@@ -337,14 +336,14 @@ export function DomainSelectors() {
       <Specimen
         name="SeasonPatchDatePicker"
         source="domain/selectors/SeasonPatchDatePicker"
-        note="A date range picked as a ranked season, a patch or custom dates; onValueChange also carries the previous period for comparisons. Filter.SeasonPatchDate is this component; defaultValue is the range the reset returns to."
+        note="A Period picked as a ranked season, a patch (the /v2/patches list, hero releases marked) or custom dates; onValueChange(period, action) says which tab picked it, or the reset. useDateRangeState turns the period into request bounds. Filter.SeasonPatchDate is this component; defaultValue is the period the reset returns to."
       >
         <Variants>
           <SeasonPatchDatePicker
-            value={dates}
-            onValueChange={({ startDate, endDate }) => setDates({ startDate, endDate })}
+            value={period}
+            onValueChange={setPeriod}
             defaultTab="patch"
-            defaultValue={{ startDate: PATCHES[0].startDate, endDate: PATCHES[0].endDate }}
+            defaultValue={LATEST_PATCH}
           />
         </Variants>
       </Specimen>

@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiHeroStatsRequest, AnalyticsHeroStats } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import { PATCH_MARKERS } from "~/components/domain/charts/PatchMarkers";
+import { usePatchMarkers } from "~/components/domain/charts/PatchMarkers";
 import { ChartCard } from "~/components/patterns/charts/ChartCard";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
 import { type WeekEntry, WeeklyTrendChart } from "~/components/patterns/charts/WeeklyTrendChart";
@@ -73,6 +73,7 @@ export function HeroWinRateOverTime({
     Math.abs(delta) < 1 ? "has held steady" : delta > 0 ? `has climbed ${points}` : `has slipped ${points}`;
   const chartLabel = `${heroName} win rate and pick rate by week`;
 
+  const patchMarkers = usePatchMarkers();
   return (
     <ChartCard
       className={className}
@@ -100,7 +101,7 @@ export function HeroWinRateOverTime({
         ) : (
           <WeeklyTrendChart
             variant="flush"
-            markers={PATCH_MARKERS}
+            markers={patchMarkers}
             weeks={weeks}
             shareLabel="Pick rate"
             label={chartLabel}

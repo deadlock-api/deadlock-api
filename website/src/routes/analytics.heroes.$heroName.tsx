@@ -37,7 +37,7 @@ import { Badge } from "~/components/ui/badge";
 import { Pips } from "~/components/ui/pips";
 import { Inline } from "~/components/ui/stack";
 import { Stat, StatGroup } from "~/components/ui/stat";
-import { useSeasons } from "~/hooks/useSeasons";
+import { usePeriodLists } from "~/hooks/usePeriodLists";
 import { computeBanRates } from "~/lib/ban-rate";
 import { getPickrateMultiplier } from "~/lib/constants";
 import { DEFAULT_DATE_FILTER, type DateFilterPreference } from "~/lib/date-filter-preference";
@@ -48,16 +48,16 @@ import { fetchHeroMatchups, type HeroMatchupsRequest } from "~/lib/hero-matchup-
 import { heroPickRate } from "~/lib/hero-pick-rate";
 import { isPreReleaseHero } from "~/lib/hero-roster";
 import { findHeroBySlug, heroSlug } from "~/lib/hero-slug";
-import { catchPrefetch, ensureCached, prefetchCached, requireOnServer } from "~/lib/prefetch-safe";
-import { rankOf } from "~/lib/rank-of";
-import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import {
   defaultPeriodLabel,
   defaultPrevUnixRange,
   defaultTemporalCoverage,
   defaultUnixRange,
-  type SeasonInfo,
-} from "~/lib/seasons";
+  type PeriodLists,
+} from "~/lib/period";
+import { catchPrefetch, ensureCached, prefetchCached, requireOnServer } from "~/lib/prefetch-safe";
+import { rankOf } from "~/lib/rank-of";
+import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
 import { computeSwapRates } from "~/lib/swap-rate";
@@ -68,7 +68,7 @@ import {
   filterPlayableHeroes,
   heroesQueryOptions,
   itemUpgradesQueryOptions,
-  loadSeasons,
+  loadPeriodLists,
 } from "~/queries/asset-queries";
 import { heroBanStatsQueryOptions } from "~/queries/hero-ban-stats-query";
 import {
@@ -99,71 +99,68 @@ const GAME_MODE = "normal" as const;
 // table, while item stats come from day-grained rollups that start at midnight. Right after a mid-day patch the item
 // counts then cover hours the hero counts do not, and "bought in X% of matches" passed 100%. Without them both come
 // from the rollups over the same days.
-function currentStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
+function currentStatsParams(lists: PeriodLists, preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
   return {
     ...DEFAULT_BADGES,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons, preference),
+    ...defaultUnixRange(lists, preference),
   };
 }
 
-function byRankStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
+function byRankStatsParams(lists: PeriodLists, preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
   return {
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons, preference),
+    ...defaultUnixRange(lists, preference),
   };
 }
 
-function currentItemStatsParams(
-  seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
-) {
-  return { minMatches: 10, ...currentStatsParams(seasons, preference) };
+function currentItemStatsParams(lists: PeriodLists, preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
+  return { minMatches: 10, ...currentStatsParams(lists, preference) };
 }
 
 function currentAbilityOrderParams(
-  seasons: readonly SeasonInfo[],
+  lists: PeriodLists,
   heroMatches: number,
   preference: DateFilterPreference = DEFAULT_DATE_FILTER,
 ) {
-  return { minMatches: Math.max(20, skillPathMinMatches(heroMatches)), ...currentStatsParams(seasons, preference) };
+  return { minMatches: Math.max(20, skillPathMinMatches(heroMatches)), ...currentStatsParams(lists, preference) };
 }
 
 /** The hero's published builds as the Build Stats page counts them by default, so both read one cache entry. */
 function currentBuildParams(
   heroId: number,
-  seasons: readonly SeasonInfo[],
+  lists: PeriodLists,
   preference: DateFilterPreference = DEFAULT_DATE_FILTER,
 ): HeroBuildStatsParams {
   return {
     heroId,
     matchMode: DEFAULT_MATCH_MODE,
     ...DEFAULT_BADGES,
-    ...defaultUnixRange(seasons, preference),
+    ...defaultUnixRange(lists, preference),
     minMatches: TOP_BUILDS_MIN_MATCHES,
   };
 }
 
-function currentBanParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
+function currentBanParams(lists: PeriodLists, preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
   return {
     matchMode: DEFAULT_MATCH_MODE,
     ...DEFAULT_BADGES,
-    ...defaultUnixRange(seasons, preference),
+    ...defaultUnixRange(lists, preference),
   };
 }
 
 function matchupsRequest(
   heroId: number,
-  seasons: readonly SeasonInfo[],
+  lists: PeriodLists,
   preference: DateFilterPreference = DEFAULT_DATE_FILTER,
 ): HeroMatchupsRequest {
-  const prev = defaultPrevUnixRange(seasons, preference);
+  const prev = defaultPrevUnixRange(lists, preference);
   return {
     heroId,
     ...DEFAULT_BADGES,
-    ...defaultUnixRange(seasons, preference),
+    ...defaultUnixRange(lists, preference),
     prevMinUnixTimestamp: prev.minUnixTimestamp,
     prevMaxUnixTimestamp: prev.maxUnixTimestamp,
     gameMode: GAME_MODE,
@@ -197,9 +194,9 @@ function summarizeHeroStats(rows: readonly AnalyticsHeroStats[] | undefined, her
 export const Route = createFileRoute("/analytics/heroes/$heroName")({
   component: HeroPage,
   loader: async ({ context: { queryClient, preferences }, params }) => {
-    const [heroes, seasons] = await Promise.all([
+    const [heroes, lists] = await Promise.all([
       ensureCached(queryClient, heroesQueryOptions),
-      loadSeasons(queryClient),
+      loadPeriodLists(queryClient),
     ]);
     const playable = filterPlayableHeroes(heroes);
     const hero = findHeroBySlug(playable, params.heroName);
@@ -236,7 +233,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
     }
     const statsPrefetch = prefetchCached(
       queryClient,
-      heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter)),
+      heroStatsQueryOptions(currentStatsParams(lists, preferences.dateFilter)),
     );
     // The skill order's request scales with the hero's match count, so it waits for the stats. Prefetched, the server
     // HTML has the order instead of its loading state.
@@ -248,7 +245,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
         prefetchCached(
           queryClient,
           abilityOrderTreeQueryOptions({
-            ...currentAbilityOrderParams(seasons, heroMatches, preferences.dateFilter),
+            ...currentAbilityOrderParams(lists, heroMatches, preferences.dateFilter),
             heroId: hero.id,
           }),
         ),
@@ -257,7 +254,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
     // The build names are what a build search looks for: the server waits for the top builds' names too.
     const buildsPrefetch = prefetchCached(
       queryClient,
-      heroBuildStatsQueryOptions(currentBuildParams(hero.id, seasons, preferences.dateFilter)),
+      heroBuildStatsQueryOptions(currentBuildParams(hero.id, lists, preferences.dateFilter)),
     ).then((rows) => {
       const ids = rows ? topBuildIds(rows) : [];
       return ids.length > 0 ? prefetchCached(queryClient, heroBuildMetaQueryOptions(hero.id, ids)) : undefined;
@@ -265,15 +262,15 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
     const [stats, ranks, , , , matchups] = await Promise.all([
       statsPrefetch,
       prefetchCached(queryClient, ranksQueryOptions),
-      prefetchCached(queryClient, heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
+      prefetchCached(queryClient, heroBanStatsQueryOptions(currentBanParams(lists, preferences.dateFilter))),
       prefetchCached(
         queryClient,
-        itemStatsQueryOptions({ ...currentItemStatsParams(seasons, preferences.dateFilter), heroId: hero.id }),
+        itemStatsQueryOptions({ ...currentItemStatsParams(lists, preferences.dateFilter), heroId: hero.id }),
       ),
       prefetchCached(queryClient, itemUpgradesQueryOptions),
-      catchPrefetch(fetchHeroMatchups({ data: matchupsRequest(hero.id, seasons, preferences.dateFilter) })),
+      catchPrefetch(fetchHeroMatchups({ data: matchupsRequest(hero.id, lists, preferences.dateFilter) })),
       // Swaps come from the same demos as bans, so they take the ban filters.
-      prefetchCached(queryClient, heroSwapStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter))),
+      prefetchCached(queryClient, heroSwapStatsQueryOptions(currentBanParams(lists, preferences.dateFilter))),
       skillOrderPrefetch,
       buildsPrefetch,
     ]);
@@ -293,7 +290,7 @@ export const Route = createFileRoute("/analytics/heroes/$heroName")({
       breadcrumb: hero.name,
       matchups,
       rankRange: rankRangeLabel(ranks, DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max),
-      coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
+      coverage: defaultTemporalCoverage(lists, preferences.dateFilter),
       summary: summary && {
         winRate: summary.winRate,
         pickRate: summary.pickRate,
@@ -390,11 +387,11 @@ function HeroDetailPage() {
   const { heroId, heroName, rankRange, matchups, accent, heroType, complexity } = data;
   const router = useRouter();
   const retryMatchups = () => void router.invalidate();
-  const { seasons } = useSeasons();
-  const period = defaultPeriodLabel(seasons, preferences.dateFilter);
-  const statsQuery = useQuery(heroStatsQueryOptions(currentStatsParams(seasons, preferences.dateFilter)));
-  const banQuery = useQuery(heroBanStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter)));
-  const swapQuery = useQuery(heroSwapStatsQueryOptions(currentBanParams(seasons, preferences.dateFilter)));
+  const lists = usePeriodLists();
+  const period = defaultPeriodLabel(lists, preferences.dateFilter);
+  const statsQuery = useQuery(heroStatsQueryOptions(currentStatsParams(lists, preferences.dateFilter)));
+  const banQuery = useQuery(heroBanStatsQueryOptions(currentBanParams(lists, preferences.dateFilter)));
+  const swapQuery = useQuery(heroSwapStatsQueryOptions(currentBanParams(lists, preferences.dateFilter)));
 
   const summary = useMemo(() => {
     const base = summarizeHeroStats(statsQuery.data, heroId);
@@ -532,7 +529,7 @@ function HeroDetailPage() {
               <div className="grid gap-4 @3xl:grid-cols-2">
                 <HeroTopBuilds
                   heroName={heroName}
-                  request={currentBuildParams(heroId, seasons, preferences.dateFilter)}
+                  request={currentBuildParams(heroId, lists, preferences.dateFilter)}
                   rankRange={rankRange}
                 />
                 <HeroTopItems
@@ -540,14 +537,14 @@ function HeroDetailPage() {
                   heroName={heroName}
                   heroMatches={summary.matches}
                   rankRange={rankRange}
-                  request={currentItemStatsParams(seasons, preferences.dateFilter)}
+                  request={currentItemStatsParams(lists, preferences.dateFilter)}
                 />
               </div>
             </div>
             <HeroSkillOrder
               heroId={heroId}
               heroName={heroName}
-              request={currentAbilityOrderParams(seasons, summary.matches, preferences.dateFilter)}
+              request={currentAbilityOrderParams(lists, summary.matches, preferences.dateFilter)}
               rankRange={rankRange}
             />
             <HeroImbueTargets
@@ -555,7 +552,7 @@ function HeroDetailPage() {
               heroName={heroName}
               heroMatches={summary.matches}
               rankRange={rankRange}
-              request={currentItemStatsParams(seasons, preferences.dateFilter)}
+              request={currentItemStatsParams(lists, preferences.dateFilter)}
             />
           </div>
         </Section>
@@ -570,7 +567,7 @@ function HeroDetailPage() {
                   className="lg:col-span-2"
                   heroId={heroId}
                   heroName={heroName}
-                  request={currentStatsParams(seasons, preferences.dateFilter)}
+                  request={currentStatsParams(lists, preferences.dateFilter)}
                   rankRange={rankRange}
                 />
               </Suspense>
@@ -580,7 +577,7 @@ function HeroDetailPage() {
                 <HeroWinRateByRank
                   heroId={heroId}
                   heroName={heroName}
-                  request={byRankStatsParams(seasons, preferences.dateFilter)}
+                  request={byRankStatsParams(lists, preferences.dateFilter)}
                 />
               </Suspense>
             </ChunkErrorBoundary>
@@ -589,7 +586,7 @@ function HeroDetailPage() {
                 <HeroWinRateByDuration
                   heroId={heroId}
                   heroName={heroName}
-                  request={currentStatsParams(seasons, preferences.dateFilter)}
+                  request={currentStatsParams(lists, preferences.dateFilter)}
                   rankRange={rankRange}
                 />
               </Suspense>

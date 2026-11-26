@@ -16,8 +16,7 @@ import {
   settledAggregates,
 } from "~/lib/player-compare";
 import { formatPlayerMetricValue } from "~/lib/player-metrics";
-import { defaultUnixRange } from "~/lib/seasons";
-import { heroesQueryOptions, loadSeasons } from "~/queries/asset-queries";
+import { heroesQueryOptions, loadPeriodLists } from "~/queries/asset-queries";
 import {
   compareHeroStatsParams,
   compareMetricsParams,
@@ -73,12 +72,10 @@ export interface CompareCardData {
 
 /** The page's filters (the site's default period for dates), and the dates as the card names them. */
 async function resolveFilters(search: URLSearchParams, client: QueryClient) {
-  // Loaded even when the URL names its dates: the seasons register the exact patch boundaries, without which a
-  // pinned season start (a patch instant) rounds down to midnight and the card counts matches the page does not.
-  const seasons = await loadSeasons(client);
-  const { filters, mode, range } = await resolveCompareFilters(compareFilterSearch(search), async () =>
-    defaultUnixRange(seasons, DEFAULT_DATE_FILTER),
-  );
+  // Loaded even when the URL names its dates: a patch or a season resolves against them, so the card counts the
+  // matches the page does.
+  const lists = await loadPeriodLists(client);
+  const { filters, mode, range } = resolveCompareFilters(compareFilterSearch(search), lists, DEFAULT_DATE_FILTER);
   // An open end is the day the card is drawn, written as that day; the years only when the dates span two of them.
   const end = range?.[1] ?? day();
   const dateLabel = range
@@ -108,7 +105,7 @@ export async function loadCompareCardData(search: URLSearchParams): Promise<Comp
   if (accountIds.length === 0) return null;
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const failed = { any: false };
-  // What doesn't depend on the filters starts now; the filters may first wait for the seasons.
+  // What doesn't depend on the filters starts now; the filters may first wait for the lists.
   const independent = Promise.all([
     settle(client.query(steamProfilesQueryOptions(sortedIds(accountIds))), failed),
     settle(client.query(playerRanksQueryOptions(accountIds)), failed),

@@ -4,12 +4,12 @@ import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
 import { Filter } from "~/components/domain/filters";
 import type { TriState } from "~/components/patterns/filter-bar/TriStateSelector";
 import { PATCHES } from "~/lib/constants";
-import type { DateRange } from "~/lib/date-filter-preference";
 import type { Mode } from "~/lib/game-mode";
+import type { Period } from "~/lib/period";
 
 type TimeRange = [number | undefined, number | undefined];
 
-const DEFAULT_DATES: DateRange = [PATCHES[0].startDate, PATCHES[0].endDate];
+const DEFAULT_PERIOD: Period = { kind: "patch", id: PATCHES[0].id };
 
 export function DomainFilters() {
   const [hero, setHero] = useState<number | null>(null);
@@ -20,7 +20,7 @@ export function DomainFilters() {
   const [tagStates, setTagStates] = useState(new Map<number, TriState>());
   const [language, setLanguage] = useState<number | null>(null);
   const [updated, setUpdated] = useState<number | null>(null);
-  const [dates, setDates] = useState<DateRange>(DEFAULT_DATES);
+  const [period, setPeriod] = useState<Period>(DEFAULT_PERIOD);
   const [duration, setDuration] = useState<TimeRange>([undefined, undefined]);
 
   const [killTime, setKillTime] = useState<TimeRange>([undefined, 600]);
@@ -43,11 +43,7 @@ export function DomainFilters() {
           />
           <Filter.MinMatches value={minMatches} onValueChange={setMinMatches} defaultValue={20} />
           <Filter.Item selection="tri-state" value={itemStates} onValueChange={setItemStates} />
-          <Filter.SeasonPatchDate
-            value={{ startDate: dates[0], endDate: dates[1] }}
-            onValueChange={({ startDate, endDate }) => setDates([startDate, endDate])}
-            defaultValue={{ startDate: DEFAULT_DATES[0], endDate: DEFAULT_DATES[1] }}
-          />
+          <Filter.SeasonPatchDate value={period} onValueChange={setPeriod} defaultValue={DEFAULT_PERIOD} />
           <Filter.MatchDuration value={duration} onValueChange={([min, max]) => setDuration([min, max])} />
         </Filter.Root>
       </Variants>

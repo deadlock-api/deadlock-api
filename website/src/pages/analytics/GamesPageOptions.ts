@@ -3,8 +3,8 @@ import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 
 import { analyticsTabFromPath, ANALYTICS_VIEWS, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { ALL_RANKS_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
+import { defaultPeriodLabel, defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/period";
 import { prefetchCached } from "~/lib/prefetch-safe";
-import { defaultPeriodLabel, defaultPrevUnixRange, defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { formatClock } from "~/lib/stat-format";
 import type { RouterContext } from "~/router";
@@ -20,12 +20,12 @@ export const gamesPageOptions = {
     location: { pathname: string };
   }) => {
     const tab = analyticsTabFromPath("games", location.pathname);
-    const [{ buffInfoQueryOptions, loadSeasons }, { gameStatsQueryOptions }] = await Promise.all([
+    const [{ buffInfoQueryOptions, loadPeriodLists }, { gameStatsQueryOptions }] = await Promise.all([
       import("~/queries/asset-queries"),
       import("~/queries/games-query"),
     ]);
-    const seasons = await loadSeasons(queryClient);
-    const range = defaultUnixRange(seasons, preferences.dateFilter);
+    const lists = await loadPeriodLists(queryClient);
+    const range = defaultUnixRange(lists, preferences.dateFilter);
     // The filters every view passes on, to the game stats and to the buff stats and performance curve alike.
     const filters = {
       gameMode: "normal",
@@ -42,7 +42,7 @@ export const gamesPageOptions = {
     // The overview's headline game length, which its meta description quotes.
     let overall: ReturnType<typeof gameStats> | undefined;
     if (tab === "overview") {
-      const prevRange = defaultPrevUnixRange(seasons, preferences.dateFilter);
+      const prevRange = defaultPrevUnixRange(lists, preferences.dateFilter);
       overall = gameStats({ ...baseParams, bucket: "no_bucket" });
       prefetches.push(overall, gameStats({ ...baseParams, ...prevRange, bucket: "no_bucket" }));
     } else if (tab === "over-time") {
@@ -82,9 +82,9 @@ export const gamesPageOptions = {
     // Read on the server only, where the stats were awaited above; the browser keeps the server's head.
     const avgDurationS = typeof window === "undefined" ? (await overall)?.[0]?.avg_duration_s : undefined;
     return {
-      coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
+      coverage: defaultTemporalCoverage(lists, preferences.dateFilter),
       avgDurationS,
-      period: defaultPeriodLabel(seasons, preferences.dateFilter),
+      period: defaultPeriodLabel(lists, preferences.dateFilter),
     };
   },
   head: ({

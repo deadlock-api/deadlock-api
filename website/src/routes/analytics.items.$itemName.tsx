@@ -21,23 +21,28 @@ import { ChunkErrorBoundary } from "~/components/patterns/states/ChunkErrorBound
 import { ErrorState } from "~/components/patterns/states/ErrorState";
 import { Badge } from "~/components/ui/badge";
 import { Stat, StatGroup } from "~/components/ui/stat";
-import { useSeasons } from "~/hooks/useSeasons";
+import { usePeriodLists } from "~/hooks/usePeriodLists";
 import { DEFAULT_DATE_FILTER, type DateFilterPreference } from "~/lib/date-filter-preference";
 import { findKey } from "~/lib/find-keys";
 import { formatPercent } from "~/lib/format";
 import { DEFAULT_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
 import { fetchItemBestHeroes, fetchItemCohort } from "~/lib/item-hero-fns";
 import { findItemBySlug, findRenamedItem, itemSlug } from "~/lib/item-slug";
+import { defaultPeriodLabel, defaultTemporalCoverage, defaultUnixRange, type PeriodLists } from "~/lib/period";
 import { catchPrefetch, ensureCached, prefetchCached, requireOnServer } from "~/lib/prefetch-safe";
 import { rankOf } from "~/lib/rank-of";
 import { DEFAULT_RANK_RANGE, rankRangeLabel } from "~/lib/rank-utils";
-import { defaultPeriodLabel, defaultTemporalCoverage, defaultUnixRange, type SeasonInfo } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
 import { closestNameBySlug, findByIdSegment, slugify } from "~/lib/slug";
 import { formatStatValue } from "~/lib/stat-format";
 import { toneOf } from "~/lib/tone";
 import { cn } from "~/lib/utils";
-import { filterShopableItems, itemQueryOptions, itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
+import {
+  filterShopableItems,
+  itemQueryOptions,
+  itemUpgradesQueryOptions,
+  loadPeriodLists,
+} from "~/queries/asset-queries";
 import { heroStatsQueryOptions } from "~/queries/hero-stats-query";
 import { itemStatsQueryOptions } from "~/queries/item-stats-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -68,10 +73,7 @@ function itemTitle(itemId: number, itemName: string): string {
 }
 
 // Mirrors the items page's default request so both pages share one cache entry.
-function currentItemStatsParams(
-  seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
-) {
+function currentItemStatsParams(lists: PeriodLists, preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
   return {
     minMatches: 10,
     heroId: null,
@@ -80,31 +82,28 @@ function currentItemStatsParams(
     maxBoughtAtS: undefined,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons, preference),
+    ...defaultUnixRange(lists, preference),
   };
 }
 
-function byRankItemStatsParams(seasons: readonly SeasonInfo[], preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
+function byRankItemStatsParams(lists: PeriodLists, preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
   return {
     minMatches: 10,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons, preference),
+    ...defaultUnixRange(lists, preference),
   };
 }
 
 // The denominator of every "bought" share. No `minHeroMatches` / `minHeroMatchesTotal`, not even 0: either one sends
 // the request to the exact-timestamp base table while the item stats come from day-grained rollups, and right after a
 // mid-day patch the shares passed 100%. Without them both come from the rollups over the same days.
-function currentHeroStatsParams(
-  seasons: readonly SeasonInfo[],
-  preference: DateFilterPreference = DEFAULT_DATE_FILTER,
-) {
+function currentHeroStatsParams(lists: PeriodLists, preference: DateFilterPreference = DEFAULT_DATE_FILTER) {
   return {
     ...DEFAULT_BADGES,
     gameMode: GAME_MODE,
     matchMode: DEFAULT_MATCH_MODE,
-    ...defaultUnixRange(seasons, preference),
+    ...defaultUnixRange(lists, preference),
   };
 }
 
@@ -135,9 +134,9 @@ function summarizeItemStats(
 export const Route = createFileRoute("/analytics/items/$itemName")({
   component: ItemDetailPage,
   loader: async ({ context: { queryClient, preferences }, params }) => {
-    const [items, seasons] = await Promise.all([
+    const [items, lists] = await Promise.all([
       ensureCached(queryClient, itemUpgradesQueryOptions),
-      loadSeasons(queryClient),
+      loadPeriodLists(queryClient),
     ]);
     const shopable = filterShopableItems(items);
     const item = findItemBySlug(shopable, params.itemName);
@@ -162,11 +161,11 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       ...DEFAULT_BADGES,
       gameMode: GAME_MODE,
       matchMode: DEFAULT_MATCH_MODE,
-      ...defaultUnixRange(seasons, preferences.dateFilter),
+      ...defaultUnixRange(lists, preferences.dateFilter),
     };
     const [stats, heroStats, ranks, , bestHeroes, cohort] = await Promise.all([
-      prefetchCached(queryClient, itemStatsQueryOptions(currentItemStatsParams(seasons, preferences.dateFilter))),
-      prefetchCached(queryClient, heroStatsQueryOptions(currentHeroStatsParams(seasons, preferences.dateFilter))),
+      prefetchCached(queryClient, itemStatsQueryOptions(currentItemStatsParams(lists, preferences.dateFilter))),
+      prefetchCached(queryClient, heroStatsQueryOptions(currentHeroStatsParams(lists, preferences.dateFilter))),
       prefetchCached(queryClient, ranksQueryOptions),
       prefetchCached(queryClient, itemQueryOptions(item.id)),
       catchPrefetch(fetchItemBestHeroes({ data: breakdownRequest })),
@@ -190,7 +189,7 @@ export const Route = createFileRoute("/analytics/items/$itemName")({
       bestHeroes,
       cohort,
       rankRange: rankRangeLabel(ranks, DEFAULT_RANK_RANGE.min, DEFAULT_RANK_RANGE.max),
-      coverage: defaultTemporalCoverage(seasons, preferences.dateFilter),
+      coverage: defaultTemporalCoverage(lists, preferences.dateFilter),
       summary: summary && {
         winRate: summary.winRate,
         rank: summary.winRateRank,
@@ -231,10 +230,10 @@ function ItemDetailPage() {
   const { preferences } = Route.useRouteContext();
   const { itemId, itemName, tier, slot, slotType, cost, rankRange, bestHeroes, cohort } = Route.useLoaderData();
   const router = useRouter();
-  const { seasons } = useSeasons();
-  const period = defaultPeriodLabel(seasons, preferences.dateFilter);
-  const itemRequest = currentItemStatsParams(seasons, preferences.dateFilter);
-  const heroRequest = currentHeroStatsParams(seasons, preferences.dateFilter);
+  const lists = usePeriodLists();
+  const period = defaultPeriodLabel(lists, preferences.dateFilter);
+  const itemRequest = currentItemStatsParams(lists, preferences.dateFilter);
+  const heroRequest = currentHeroStatsParams(lists, preferences.dateFilter);
   const statsQuery = useQuery(itemStatsQueryOptions(itemRequest));
   const heroStatsQuery = useQuery(heroStatsQueryOptions(heroRequest));
   const itemQuery = useQuery(itemQueryOptions(itemId));
@@ -371,7 +370,7 @@ function ItemDetailPage() {
               <ItemWinRateByRank
                 itemId={itemId}
                 itemName={itemName}
-                request={byRankItemStatsParams(seasons, preferences.dateFilter)}
+                request={byRankItemStatsParams(lists, preferences.dateFilter)}
               />
             </Suspense>
           </ChunkErrorBoundary>

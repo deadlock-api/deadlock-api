@@ -36,7 +36,8 @@ export function useHeroFilters() {
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.min));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(DEFAULT_RANK_RANGE.max));
   const [sameLaneFilter, setSameLaneFilter] = useQueryState("same_lane", parseAsBoolean.withDefault(true));
-  const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
+  const { period, startDate, endDate, prevStartDate, prevEndDate, handlePeriodChange, defaultPeriod } =
+    useDateRangeState();
   const [tab, setTab] = useAnalyticsTab("heroes");
   const [heroId, setHeroId] = useQueryState("hero_id", parseAsInteger.withDefault(2));
   const [chosenHeroStat, setHeroStat] = useQueryState(
@@ -84,8 +85,9 @@ export function useHeroFilters() {
     endDate,
     prevStartDate,
     prevEndDate,
-    handleDateChange,
-    defaultRange,
+    period,
+    handlePeriodChange,
+    defaultPeriod,
     tab,
     setTab,
     heroId,

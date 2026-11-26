@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 
-import { PATCH_MARKERS_SHORT } from "~/components/domain/charts/PatchMarkers";
+import { usePatchMarkers } from "~/components/domain/charts/PatchMarkers";
 import StatTrendChart, { type StatTrendBucket } from "~/components/patterns/charts/StatTrendChart";
 import type { StatDefinition } from "~/lib/game-stat-definitions";
 import { completeTimeBuckets } from "~/lib/time-buckets";
@@ -34,10 +34,11 @@ export default function GameStatTrendChart({
     [data, stat.key, params.minUnixTimestamp, params.maxUnixTimestamp],
   );
 
+  const patchMarkers = usePatchMarkers("sm");
   return (
     <StatTrendChart
       data={chartData}
-      markers={PATCH_MARKERS_SHORT}
+      markers={patchMarkers}
       state={isPending ? "loading" : isError ? "error" : "ready"}
       stat={stat}
       value={BUCKET}

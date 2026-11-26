@@ -54,7 +54,8 @@ export function ItemsPage() {
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
   const [minBoughtAtS, setMinBoughtAtS] = useQueryState("min_bought_at", parseAsInteger);
   const [maxBoughtAtS, setMaxBoughtAtS] = useQueryState("max_bought_at", parseAsInteger);
-  const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
+  const { period, startDate, endDate, prevStartDate, prevEndDate, handlePeriodChange, defaultPeriod } =
+    useDateRangeState();
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
 
   const [tab, setTab] = useAnalyticsTab("items");
@@ -106,11 +107,7 @@ export function ItemsPage() {
               }
             }}
           />
-          <Filter.SeasonPatchDate
-            value={{ startDate, endDate }}
-            onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-            defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-          />
+          <Filter.SeasonPatchDate value={period} onValueChange={handlePeriodChange} defaultValue={defaultPeriod} />
           {tab === "item-combos" && <ItemCombFilters />}
           {tab === "item-stats" && (
             <>

@@ -24,6 +24,7 @@ const entry = (id: string, start: string, shortName = id): PatchEntry => ({
   name: id,
   shortName,
   startUnix: unix(start),
+  kind: "update",
 });
 
 // A slice of the real feed (2026-10-08), newest first.
@@ -80,6 +81,8 @@ test("merge: a hero going live is a patch of its own, named by its post, a tease
   );
   assert.equal(patches[0].shortName, "Fairfax Industries Employee Spotlight");
   assert.equal(patches[0].startUnix, unix("2026-10-13T20:59:55Z"));
+  assert.equal(patches[0].kind, "hero");
+  assert.equal(patches[1].kind, "update");
   assert.equal(patches[1].endUnix, unix("2026-10-13T20:59:55Z"));
 });
 
@@ -157,9 +160,8 @@ test("labels name the patch, or its date for a plain update", () => {
   assert.equal(patchLabel(getPatch(PATCHES, "2026-10-05")!), "Oct 5, 2026 Patch");
 });
 
-test("date range: exact instants, open while the patch runs", () => {
-  assert.equal(patchDateRange(getPatch(PATCHES, "2026-09-29")!), "2026-09-29T20:25:11.000Z_2026-10-05T23:05:32.000Z");
-  assert.equal(patchDateRange(getPatch(PATCHES, "2026-10-05")!), "2026-10-05T23:05:32.000Z_");
+test("date range: the patch by its id", () => {
+  assert.equal(patchDateRange(getPatch(PATCHES, "2026-09-29")!), "patch:2026-09-29");
 });
 
 test("a patch's notes are the longest Steam post of its day", () => {

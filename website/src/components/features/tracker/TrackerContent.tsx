@@ -20,7 +20,7 @@ import { Alert, AlertDescription, AlertTitle } from "~/components/ui/alert";
 import { Button } from "~/components/ui/button";
 import { Heading } from "~/components/ui/heading";
 import { useTrackerFilters } from "~/hooks/useTrackerFilters";
-import type { DateRange } from "~/lib/date-filter-preference";
+import type { Period } from "~/lib/period";
 import { filterMatches, filtersRevealing, type TrackerFilterValues } from "~/lib/tracker/compute";
 import { filterRecoveryOptions } from "~/lib/tracker/filter-recovery";
 import { ranksQueryOptions } from "~/queries/ranks-query";
@@ -40,13 +40,13 @@ export function TrackerContent({
   accountId,
   notice,
   playerHeading,
-  defaultDateRange,
+  defaultPeriod: fallbackPeriod,
 }: {
   accountId: number;
   notice?: ReactNode;
   playerHeading?: "h1" | "h2";
   /** Replaces the visitor's season-or-patch default; has to be referentially stable. */
-  defaultDateRange?: DateRange;
+  defaultPeriod?: Period;
 }) {
   const {
     tab,
@@ -59,15 +59,14 @@ export function TrackerContent({
     setHeroId,
     result,
     setResult,
-    startDate,
-    endDate,
-    handleDateChange,
-    defaultRange,
+    period,
+    handlePeriodChange,
+    defaultPeriod,
     minUnixTimestamp,
     maxUnixTimestamp,
     filters,
     applyFilters,
-  } = useTrackerFilters(defaultDateRange);
+  } = useTrackerFilters(fallbackPeriod);
 
   const sectionRef = useRef<HTMLElement>(null);
   const previousSection = useRef(tab);
@@ -170,10 +169,9 @@ export function TrackerContent({
           heroOrder={heroOrder}
           result={result}
           onResultChange={setResult}
-          startDate={startDate}
-          endDate={endDate}
-          onDateChange={handleDateChange}
-          resetRange={defaultRange}
+          period={period}
+          onPeriodChange={handlePeriodChange}
+          defaultPeriod={defaultPeriod}
         />
       </PlayerHeader>
 

@@ -3,9 +3,9 @@ import { lazyRouteComponent } from "@tanstack/react-router";
 import { analyticsView, redirectAnalyticsTab } from "~/lib/analytics-tabs";
 import { compareCardUrl, compareFilterSearch, type CompareFilterSearch, compareShareParams } from "~/lib/compare-share";
 import { ALL_RANKS_BADGES, DEFAULT_MATCH_MODE } from "~/lib/game-mode";
+import { defaultUnixRange } from "~/lib/period";
 import { comparisonVerdict, parseCompareIds, SCORED_STAT_COUNT, settledAggregates } from "~/lib/player-compare";
 import { prefetchCached } from "~/lib/prefetch-safe";
-import { defaultUnixRange } from "~/lib/seasons";
 import { pageTitle, seo, SITE_URL } from "~/lib/seo";
 import type { RouterContext } from "~/router";
 
@@ -28,13 +28,13 @@ export const playersPageOptions = {
     context: RouterContext;
     deps: { heroId: number | undefined };
   }) => {
-    const [{ loadSeasons }, { playerScoreboardQueryOptions }, { steamProfileBatches, steamProfilesQueryOptions }] =
+    const [{ loadPeriodLists }, { playerScoreboardQueryOptions }, { steamProfileBatches, steamProfilesQueryOptions }] =
       await Promise.all([
         import("~/queries/asset-queries"),
         import("~/queries/player-scoreboard-query"),
         import("~/queries/steam-queries"),
       ]);
-    const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
+    const range = defaultUnixRange(await loadPeriodLists(queryClient), preferences.dateFilter);
     const scoreboard = await prefetchCached(
       queryClient,
       playerScoreboardQueryOptions({
@@ -79,11 +79,11 @@ export const statsMetricsPageOptions = {
     context: RouterContext;
     deps: { heroId: number | undefined };
   }) => {
-    const [{ loadSeasons }, { playerStatsMetricsQueryOptions }] = await Promise.all([
+    const [{ loadPeriodLists }, { playerStatsMetricsQueryOptions }] = await Promise.all([
       import("~/queries/asset-queries"),
       import("~/queries/player-stats-metrics-query"),
     ]);
-    const range = defaultUnixRange(await loadSeasons(queryClient), preferences.dateFilter);
+    const range = defaultUnixRange(await loadPeriodLists(queryClient), preferences.dateFilter);
     await prefetchCached(
       queryClient,
       playerStatsMetricsQueryOptions({
@@ -123,7 +123,7 @@ export const comparePageOptions = {
     deps: { accountIds: number[]; filters: CompareFilterSearch };
   }) => {
     const [
-      { loadSeasons },
+      { loadPeriodLists },
       compareQueries,
       { trackerHeroStatsQueryOptions },
       { playerScoreboardQueryOptions },
@@ -137,13 +137,11 @@ export const comparePageOptions = {
       import("~/queries/player-stats-metrics-query"),
       import("~/queries/steam-queries"),
     ]);
-    // Loaded even when the URL names its dates: the seasons register the exact patch boundaries, without which a pinned
-    // season start (a patch instant) rounds down to midnight, and the server would ask for other data (another query
-    // key) than the page, which then renders its skeletons over the server's numbers.
-    const seasons = await loadSeasons(queryClient);
-    const { filters } = await compareQueries.resolveCompareFilters(deps.filters, async () =>
-      defaultUnixRange(seasons, preferences.dateFilter),
-    );
+    // Loaded even when the URL names its dates: a patch or a season resolves against them, and without the same
+    // bounds as the page the server would ask for other data (another query key), and the page would render its
+    // skeletons over the server's numbers.
+    const lists = await loadPeriodLists(queryClient);
+    const { filters } = compareQueries.resolveCompareFilters(deps.filters, lists, preferences.dateFilter);
     const accountIds = parseCompareIds(deps.accountIds);
     if (accountIds.length === 0) {
       // The "Add top player" button's pick.

@@ -42,7 +42,8 @@ export function Games() {
   const isStreetBrawl = mode === "street_brawl";
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(MAX_BADGE));
-  const { startDate, endDate, prevStartDate, prevEndDate, handleDateChange, defaultRange } = useDateRangeState();
+  const { period, startDate, endDate, prevStartDate, prevEndDate, handlePeriodChange, defaultPeriod } =
+    useDateRangeState();
   const [minDurationS, setMinDurationS] = useQueryState("min_duration_s", parseAsInteger);
   const [maxDurationS, setMaxDurationS] = useQueryState("max_duration_s", parseAsInteger);
   const [chosenStat, setStat] = useQueryState("stat", parseAsStringLiteral(ALL_STAT_KEYS).withDefault("avg_kills"));
@@ -143,11 +144,7 @@ export function Games() {
               void setMaxDurationS(max ?? null);
             }}
           />
-          <Filter.SeasonPatchDate
-            value={{ startDate, endDate }}
-            onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-            defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-          />
+          <Filter.SeasonPatchDate value={period} onValueChange={handlePeriodChange} defaultValue={defaultPeriod} />
           {(tab === "over-time" || tab === "by-rank") && (
             <StatSelector value={stat} onChange={chooseStat} isStreetBrawl={isStreetBrawl} />
           )}

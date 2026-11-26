@@ -34,10 +34,23 @@ const catalog: Catalog = {
 
 const context = {
   patches: [
-    { id: "2026-09-29", name: "City Never Sleeps", shortName: "City Never Sleeps", startUnix: 1_790_000_000 },
-    { id: "2026-09-16", name: "Minor Update", shortName: "Patch", startUnix: 1_789_000_000, endUnix: 1_790_000_000 },
+    {
+      id: "2026-09-29",
+      name: "City Never Sleeps",
+      shortName: "City Never Sleeps",
+      startUnix: 1_790_000_000,
+      kind: "update" as const,
+    },
+    {
+      id: "2026-09-16",
+      name: "Minor Update",
+      shortName: "Patch",
+      startUnix: 1_789_000_000,
+      endUnix: 1_790_000_000,
+      kind: "update" as const,
+    },
   ],
-  seasons: [{ startUnix: 1_780_000_000 }],
+  seasons: [{ id: "season_1" }],
   now: Date.UTC(2026, 9, 8, 12) / 1000,
 };
 
@@ -187,7 +200,7 @@ test("a mode the question does not name is dropped", () => {
 test("the example questions land on their pages", () => {
   assert.equal(
     url(intent("games_overview", { time: "current_patch" })),
-    '/analytics/games{"date_range":"2026-09-21T14:13:20.000Z_"}',
+    '/analytics/games{"date_range":"patch:2026-09-29"}',
   );
   assert.equal(url(intent("hero_counters", { heroes: ["Bebop"] })), '/analytics/heroes/matchup-details{"hero_id":15}');
   assert.equal(url({ ...NO_FILTERS, page: null }), undefined);

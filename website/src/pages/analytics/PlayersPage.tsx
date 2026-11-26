@@ -80,7 +80,7 @@ export function PlayersPage({
   const [minMatches, setMinMatches] = useQueryState("min_matches", parseAsInteger.withDefault(DEFAULT_MIN_MATCHES));
   const [minRankId, setMinRankId] = useQueryState("min_rank", parseAsInteger.withDefault(0));
   const [maxRankId, setMaxRankId] = useQueryState("max_rank", parseAsInteger.withDefault(MAX_BADGE));
-  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
+  const { period, startDate, endDate, handlePeriodChange, defaultPeriod } = useDateRangeState();
   // Another board starts on its first page: a kept `page=5` opened a new sort at rank 101.
   const [, setPage] = useQueryState("page", parseAsInteger);
   const firstPage = () => void setPage(null, together);
@@ -147,12 +147,12 @@ export function PlayersPage({
             allowNull
           />
           <Filter.SeasonPatchDate
-            value={{ startDate, endDate }}
-            onValueChange={(next) => {
-              handleDateChange(next.startDate, next.endDate, next.action);
+            value={period}
+            onValueChange={(next, action) => {
+              handlePeriodChange(next, action);
               firstPage();
             }}
-            defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
+            defaultValue={defaultPeriod}
           />
           {tab === "scoreboard" && (
             <>

@@ -23,11 +23,11 @@ import {
   MODE_CONFIG,
   modeFromParams,
 } from "~/lib/game-mode";
+import { defaultTemporalCoverage, defaultUnixRange } from "~/lib/period";
 import { prefetchCached } from "~/lib/prefetch-safe";
 import { DEFAULT_RANK_RANGE } from "~/lib/rank-utils";
-import { defaultTemporalCoverage, defaultUnixRange } from "~/lib/seasons";
 import { datasetJsonLd, pageTitle, seo } from "~/lib/seo";
-import { itemUpgradesQueryOptions, loadSeasons } from "~/queries/asset-queries";
+import { itemUpgradesQueryOptions, loadPeriodLists } from "~/queries/asset-queries";
 import {
   buildMetaBatches,
   heroBuildMetaQueryOptions,
@@ -79,9 +79,9 @@ export const Route = createFileRoute("/analytics/builds")({
     };
   },
   loader: async ({ context: { queryClient, preferences }, deps }) => {
-    const seasons = await loadSeasons(queryClient);
-    const range = defaultUnixRange(seasons, preferences.dateFilter);
-    if (deps.customDates) return { coverage: defaultTemporalCoverage(seasons, preferences.dateFilter) };
+    const lists = await loadPeriodLists(queryClient);
+    const range = defaultUnixRange(lists, preferences.dateFilter);
+    if (deps.customDates) return { coverage: defaultTemporalCoverage(lists, preferences.dateFilter) };
     // The item names of the build tiles and the hero's own win rate the builds are read against, so the server HTML
     // has them instead of "Item" and a placeholder. The heroes pages warm both, so they are usually cached.
     const context = Promise.all([
@@ -124,7 +124,7 @@ export const Route = createFileRoute("/analytics/builds")({
       );
     }
     await context;
-    return { coverage: defaultTemporalCoverage(seasons, preferences.dateFilter) };
+    return { coverage: defaultTemporalCoverage(lists, preferences.dateFilter) };
   },
   head: ({ loaderData }) =>
     seo({
@@ -159,7 +159,7 @@ function BuildsPage() {
   const { mode: urlMode, setMode } = useModeState();
   // A Street Brawl link from another page reads as the default mode here.
   const mode = urlMode === "street_brawl" ? DEFAULT_MODE : urlMode;
-  const { startDate, endDate, handleDateChange, defaultRange } = useDateRangeState();
+  const { period, startDate, endDate, handlePeriodChange, defaultPeriod } = useDateRangeState();
   const { effectiveMinRankId, effectiveMaxRankId } = getEffectiveRankRange(mode, minRankId, maxRankId);
   // What a build is rather than how its matches went: one update sets both tag lists.
   const [tagParams, setTagParams] = useQueryStates({
@@ -263,11 +263,7 @@ function BuildsPage() {
           onValueChange={(next) => startTransition(() => void setMinPlayers(next, together))}
           defaultValue={DEFAULT_MIN_PLAYERS}
         />
-        <Filter.SeasonPatchDate
-          value={{ startDate, endDate }}
-          onValueChange={(next) => handleDateChange(next.startDate, next.endDate, next.action)}
-          defaultValue={{ startDate: defaultRange[0], endDate: defaultRange[1] }}
-        />
+        <Filter.SeasonPatchDate value={period} onValueChange={handlePeriodChange} defaultValue={defaultPeriod} />
         <>
           <Filter.MinMatches
             value={minMatches}
