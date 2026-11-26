@@ -6,14 +6,18 @@ edition = "2024"
 [dependencies]
 bytes = { workspace = true }
 clap = { workspace = true }
+clickhouse = { workspace = true }
+clickhouse-utils = { workspace = true }
 db-clients = { workspace = true }
 futures = { workspace = true }
+ingest-worker = { path = "../ingest-worker" }
 md5 = { package = "md-5", version = "0.11" }
 metadata-packs = { workspace = true }
 metrics = { workspace = true }
 mimalloc = { workspace = true }
 object_store = { workspace = true }
 service-utils = { workspace = true }
+sha2 = "0.11"
 sqlx = { workspace = true, features = ["postgres", "runtime-tokio"] }
 telemetry = { workspace = true, features = ["prometheus"] }
 thiserror = { workspace = true }

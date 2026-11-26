@@ -1334,7 +1334,7 @@ fn gold_source_values(
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use valveprotos::deadlock::CMsgMatchPlayerRankData;
 
     use super::*;
@@ -1357,7 +1357,7 @@ mod tests {
         }
     }
 
-    fn damage_matrix_match() -> MatchInfo {
+    pub(crate) fn damage_matrix_match() -> MatchInfo {
         use valveprotos::deadlock::CMsgMatchPlayerDamageMatrix;
         use valveprotos::deadlock::c_msg_match_player_damage_matrix::{
             DamageDealer, DamageSource, DamageToPlayer, SourceDetails,

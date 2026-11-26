@@ -32,6 +32,7 @@ use tracing::{error, info};
 
 mod config;
 mod delete;
+mod dm;
 mod inventory;
 mod packing;
 mod queue;
@@ -75,6 +76,14 @@ enum Command {
         #[arg(long, default_value_t = 1000)]
         count: usize,
     },
+    /// Stages the damage matrix columns of every published pack not staged yet (see `dm`).
+    DmBackfillPacks {
+        /// Leave newer packs alone (the running packer stages its own).
+        #[arg(long)]
+        max_pack_id: Option<u64>,
+        #[arg(long, default_value_t = 2)]
+        concurrency: usize,
+    },
 }
 
 #[derive(Debug, thiserror::Error)]
@@ -112,6 +121,8 @@ pub(crate) struct Ctx {
     /// The full archive bucket, which also holds the packs (bucket ordinal 0 in the index).
     pub(crate) packs: Bucket,
     pub(crate) limiter: RateLimiter,
+    /// For the damage matrix backfill (see `dm`), when it is on.
+    pub(crate) ch: Option<clickhouse::Client>,
 }
 
 impl Ctx {
@@ -146,8 +157,15 @@ async fn main() -> Result<(), Error> {
         Arc::new(db_clients::get_archive_store()?.ok_or(Error::NoArchive)?);
     let index = Index::new(db_clients::get_pg_client().await?);
     index.ensure_schema().await?;
+    dm::ensure_schema(index.pool()).await?;
+    let ch = if cfg.dm_backfill || matches!(cli.command, Command::DmBackfillPacks { .. }) {
+        Some(db_clients::get_ch_client()?)
+    } else {
+        None
+    };
     let ctx = Arc::new(Ctx {
         limiter: RateLimiter::per_second(cfg.requests_per_s),
+        ch,
         cfg,
         index,
         main: Bucket {
@@ -193,6 +211,10 @@ async fn main() -> Result<(), Error> {
             }
             Ok(())
         }
+        Command::DmBackfillPacks {
+            max_pack_id,
+            concurrency,
+        } => dm::backfill_packs(ctx, max_pack_id, concurrency).await,
     }
 }
 

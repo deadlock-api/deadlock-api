@@ -26,6 +26,7 @@ use tokio::task::JoinSet;
 use tokio_util::sync::CancellationToken;
 use tracing::{info, warn};
 
+use crate::dm;
 use crate::queue::{self, Pending};
 use crate::{Ctx, PACK_BUCKET};
 
@@ -140,6 +141,8 @@ pub(crate) enum JobError {
     Pack(#[from] metadata_packs::PackError),
     #[error("building the pack panicked or was cancelled")]
     Join,
+    #[error("staging the damage matrix: {0}")]
+    Dm(#[from] clickhouse::error::Error),
 }
 
 /// What became of one queue row in a job.
@@ -264,6 +267,20 @@ async fn run_job(ctx: &Ctx, rows: Vec<Pending>) -> Result<Option<String>, JobErr
         return Ok(None);
     }
 
+    // The damage matrix rows go in first: a failed insert fails the job, so no pack is
+    // published without them (see `dm`).
+    let staged = if let Some(ch) = &ctx.ch {
+        let inputs = files
+            .iter()
+            .map(|f| (f.match_id, f.kind, f.data.clone()))
+            .collect();
+        let staged = dm::build(inputs, ctx.cfg.dm_threads).await;
+        dm::insert(ch, &staged.rows).await?;
+        Some(staged)
+    } else {
+        None
+    };
+
     let pack_id = ctx.index.next_pack_id().await?;
     let created_unix = SystemTime::now()
         .duration_since(UNIX_EPOCH)
@@ -287,6 +304,9 @@ async fn run_job(ctx: &Ctx, rows: Vec<Pending>) -> Result<Option<String>, JobErr
             PublishSources::Keys(&covered),
         )
         .await?;
+    if let Some(staged) = &staged {
+        dm::mark_done(ctx.pg(), pack_id, staged).await?;
+    }
 
     let files = pack.entries.len();
     counter!("metadata_packer.packs").increment(1);

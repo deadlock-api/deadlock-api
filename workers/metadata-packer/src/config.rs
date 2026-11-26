@@ -27,6 +27,10 @@ pub(crate) struct Config {
     pub(crate) inventory_interval: Duration,
     /// Every n-th pack is downloaded whole after its upload; the others are checked by `ETag`.
     pub(crate) read_back_every: u64,
+    /// Stage the damage matrix columns of every packed file (see `dm`).
+    pub(crate) dm_backfill: bool,
+    /// Blocking threads a pack's damage matrix rows are built on.
+    pub(crate) dm_threads: usize,
 }
 
 impl Config {
@@ -44,6 +48,8 @@ impl Config {
             seal_after: Duration::from_secs(env_or("METADATA_PACKER_SEAL_AFTER_S", 3600)),
             delete_grace: Duration::from_secs(env_or("METADATA_PACKER_DELETE_GRACE_S", 600)),
             read_back_every: env_or("METADATA_PACKER_READ_BACK_EVERY", 20),
+            dm_backfill: env_or("METADATA_PACKER_DM_BACKFILL", false),
+            dm_threads: env_or("METADATA_PACKER_DM_THREADS", 4),
             inventory_interval: Duration::from_secs(env_or(
                 "METADATA_PACKER_INVENTORY_INTERVAL_S",
                 600,
