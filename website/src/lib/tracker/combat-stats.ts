@@ -26,8 +26,10 @@ export function resolveCustomStats(raw: unknown, names: Map<number, string>): Re
   return result;
 }
 
-/** Ratios can fall during a match, so use one latest snapshot, never maxima or summed samples. */
-export function combatStats(samples: readonly StatSample[] | null | undefined): CombatStats | null {
+/** The custom stats of the latest snapshot that has a time, and that time; null when there is none. */
+export function latestCustomStats(
+  samples: readonly StatSample[] | null | undefined,
+): { time: number; stats: Record<string, unknown> } | null {
   let latest: StatSample | undefined;
   let latestTime = 0;
   for (const sample of samples ?? []) {
@@ -40,7 +42,20 @@ export function combatStats(samples: readonly StatSample[] | null | undefined): 
   }
   const raw = latest?.custom_user_stats;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
-  const stats = raw as Record<string, unknown>;
+  return { time: latestTime, stats: raw as Record<string, unknown> };
+}
+
+/** A custom stat of the latest snapshot as a count, or null when the snapshot lacks it. */
+export function latestCustomCount(samples: readonly StatSample[] | null | undefined, name: string): number | null {
+  const value = latestCustomStats(samples)?.stats[name];
+  return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+}
+
+/** Ratios can fall during a match, so use one latest snapshot, never maxima or summed samples. */
+export function combatStats(samples: readonly StatSample[] | null | undefined): CombatStats | null {
+  const latest = latestCustomStats(samples);
+  if (!latest) return null;
+  const { stats, time: latestTime } = latest;
   const count = (key: string): number | null => {
     const value = stats[key];
     return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;

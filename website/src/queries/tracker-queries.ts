@@ -10,7 +10,7 @@ import { api } from "~/lib/api";
 import type { GameMode, MatchMode } from "~/lib/game-mode";
 import { graphql, isGraphqlRateLimited } from "~/lib/graphql";
 import { ensureCached } from "~/lib/prefetch-safe";
-import { combatStats, type CombatStats } from "~/lib/tracker/combat-stats";
+import { combatStats, type CombatStats, latestCustomCount } from "~/lib/tracker/combat-stats";
 import { DEMO_ACCOUNT_ID, isDemoAccount, isDemoMatch } from "~/lib/tracker/demo";
 import { type MatchTeams, teamsByMatch } from "~/lib/tracker/hero-matchups";
 import { MIN_ITEM_GAMES } from "~/lib/tracker/item-performance";
@@ -28,6 +28,16 @@ import {
   toTrackerStat,
   trackerMatchFromRawMetadata,
 } from "~/lib/tracker/match-metadata";
+import {
+  BREAKABLES_BROKEN,
+  type PermanentBuff,
+  permanentBuffs,
+  type PlayerSouls,
+  SOUL_FIELDS,
+  type SoulField,
+  soulsFrom,
+  UNSPENT_SOUL_MINUTES,
+} from "~/lib/tracker/match-souls";
 import { type LaneTimeline, laneStateOf, type TrackerMatchStats } from "~/lib/tracker/match-stats";
 
 import { abilitiesQueryOptions, heroesQueryOptions, itemUpgradesQueryOptions } from "./asset-queries";
@@ -177,6 +187,14 @@ export interface TrackerMatchPlayer {
   items: TrackerMatchItem[];
   stats: TrackerMatchStat[];
   personaname: string | undefined;
+  /** Soul income by source at the end of the match; null for a match recorded without it. */
+  souls: PlayerSouls | null;
+  /** The game's "Unspent Gold Minutes": the souls held unspent, summed over every minute of the match. */
+  unspent_soul_minutes: number | null;
+  /** Breakables broken for souls, the game's "PowerUp Gold" count. */
+  breakables_broken: number | null;
+  /** Permanent buffs picked up from statues. */
+  permanent_buffs: PermanentBuff[];
 }
 
 /**
@@ -587,6 +605,12 @@ export function trackerMatchTeamsQueryOptions(matchIds: readonly number[]) {
   });
 }
 
+/** Every `max_gold_*` field the soul sources read, the last stats sample's values. */
+const SOUL_SELECTION = Object.fromEntries(SOUL_FIELDS.map((field) => [`max_${field}`, true])) as Record<
+  `max_${SoulField}`,
+  true
+>;
+
 /**
  * One match's details. `graphql` reads only what is stored: the REST fallback may fetch a match from Steam, which a
  * page that only shows stored matches must not trigger.
@@ -629,6 +653,8 @@ export function trackerMatchMetadataQueryOptions(matchId: number, source: MatchM
             max_player_damage: true,
             max_player_damage_taken: true,
             max_boss_damage: true,
+            ...SOUL_SELECTION,
+            power_up_buffs: true,
             mvp_rank: true,
             abandon_match_time_s: true,
             player_rank_initial_display_rank: true,
@@ -712,6 +738,10 @@ export function trackerMatchMetadataQueryOptions(matchId: number, source: MatchM
           items: (player.items ?? []).map(toTrackerItem),
           stats: (player.stats ?? []).map(toTrackerStat),
           personaname: player.steam?.personaname,
+          souls: soulsFrom((field) => player[`max_${field}`]),
+          unspent_soul_minutes: latestCustomCount(player.stats, UNSPENT_SOUL_MINUTES),
+          breakables_broken: latestCustomCount(player.stats, BREAKABLES_BROKEN),
+          permanent_buffs: permanentBuffs(player.power_up_buffs),
         })),
       };
     },

@@ -3,6 +3,7 @@ import type { AnalyticsApiGameStatsRequest } from "deadlock_api_client";
 import { useMemo } from "react";
 import { Pie, PieChart } from "recharts";
 
+import { formatSouls, groupSoulParts, SOUL_SOURCE_GROUPS } from "~/components/domain/match/soul-sources";
 import { ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartSurface } from "~/components/patterns/charts/ChartSurface";
 import { EmptyState } from "~/components/patterns/states/EmptyState";
@@ -14,8 +15,6 @@ import { Stat, StatGroup } from "~/components/ui/stat";
 import { formatPercent } from "~/lib/format";
 import { formatStatValue } from "~/lib/game-stat-definitions";
 import { gameStatsQueryOptions } from "~/queries/games-query";
-
-import { formatSouls, groupSoulParts, SOUL_SOURCE_GROUPS } from "./economy-definitions";
 
 interface EconomySoulSourcesProps {
   params: AnalyticsApiGameStatsRequest;

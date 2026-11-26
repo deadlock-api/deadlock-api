@@ -68,6 +68,14 @@ export function formatCooldownRemaining(deletedAt: string): string | null {
   return remainingMinutes > 0 ? `${remainingMinutes}m` : "< 1m";
 }
 
+const ORDINAL_RULES = new Intl.PluralRules("en-US", { type: "ordinal" });
+const ORDINAL_SUFFIXES: Record<string, string> = { one: "st", two: "nd", few: "rd", other: "th" };
+
+/** "1st", "2nd", "3rd", "11th". */
+export function formatOrdinal(value: number): string {
+  return `${value}${ORDINAL_SUFFIXES[ORDINAL_RULES.select(value)] ?? "th"}`;
+}
+
 /** Formats a ratio in `[0,1]` as a percentage, e.g. `52.6%`. */
 export function formatPercent(ratio: number, digits = 1): string {
   return `${(ratio * 100).toFixed(digits)}%`;

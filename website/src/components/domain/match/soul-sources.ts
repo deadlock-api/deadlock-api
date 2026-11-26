@@ -4,7 +4,7 @@ import { CHART_COLOR, SERIES_COLORS } from "~/components/patterns/charts/theme";
 import type { Color } from "~/types/general";
 
 /** A soul source as the game stats report it (`avg_gold_boss`); the performance curve reports it as `gold_boss_avg`. */
-type StatKey = Extract<keyof AnalyticsGameStats, `avg_gold_${string}`>;
+export type StatKey = Extract<keyof AnalyticsGameStats, `avg_gold_${string}`>;
 type CurveKey<K extends StatKey> = K extends `avg_${infer Field}` ? `${Field}_avg` : never;
 
 function curveKey<K extends StatKey>(key: K): CurveKey<K> {
@@ -94,7 +94,8 @@ export const SOUL_SOURCE_GROUPS: SoulSourceGroup[] = [
   },
 ];
 
-function soulParts(read: (key: StatKey) => number, group: SoulSourceGroup): { base: number; orb: number } {
+/** A group's souls from any reading keyed like the game stats, e.g. one player's end-of-match stats. */
+export function soulParts(read: (key: StatKey) => number, group: SoulSourceGroup): { base: number; orb: number } {
   const minus = group.minusKey ? read(group.minusKey) : 0;
   const extra = (group.extraKeys ?? []).reduce((sum, key) => sum + read(key), 0);
   return {

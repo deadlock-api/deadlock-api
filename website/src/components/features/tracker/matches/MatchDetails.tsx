@@ -54,6 +54,7 @@ import {
 import { LanesCard } from "./LanesCard";
 import { MatchTimeline } from "./MatchTimeline";
 import { Scoreboard } from "./Scoreboard";
+import { SoulsCard } from "./SoulsCard";
 
 /** Why the match counted differently for the player than for their team, said after the team's result. */
 const UNSCORED_OUTCOME_NOTES: Record<UnscoredOutcome, { icon: typeof Gavel; text: string }> = {
@@ -428,6 +429,14 @@ export function MatchView({
       />
       {laneMatchups.length > 0 && (
         <LanesCard matchups={laneMatchups} trackedAccountId={neutral ? undefined : accountId} nameOf={nameOf} />
+      )}
+      {soulEconomy && match.players.some((player) => player.souls) && (
+        <SoulsCard
+          players={match.players}
+          durationS={durationS}
+          trackedAccountId={neutral ? undefined : accountId}
+          nameOf={nameOf}
+        />
       )}
     </div>
   );

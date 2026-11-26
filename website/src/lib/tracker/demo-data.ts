@@ -29,6 +29,7 @@ import { badgeToLinear, isWin, linearToBadge } from "./compute";
 import { DEMO_ACCOUNT_ID, demoMatchId, demoMatchIndex } from "./demo";
 import type { MatchTeams } from "./hero-matchups";
 import { LANE_PHASE_END_S } from "./lane-matchup";
+import type { PermanentBuff, PlayerSouls } from "./match-souls";
 import type { TrackerMatchStats } from "./match-stats";
 import { type PlayerMetricRow, playerMetricsOf } from "./player-metric-formulas";
 import { TEAMS } from "./teams";
@@ -623,6 +624,60 @@ function demoObjectives(rng: Rng, winningTeam: string, durationS: number): Track
 }
 
 /** Full details of one generated match, consistent with its row in `history`; null for an unknown match id. */
+/**
+ * A believable soul income for a generated player: shares of their net worth near the usual ones, from a generator of
+ * its own so the other details stay as they were.
+ */
+function demoSouls(rng: Rng, netWorth: number, teamUrn: number): PlayerSouls {
+  const parts = {
+    laneCreep: between(rng, 0.3, 0.45),
+    neutral: between(rng, 0.08, 0.2),
+    kills: between(rng, 0.06, 0.16),
+    boss: between(rng, 0.1, 0.2),
+    assists: between(rng, 0.04, 0.1),
+    breakable: between(rng, 0.03, 0.07),
+    teamBonus: between(rng, 0.01, 0.06),
+  };
+  const delivered = rng() < 0.2 ? intBetween(rng, 1500, 3500) : 0;
+  const total = Object.values(parts).reduce((sum, part) => sum + part, 0);
+  const share = (part: number) => Math.round(((netWorth - teamUrn - delivered) * 0.97 * part) / total);
+  const laneCreep = share(parts.laneCreep);
+  const laneOrbs = Math.round(laneCreep * between(rng, 0.4, 0.5));
+  const assists = share(parts.assists);
+  return {
+    gold_player: share(parts.kills) + assists,
+    gold_player_orbs: 0,
+    gold_lane_creep: laneCreep - laneOrbs,
+    gold_lane_creep_orbs: laneOrbs,
+    gold_neutral_creep: share(parts.neutral),
+    gold_neutral_creep_orbs: 0,
+    gold_boss: share(parts.boss),
+    gold_boss_orb: 0,
+    gold_treasure: teamUrn + delivered,
+    gold_death_loss: Math.round(netWorth * between(rng, 0.01, 0.05)),
+    gold_assists: assists,
+    gold_team_bonus: share(parts.teamBonus),
+    gold_breakable: share(parts.breakable),
+    gold_ability_assassinate: 0,
+    gold_item_trophy_collector: 0,
+    gold_item_cultist_sacrifice: 0,
+    gold_item_goose_egg: 0,
+  };
+}
+
+const DEMO_BUFF_TYPES = ["hp", "wp", "spirit", "firerate", "ammo", "cd", "bulletresist", "spiritresist"];
+
+function demoPermanentBuffs(rng: Rng, minutes: number): PermanentBuff[] {
+  const buffs: PermanentBuff[] = [];
+  for (const stem of shuffled(rng, DEMO_BUFF_TYPES).slice(
+    0,
+    intBetween(rng, 0, Math.min(6, Math.round(minutes / 5))),
+  )) {
+    buffs.push({ type: `${stem}_permanent_pickup`, count: intBetween(rng, 1, 2) });
+  }
+  return buffs;
+}
+
 /** The seeded generator of a match's details; its first draws pick the other heroes (`demoOtherHeroes`). */
 function demoMatchRng(matchId: number): Rng {
   return mulberry32(demoMatchIndex(matchId) + 0x5eed);
@@ -727,6 +782,8 @@ export function demoMatchMetadata(
   const mateScale = (ownTarget - entry.net_worth) / (teamSouls(ownTeam) - entry.net_worth);
   for (let i = 1; i <= 5; i++) netWorths[i] = Math.round(netWorths[i] * mateScale);
 
+  const soulRng = mulberry32(demoMatchIndex(matchId) + 0x5011);
+  const teamUrns = new Map([ownTeam, enemyTeam].map((team) => [team, intBetween(soulRng, 200, 600)]));
   const players: TrackerMatchPlayer[] = seats.map((seat, i) => {
     const tracked = i === 0;
     const onWinningTeam = seat.team === winningTeam;
@@ -795,6 +852,10 @@ export function demoMatchMetadata(
       ),
       stats: demoTimeline(totals, durationS, between(rng, 1, 1.7)),
       personaname: demoName(seat.accountId),
+      souls: demoSouls(soulRng, netWorth, teamUrns.get(seat.team) ?? 0),
+      unspent_soul_minutes: Math.round(minutes * minutes * between(soulRng, 60, 110)),
+      breakables_broken: intBetween(soulRng, 4, Math.max(4, Math.round(minutes))),
+      permanent_buffs: demoPermanentBuffs(soulRng, minutes),
     };
   });
 

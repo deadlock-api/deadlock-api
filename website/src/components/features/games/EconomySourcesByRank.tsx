@@ -3,6 +3,12 @@ import type { AnalyticsApiGameStatsRequest, Rank } from "deadlock_api_client";
 import { useMemo, useState } from "react";
 import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
 
+import {
+  formatSouls,
+  formatSoulsCompact,
+  groupSouls,
+  SOUL_SOURCE_GROUPS,
+} from "~/components/domain/match/soul-sources";
 import { RankTierTick } from "~/components/domain/rank/RankTierTick";
 import { ChartLegend, ChartLegendItem, ChartSwatch } from "~/components/patterns/charts/ChartLegend";
 import { ChartEmpty, ChartError, ChartLoading } from "~/components/patterns/charts/ChartStates";
@@ -20,8 +26,6 @@ import { TooltipCard, TooltipHeader, TooltipStat, TooltipStats } from "~/compone
 import { formatPercent } from "~/lib/format";
 import { gameStatsQueryOptions } from "~/queries/games-query";
 import { ranksQueryOptions } from "~/queries/ranks-query";
-
-import { formatSouls, formatSoulsCompact, groupSouls, SOUL_SOURCE_GROUPS } from "./economy-definitions";
 
 interface EconomySourcesByRankProps {
   params: AnalyticsApiGameStatsRequest;

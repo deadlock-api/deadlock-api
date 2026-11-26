@@ -1,5 +1,6 @@
 import { api } from "~/lib/api";
-import { combatStats, resolveCustomStats } from "~/lib/tracker/combat-stats";
+import { combatStats, latestCustomCount, resolveCustomStats } from "~/lib/tracker/combat-stats";
+import { BREAKABLES_BROKEN, permanentBuffs, restSouls, UNSPENT_SOUL_MINUTES } from "~/lib/tracker/match-souls";
 import type {
   TrackerMatchDeath,
   TrackerMatchItem,
@@ -66,6 +67,8 @@ export interface RawMatchMetadata {
         flags?: number;
       }[];
       death_details?: RawDeath[] | null;
+      /** Same entries as the GraphQL `power_up_buffs` scalar. */
+      power_up_buffs?: unknown;
       stats?: {
         custom_user_stats?: { id?: number; value?: number }[];
         time_stamp_s?: number;
@@ -79,6 +82,18 @@ export interface RawMatchMetadata {
         player_damage_taken?: number;
         boss_damage?: number;
         player_healing?: number;
+        gold_player?: number;
+        gold_player_orbs?: number;
+        gold_lane_creep?: number;
+        gold_lane_creep_orbs?: number;
+        gold_neutral_creep?: number;
+        gold_neutral_creep_orbs?: number;
+        gold_boss?: number;
+        gold_boss_orb?: number;
+        gold_treasure?: number;
+        gold_death_loss?: number;
+        /** Souls by `EGoldSource`, including the sources without a field of their own. */
+        gold_sources?: { source?: number; gold?: number | null }[] | null;
       }[];
     }[];
   };
@@ -218,44 +233,49 @@ export function trackerMatchFromRawMetadata(metadata: RawMatchMetadata): Tracker
     })),
     mid_boss: claimedMidBosses(info.mid_boss, (boss) => restTeam(boss.team_claimed)),
     deaths: info.players.map(playerDeaths),
-    players: info.players.map((player) => ({
-      account_id: player.account_id ?? 0,
-      team: restTeam(player.team),
-      hero_id: player.hero_id ?? 0,
-      pregame_hero_id: metadata.pregame_hero_ids?.[String(player.account_id)] || null,
-      combat_stats: combatStats(
-        (player.stats ?? []).map((stat) => ({
-          time_stamp_s: stat.time_stamp_s,
-          custom_user_stats: resolveCustomStats(stat.custom_user_stats, customStatNames),
-        })),
-      ),
-      assigned_lane: player.assigned_lane ?? 0,
-      kills: player.kills ?? 0,
-      deaths: player.deaths ?? 0,
-      assists: player.assists ?? 0,
-      net_worth: player.net_worth ?? 0,
-      level: player.level ?? 0,
-      last_hits: player.last_hits ?? 0,
-      denies: player.denies ?? 0,
-      player_damage: maxStat(player.stats, "player_damage"),
-      player_damage_taken: maxStat(player.stats, "player_damage_taken"),
-      boss_damage: maxStat(player.stats, "boss_damage"),
-      player_healing: maxStat(player.stats, "player_healing"),
-      mvp_rank: player.mvp_rank ?? null,
-      abandon_match_time_s: player.abandon_match_time_s || null,
-      rank_badge: player.player_rank_data?.initial_display_rank || null,
-      rank_delta: rankDelta(
-        player.player_rank_data?.initial_flat_progress,
-        player.player_rank_data?.final_flat_progress,
-      ),
-      demotion_protected: player.player_rank_data?.consumed_demotion_protection === true,
-      ability_stacks: Object.fromEntries(
-        (player.ability_stats ?? []).map((stat) => [stat.ability_id ?? 0, stat.ability_value ?? 0]),
-      ),
-      items: (player.items ?? []).map(toTrackerItem),
-      stats: (player.stats ?? []).map(toTrackerStat),
-      personaname: undefined,
-    })),
+    players: info.players.map((player) => {
+      const customSamples = (player.stats ?? []).map((stat) => ({
+        time_stamp_s: stat.time_stamp_s,
+        custom_user_stats: resolveCustomStats(stat.custom_user_stats, customStatNames),
+      }));
+      return {
+        account_id: player.account_id ?? 0,
+        team: restTeam(player.team),
+        hero_id: player.hero_id ?? 0,
+        pregame_hero_id: metadata.pregame_hero_ids?.[String(player.account_id)] || null,
+        combat_stats: combatStats(customSamples),
+        assigned_lane: player.assigned_lane ?? 0,
+        kills: player.kills ?? 0,
+        deaths: player.deaths ?? 0,
+        assists: player.assists ?? 0,
+        net_worth: player.net_worth ?? 0,
+        level: player.level ?? 0,
+        last_hits: player.last_hits ?? 0,
+        denies: player.denies ?? 0,
+        player_damage: maxStat(player.stats, "player_damage"),
+        player_damage_taken: maxStat(player.stats, "player_damage_taken"),
+        boss_damage: maxStat(player.stats, "boss_damage"),
+        player_healing: maxStat(player.stats, "player_healing"),
+        mvp_rank: player.mvp_rank ?? null,
+        abandon_match_time_s: player.abandon_match_time_s || null,
+        rank_badge: player.player_rank_data?.initial_display_rank || null,
+        rank_delta: rankDelta(
+          player.player_rank_data?.initial_flat_progress,
+          player.player_rank_data?.final_flat_progress,
+        ),
+        demotion_protected: player.player_rank_data?.consumed_demotion_protection === true,
+        ability_stacks: Object.fromEntries(
+          (player.ability_stats ?? []).map((stat) => [stat.ability_id ?? 0, stat.ability_value ?? 0]),
+        ),
+        items: (player.items ?? []).map(toTrackerItem),
+        stats: (player.stats ?? []).map(toTrackerStat),
+        personaname: undefined,
+        souls: restSouls(player.stats),
+        unspent_soul_minutes: latestCustomCount(customSamples, UNSPENT_SOUL_MINUTES),
+        breakables_broken: latestCustomCount(customSamples, BREAKABLES_BROKEN),
+        permanent_buffs: permanentBuffs(player.power_up_buffs),
+      };
+    }),
   };
 }
 
