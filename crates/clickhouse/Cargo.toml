@@ -82,22 +82,22 @@ futures-channel = { version = "0.3.30", features = ["sink"] }
 twox-hash = { version = "2.1.4", optional = true }
 lz4_flex = { version = "0.14.0", optional = true, default-features = false, features = ["std"] }
 cityhash-rs = { version = "=1.0.1", optional = true } # exact version for safety, this package has been stable for years
-zstd = { version = "0.13", default-features = false, optional = true }
+zstd = { version = "0.14", default-features = false, optional = true }
 uuid = { version = "1", optional = true }
 time = { version = "0.3", optional = true }
 chrono = { version = "0.4", optional = true, features = ["serde"] }
 bstr = { version = "1.11.0", default-features = false }
-quanta = { version = "0.12", optional = true }
+quanta = { version = "0.13", optional = true }
 rand = "0.9"
 
 hashbrown = "0.17.1"
 
-bnum = "0.13.0"
+bnum = "0.14.4"
 
 tracing = { version = "0.1.44", default-features = false, features = ["std"] }
 
-opentelemetry = { version = "0.31.0", optional = true }
-opentelemetry-http = { version = "0.31.0", optional = true }
+opentelemetry = { version = "0.33.1", optional = true }
+opentelemetry-http = { version = "0.33.1", optional = true }
 
 [dev-dependencies]
 tokio = { version = "1.0.1", features = ["full", "test-util", "io-util"] }
