@@ -63,6 +63,9 @@ export default defineConfig({
           // page's hero win rates are live too and follow the preferred period (served by src/lib/html-cache.ts).
           !/^\/patches(\/|$)/.test(path) &&
           path !== "/" &&
+          // The yearly recap opens and closes by date (a 404 outside 1 December to 15 January): a build-time copy
+          // would freeze whichever state the build day had.
+          !/^\/year-in-deadlock(\/|$)/.test(path) &&
           // Legacy paths only redirect (src/lib/site-route-migration.ts). The prerenderer follows a redirect and saves
           // the destination's HTML under the old path, which would then be served there instead of the 301.
           !/^\/(heroes|items|abilities|players|team-builder|leaderboard|badge-distribution|heatmap)(\/|$)/.test(path) &&

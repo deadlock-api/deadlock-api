@@ -11,6 +11,7 @@ import {
   SideNavSpecimen,
 } from "~/components/dev/design-system/PatternsMore";
 import { PatternsPicker } from "~/components/dev/design-system/PatternsPicker";
+import { PatternsStory } from "~/components/dev/design-system/PatternsStory";
 import { PatternsTierList } from "~/components/dev/design-system/PatternsTierList";
 import { Round3Patterns } from "~/components/dev/design-system/Round3Patterns";
 import { Round3PatternsMore } from "~/components/dev/design-system/Round3PatternsMore";
@@ -869,6 +870,7 @@ export function Patterns() {
       <Round3Patterns />
       <Round3PatternsMore />
       <PatternsTierList />
+      <PatternsStory />
       <PatternsListDetail />
       <PatternsLiveList />
     </Chapter>

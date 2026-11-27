@@ -204,6 +204,10 @@
   --duration-slow: 300ms;
   /* A highlight that fades on its own: a new entry of a live list. */
   --duration-highlight: 1500ms;
+  /* A story chapter's entrance (StoryDeck layout="deck"): long and soft, its parts a step apart. */
+  --duration-reveal: 750ms;
+  --stagger-step: 70ms;
+  --ease-reveal: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* App chrome on phones (below md): the bar along the top that holds the menu button, and the room kept under the
@@ -403,5 +407,7 @@
     --duration-normal: 0.01ms;
     --duration-slow: 0.01ms;
     --duration-highlight: 0.01ms;
+    --duration-reveal: 0.01ms;
+    --stagger-step: 0ms;
   }
 }

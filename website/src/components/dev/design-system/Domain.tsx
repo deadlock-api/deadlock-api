@@ -1,6 +1,7 @@
 import { DomainAssets } from "~/components/dev/design-system/DomainAssets";
 import { DomainData } from "~/components/dev/design-system/DomainData";
 import { DomainFilters } from "~/components/dev/design-system/DomainFilters";
+import { DomainGameArt } from "~/components/dev/design-system/DomainGameArt";
 import { DomainMinigames } from "~/components/dev/design-system/DomainMinigames";
 import { DomainRank } from "~/components/dev/design-system/DomainRank";
 import { DomainSelectors } from "~/components/dev/design-system/DomainSelectors";
@@ -22,6 +23,7 @@ export function Domain() {
       <DomainData />
       <DomainMinigames />
       <Round3DomainAssets />
+      <DomainGameArt />
       <Round3DomainPlayer />
       <Round3DomainMisc />
     </Chapter>

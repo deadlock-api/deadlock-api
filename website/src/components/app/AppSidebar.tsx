@@ -11,9 +11,10 @@ import {
   SideNavHeader,
   SideNavShell,
 } from "~/components/patterns/navigation/SideNavShell";
+import { useRecapOpen } from "~/hooks/useRecapOpen";
 import { TRACKER_DEMO_PATH, useTrackerHome } from "~/hooks/useTrackerHome";
 import { API_ORIGIN } from "~/lib/constants";
-import { bottomNavLinks, type NavLink, navGroups, topLinks } from "~/lib/site-nav";
+import { bottomNavLinks, type NavLink, navGroups, topLinks, yearRecapLink } from "~/lib/site-nav";
 
 function isActive(pathname: string, to: string) {
   if (to === "/") return pathname === "/";
@@ -46,6 +47,7 @@ function NavItem({ link, href = link.to }: { link: NavLink; href?: string }) {
 
 function SidebarContent() {
   const trackerHome = useTrackerHome();
+  const recapOpen = useRecapOpen();
   return (
     <>
       <SideNavHeader>
@@ -70,6 +72,7 @@ function SidebarContent() {
           {topLinks.map((link) => (
             <NavItem key={link.to} link={link} />
           ))}
+          {recapOpen && <NavItem link={yearRecapLink} />}
         </SideNavGroup>
         {navGroups.map((group) => (
           <SideNavGroup key={group.label} label={group.label}>

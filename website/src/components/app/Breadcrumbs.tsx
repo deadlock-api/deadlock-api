@@ -37,6 +37,7 @@ const ROUTE_LABELS: Record<string, string> = {
   "/patron": "Prioritized Fetching",
   "/blog": "Blog",
   "/patches": "Patches",
+  "/year-in-deadlock": "Year in Deadlock",
 };
 
 interface Crumb {

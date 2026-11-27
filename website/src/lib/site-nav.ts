@@ -18,6 +18,7 @@ import {
   Palette,
   Radio,
   Shield,
+  Sparkles,
   ShoppingBag,
   Swords,
   Trophy,
@@ -41,6 +42,17 @@ export interface NavGroup {
 }
 
 export const topLinks: NavLink[] = [{ to: "/", label: "Home", icon: Home }];
+
+/**
+ * The yearly recap, under Home while it is open (1 December to 15 January, always on the dev server). The sidebar
+ * decides after hydration with `useRecapOpen`, since the server has no clock the client agrees with.
+ */
+export const yearRecapLink: NavLink = {
+  to: "/year-in-deadlock",
+  label: "Year in Deadlock",
+  icon: Sparkles,
+  special: true,
+};
 
 export const navGroups: NavGroup[] = [
   {

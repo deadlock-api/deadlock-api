@@ -42,6 +42,7 @@ export const queryKeys = {
     abilities: () => ["assets-items-abilities"] as const,
     abilitiesFull: () => ["assets-items-abilities-full"] as const,
     npcUnits: () => ["assets-npc-units"] as const,
+    weapons: () => ["assets-items-weapons"] as const,
     sounds: () => ["assets-sounds"] as const,
     itemUpgrades: () => ["assets-items-upgrades"] as const,
     itemUpgradesFull: () => ["assets-items-upgrades-full"] as const,
@@ -148,6 +149,7 @@ export const queryKeys = {
     itemPairStats: (params: TrackerMatchStatsParams) => ["api-tracker-item-pair-stats", params] as const,
     abilities: () => ["api-tracker-abilities"] as const,
     ingestStatus: (accountId: number) => ["api-player-ingest-status", accountId] as const,
+    yearRecap: (accountId: number, year: number) => ["api-player-year-recap", accountId, year] as const,
   },
   patron: {
     all: ["patron"] as const,

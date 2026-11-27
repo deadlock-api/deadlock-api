@@ -1,5 +1,5 @@
 import { type QueryClient, queryOptions } from "@tanstack/react-query";
-import type { Ability, Hero, Upgrade } from "deadlock_api_client";
+import type { Ability, Hero, Upgrade, Weapon } from "deadlock_api_client";
 
 import { CACHE_DURATIONS } from "~/constants/cache";
 import { api } from "~/lib/api";
@@ -92,6 +92,19 @@ export const abilitiesFullQueryOptions = queryOptions({
   queryFn: async () => {
     const response = await api.items_api.getItemsByType({ type: "ability" });
     return response.data as Ability[];
+  },
+  staleTime: CACHE_DURATIONS.FOREVER,
+});
+
+/**
+ * The heroes' guns by class name ("citadel_weapon_gigawatt_set" is Seven's Cold Calculus): only the name and the hero
+ * are kept, not the weapon stats.
+ */
+export const weaponsQueryOptions = queryOptions({
+  queryKey: queryKeys.assets.weapons(),
+  queryFn: async () => {
+    const response = await api.items_api.getItemsByType({ type: "weapon" });
+    return (response.data as Weapon[]).map(({ id, class_name, name, hero }) => ({ id, class_name, name, hero }));
   },
   staleTime: CACHE_DURATIONS.FOREVER,
 });

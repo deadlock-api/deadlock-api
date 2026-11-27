@@ -26,6 +26,11 @@ export const UNSEARCHABLE_PAGES: readonly UnsearchablePage[] = [
   { path: "/patron", reason: "an account page, not stats" },
   { path: "/tracker", reason: "a redirect to the demo profile" },
   { path: "/tracker/*", reason: "player profiles, opened by account; never a search result" },
+  {
+    path: "/year-in-deadlock",
+    reason: "the yearly recap, a 404 outside 1 December to 15 January; the sidebar links it",
+  },
+  { path: "/year-in-deadlock/*", reason: "one player's yearly recap, opened by account from the recap's own page" },
   { path: "/matches/*", reason: "one match, opened by its ID, which the search reads in code" },
   { path: "/data-privacy", reason: "a legal page" },
   { path: "/deadlockstats-privacy", reason: "a legal page" },

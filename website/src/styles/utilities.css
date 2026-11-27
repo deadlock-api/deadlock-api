@@ -165,6 +165,32 @@
   letter-spacing: -0.025em;
   font-variant-numeric: tabular-nums;
 }
+/* The one number a story chapter is about (`StoryFigure`): condensed capitals that grow with the chapter's width (cqi of
+   its container) between two steps of the scale, so a phone and a wide screen both get a number that fills the line. */
+@utility type-figure-lg {
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-6xl), 20cqi, var(--text-9xl));
+  line-height: 0.9;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+@utility type-figure {
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-5xl), 13cqi, var(--text-8xl));
+  line-height: 0.95;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+}
+@utility type-figure-sm {
+  font-family: var(--font-display);
+  font-size: clamp(var(--text-4xl), 8cqi, var(--text-6xl));
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  font-variant-numeric: tabular-nums;
+}
 /* A number in a dense header or a small panel, at body size. */
 @utility type-value-sm {
   font-size: var(--text-base);
@@ -339,4 +365,298 @@
 }
 [data-slot="filter-bar"]:has([data-active]) [data-slot="filter-bar-count"]::after {
   visibility: visible;
+}
+
+/* Story reveals (patterns/story): a chapter rises into place as it scrolls into view, its parts follow in reading
+   order, its big number pops, its bars grow and its glow drifts with the scroll. Scroll-driven animations on view()
+   timelines: no script, nothing waits for hydration, and the server HTML is the end state, so a browser without
+   view timelines (or a crawler, or print, where the timeline is inactive) shows every chapter as it is. The motion
+   reset in base.css only shortens durations, which a scroll timeline ignores, so these are gated on
+   no-preference themselves. Every range ends by the time an element is a third into the viewport: nothing is still
+   faded where the reader is looking. */
+@keyframes story-rise {
+  from {
+    opacity: 0;
+    translate: 0 2.5rem;
+  }
+}
+@keyframes story-surface {
+  from {
+    opacity: 0.2;
+    translate: 0 3rem;
+    scale: 0.97;
+  }
+}
+@keyframes story-pop {
+  from {
+    opacity: 0;
+    scale: 0.7;
+  }
+}
+@keyframes story-grow {
+  from {
+    scale: 0 1;
+  }
+}
+@keyframes story-drift {
+  from {
+    translate: 0 -15%;
+  }
+  to {
+    translate: 0 15%;
+  }
+}
+
+@utility story-reveal {
+  @media (prefers-reduced-motion: no-preference) {
+    @supports (animation-timeline: view()) {
+      animation: story-surface ease-out both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+
+      /* The header, then each block of the chapter, each on its own timeline, so they arrive in reading order. */
+      & > :not([aria-hidden]) {
+        animation: story-rise ease-out both;
+        animation-timeline: view();
+        animation-range: entry 10% cover 30%;
+      }
+      & [data-slot="story-figure-value"] {
+        transform-origin: 0 100%;
+        animation: story-pop ease-out both;
+        animation-timeline: view();
+        animation-range: entry 30% cover 30%;
+      }
+      & [data-slot="story-figure"][data-align="center"] [data-slot="story-figure-value"] {
+        transform-origin: 50% 100%;
+      }
+      &:dir(rtl) [data-slot="story-figure-value"] {
+        transform-origin: 100% 100%;
+      }
+      /* Tiles of a row follow one another. */
+      & [data-slot="stat"] {
+        animation: story-rise ease-out both;
+        animation-timeline: view();
+        animation-range: entry 20% cover 30%;
+      }
+      & [data-slot="stat"]:nth-child(4n + 2) {
+        animation-range: entry 35% cover 32%;
+      }
+      & [data-slot="stat"]:nth-child(4n + 3) {
+        animation-range: entry 50% cover 34%;
+      }
+      & [data-slot="stat"]:nth-child(4n + 4) {
+        animation-range: entry 65% cover 36%;
+      }
+      /* Bars fill from their start edge. */
+      & [data-slot="progress-bar"] > :first-child {
+        transform-origin: 0 50%;
+        animation: story-grow ease-out both;
+        animation-timeline: view();
+        animation-range: entry 40% cover 35%;
+      }
+      &:dir(rtl) [data-slot="progress-bar"] > :first-child {
+        transform-origin: 100% 50%;
+      }
+      & [data-slot="story-chapter-glow"] {
+        animation: story-drift linear both;
+        animation-timeline: view();
+        animation-range: cover 0% cover 100%;
+      }
+    }
+  }
+}
+
+/* Story deck (StoryDeck layout="deck"): one chapter per screen. Every chapter is exactly a page tall and the page
+   snaps to them one at a time, so after a scroll only one card is in view; a chapter longer than that scrolls inside
+   its card, then hands the scroll on to the next. */
+html:has([data-slot="story-deck"][data-layout="deck"]) {
+  scroll-snap-type: y mandatory;
+  @media (prefers-reduced-motion: no-preference) {
+    scroll-behavior: smooth;
+  }
+}
+
+@utility story-deck {
+  --story-card-height: var(--page-height);
+  @media (width < 48rem) {
+    --story-card-height: calc(100dvh - var(--app-bar-height) - 2.5rem);
+  }
+
+  /* A card is a screen tall and never scrolls inside: useStoryFit scales a slightly too tall card's blocks down to fit
+     (data-fit="fixed", --story-fit) and lets a much taller one, or any card on a narrow screen, grow past the screen
+     (data-fit="grow"), so the page scrolls through it. Until it has measured (server HTML), cards grow as needed. */
+  & [data-slot="story-chapter"] {
+    min-height: var(--story-card-height);
+    justify-content: safe center;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  & [data-slot="story-chapter"][data-fit="fixed"] {
+    height: var(--story-card-height);
+  }
+  & [data-slot="story-chapter"][data-fit="fixed"] > :not([aria-hidden]) {
+    zoom: var(--story-fit, 1);
+  }
+  & [data-slot="story-chapter"] > * {
+    flex-shrink: 0;
+  }
+
+  /* Full width, its content in a centred column: the index is a slim rail at the screen's edge. */
+  & [data-slot="story-chapter"] {
+    align-items: center;
+    text-align: center;
+    padding-inline: max(1.25rem, 4%);
+  }
+  & [data-slot="story-chapter"] > :not([aria-hidden]) {
+    width: 100%;
+    max-width: 64rem;
+  }
+  & [data-slot="story-chapter-header"] {
+    align-items: center;
+  }
+  & [data-slot="story-chapter-header"] > p {
+    margin-inline: auto;
+  }
+  & [data-slot="story-figure"] {
+    align-items: center;
+  }
+  & [data-slot="story-figure"] > span:first-child {
+    justify-content: center;
+  }
+  & [data-slot="story-figure-value"] {
+    transform-origin: 50% 100%;
+  }
+  & [data-slot="story-note"] {
+    margin-inline: auto;
+    text-align: start;
+  }
+  & [data-slot="story-deck-progress"] [data-slot="story-progress-item"] > span:last-child {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Entrances. A chapter plays its entrance once, when a third of it is in view: time-based transitions, so the
+     scroll itself stays native and smooth. useStoryReveal sets data-animate after hydration and data-revealed per
+     chapter; without them (server HTML, no script, reduced motion) every card simply shows as it is. The scroll-
+     driven reveals of the flow layout are off here. */
+  & .story-reveal,
+  & .story-reveal > *,
+  & .story-reveal [data-slot="story-figure-value"],
+  & .story-reveal [data-slot="stat"],
+  & .story-reveal [data-slot="progress-bar"] > :first-child,
+  & .story-reveal [data-slot="story-chapter-glow"] {
+    animation: none;
+  }
+  &[data-animate] {
+    & [data-slot="story-chapter"] > :not([aria-hidden]),
+    & [data-slot="story-chapter-glow"],
+    & [data-slot="story-figure-value"],
+    & [data-slot="stat"] {
+      transition-property: opacity, translate, scale;
+      transition-duration: var(--duration-reveal);
+      transition-timing-function: var(--ease-reveal);
+    }
+    & [data-slot="story-chapter"] > :not([aria-hidden]) {
+      transition-delay: calc(var(--story-step, 0) * 1.5 * var(--stagger-step));
+    }
+    & [data-slot="story-chapter"] > :nth-child(3 of :not([aria-hidden])) {
+      --story-step: 0;
+    }
+    & [data-slot="story-chapter"] > :nth-child(4 of :not([aria-hidden])) {
+      --story-step: 1;
+    }
+    & [data-slot="story-chapter"] > :nth-child(5 of :not([aria-hidden])) {
+      --story-step: 2;
+    }
+    & [data-slot="story-chapter"] > :nth-child(6 of :not([aria-hidden])) {
+      --story-step: 3;
+    }
+    & [data-slot="story-chapter"] > :nth-child(7 of :not([aria-hidden])) {
+      --story-step: 4;
+    }
+    & [data-slot="story-chapter"] > :nth-child(8 of :not([aria-hidden])) {
+      --story-step: 5;
+    }
+    & [data-slot="story-figure-value"] {
+      transition-delay: calc(3 * var(--stagger-step));
+    }
+    & [data-slot="stat"] {
+      transition-delay: calc((3 + var(--story-tile, 0)) * var(--stagger-step));
+    }
+    & [data-slot="stat"]:nth-child(1) {
+      --story-tile: 1;
+    }
+    & [data-slot="stat"]:nth-child(2) {
+      --story-tile: 2;
+    }
+    & [data-slot="stat"]:nth-child(3) {
+      --story-tile: 3;
+    }
+    & [data-slot="stat"]:nth-child(4) {
+      --story-tile: 4;
+    }
+    & [data-slot="stat"]:nth-child(5) {
+      --story-tile: 5;
+    }
+    & [data-slot="stat"]:nth-child(6) {
+      --story-tile: 6;
+    }
+    & [data-slot="stat"]:nth-child(7) {
+      --story-tile: 7;
+    }
+    & [data-slot="stat"]:nth-child(8) {
+      --story-tile: 8;
+    }
+    & [data-slot="progress-bar"] > :first-child {
+      transition: scale calc(1.6 * var(--duration-reveal)) var(--ease-reveal) calc(5 * var(--stagger-step));
+    }
+    & [data-slot="story-chapter-glow"] {
+      transition-duration: calc(2 * var(--duration-reveal));
+    }
+
+    & [data-slot="story-chapter"]:not([data-revealed]) {
+      & > :not([aria-hidden]) {
+        opacity: 0;
+        translate: 0 1.75rem;
+      }
+      & [data-slot="story-chapter-glow"] {
+        opacity: 0;
+        scale: 0.8;
+      }
+      & [data-slot="story-figure-value"] {
+        opacity: 0;
+        scale: 0.85;
+      }
+      & [data-slot="stat"] {
+        opacity: 0;
+        translate: 0 1rem;
+      }
+      & [data-slot="progress-bar"] > :first-child {
+        scale: 0 1;
+      }
+    }
+    & [data-slot="progress-bar"] > :first-child {
+      transform-origin: 0 50%;
+    }
+    &:dir(rtl) [data-slot="progress-bar"] > :first-child {
+      transform-origin: 100% 50%;
+    }
+  }
+}
+
+/* An image that must fit inside a story deck card with the chapter's header (a share preview): as large as the card
+   allows, never taller, keeping its ratio. Outside a deck it is capped at the viewport. When the card is narrow and
+   the controls stack under the image, more room is kept for them. */
+@utility story-media-fit {
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  max-height: calc(var(--story-card-height, 100dvh) - var(--story-media-reserve, 15rem));
+  @container story (width < 48rem) {
+    --story-media-reserve: 30rem;
+  }
 }

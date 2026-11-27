@@ -525,7 +525,7 @@ export function Primitives() {
       <Specimen
         name="Stat"
         source="ui/stat"
-        note="Headline numbers. StatGroup supplies the layout and the <dl>; columns are set with grid classes."
+        note="Headline numbers. StatGroup supplies the layout and the <dl>; columns are set with grid classes. overflow truncate (default) keeps labels and values on one line; wrap lets words (a hero, a rank, a date) break onto more lines in narrow tiles instead of being cut. icon puts a small glyph before the label (see GameIcon)."
       >
         <Variants label='variant="tiles"' className="block">
           <StatGroup className="grid-cols-2 sm:grid-cols-4">
@@ -562,6 +562,16 @@ export function Primitives() {
             <Stat align="end" label="K / D / A" value="9 / 4 / 12" />
             <Stat align="end" label="Souls" value="31,240" />
             <Stat align="end" label="Rank" value={<Delta value={14} format="number" />} />
+          </StatGroup>
+        </Variants>
+        <Variants label='overflow="truncate" (default) vs overflow="wrap", in a 12rem column' className="items-start">
+          <StatGroup size="sm" className="w-48 grid-cols-2">
+            <Stat label="Longest losing streak" value="Ascendant 4" />
+            <Stat label="Favourite brawler" value="The Doorman" />
+          </StatGroup>
+          <StatGroup size="sm" overflow="wrap" className="w-48 grid-cols-2">
+            <Stat label="Longest losing streak" value="Ascendant 4" />
+            <Stat label="Favourite brawler" value="The Doorman" />
           </StatGroup>
         </Variants>
       </Specimen>

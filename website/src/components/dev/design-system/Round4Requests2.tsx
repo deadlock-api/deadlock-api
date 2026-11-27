@@ -1,4 +1,4 @@
-import { FolderOpen, Volume2 } from "lucide-react";
+import { Download, FolderOpen, ImageIcon, Share2, Volume2 } from "lucide-react";
 import { useState } from "react";
 
 import { Specimen, Variants } from "~/components/dev/design-system/Specimen";
@@ -12,16 +12,19 @@ import { StateFlash } from "~/components/domain/minigames/StateFlash";
 import { ChartAxisTitle, ChartRegion, ChartStage } from "~/components/patterns/charts/ChartOverlay";
 import { PanelSection } from "~/components/patterns/panel/Panel";
 import { StaleOverlay } from "~/components/patterns/states/StaleOverlay";
+import { ActionButton } from "~/components/ui/action-button";
 import { Button } from "~/components/ui/button";
 import { DetailPopover } from "~/components/ui/detail-popover";
 import { DragScroll } from "~/components/ui/drag-scroll";
 import { DropZone, DropZoneStatus } from "~/components/ui/drop-zone";
 import { HeatCell } from "~/components/ui/heat-cell";
 import { useDropZone } from "~/components/ui/hooks/use-drop-zone";
+import { useShareImage } from "~/components/ui/hooks/use-share-image";
 import { IconTile } from "~/components/ui/icon-tile";
 import { MaskedIcon } from "~/components/ui/masked-icon";
 import { NoValue } from "~/components/ui/no-value";
 import { ScrollArea } from "~/components/ui/scroll-area";
+import { Inline } from "~/components/ui/stack";
 import { StatusDot } from "~/components/ui/status-dot";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "~/components/ui/table";
 import { TextLink } from "~/components/ui/text-link";
@@ -203,6 +206,71 @@ function DropZoneDemo() {
       <DropZoneStatus className="text-sm">{dropped ? `Dropped ${dropped}` : "Drop a file here"}</DropZoneStatus>
       <Button size="sm">Choose file</Button>
     </DropZone>
+  );
+}
+
+/** A small PNG made on the press, as a share image would be. */
+function sampleImage(): Promise<Blob> {
+  const canvas = document.createElement("canvas");
+  canvas.width = 240;
+  canvas.height = 135;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim() || "red";
+    ctx.fillRect(0, 0, 240, 135);
+  }
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error("no blob"))), "image/png");
+  });
+}
+
+function ShareImageDemo() {
+  const { support, status, share, copy, save } = useShareImage();
+  const unsupported = support
+    ? [!support.share && "share files", !support.copy && "copy images"].filter(Boolean).join(" or ")
+    : "";
+  return (
+    <Inline gap={2}>
+      <ActionButton
+        icon={Share2}
+        status={status.share}
+        busyLabel="Sharing"
+        doneLabel="Shared"
+        failedLabel="Share failed"
+        aria-disabled={!support?.share || undefined}
+        aria-describedby={!support?.share ? "share-image-demo-reason" : undefined}
+        onClick={() => void sampleImage().then((image) => share(image, { filename: "sample.png" }))}
+      >
+        Share
+      </ActionButton>
+      <ActionButton
+        variant="outline"
+        icon={ImageIcon}
+        status={status.copy}
+        busyLabel="Copying"
+        doneLabel="Copied"
+        failedLabel="Copy failed"
+        aria-disabled={!support?.copy || undefined}
+        aria-describedby={!support?.copy ? "share-image-demo-reason" : undefined}
+        onClick={() => void copy(sampleImage())}
+      >
+        Copy image
+      </ActionButton>
+      <ActionButton
+        variant="outline"
+        icon={Download}
+        status={status.save}
+        busyLabel="Saving"
+        doneLabel="Saved"
+        failedLabel="Save failed"
+        onClick={() => void sampleImage().then((image) => save(image, "sample.png"))}
+      >
+        Download PNG
+      </ActionButton>
+      <span id="share-image-demo-reason" className="text-xs text-muted-foreground">
+        {unsupported ? `This browser cannot ${unsupported}.` : ""}
+      </span>
+    </Inline>
   );
 }
 
@@ -576,6 +644,43 @@ export function Round4Requests2() {
             <Volume2 aria-hidden="true" className="size-4" />
             Round 3 of 8
           </span>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="ActionButton"
+        source="ui/action-button"
+        note="A button for an action that takes a moment and can fail: share, copy or save a file. status: idle shows the icon and label, busy a spinner (presses are ignored and it stays focusable), done a check mark and doneLabel, failed an alert and failedLabel. The parent owns the status and announces the outcome in one polite output of its own. An action the browser cannot do takes aria-disabled plus aria-describedby pointing at the reason: it stays focusable and ignores presses."
+      >
+        <Variants label="status">
+          <ActionButton icon={Download}>Download PNG</ActionButton>
+          <ActionButton icon={Download} status="busy" busyLabel="Saving">
+            Download PNG
+          </ActionButton>
+          <ActionButton icon={Download} status="done" doneLabel="Saved">
+            Download PNG
+          </ActionButton>
+          <ActionButton icon={Download} status="failed" failedLabel="Save failed">
+            Download PNG
+          </ActionButton>
+        </Variants>
+        <Variants label="unavailable, with its reason">
+          <ActionButton variant="outline" icon={ImageIcon} aria-disabled aria-describedby="action-button-reason">
+            Copy image
+          </ActionButton>
+          <span id="action-button-reason" className="text-xs text-muted-foreground">
+            This browser cannot copy images.
+          </span>
+        </Variants>
+      </Specimen>
+
+      <Specimen
+        name="useShareImage"
+        source="ui/hooks/use-share-image"
+        note="Headless share, copy and save of an image Blob: share(image, { filename, title, text }) opens the system share sheet with the file, copy(image or a promise of one) writes a PNG to the clipboard, save(image, filename) downloads it. status holds each action's idle, busy, done or failed (back to idle after resetAfter); a share the reader backs out of is cancelled, not failed. support (null until hydrated, so the server markup matches) says what the browser has: share is canShare({ files }), true on phones; copy is ClipboardItem with image/png. Call share and copy straight from the press. These buttons share a small PNG made on the press."
+      >
+        <Variants label="this browser">
+          <ShareImageDemo />
         </Variants>
       </Specimen>
     </>

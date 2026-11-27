@@ -167,6 +167,17 @@ export function Foundations() {
             <span className="font-display text-3xl font-bold tracking-wide uppercase">Hero win rates</span>
             <code className="font-mono text-xs text-muted-foreground">font-display · page titles (PageHeader)</code>
           </div>
+          <div className="@container flex flex-col gap-1">
+            <div className="flex flex-wrap items-baseline gap-x-4">
+              <span className="type-figure-lg">2,842</span>
+              <span className="type-figure">1,461</span>
+              <span className="type-figure-sm">56.0%</span>
+            </div>
+            <code className="font-mono text-xs text-muted-foreground">
+              type-figure-lg / type-figure / type-figure-sm · the one number of a story chapter (StoryFigure), condensed
+              capitals that grow with their container (cqi) between two steps
+            </code>
+          </div>
           <div className="flex flex-wrap items-baseline gap-x-4">
             <span className="font-game text-2xl">Deadlockdle</span>
             <code className="font-mono text-xs text-muted-foreground">font-game</code>

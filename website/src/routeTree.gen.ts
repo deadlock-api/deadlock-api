@@ -78,6 +78,8 @@ import { Route as PatchesPatchIdRouteImport } from './routes/patches.$patchId'
 import { Route as PlayersAccountIdRouteImport } from './routes/players_.$accountId'
 import { Route as StreamkitIndexRouteImport } from './routes/streamkit/index'
 import { Route as TrackerDemoRouteImport } from './routes/tracker_.demo'
+import { Route as YearInDeadlockIndexRouteImport } from './routes/year-in-deadlock.index'
+import { Route as YearInDeadlockAccountIdRouteImport } from './routes/year-in-deadlock.$accountId'
 import { Route as AnalyticsGamesIndexRouteImport } from './routes/analytics.games.index'
 import { Route as AnalyticsGamesBuffsRouteImport } from './routes/analytics.games.buffs'
 import { Route as AnalyticsGamesByRankRouteImport } from './routes/analytics.games.by-rank'
@@ -471,6 +473,16 @@ const TrackerDemoRoute = TrackerDemoRouteImport.update({
   path: '/tracker/demo',
   getParentRoute: () => rootRouteImport,
 } as any)
+const YearInDeadlockIndexRoute = YearInDeadlockIndexRouteImport.update({
+  id: '/year-in-deadlock/',
+  path: '/year-in-deadlock/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const YearInDeadlockAccountIdRoute = YearInDeadlockAccountIdRouteImport.update({
+  id: '/year-in-deadlock/$accountId',
+  path: '/year-in-deadlock/$accountId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AnalyticsGamesIndexRoute = AnalyticsGamesIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -781,6 +793,7 @@ export interface FileRoutesByFullPath {
   '/patches/$patchId': typeof PatchesPatchIdRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
   '/tracker/demo': typeof TrackerDemoRoute
+  '/year-in-deadlock/$accountId': typeof YearInDeadlockAccountIdRoute
   '/analytics/': typeof AnalyticsIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/community/': typeof CommunityIndexRoute
@@ -790,6 +803,7 @@ export interface FileRoutesByFullPath {
   '/items/': typeof ItemsIndexRoute
   '/patches/': typeof PatchesIndexRoute
   '/streamkit/': typeof StreamkitIndexRoute
+  '/year-in-deadlock/': typeof YearInDeadlockIndexRoute
   '/analytics/games/buffs': typeof AnalyticsGamesBuffsRoute
   '/analytics/games/by-rank': typeof AnalyticsGamesByRankRoute
   '/analytics/games/combat': typeof AnalyticsGamesCombatRoute
@@ -887,6 +901,7 @@ export interface FileRoutesByTo {
   '/patches/$patchId': typeof PatchesPatchIdRoute
   '/players/$accountId': typeof PlayersAccountIdRoute
   '/tracker/demo': typeof TrackerDemoRoute
+  '/year-in-deadlock/$accountId': typeof YearInDeadlockAccountIdRoute
   '/analytics': typeof AnalyticsIndexRoute
   '/blog': typeof BlogIndexRoute
   '/community': typeof CommunityIndexRoute
@@ -896,6 +911,7 @@ export interface FileRoutesByTo {
   '/items': typeof ItemsIndexRoute
   '/patches': typeof PatchesIndexRoute
   '/streamkit': typeof StreamkitIndexRoute
+  '/year-in-deadlock': typeof YearInDeadlockIndexRoute
   '/analytics/games/buffs': typeof AnalyticsGamesBuffsRoute
   '/analytics/games/by-rank': typeof AnalyticsGamesByRankRoute
   '/analytics/games/combat': typeof AnalyticsGamesCombatRoute
@@ -1005,6 +1021,7 @@ export interface FileRoutesById {
   '/patches/$patchId': typeof PatchesPatchIdRoute
   '/players_/$accountId': typeof PlayersAccountIdRoute
   '/tracker_/demo': typeof TrackerDemoRoute
+  '/year-in-deadlock/$accountId': typeof YearInDeadlockAccountIdRoute
   '/analytics/': typeof AnalyticsIndexRoute
   '/blog/': typeof BlogIndexRoute
   '/community/': typeof CommunityIndexRoute
@@ -1014,6 +1031,7 @@ export interface FileRoutesById {
   '/items/': typeof ItemsIndexRoute
   '/patches/': typeof PatchesIndexRoute
   '/streamkit/': typeof StreamkitIndexRoute
+  '/year-in-deadlock/': typeof YearInDeadlockIndexRoute
   '/analytics/games/buffs': typeof AnalyticsGamesBuffsRoute
   '/analytics/games/by-rank': typeof AnalyticsGamesByRankRoute
   '/analytics/games/combat': typeof AnalyticsGamesCombatRoute
@@ -1124,6 +1142,7 @@ export interface FileRouteTypes {
     | '/patches/$patchId'
     | '/players/$accountId'
     | '/tracker/demo'
+    | '/year-in-deadlock/$accountId'
     | '/analytics/'
     | '/blog/'
     | '/community/'
@@ -1133,6 +1152,7 @@ export interface FileRouteTypes {
     | '/items/'
     | '/patches/'
     | '/streamkit/'
+    | '/year-in-deadlock/'
     | '/analytics/games/buffs'
     | '/analytics/games/by-rank'
     | '/analytics/games/combat'
@@ -1230,6 +1250,7 @@ export interface FileRouteTypes {
     | '/patches/$patchId'
     | '/players/$accountId'
     | '/tracker/demo'
+    | '/year-in-deadlock/$accountId'
     | '/analytics'
     | '/blog'
     | '/community'
@@ -1239,6 +1260,7 @@ export interface FileRouteTypes {
     | '/items'
     | '/patches'
     | '/streamkit'
+    | '/year-in-deadlock'
     | '/analytics/games/buffs'
     | '/analytics/games/by-rank'
     | '/analytics/games/combat'
@@ -1347,6 +1369,7 @@ export interface FileRouteTypes {
     | '/patches/$patchId'
     | '/players_/$accountId'
     | '/tracker_/demo'
+    | '/year-in-deadlock/$accountId'
     | '/analytics/'
     | '/blog/'
     | '/community/'
@@ -1356,6 +1379,7 @@ export interface FileRouteTypes {
     | '/items/'
     | '/patches/'
     | '/streamkit/'
+    | '/year-in-deadlock/'
     | '/analytics/games/buffs'
     | '/analytics/games/by-rank'
     | '/analytics/games/combat'
@@ -1452,10 +1476,12 @@ export interface RootRouteChildren {
   OgMatchDotpngRoute: typeof OgMatchDotpngRoute
   PlayersAccountIdRoute: typeof PlayersAccountIdRoute
   TrackerDemoRoute: typeof TrackerDemoRoute
+  YearInDeadlockAccountIdRoute: typeof YearInDeadlockAccountIdRoute
   AnalyticsIndexRoute: typeof AnalyticsIndexRoute
   BlogIndexRoute: typeof BlogIndexRoute
   CommunityIndexRoute: typeof CommunityIndexRoute
   StreamkitIndexRoute: typeof StreamkitIndexRoute
+  YearInDeadlockIndexRoute: typeof YearInDeadlockIndexRoute
   AuthPatreonCallbackRoute: typeof AuthPatreonCallbackRoute
   TrackerPlayersAccountIdRoute: typeof TrackerPlayersAccountIdRoute
   TrackerPlayersIndexRoute: typeof TrackerPlayersIndexRoute
@@ -1947,6 +1973,20 @@ declare module '@tanstack/react-router' {
       path: '/tracker/demo'
       fullPath: '/tracker/demo'
       preLoaderRoute: typeof TrackerDemoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/year-in-deadlock/': {
+      id: '/year-in-deadlock/'
+      path: '/year-in-deadlock'
+      fullPath: '/year-in-deadlock/'
+      preLoaderRoute: typeof YearInDeadlockIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/year-in-deadlock/$accountId': {
+      id: '/year-in-deadlock/$accountId'
+      path: '/year-in-deadlock/$accountId'
+      fullPath: '/year-in-deadlock/$accountId'
+      preLoaderRoute: typeof YearInDeadlockAccountIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analytics/games/': {
@@ -2543,10 +2583,12 @@ const rootRouteChildren: RootRouteChildren = {
   OgMatchDotpngRoute: OgMatchDotpngRoute,
   PlayersAccountIdRoute: PlayersAccountIdRoute,
   TrackerDemoRoute: TrackerDemoRoute,
+  YearInDeadlockAccountIdRoute: YearInDeadlockAccountIdRoute,
   AnalyticsIndexRoute: AnalyticsIndexRoute,
   BlogIndexRoute: BlogIndexRoute,
   CommunityIndexRoute: CommunityIndexRoute,
   StreamkitIndexRoute: StreamkitIndexRoute,
+  YearInDeadlockIndexRoute: YearInDeadlockIndexRoute,
   AuthPatreonCallbackRoute: AuthPatreonCallbackRoute,
   TrackerPlayersAccountIdRoute: TrackerPlayersAccountIdRoute,
   TrackerPlayersIndexRoute: TrackerPlayersIndexRoute,
