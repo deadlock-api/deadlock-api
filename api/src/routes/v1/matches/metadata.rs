@@ -417,6 +417,13 @@ The response adds three top-level fields from demo analysis (empty when not avai
 
 `banned_hero_ids` lists the hero IDs that were banned in the match.
 
+### Reading the data
+
+- `damage_matrix`: every hit appears twice, under a group (`Bullet`, `Ability`, `Melee`, `Misc`, `UnknownAbility`) and under its source (a class name), so sum one of the two; either sums to `stats[].player_damage`. Series are cumulative and keep only their last values: value `j` of a series of length `len` is at `sample_time_s[N - len + j]`. Slots missing from `players[]` are not players.
+- `match_paths`: position is `x_min + x_pos / x_resolution × (x_max − x_min)` (same for y), at 39.37 units per meter, and (0, 0) while dead. Sample `i` is not always second `i`: pair each death in `death_details` with the nearest drop of `health` to 0 to line a path up. Some drops are no death, and some deaths have no drop.
+- `objectives`: `destroyed_time_s` is 0 if it stood. Lane numbers match the map asset's `team<T>_tier1_<n>` keys.
+- `items`: for an ability, `upgrade_info >> 16` is 1 when unlocked, then 3, 7 and 15 for upgrades 1 to 3.
+
 Protobuf definitions can be found here: [https://github.com/SteamDatabase/Protobufs](https://github.com/SteamDatabase/Protobufs)
 
 Relevant Protobuf Messages:
