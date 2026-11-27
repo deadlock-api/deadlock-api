@@ -116,11 +116,12 @@ pub(crate) async fn unprotect(pg_client: &Pool<Postgres>, steam_id: u32) -> APIR
 /// Row policies hiding protected accounts and anonymous players (`account_id = 0`), by the table
 /// they guard. Every table with an `account_id` column that `api_readonly_user` or `dump_user` can
 /// read needs one.
-const GDPR_ROW_POLICIES: [(&str, &str); 7] = [
+const GDPR_ROW_POLICIES: [(&str, &str); 8] = [
     ("gdpr_protection_mp", "match_player"),
     ("gdpr_protection_sp", "steam_profiles"),
     ("gdpr_protection_spon", "steam_profile_observed_names"),
     ("gdpr_protection_pms", "player_match_stats"),
+    ("gdpr_protection_pmrc", "player_match_recap"),
     ("gdpr_protection_pmh", "player_match_history"),
     ("gdpr_protection_pmr", "player_match_roster"),
     ("gdpr_protection_pcm", "player_cluster_matches"),

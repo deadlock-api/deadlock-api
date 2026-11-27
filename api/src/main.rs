@@ -31,7 +31,8 @@ use tracing::{error, info};
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
 
-const PORT: u16 = 3000;
+/// Listening port; the `PORT` env var overrides it (e.g. to run beside a website dev server).
+const DEFAULT_PORT: u16 = 3000;
 const SERVICE_NAME: &str = "deadlock-api";
 const DRAIN_DELAY: core::time::Duration = core::time::Duration::from_secs(8);
 /// Upper bound for the final background flushes (request logs, insert batchers) after the server
@@ -91,8 +92,12 @@ async fn main() -> Result<(), StartupError> {
         console_fields: ConsoleFields::default(),
     });
 
-    let router = router(PORT).await?;
-    let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, PORT));
+    let port = std::env::var("PORT")
+        .ok()
+        .and_then(|p| p.parse().ok())
+        .unwrap_or(DEFAULT_PORT);
+    let router = router(port).await?;
+    let address = SocketAddr::from((Ipv4Addr::UNSPECIFIED, port));
     let listener = tokio::net::TcpListener::bind(&address).await?;
 
     info!("Listening on http://{address}");

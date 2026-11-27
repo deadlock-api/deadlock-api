@@ -9,6 +9,7 @@ mod recent_matches;
 pub(crate) mod region;
 mod roster_stats;
 pub mod steam;
+mod year_recap;
 
 use core::time::Duration;
 
@@ -40,6 +41,10 @@ pub(super) fn router() -> OpenApiRouter<AppState> {
         .routes(routes!(rank_distribution::rank_distribution))
         .routes(routes!(region::region))
         .routes(routes!(region::region_batch))
+        .route(
+            "/{account_id}/year-recap",
+            axum::routing::get(year_recap::year_recap),
+        )
         .route(
             "/recent-matches",
             axum::routing::get(recent_matches::recent_matches),
